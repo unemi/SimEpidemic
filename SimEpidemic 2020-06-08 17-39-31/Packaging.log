@@ -1,0 +1,126 @@
+2020-06-08 08:38:51 +0000  Initial pipeline context: <IDEDistributionProcessingPipelineContext: 0x7faa334485f0; archive(resolved)='<IDEArchive: 0x7faa5257b4b0>', distributionTask(resolved)='2', distributionDestination(resolved)='1', distributionMethod(resolved)='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team(resolved)='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	Chain (11, self inclusive):
+	<IDEDistributionProcessingPipelineContext: 0x7faa334485f0; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	<IDEDistributionProcessingPipelineContext: 0x7faa3347a190; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	<IDEDistributionContext: 0x7faa3ee3b8b0; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	<IDEDistributionContext: 0x7faa3cd00050; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	<IDEDistributionContext: 0x7faa3354a950; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	<IDEDistributionContext: 0x7faa39edf750; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	<IDEDistributionContext: 0x7faa3e44ca30; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	<IDEDistributionContext: 0x7faa3ee7a7f0; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='<IDEProvisioningDisambiguatableBasicTeam: 0x7faa510ce5d0; teamID='726X5Z9867', teamName='Tatsuo Unemi', teamType='Individual', username='unemi@soka.gr.jp', isFreeProvisioningTeam='0'>'>
+	<IDEDistributionContext: 0x7faa3cdaee20; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='(null)'>
+	<IDEDistributionContext: 0x7faa51461ae0; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='<IDEDistributionMethodDeveloperID: 0x7faa4ff07920>', team='(null)'>
+	<IDEDistributionContext: 0x7faa3a700200; archive = '<IDEArchive: 0x7faa5257b4b0>', distributionMethod='(null)', team='(null)'>
+</IDEDistributionProcessingPipelineContext: 0x7faa334485f0>
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionCreateDestRootStep
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionCopyItemStep
+2020-06-08 08:38:51 +0000  Running /usr/bin/ditto '-V' '/Users/unemi/Library/Developer/Xcode/Archives/2020-06-08/SimEpidemic 2020-06-08 17.37.xcarchive/Products/Applications/SimEpidemic.app' '/var/folders/9h/_b23l8_16fq4bs1bsq1rz4700000gn/T/XcodeDistPipeline.~~~HMyIh1/Root/Applications/SimEpidemic.app'
+2020-06-08 08:38:51 +0000  >>> Copying /Users/unemi/Library/Developer/Xcode/Archives/2020-06-08/SimEpidemic 2020-06-08 17.37.xcarchive/Products/Applications/SimEpidemic.app 
+2020-06-08 08:38:51 +0000  copying file ./Contents/_CodeSignature/CodeResources ... 
+2020-06-08 08:38:51 +0000  9199 bytes for ./Contents/_CodeSignature/CodeResources
+2020-06-08 08:38:51 +0000  copying file ./Contents/MacOS/SimEpidemic ... 
+2020-06-08 08:38:51 +0000  220528 bytes for ./Contents/MacOS/SimEpidemic
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/MainMenu.strings ... 
+2020-06-08 08:38:51 +0000  1760 bytes for ./Contents/Resources/ja.lproj/MainMenu.strings
+copying file ./Contents/Resources/ja.lproj/ParamPanel.strings ... 
+2020-06-08 08:38:51 +0000  1852 bytes for ./Contents/Resources/ja.lproj/ParamPanel.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/Localizable.strings ... 
+2020-06-08 08:38:51 +0000  3454 bytes for ./Contents/Resources/ja.lproj/Localizable.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/Preferences.strings ... 
+2020-06-08 08:38:51 +0000  402 bytes for ./Contents/Resources/ja.lproj/Preferences.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/InfoPlist.strings ... 
+2020-06-08 08:38:51 +0000  50 bytes for ./Contents/Resources/ja.lproj/InfoPlist.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/Credits.rtf ... 
+2020-06-08 08:38:51 +0000  1044 bytes for ./Contents/Resources/ja.lproj/Credits.rtf
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/Document.strings ... 
+2020-06-08 08:38:51 +0000  622 bytes for ./Contents/Resources/ja.lproj/Document.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/StatPanel.strings ... 
+2020-06-08 08:38:51 +0000  309 bytes for ./Contents/Resources/ja.lproj/StatPanel.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/DataPanel.strings ... 
+2020-06-08 08:38:51 +0000  1483 bytes for ./Contents/Resources/ja.lproj/DataPanel.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/ja.lproj/Scenario.strings ... 
+2020-06-08 08:38:51 +0000  352 bytes for ./Contents/Resources/ja.lproj/Scenario.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/en.lproj/Localizable.strings ... 
+2020-06-08 08:38:51 +0000  1948 bytes for ./Contents/Resources/en.lproj/Localizable.strings
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/AppIcon.icns ... 
+2020-06-08 08:38:51 +0000  86481 bytes for ./Contents/Resources/AppIcon.icns
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Base.lproj/Scenario.nib ... 
+2020-06-08 08:38:51 +0000  29800 bytes for ./Contents/Resources/Base.lproj/Scenario.nib
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Base.lproj/Document.nib ... 
+2020-06-08 08:38:51 +0000  24255 bytes for ./Contents/Resources/Base.lproj/Document.nib
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Base.lproj/MainMenu.nib ... 
+2020-06-08 08:38:51 +0000  16400 bytes for ./Contents/Resources/Base.lproj/MainMenu.nib
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Base.lproj/Credits.rtf ... 
+2020-06-08 08:38:51 +0000  800 bytes for ./Contents/Resources/Base.lproj/Credits.rtf
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Base.lproj/DataPanel.nib ... 
+2020-06-08 08:38:51 +0000  29143 bytes for ./Contents/Resources/Base.lproj/DataPanel.nib
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Base.lproj/ParamPanel.nib ... 
+2020-06-08 08:38:51 +0000  61886 bytes for ./Contents/Resources/Base.lproj/ParamPanel.nib
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Base.lproj/Preferences.nib ... 
+2020-06-08 08:38:51 +0000  15870 bytes for ./Contents/Resources/Base.lproj/Preferences.nib
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Base.lproj/StatPanel.nib ... 
+2020-06-08 08:38:51 +0000  6548 bytes for ./Contents/Resources/Base.lproj/StatPanel.nib
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/Assets.car ... 
+2020-06-08 08:38:51 +0000  1032712 bytes for ./Contents/Resources/Assets.car
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/loupePlus.pdf ... 
+2020-06-08 08:38:51 +0000  5578 bytes for ./Contents/Resources/loupePlus.pdf
+2020-06-08 08:38:51 +0000  copying file ./Contents/Resources/loupeMinus.pdf ... 
+2020-06-08 08:38:51 +0000  5216 bytes for ./Contents/Resources/loupeMinus.pdf
+2020-06-08 08:38:51 +0000  copying file ./Contents/Info.plist ... 
+2020-06-08 08:38:51 +0000  2721 bytes for ./Contents/Info.plist
+2020-06-08 08:38:51 +0000  copying file ./Contents/PkgInfo ... 
+2020-06-08 08:38:51 +0000  8 bytes for ./Contents/PkgInfo
+2020-06-08 08:38:51 +0000  /usr/bin/ditto exited with 0
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionEmbedProfileStep
+2020-06-08 08:38:51 +0000  Skipping profile for item: <IDEDistributionItem: 0x7faa51432850; bundleID='jp.ac.soka.unemi.SimEpidemic', path='<DVTFilePath:0x7faa51074c80:'/Users/unemi/Library/Developer/Xcode/Archives/2020-06-08/SimEpidemic 2020-06-08 17.37.xcarchive/Products/Applications/SimEpidemic.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7faa36c5bc70; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7faa3a8f8e30; name='Mac Developer: Tatsuo Unemi (H7T73T729P)', hash='00751F136649743F709BD0C246D2416B938646D2', serialNumber='6F9EEFF8E063DE01', certificateKinds='(
+    "1.2.840.113635.100.6.1.12"
+), issueDate='2019-10-01 10:11:01 +0000''>', entitlements='{
+    "com.apple.security.app-sandbox" = 1;
+    "com.apple.security.files.user-selected.read-write" = 1;
+}', teamID='726X5Z9867', identifier='jp.ac.soka.unemi.SimEpidemic', executablePath='<DVTFilePath:0x7faa3cd8e300:'/Users/unemi/Library/Developer/Xcode/Archives/2020-06-08/SimEpidemic 2020-06-08 17.37.xcarchive/Products/Applications/SimEpidemic.app/Contents/MacOS/SimEpidemic'>', hardenedRuntime='1'>'>
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionAppThinningPlistStep
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionCompileBitcodeStep
+2020-06-08 08:38:51 +0000  Skipping step: IDEDistributionCompileBitcodeStep because it said so
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionCodeSlimmingStep
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionCopyBCSymbolMapsStep
+2020-06-08 08:38:51 +0000  Skipping step: IDEDistributionCopyBCSymbolMapsStep because it said so
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionSymbolsStep
+2020-06-08 08:38:51 +0000  Skipping step: IDEDistributionSymbolsStep because it said so
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionAppThinningStep
+2020-06-08 08:38:51 +0000  Skipping step: IDEDistributionAppThinningStep because it said so
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionArchThinningStep
+2020-06-08 08:38:51 +0000  Running /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo '/var/folders/9h/_b23l8_16fq4bs1bsq1rz4700000gn/T/XcodeDistPipeline.~~~HMyIh1/Root/Applications/SimEpidemic.app/Contents/MacOS/SimEpidemic' '-verify_arch' 'arm64e'
+2020-06-08 08:38:51 +0000  /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo exited with 1
+2020-06-08 08:38:51 +0000  Skipping architecture thinning for item "SimEpidemic" because arch "arm64e" wasn't found
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionODRStep
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionStripXattrsStep
+2020-06-08 08:38:51 +0000  Running /usr/bin/xattr '-crs' '/var/folders/9h/_b23l8_16fq4bs1bsq1rz4700000gn/T/XcodeDistPipeline.~~~HMyIh1/Root/Applications/SimEpidemic.app'
+2020-06-08 08:38:51 +0000  /usr/bin/xattr exited with 0
+2020-06-08 08:38:51 +0000  Processing step: IDEDistributionCodesignStep
+2020-06-08 08:38:51 +0000  Entitlements for <IDEDistributionItem: 0x7faa51432850; bundleID='jp.ac.soka.unemi.SimEpidemic', path='<DVTFilePath:0x7faa51074c80:'/Users/unemi/Library/Developer/Xcode/Archives/2020-06-08/SimEpidemic 2020-06-08 17.37.xcarchive/Products/Applications/SimEpidemic.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7faa36c5bc70; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7faa3cd16250; name='Mac Developer: Tatsuo Unemi (H7T73T729P)', hash='00751F136649743F709BD0C246D2416B938646D2', serialNumber='6F9EEFF8E063DE01', certificateKinds='(
+    "1.2.840.113635.100.6.1.12"
+), issueDate='2019-10-01 10:11:01 +0000''>', entitlements='{
+    "com.apple.security.app-sandbox" = 1;
+    "com.apple.security.files.user-selected.read-write" = 1;
+}', teamID='726X5Z9867', identifier='jp.ac.soka.unemi.SimEpidemic', executablePath='<DVTFilePath:0x7faa3cd8e300:'/Users/unemi/Library/Developer/Xcode/Archives/2020-06-08/SimEpidemic 2020-06-08 17.37.xcarchive/Products/Applications/SimEpidemic.app/Contents/MacOS/SimEpidemic'>', hardenedRuntime='1'>'>: {
+    "com.apple.security.app-sandbox" = 1;
+    "com.apple.security.files.user-selected.read-write" = 1;
+}
+2020-06-08 08:38:51 +0000  Writing entitlements for <IDEDistributionItem: 0x7faa51432850; bundleID='jp.ac.soka.unemi.SimEpidemic', path='<DVTFilePath:0x7faa51074c80:'/Users/unemi/Library/Developer/Xcode/Archives/2020-06-08/SimEpidemic 2020-06-08 17.37.xcarchive/Products/Applications/SimEpidemic.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x7faa36c5bc70; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x7faa39d5be70; name='Mac Developer: Tatsuo Unemi (H7T73T729P)', hash='00751F136649743F709BD0C246D2416B938646D2', serialNumber='6F9EEFF8E063DE01', certificateKinds='(
+    "1.2.840.113635.100.6.1.12"
+), issueDate='2019-10-01 10:11:01 +0000''>', entitlements='{
+    "com.apple.security.app-sandbox" = 1;
+    "com.apple.security.files.user-selected.read-write" = 1;
+}', teamID='726X5Z9867', identifier='jp.ac.soka.unemi.SimEpidemic', executablePath='<DVTFilePath:0x7faa3cd8e300:'/Users/unemi/Library/Developer/Xcode/Archives/2020-06-08/SimEpidemic 2020-06-08 17.37.xcarchive/Products/Applications/SimEpidemic.app/Contents/MacOS/SimEpidemic'>', hardenedRuntime='1'>'> to: /var/folders/9h/_b23l8_16fq4bs1bsq1rz4700000gn/T/XcodeDistPipeline.~~~HMyIh1/entitlements~~~rKTMCs
+2020-06-08 08:38:51 +0000  Running /usr/bin/codesign '-vvv' '--force' '--sign' 'AB088BB74D916AAD4A8028966E85AB1E071AFB3F' '--entitlements' '/var/folders/9h/_b23l8_16fq4bs1bsq1rz4700000gn/T/XcodeDistPipeline.~~~HMyIh1/entitlements~~~rKTMCs' '--preserve-metadata=identifier,flags,runtime' '--requirements' '=designated => anchor apple generic  and identifier "$self.identifier" and ((cert leaf[field.1.2.840.113635.100.6.1.9] exists) or ( certificate 1[field.1.2.840.113635.100.6.2.6] exists and certificate leaf[field.1.2.840.113635.100.6.1.13] exists  and certificate leaf[subject.OU] = "726X5Z9867" ))' '/var/folders/9h/_b23l8_16fq4bs1bsq1rz4700000gn/T/XcodeDistPipeline.~~~HMyIh1/Root/Applications/SimEpidemic.app'
+2020-06-08 08:38:51 +0000  /var/folders/9h/_b23l8_16fq4bs1bsq1rz4700000gn/T/XcodeDistPipeline.~~~HMyIh1/Root/Applications/SimEpidemic.app: replacing existing signature
+2020-06-08 08:39:02 +0000  /var/folders/9h/_b23l8_16fq4bs1bsq1rz4700000gn/T/XcodeDistPipeline.~~~HMyIh1/Root/Applications/SimEpidemic.app: signed app bundle with Mach-O thin (x86_64) [jp.ac.soka.unemi.SimEpidemic]
+2020-06-08 08:39:02 +0000  /usr/bin/codesign exited with 0
+2020-06-08 08:39:02 +0000  Processing step: IDEDistributionZipODRItemStep
+2020-06-08 08:39:02 +0000  Skipping step: IDEDistributionZipODRItemStep because it said so
+2020-06-08 08:39:02 +0000  Processing step: IDEDistributionSkipPackagingStep
+2020-06-08 08:39:02 +0000  Processing step: IDEDistributionAppStoreInformationStep
+2020-06-08 08:39:02 +0000  Skipping step: IDEDistributionAppStoreInformationStep because it said so
+2020-06-08 08:39:02 +0000  Processing step: IDEDistributionGenerateProcessedDistributionItems
+2020-06-08 08:39:02 +0000  Processing step: IDEDistributionCreateManifestStep
+2020-06-08 08:39:02 +0000  Skipping step: IDEDistributionCreateManifestStep because it said so

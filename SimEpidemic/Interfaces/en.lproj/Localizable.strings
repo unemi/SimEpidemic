@@ -1,0 +1,31 @@
+/* 
+  Localizable.strings
+  SimEpidemic
+
+  Created by Tatsuo Unemi on 2020/05/24.
+  Copyright © 2020 Tatsuo Unemi. All rights reserved.
+*/
+"infec" = "infection rate";
+"recovMean" = "recovery mean";
+"recovSTD" = "recovery STD";
+"incubPMin" = "incubation min";
+"incubPMax" = "incubation max";
+"incubPBias" = "incubation bias";
+"diseaRt" = "disease ratio";
+"imunMean" = "immunity mean";
+"imunSTD" = "immunity STD";
+"qnsRt" = "asymp. quarantine rate";
+"qnsDl" = "asymp. quarantine delay";
+"qdsRt" = "symp. quarantime rate";
+"qdsDl" = "symp. quarantime delay";
+"dstST" = "distancing strength";
+"dstOB" = "distancing obedience";
+"mobFr" = "mobility frequency";
+"mobDs" = "mobility distance";
+"initPop" = "initial poplation size";
+"worldSize" = "world dimension";
+"stepsPerDay" = "steps per day";
+"mesh" = "number of mesh";
+"PreConditionWord" = "";
+"AnimeStepsFormat" = "Draw in each %ld steps.";
+"HistogramFormat" = "%@\nSamples %ld\nMin %ld, Max %ld\nMedian %ld\nAverage %.2f";

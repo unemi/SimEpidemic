@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>diseaRt</key>
+	<real>25</real>
+	<key>dstOB</key>
+	<real>20</real>
+	<key>dstST</key>
+	<real>50</real>
+	<key>imunMean</key>
+	<real>180</real>
+	<key>imunSTD</key>
+	<real>10</real>
+	<key>incubPBias</key>
+	<real>20</real>
+	<key>incubPMax</key>
+	<real>15</real>
+	<key>incubPMin</key>
+	<real>1</real>
+	<key>infec</key>
+	<real>50</real>
+	<key>initPop</key>
+	<integer>48000</integer>
+	<key>mesh</key>
+	<integer>40</integer>
+	<key>mobDs</key>
+	<real>50</real>
+	<key>mobFr</key>
+	<real>50</real>
+	<key>qdsDl</key>
+	<real>5</real>
+	<key>qdsRt</key>
+	<real>80</real>
+	<key>qnsDl</key>
+	<real>10</real>
+	<key>qnsRt</key>
+	<real>10</real>
+	<key>recovMean</key>
+	<real>10</real>
+	<key>recovSTD</key>
+	<real>4</real>
+	<key>stepsPerDay</key>
+	<integer>4</integer>
+	<key>worldSize</key>
+	<integer>800</integer>
+</dict>
+</plist>

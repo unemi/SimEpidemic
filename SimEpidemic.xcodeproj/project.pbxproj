@@ -1,0 +1,548 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		231E00102461497000BFBE9E /* MyView.m in Sources */ = {isa = PBXBuildFile; fileRef = 231E000F2461497000BFBE9E /* MyView.m */; };
+		231E25C7247401060005A381 /* loupePlus.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 231E25C5247401060005A381 /* loupePlus.pdf */; };
+		231E25C8247401060005A381 /* loupeMinus.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 231E25C6247401060005A381 /* loupeMinus.pdf */; };
+		232055F12457D2C6005ADCCF /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F02457D2C6005ADCCF /* AppDelegate.m */; };
+		232055F42457D2C6005ADCCF /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F32457D2C6005ADCCF /* Document.m */; };
+		232055F72457D2C6005ADCCF /* Document.xib in Resources */ = {isa = PBXBuildFile; fileRef = 232055F52457D2C6005ADCCF /* Document.xib */; };
+		232055F92457D2C7005ADCCF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 232055F82457D2C7005ADCCF /* Assets.xcassets */; };
+		232055FC2457D2C7005ADCCF /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 232055FA2457D2C7005ADCCF /* MainMenu.xib */; };
+		232055FF2457D2C7005ADCCF /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055FE2457D2C7005ADCCF /* main.m */; };
+		232790BA24587B670017AEC2 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
+		233420D22468156200C93F8E /* DataPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 233420D02468156200C93F8E /* DataPanel.m */; };
+		233D9DE724869F7300498A77 /* Scenario.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DE924869F7300498A77 /* Scenario.xib */; };
+		233D9DEA24869F7D00498A77 /* DataPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DEC24869F7D00498A77 /* DataPanel.xib */; };
+		233D9DED24869F8400498A77 /* StatPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DEF24869F8400498A77 /* StatPanel.xib */; };
+		233D9DF024869F8C00498A77 /* ParamPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DF224869F8C00498A77 /* ParamPanel.xib */; };
+		233D9DF324869F9B00498A77 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DF524869F9B00498A77 /* Localizable.strings */; };
+		233D9DF624869FA200498A77 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DF824869FA200498A77 /* Credits.rtf */; };
+		233D9E0B2486B14A00498A77 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 233D9E0D2486B14A00498A77 /* InfoPlist.strings */; };
+		235639CD247111A200F941A6 /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 235639CB247111A200F941A6 /* Scenario.m */; };
+		235D657B2462564600487784 /* ParamPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 235D65792462564600487784 /* ParamPanel.m */; };
+		238A8F2A246694D300604BF4 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
+		238C4527248B783B00FB5F89 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 238C4525248B783B00FB5F89 /* Preferences.xib */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		231E000D246125AD00BFBE9E /* CommonTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CommonTypes.h; sourceTree = "<group>"; };
+		231E000E2461497000BFBE9E /* MyView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MyView.h; sourceTree = "<group>"; };
+		231E000F2461497000BFBE9E /* MyView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MyView.m; sourceTree = "<group>"; };
+		231E25C5247401060005A381 /* loupePlus.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; name = loupePlus.pdf; path = Images/loupePlus.pdf; sourceTree = "<group>"; };
+		231E25C6247401060005A381 /* loupeMinus.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; name = loupeMinus.pdf; path = Images/loupeMinus.pdf; sourceTree = "<group>"; };
+		232055EC2457D2C5005ADCCF /* SimEpidemic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimEpidemic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		232055EF2457D2C6005ADCCF /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		232055F02457D2C6005ADCCF /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		232055F22457D2C6005ADCCF /* Document.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Document.h; sourceTree = "<group>"; };
+		232055F32457D2C6005ADCCF /* Document.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Document.m; sourceTree = "<group>"; };
+		232055F62457D2C6005ADCCF /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/Document.xib; sourceTree = "<group>"; };
+		232055F82457D2C7005ADCCF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		232055FB2457D2C7005ADCCF /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		232055FD2457D2C7005ADCCF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		232055FE2457D2C7005ADCCF /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		232056002457D2C7005ADCCF /* SimEpidemic.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SimEpidemic.entitlements; sourceTree = "<group>"; };
+		232790B824587B670017AEC2 /* Agent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Agent.h; sourceTree = "<group>"; };
+		232790B924587B670017AEC2 /* Agent.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Agent.m; sourceTree = "<group>"; };
+		233420CF2468156200C93F8E /* DataPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DataPanel.h; sourceTree = "<group>"; };
+		233420D02468156200C93F8E /* DataPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DataPanel.m; sourceTree = "<group>"; };
+		233D9DE824869F7300498A77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/Scenario.xib; sourceTree = "<group>"; };
+		233D9DEB24869F7D00498A77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/DataPanel.xib; sourceTree = "<group>"; };
+		233D9DEE24869F8400498A77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/StatPanel.xib; sourceTree = "<group>"; };
+		233D9DF124869F8C00498A77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/ParamPanel.xib; sourceTree = "<group>"; };
+		233D9DF424869F9B00498A77 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		233D9DF724869FA200498A77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = Base; path = Base.lproj/Credits.rtf; sourceTree = "<group>"; };
+		233D9E012486A2E000498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Scenario.strings; sourceTree = "<group>"; };
+		233D9E022486A2E000498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/DataPanel.strings; sourceTree = "<group>"; };
+		233D9E032486A2E000498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/StatPanel.strings; sourceTree = "<group>"; };
+		233D9E042486A2E000498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/ParamPanel.strings; sourceTree = "<group>"; };
+		233D9E052486A2E000498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Document.strings; sourceTree = "<group>"; };
+		233D9E062486A2E000498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/MainMenu.strings; sourceTree = "<group>"; };
+		233D9E072486A2E000498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
+		233D9E082486A35900498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = ja; path = ja.lproj/Credits.rtf; sourceTree = "<group>"; };
+		233D9E0C2486B14A00498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		235639CA247111A200F941A6 /* Scenario.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scenario.h; sourceTree = "<group>"; };
+		235639CB247111A200F941A6 /* Scenario.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Scenario.m; sourceTree = "<group>"; };
+		235D65782462564600487784 /* ParamPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ParamPanel.h; sourceTree = "<group>"; };
+		235D65792462564600487784 /* ParamPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ParamPanel.m; sourceTree = "<group>"; };
+		23666C63248C99BB00061274 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Preferences.strings; sourceTree = "<group>"; };
+		238A8F27246694D300604BF4 /* StatPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StatPanel.h; sourceTree = "<group>"; };
+		238A8F28246694D300604BF4 /* StatPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StatPanel.m; sourceTree = "<group>"; };
+		238C4526248B783B00FB5F89 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/Preferences.xib; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		232055E92457D2C5005ADCCF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		232055E32457D2C5005ADCCF = {
+			isa = PBXGroup;
+			children = (
+				232055EE2457D2C5005ADCCF /* SimEpidemic */,
+				232055ED2457D2C5005ADCCF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		232055ED2457D2C5005ADCCF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				232055EC2457D2C5005ADCCF /* SimEpidemic.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		232055EE2457D2C5005ADCCF /* SimEpidemic */ = {
+			isa = PBXGroup;
+			children = (
+				235D65772462555500487784 /* Sources */,
+				235D65762462552300487784 /* Interfaces */,
+				232055F82457D2C7005ADCCF /* Assets.xcassets */,
+				232055FD2457D2C7005ADCCF /* Info.plist */,
+				232055FE2457D2C7005ADCCF /* main.m */,
+				232056002457D2C7005ADCCF /* SimEpidemic.entitlements */,
+				231E25C6247401060005A381 /* loupeMinus.pdf */,
+				231E25C5247401060005A381 /* loupePlus.pdf */,
+			);
+			path = SimEpidemic;
+			sourceTree = "<group>";
+		};
+		235D65762462552300487784 /* Interfaces */ = {
+			isa = PBXGroup;
+			children = (
+				233D9DE924869F7300498A77 /* Scenario.xib */,
+				233D9DEC24869F7D00498A77 /* DataPanel.xib */,
+				233D9DEF24869F8400498A77 /* StatPanel.xib */,
+				233D9DF224869F8C00498A77 /* ParamPanel.xib */,
+				232055F52457D2C6005ADCCF /* Document.xib */,
+				232055FA2457D2C7005ADCCF /* MainMenu.xib */,
+				233D9DF524869F9B00498A77 /* Localizable.strings */,
+				233D9DF824869FA200498A77 /* Credits.rtf */,
+				233D9E0D2486B14A00498A77 /* InfoPlist.strings */,
+				238C4525248B783B00FB5F89 /* Preferences.xib */,
+			);
+			path = Interfaces;
+			sourceTree = "<group>";
+		};
+		235D65772462555500487784 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				231E000D246125AD00BFBE9E /* CommonTypes.h */,
+				232055EF2457D2C6005ADCCF /* AppDelegate.h */,
+				232055F02457D2C6005ADCCF /* AppDelegate.m */,
+				232055F22457D2C6005ADCCF /* Document.h */,
+				232055F32457D2C6005ADCCF /* Document.m */,
+				231E000E2461497000BFBE9E /* MyView.h */,
+				231E000F2461497000BFBE9E /* MyView.m */,
+				232790B824587B670017AEC2 /* Agent.h */,
+				232790B924587B670017AEC2 /* Agent.m */,
+				235D65782462564600487784 /* ParamPanel.h */,
+				235D65792462564600487784 /* ParamPanel.m */,
+				238A8F27246694D300604BF4 /* StatPanel.h */,
+				238A8F28246694D300604BF4 /* StatPanel.m */,
+				233420CF2468156200C93F8E /* DataPanel.h */,
+				233420D02468156200C93F8E /* DataPanel.m */,
+				235639CA247111A200F941A6 /* Scenario.h */,
+				235639CB247111A200F941A6 /* Scenario.m */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		232055EB2457D2C5005ADCCF /* SimEpidemic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 232056032457D2C7005ADCCF /* Build configuration list for PBXNativeTarget "SimEpidemic" */;
+			buildPhases = (
+				232055E82457D2C5005ADCCF /* Sources */,
+				232055E92457D2C5005ADCCF /* Frameworks */,
+				232055EA2457D2C5005ADCCF /* Resources */,
+				236F7B3D2485277B004ABB83 /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SimEpidemic;
+			productName = SimEpidemic;
+			productReference = 232055EC2457D2C5005ADCCF /* SimEpidemic.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		232055E42457D2C5005ADCCF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1130;
+				ORGANIZATIONNAME = "Tatsuo Unemi";
+				TargetAttributes = {
+					232055EB2457D2C5005ADCCF = {
+						CreatedOnToolsVersion = 11.3.1;
+					};
+				};
+			};
+			buildConfigurationList = 232055E72457D2C5005ADCCF /* Build configuration list for PBXProject "SimEpidemic" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				ja,
+			);
+			mainGroup = 232055E32457D2C5005ADCCF;
+			productRefGroup = 232055ED2457D2C5005ADCCF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				232055EB2457D2C5005ADCCF /* SimEpidemic */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		232055EA2457D2C5005ADCCF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				233D9DF024869F8C00498A77 /* ParamPanel.xib in Resources */,
+				238C4527248B783B00FB5F89 /* Preferences.xib in Resources */,
+				233D9E0B2486B14A00498A77 /* InfoPlist.strings in Resources */,
+				231E25C8247401060005A381 /* loupeMinus.pdf in Resources */,
+				233D9DF324869F9B00498A77 /* Localizable.strings in Resources */,
+				232055F92457D2C7005ADCCF /* Assets.xcassets in Resources */,
+				233D9DEA24869F7D00498A77 /* DataPanel.xib in Resources */,
+				232055F72457D2C6005ADCCF /* Document.xib in Resources */,
+				233D9DE724869F7300498A77 /* Scenario.xib in Resources */,
+				232055FC2457D2C7005ADCCF /* MainMenu.xib in Resources */,
+				233D9DF624869FA200498A77 /* Credits.rtf in Resources */,
+				231E25C7247401060005A381 /* loupePlus.pdf in Resources */,
+				233D9DED24869F8400498A77 /* StatPanel.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		236F7B3D2485277B004ABB83 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ ${CONFIGURATION} == Release ]; then /Users/unemi/Program/bin/incBuildVersion.csh; fi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		232055E82457D2C5005ADCCF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				233420D22468156200C93F8E /* DataPanel.m in Sources */,
+				232055F42457D2C6005ADCCF /* Document.m in Sources */,
+				232790BA24587B670017AEC2 /* Agent.m in Sources */,
+				238A8F2A246694D300604BF4 /* StatPanel.m in Sources */,
+				235D657B2462564600487784 /* ParamPanel.m in Sources */,
+				232055FF2457D2C7005ADCCF /* main.m in Sources */,
+				232055F12457D2C6005ADCCF /* AppDelegate.m in Sources */,
+				235639CD247111A200F941A6 /* Scenario.m in Sources */,
+				231E00102461497000BFBE9E /* MyView.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		232055F52457D2C6005ADCCF /* Document.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				232055F62457D2C6005ADCCF /* Base */,
+				233D9E052486A2E000498A77 /* ja */,
+			);
+			name = Document.xib;
+			sourceTree = "<group>";
+		};
+		232055FA2457D2C7005ADCCF /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				232055FB2457D2C7005ADCCF /* Base */,
+				233D9E062486A2E000498A77 /* ja */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+		233D9DE924869F7300498A77 /* Scenario.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				233D9DE824869F7300498A77 /* Base */,
+				233D9E012486A2E000498A77 /* ja */,
+			);
+			name = Scenario.xib;
+			sourceTree = "<group>";
+		};
+		233D9DEC24869F7D00498A77 /* DataPanel.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				233D9DEB24869F7D00498A77 /* Base */,
+				233D9E022486A2E000498A77 /* ja */,
+			);
+			name = DataPanel.xib;
+			sourceTree = "<group>";
+		};
+		233D9DEF24869F8400498A77 /* StatPanel.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				233D9DEE24869F8400498A77 /* Base */,
+				233D9E032486A2E000498A77 /* ja */,
+			);
+			name = StatPanel.xib;
+			sourceTree = "<group>";
+		};
+		233D9DF224869F8C00498A77 /* ParamPanel.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				233D9DF124869F8C00498A77 /* Base */,
+				233D9E042486A2E000498A77 /* ja */,
+			);
+			name = ParamPanel.xib;
+			sourceTree = "<group>";
+		};
+		233D9DF524869F9B00498A77 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				233D9DF424869F9B00498A77 /* en */,
+				233D9E072486A2E000498A77 /* ja */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		233D9DF824869FA200498A77 /* Credits.rtf */ = {
+			isa = PBXVariantGroup;
+			children = (
+				233D9DF724869FA200498A77 /* Base */,
+				233D9E082486A35900498A77 /* ja */,
+			);
+			name = Credits.rtf;
+			sourceTree = "<group>";
+		};
+		233D9E0D2486B14A00498A77 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				233D9E0C2486B14A00498A77 /* ja */,
+			);
+			name = InfoPlist.strings;
+			path = SimEpidemic;
+			sourceTree = SOURCE_ROOT;
+		};
+		238C4525248B783B00FB5F89 /* Preferences.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				238C4526248B783B00FB5F89 /* Base */,
+				23666C63248C99BB00061274 /* ja */,
+			);
+			name = Preferences.xib;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		232056012457D2C7005ADCCF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		232056022457D2C7005ADCCF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		232056042457D2C7005ADCCF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = SimEpidemic/SimEpidemic.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 726X5Z9867;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = SimEpidemic/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		232056052457D2C7005ADCCF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = SimEpidemic/SimEpidemic.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 726X5Z9867;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = SimEpidemic/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		232055E72457D2C5005ADCCF /* Build configuration list for PBXProject "SimEpidemic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				232056012457D2C7005ADCCF /* Debug */,
+				232056022457D2C7005ADCCF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		232056032457D2C7005ADCCF /* Build configuration list for PBXNativeTarget "SimEpidemic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				232056042457D2C7005ADCCF /* Debug */,
+				232056052457D2C7005ADCCF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 232055E42457D2C5005ADCCF /* Project object */;
+}

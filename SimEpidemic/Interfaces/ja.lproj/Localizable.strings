@@ -1,0 +1,68 @@
+/* 
+  Copyright © 2020 Tatsuo Unemi. All rights reserved.
+  Created by Tatsuo Unemi on 2020/05/24.
+  Localizable.strings
+  SimEpidemic
+*/
+"stepsPerDay" = "1日当たりステップ数";
+"infec" = "感染率";
+"mesh" = "メッシュ";
+"initPop" = "初期人口";
+"mobDs" = "移動距離";
+"mobFr" = "移動頻度";
+"worldSize" = "世界の広さ";
+"incubPMax" = "潜伏期間最大";
+"incubPMin" = "潜伏期間最小";
+"dstST" = "社会距離強度";
+"qdsRt" = "有症状者隔離率";
+"qnsRt" = "無症状者隔離率";
+"dstOB" = "社会距離協力率";
+"qdsDl" = "有症状者隔離遅れ";
+"qnsDl" = "無症状者隔離遅れ";
+"imunMean" = "免疫有効期間平均値";
+"recovMean" = "回復開始期間平均値";
+"incubPBias" = "潜伏期間分布の偏り";
+"diseaRt" = "発症までの期間割合";
+"imunSTD" = "免疫有効期間標準偏差";
+"recovSTD" = "回復開始期間標準偏差";
+"Start" = "開始";
+"Stop" = "停止";
+"Susceptible" = "未感染者";
+"Asymptomatic" = "無症状者";
+"Symptomatic" = "有症状者";
+"Recovered" = "回復者";
+"Dead" = "死者";
+"Hospital" = "病院";
+"Cemetery" = "墓地";
+"None" = "ナシ";
+"Parameters" = "パラメータ";
+"Condition" = "条件";
+"Infection" = "感染者追加";
+"PreConditionWord" = "以下の";
+"Any" = "いずれか";
+"All" = "すべて";
+"of the following are true." = "が真のとき";
+"days" = "日数";
+"susceptible" = "未感染者数";
+"infected" = "感染者数";
+"symptomatic" = "発症者数";
+"recovered" = "回復者数";
+"died" = "死者数";
+"quarantine" = "隔離";
+"dailyInfection" = "日当たり感染者数";
+"dailySymptomatic" = "日当たり発症者数";
+"dailyRecovery" = "日当たり回復者数";
+"dailyDeath" = "日当たり死者数";
+"people" = "人";
+"per mille" = "パーミル";
+"This operation cannot be undone." = "この操作は取り消せません。";
+"Cancel" = "キャンセル";
+"Will overwrites the current user's defaults." = "現在の規定値を上書きします。";
+"Will clear the current user's defaults." = "現在の規定値設定を消去します。";
+"Draw in each step." = "毎ステップ描画する";
+"AnimeStepsFormat" = "%ld ステップ毎に描画";
+"max" = "最大";
+"HistogramFormat" = "%@\nサンプル数 %ld\n最小 %ld, 最大 %ld\n中央値 %ld\n平均値 %.2f";
+"Incubation Period" = "潜伏期間";
+"Recovery Period" = "回復までの期間";
+"Fatal Period" = "死亡までの期間";

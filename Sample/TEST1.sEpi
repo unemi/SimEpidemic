@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>scenario</key>
+	<array>
+		<dict>
+			<key>infec</key>
+			<integer>80</integer>
+		</dict>
+		<string>quarantine &gt; 100</string>
+		<dict>
+			<key>infec</key>
+			<integer>50</integer>
+		</dict>
+		<string>quarantine &gt; 200</string>
+		<dict>
+			<key>infec</key>
+			<integer>30</integer>
+		</dict>
+	</array>
+</dict>
+</plist>
