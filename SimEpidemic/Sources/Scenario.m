@@ -28,13 +28,6 @@
 - (NSInteger)dailyDeath { return self.transit->cnt[Died]; }
 @end
 
-static NSString *defaultForm = @"days = 200 OR 'infected' = 0";
-static NSPredicate *defaultPredicate;
-static void check_default_predicate(void) {
-	if (defaultPredicate == nil) defaultPredicate =
-		[NSPredicate predicateWithFormat:defaultForm];
-}
-
 static void set_subview(NSControl *cnt, NSView *parent, BOOL leftToRight) {
 	if (![cnt isKindOfClass:NSTextField.class]) {
 //		cnt.controlSize = [cnt isKindOfClass:NSButton.class]?
@@ -622,7 +615,6 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 @implementation Scenario
 - (instancetype)initWithDoc:(Document *)dc {
 	if (!(self = [super initWithWindowNibName:@"Scenario"])) return nil;
-	check_default_predicate();
 	check_images();
 	_doc = dc;
 	_undoManager = NSUndoManager.new;

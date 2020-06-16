@@ -18,14 +18,21 @@ typedef enum {
 } WarpType;
 
 typedef struct {
-	CGFloat infec, infecDst, recovMean, recovSTD,
-		incubPMin, incubPMax, incubPBias,
-		diseaRt, imunMean, imunSTD;
+	CGFloat min, max, mode;
+} DistInfo;
+
+typedef struct {
+	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat qnsRt, qnsDl, qdsRt, qdsDl;	// Quarantine rate and delay
 	CGFloat dstST, dstOB; // Distancing strength and obedience
-	CGFloat mobFr, mobDs; // Mobility frequency and distance
+	CGFloat mobFr; // Mobility frequency
+	DistInfo mobDist; // and distance
+	DistInfo incub, fatal, recov, immun; // incubation, fatality, recovery, immunity
 	NSInteger initPop, worldSize, mesh, stepsPerDay, nInitInfec;
 } Params;
+#define PARAM_F1 infec
+#define PARAM_D1 mobDist
+#define PARAM_I1 initPop
 
 typedef struct StatDataRec {
 	struct StatDataRec *next;
@@ -37,7 +44,7 @@ typedef struct AgentRec {
 	struct AgentRec *prev, *next;
 	CGFloat app, prf, x, y, vx, vy, fx, fy;
 	CGPoint orgPt;
-	CGFloat daysI, daysD, daysToRecover, daysToDie, imExpr;
+	CGFloat daysI, daysD, daysToRecover, daysToOnset, daysToDie, imExpr;
 	HealthType health, newHealth;
 	BOOL distancing, isWarping, gotAtHospital;
 	struct AgentRec *best;

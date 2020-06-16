@@ -87,24 +87,20 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 }
 NSString *keyAnimeSteps = @"animeSteps";
 static ParamInfo paramInfo[] = {
-	{ ParamTypeFloat, @"infec", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloat, @"infecDst", {.f = { 4., 1., 20.}}},
-	{ ParamTypeFloat, @"recovMean", {.f = { 10., 0., 20.}}},
-	{ ParamTypeFloat, @"recovSTD", {.f = { 4., 0., 20.}}},
-	{ ParamTypeFloat, @"incubPMin", {.f = { 1., 0., 20.}}},
-	{ ParamTypeFloat, @"incubPMax", {.f = { 15., 0., 50.}}},
-	{ ParamTypeFloat, @"incubPBias", {.f = { 20., -99., 100.}}},
-	{ ParamTypeFloat, @"diseaRt", {.f = { 25., 0., 100.}}},
-	{ ParamTypeFloat, @"imunMean", {.f = { 180., 0., 360.}}},
-	{ ParamTypeFloat, @"imunSTD", {.f = { 10., 0., 100.}}},
-	{ ParamTypeFloat, @"qnsRt", {.f = { 10., 0., 100.}}},
-	{ ParamTypeFloat, @"qnsDl", {.f = { 10., 0., 20.}}},
-	{ ParamTypeFloat, @"qdsRt", {.f = { 80., 0., 100.}}},
-	{ ParamTypeFloat, @"qdsDl", {.f = { 5., 0., 20.}}},
-	{ ParamTypeFloat, @"dstST", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloat, @"dstOB", {.f = { 20., 0., 100.}}},
-	{ ParamTypeFloat, @"mobFr", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloat, @"mobDs", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"infectionProberbility", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"infectionDistance", {.f = { 4., 1., 20.}}},
+	{ ParamTypeFloat, @"quarantineAsymRate", {.f = { 10., 0., 100.}}},
+	{ ParamTypeFloat, @"quarantineAsymDelay", {.f = { 10., 0., 20.}}},
+	{ ParamTypeFloat, @"quarantineSympRate", {.f = { 80., 0., 100.}}},
+	{ ParamTypeFloat, @"quarantineSympDelay", {.f = { 5., 0., 20.}}},
+	{ ParamTypeFloat, @"distancingStrength", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
+	{ ParamTypeFloat, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
+	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
+	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
+	{ ParamTypeDist, @"fatality", {.d = { 4., 16., 20.}}},
+	{ ParamTypeDist, @"recovery", {.d = { 4., 10., 40.}}},
+	{ ParamTypeDist, @"immunity", {.d = { 30, 180., 360.}}},
 	{ ParamTypeInteger, @"initPop", {.i = { 10000, 100, 999900}}},
 	{ ParamTypeInteger, @"worldSize", {.i = { 360, 10, 999999}}},
 	{ ParamTypeInteger, @"mesh", {.i = { 18, 1, 999}}},
@@ -120,21 +116,30 @@ NSDictionary<NSString *, NSString *> *paramKeyFromName;
 NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
 NSDictionary *param_dict(Params *pp) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
-	CGFloat *fp = &pp->infec;
-	NSInteger *ip = &pp->initPop;
-	for (ParamInfo *p = paramInfo; p->key != nil; p ++) {
-		if (p->type == ParamTypeFloat) md[p->key] = @(*(fp ++));
-		else md[p->key] = @(*(ip ++));
+	CGFloat *fp = &pp->PARAM_F1;
+	DistInfo *dp = &pp->PARAM_D1;
+	NSInteger *ip = &pp->PARAM_I1;
+	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
+		case ParamTypeFloat: md[p->key] = @(*(fp ++)); break;
+		case ParamTypeDist: md[p->key] = @[@(dp[0].min), @(dp[0].max), @(dp[0].mode)]; break;
+		case ParamTypeInteger: md[p->key] = @(*(ip ++));
+		default: break;
 	}
 	return [NSDictionary dictionaryWithDictionary:md];
 }
+#define IDX_D 1000
+#define IDX_I 2000
 void set_params_from_dict(Params *pp, NSDictionary *dict) {
 	for (NSString *key in dict.keyEnumerator) {
 		NSNumber *idxNum = paramIndexFromKey[key];
 		if (idxNum == nil) continue;
 		NSInteger index = idxNum.integerValue;
-		if (index < 1000) (&pp->infec)[index] = [dict[key] doubleValue];
-		else (&pp->initPop)[index - 1000] = [dict[key] integerValue];
+		if (index < IDX_D) (&pp->PARAM_F1)[index] = [dict[key] doubleValue];
+		else if (index < IDX_I) {
+			NSArray<NSNumber *> *arr = dict[key];
+			(&pp->PARAM_D1)[index - IDX_D] = (DistInfo){
+				arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
+		} else (&pp->PARAM_I1)[index - IDX_I] = [dict[key] integerValue];
 	}
 }
 #define RGB3(r,g,b) ((r<<16)|(g<<8)|b)
@@ -169,50 +174,65 @@ static void setup_colors(void) {
 @implementation AppDelegate
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
 	nCores = NSProcessInfo.processInfo.processorCount;
-	NSInteger nF = 0, nI = 0;
-	for (ParamInfo *p = paramInfo; p->key != nil; p ++) {
-		if (p->type == ParamTypeFloat) (&defaultParams.infec)[nF ++] = p->v.f.defaultValue;
-		else (&defaultParams.initPop)[nI ++] = p->v.i.defaultValue;
+	NSInteger nF = 0, nD = 0, nI = 0;
+	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
+		case ParamTypeFloat: (&defaultParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
+		case ParamTypeDist: (&defaultParams.PARAM_D1)[nD ++] = (DistInfo){
+			p->v.d.defMin, p->v.d.defMax, p->v.d.defMode}; break;
+		case ParamTypeInteger: (&defaultParams.PARAM_I1)[nI ++] = p->v.i.defaultValue;
+		default: break;
 	}
-	NSInteger nn = nF + nI;
-	NSString *keys[nn], *names[nn];
+	NSInteger nn = nF + nD + nI;
+	NSString *keys[nn], *names[nF];
 	NSNumber *indexes[nn];
-	NSNumberFormatter *formatters[nn];
+	NSNumberFormatter *formatters[nF + nI], *fmt;
 	for (NSInteger i = 0; i < nn; i ++) {
-		names[i] = NSLocalizedString((keys[i] = paramInfo[i].key), nil);
-		indexes[i] = @((paramInfo[i].type == ParamTypeFloat)? i : i - nF + 1000);
-		NSNumberFormatter *fmt = NSNumberFormatter.new;
-		if (paramInfo[i].type == ParamTypeFloat) {
+		ParamInfo *p = paramInfo + i;
+		keys[i] = p->key;
+		switch (p->type) {
+			case ParamTypeFloat: indexes[i] = @(i);
+			names[i] = NSLocalizedString(p->key, nil);
+			fmt = NSNumberFormatter.new;
 			fmt.allowsFloats = YES;
-			fmt.minimum = @(paramInfo[i].v.f.minValue);
-			fmt.maximum = @(paramInfo[i].v.f.maxValue);
+			fmt.minimum = @(p->v.f.minValue);
+			fmt.maximum = @(p->v.f.maxValue);
 			fmt.minimumFractionDigits = fmt.maximumFractionDigits =
 			fmt.minimumIntegerDigits = 1;
-		} else {
+			formatters[i] = fmt;
+			break;
+			case ParamTypeDist: indexes[i] = @(i - nF + IDX_D); break;
+			case ParamTypeInteger: indexes[i] = @(i - nF - nD + IDX_I);
+			fmt = NSNumberFormatter.new;
 			fmt.allowsFloats = NO;
-			fmt.minimum = @(paramInfo[i].v.i.minValue);
-			fmt.maximum = @(paramInfo[i].v.i.maxValue);
+			fmt.minimum = @(p->v.i.minValue);
+			fmt.maximum = @(p->v.i.maxValue);
+			formatters[i - nD] = fmt;
+			default: break;
 		}
-		formatters[i] = fmt;
 	}
 	paramKeys = [NSArray arrayWithObjects:keys count:nn];
-	paramNames = [NSArray arrayWithObjects:names count:nn];
-	paramFormatters = [NSArray arrayWithObjects:formatters count:nn];
-	paramKeyFromName = [NSDictionary dictionaryWithObjects:keys forKeys:names count:nn];
+	paramNames = [NSArray arrayWithObjects:names count:nF];
+	paramFormatters = [NSArray arrayWithObjects:formatters count:nF + nI];
+	paramKeyFromName = [NSDictionary dictionaryWithObjects:keys forKeys:names count:nF];
 	paramIndexFromKey = [NSDictionary dictionaryWithObjects:indexes forKeys:keys count:nn];
 	memcpy(&userDefaultParams, &defaultParams, sizeof(Params));
 	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 	NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;
 	NSNumber *num;
+	NSArray<NSNumber *> *arr;
 	if ((num = [ud objectForKey:keyAnimeSteps])) defaultAnimeSteps = num.integerValue;
 	for (NSInteger i = 0; i < N_COLORS; i ++)
 		if ((num = [ud objectForKey:colKeys[i]])) stateRGB[i] = num.integerValue;
 	for (NSInteger i = 0; i < nF; i ++)
 		if ((num = [ud objectForKey:paramInfo[i].key]))
-			(&userDefaultParams.infec)[i] = num.doubleValue;
+			(&userDefaultParams.PARAM_F1)[i] = num.doubleValue;
+	for (NSInteger i = 0; i < nD; i ++)
+		if ((arr = [ud objectForKey:paramInfo[i + nF].key]))
+			(&userDefaultParams.PARAM_D1)[i] = (DistInfo){
+				arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
 	for (NSInteger i = 0; i < nI; i ++)
-		if ((num = [ud objectForKey:paramInfo[i + nF].key]))
-			(&userDefaultParams.initPop)[i] = num.integerValue;
+		if ((num = [ud objectForKey:paramInfo[i + nF + nD].key]))
+			(&userDefaultParams.PARAM_I1)[i] = num.integerValue;
 	if ((num = [ud objectForKey:keyWarpOpacity])) warpOpacity = num.doubleValue;
 	setup_colors();
 }
@@ -306,6 +326,8 @@ static void setup_colors(void) {
 		setup_colors();
 		for (NSInteger i = 0; i < N_COLORS; i ++)
 			colWells[i].color = stateColors[i];
+		for (NSString *key in paramKeys)
+			[ud removeObjectForKey:key];
 	});
 }
 @end

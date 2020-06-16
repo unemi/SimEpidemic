@@ -13,12 +13,15 @@
 
 enum { ColBackground = NHealthTypes,
 	ColHospital, ColCemetery, ColText };
-typedef enum { ParamTypeNone, ParamTypeFloat, ParamTypeInteger } ParamType;
+typedef enum {
+	ParamTypeNone, ParamTypeFloat, ParamTypeDist, ParamTypeInteger
+} ParamType;
 typedef struct {
 	ParamType type;
 	NSString *key;
 	union {
 		struct { CGFloat defaultValue, minValue, maxValue; } f;
+		struct { CGFloat defMin, defMode, defMax; } d;
 		struct { NSInteger defaultValue, minValue, maxValue; } i;
 	} v;
 } ParamInfo;

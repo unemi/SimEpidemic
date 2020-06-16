@@ -26,27 +26,27 @@ static CGFloat random_guassian(CGFloat mu, CGFloat sigma) {
 	}
 	return x * sigma + mu;
 }
-//static CGFloat my_random(CGFloat min, CGFloat max, CGFloat mode, CGFloat kurtosis) {
-//	CGFloat x = random_guassian(.5, .14);
+static CGFloat my_random(DistInfo *p) {
+	CGFloat x = random_guassian(.5, .14);
 //	if (kurtosis != 0.) {
 //		CGFloat b = pow(2., -kurtosis);
 //		/* x = (x < .5)? b * x / ((b - 1) * x * 2. + 1.) :
 //			(x - .5) / ((x + b - b * x) * 2. - 1.) + .5;  */
 //		x = (x < .5)? pow(x * 2., b) * .5 : 1. - pow(2. - x * 2., b) * .5;
 //	}
-//	if (x < 0.) x = 0.; else if (x > 1.) x = 1.;
-//	CGFloat a = (mode - min) / (max - mode);
-//	return a * x / ((a - 1.) * x + 1.) * (max - min) + min;
-//}
+	if (x < 0.) x = 0.; else if (x > 1.) x = 1.;
+	CGFloat a = (p->mode - p->min) / (p->max - p->mode);
+	return a * x / ((a - 1.) * x + 1.) * (p->max - p->min) + p->min;
+}
 static BOOL was_hit(Params *p, CGFloat prob) {
 	return (random() > pow(1. - prob, 1. / p->stepsPerDay) * 0x7fffffff);
 }
 static void reset_days(Agent *a, Params *p) {
 	a->daysI = a->daysD = 0;
-	a->daysToRecover = fmax(0., random_guassian(p->recovMean, p->recovSTD));
-	a->daysToDie = (pow(fmax(0., random_guassian(.5, .2)), exp(p->incubPBias / 100.))
-		* (p->incubPMax - p->incubPMin) + p->incubPMin) * 100. / p->diseaRt;
-	a->imExpr = random_guassian(p->imunMean, p->imunSTD);
+	a->daysToRecover = my_random(&p->recov);
+	a->daysToOnset = my_random(&p->incub);
+	a->daysToDie = my_random(&p->fatal) + a->daysToOnset;
+	a->imExpr = my_random(&p->immun);
 }
 void reset_agent(Agent *a, Params *p) {
 	a->app = random() / (CGFloat)0x7fffffff;
@@ -159,8 +159,7 @@ static BOOL patient_step(Agent *a, Params *p, Document *doc) {
   } else if (a->daysI >= a->daysToDie) {
 	cummulate_histgrm(doc.DeathPHist, a->daysD);
 	return YES;
-  } else if (a->health == Asymptomatic && 
-	a->daysI >= a->daysToDie * p->diseaRt / 100.) {
+  } else if (a->health == Asymptomatic && a->daysI >= a->daysToOnset) {
 	a->newHealth = Symptomatic;
 	cummulate_histgrm(doc.IncubPHist, a->daysI);
   }
@@ -194,7 +193,7 @@ void step_agent(Agent *a, Params *p, Document *doc) {
 		return;
 	}
 	if (a->health != Symptomatic && was_hit(p, p->mobFr / 1000.)) {
-		CGFloat dst = fmax(4., p->mobDs * random_guassian(1., .5));
+		CGFloat dst = my_random(&p->mobDist) * p->worldSize / 100.;
 		CGFloat th = random() * M_PI * 2. / 0x7fffffff;
 		CGPoint newPt = {a->x + cos(th) * dst, a->y + sin(th) * dst};
 		if (newPt.x < 3.) newPt.x = 3. - newPt.x;

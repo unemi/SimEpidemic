@@ -13,18 +13,20 @@ NS_ASSUME_NONNULL_BEGIN
 @class Document;
 
 @interface ParamPanel : NSWindowController <NSWindowDelegate> {
-	IBOutlet NSTextField *infecDgt, *infecDstDgt, *recovMeanDgt, *recovSTDDgt,
-		*incubPMinDgt, *incubPMaxDgt, *incubPBiasDgt, *diseaRtDgt,
-		*imunMeanDgt, *imunSTDDgt;
-	IBOutlet NSSlider *infecSld, *infecDstSld, *recovMeanSld, *recovSTDSld,
-		*incubPMinSld, *incubPMaxSld, *incubPBiasSld, *diseaRtSld,
-		*imunMeanSld, *imunSTDSld;
+	IBOutlet NSTextField *infecDgt, *infecDstDgt;
+	IBOutlet NSTextField
+		*mobDistMinDgt, *mobDistMaxDgt, *mobDistModeDgt,
+		*incubMinDgt, *incubMaxDgt, *incubModeDgt,
+		*fatalMinDgt, *fatalMaxDgt, *fatalModeDgt,
+		*recovMinDgt, *recovMaxDgt, *recovModeDgt,
+		*immunMinDgt, *immunMaxDgt, *immunModeDgt;
+	IBOutlet NSSlider *infecSld, *infecDstSld;
 	IBOutlet NSTextField *initPopDgt, *worldSizeDgt, *stepsPerDayDgt, *meshDgt, *nInfecDgt;
 	IBOutlet NSStepper *initPopStp, *worldSizeStp, *stepsPerDayStp, *meshStp, *nInfecStp;
 	IBOutlet NSTextField *qnsRtDgt, *qnsDlDgt, *qdsRtDgt, *qdsDlDgt,
-		*dstSTDgt, *dstOBDgt, *mobFrDgt, *mobDsDgt;
+		*dstSTDgt, *dstOBDgt, *mobFrDgt;
 	IBOutlet NSSlider *qnsRtSld, *qnsDlSld, *qdsRtSld, *qdsDlSld,
-		*dstSTSld, *dstOBSld, *mobFrSld, *mobDsSld;
+		*dstSTSld, *dstOBSld, *mobFrSld;
 	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn,
 		*saveAsUDBtn, *makeInitBtn;
 }

@@ -5,27 +5,17 @@
   Created by Tatsuo Unemi on 2020/05/24.
   Copyright © 2020 Tatsuo Unemi. All rights reserved.
 */
-"infec" = "infection rate";
-"recovMean" = "recovery mean";
-"recovSTD" = "recovery STD";
-"incubPMin" = "incubation min";
-"incubPMax" = "incubation max";
-"incubPBias" = "incubation bias";
-"diseaRt" = "disease ratio";
-"imunMean" = "immunity mean";
-"imunSTD" = "immunity STD";
-"qnsRt" = "asymp. quarantine rate";
-"qnsDl" = "asymp. quarantine delay";
-"qdsRt" = "symp. quarantime rate";
-"qdsDl" = "symp. quarantime delay";
-"dstST" = "distancing strength";
-"dstOB" = "distancing obedience";
-"mobFr" = "mobility frequency";
-"mobDs" = "mobility distance";
-"initPop" = "initial poplation size";
-"worldSize" = "world dimension";
-"stepsPerDay" = "steps per day";
-"mesh" = "number of mesh";
+"infectionProberbility" = "infection rate";
+"infectionDistance" = "infection distance";
+"quarantineAsymRate" = "asymp. quarantine rate";
+"quarantineAsymDelay" = "asymp. quarantine delay";
+"quarantineSympRate" = "symp. quarantime rate";
+"quarantineSympDelay" = "symp. quarantime delay";
+"distancingStrength" = "distancing strength";
+"distancingObedience" = "distancing obedience";
+"mobilityFrequency" = "mobility frequency";
+"mobilityDistance" = "mobility distance";
+
 "PreConditionWord" = "";
 "AnimeStepsFormat" = "Draw in each %ld steps.";
 "HistogramFormat" = "%@\nSamples %ld\nMin %ld, Max %ld\nMedian %ld\nAverage %.2f";

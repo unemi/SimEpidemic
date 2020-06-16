@@ -10,9 +10,51 @@
 #import "AppDelegate.h"
 #import "Document.h"
 
+@interface DistDigits : NSObject {
+	DistInfo *distInfo;
+	NSTextField __weak *minDgt, *maxDgt, *modDgt;
+}
+@end
+@implementation DistDigits
+- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits index:(NSInteger)index
+	var:(DistInfo *)var parent:(ParamPanel *)parent {
+	if (!(self = [super init])) return nil;
+	minDgt = digits[0];
+	maxDgt = digits[1];
+	modDgt = digits[2];
+	minDgt.tag = maxDgt.tag = modDgt.tag = index;
+	minDgt.target = maxDgt.target = modDgt.target = parent;
+	minDgt.action = maxDgt.action = modDgt.action = @selector(dValueChanged:);
+	distInfo = var;
+	return self;
+}
+- (void)adjustDigits:(const DistInfo * _Nullable)p {
+	if (p == NULL) p = distInfo;
+	minDgt.doubleValue = p->min;
+	maxDgt.doubleValue = p->max;
+	modDgt.doubleValue = p->mode;
+}
+- (DistInfo)dValueChanged:(NSTextField *)sender {
+	DistInfo *p = distInfo, org = *p;
+	*distInfo = (DistInfo){minDgt.doubleValue, maxDgt.doubleValue, modDgt.doubleValue};
+	if (sender == minDgt) {
+		if (p->max < p->min) maxDgt.doubleValue = p->max = p->min;
+		if (p->mode < p->min) modDgt.doubleValue = p->mode = p->min;
+	} else if (sender == maxDgt) {
+		if (p->min > p->max) minDgt.doubleValue = p->min = p->max;
+		if (p->mode > p->max) modDgt.doubleValue = p->mode = p->max;
+	} else {
+		if (p->min > p->mode) minDgt.doubleValue = p->min = p->mode;
+		if (p->max < p->mode) maxDgt.doubleValue = p->max = p->mode;
+	}
+	return org;
+}
+@end
+
 @interface ParamPanel () {
 	Document *doc;
 	NSArray<NSTextField *> *fDigits, *iDigits;
+	NSArray<DistDigits *> *dDigits;
 	NSArray<NSSlider *> *fSliders;
 	NSArray<NSStepper *> *iSteppers;
 	NSUndoManager *undoManager;
@@ -33,9 +75,10 @@
 - (void)adjustControls {
 	Params *p = doc.paramsP;
 	for (NSInteger i = 0; i < fDigits.count; i ++)
-		fDigits[i].doubleValue = fSliders[i].doubleValue = (&p->infec)[i];
+		fDigits[i].doubleValue = fSliders[i].doubleValue = (&p->PARAM_F1)[i];
+	for (DistDigits *d in dDigits) [d adjustDigits:NULL];
 	for (NSInteger i = 0; i < iDigits.count; i ++)
-		iDigits[i].integerValue = iSteppers[i].integerValue = (&p->initPop)[i];
+		iDigits[i].integerValue = iSteppers[i].integerValue = (&p->PARAM_I1)[i];
 	stepsPerDayStp.integerValue = round(log2(p->stepsPerDay));
 	stepsPerDayDgt.integerValue = p->stepsPerDay;
 }
@@ -45,14 +88,20 @@
 	revertFDBtn.enabled = (memcmp(doc.paramsP, &defaultParams, sizeof(Params)) != 0);
 	saveAsUDBtn.enabled = (memcmp(doc.paramsP, &userDefaultParams, sizeof(Params)) != 0);
 }
+#define DDGT(d1,d2,d3,i) [DistDigits.alloc initWithDigits:@[d1,d2,d3]\
+ index:i var:&doc.paramsP->PARAM_D1 + i parent:self]
 - (void)windowDidLoad {
     [super windowDidLoad];
-    fDigits = @[infecDgt, infecDstDgt, recovMeanDgt, recovSTDDgt,
-		incubPMinDgt, incubPMaxDgt, incubPBiasDgt, diseaRtDgt, imunMeanDgt, imunSTDDgt,
-		qnsRtDgt, qnsDlDgt, qdsRtDgt, qdsDlDgt, dstSTDgt, dstOBDgt, mobFrDgt, mobDsDgt];
-	fSliders = @[infecSld, infecDstSld, recovMeanSld, recovSTDSld,
-		incubPMinSld, incubPMaxSld, incubPBiasSld, diseaRtSld, imunMeanSld, imunSTDSld,
-		qnsRtSld, qnsDlSld, qdsRtSld, qdsDlSld, dstSTSld, dstOBSld, mobFrSld, mobDsSld];
+    fDigits = @[infecDgt, infecDstDgt,
+		qnsRtDgt, qnsDlDgt, qdsRtDgt, qdsDlDgt, dstSTDgt, dstOBDgt, mobFrDgt];
+	fSliders = @[infecSld, infecDstSld,
+		qnsRtSld, qnsDlSld, qdsRtSld, qdsDlSld, dstSTSld, dstOBSld, mobFrSld];
+	dDigits = @[
+		DDGT(mobDistMinDgt, mobDistMaxDgt, mobDistModeDgt, 0),
+		DDGT(incubMinDgt, incubMaxDgt, incubModeDgt, 1),
+		DDGT(fatalMinDgt, fatalMaxDgt, fatalModeDgt, 2),
+		DDGT(recovMinDgt, recovMaxDgt, recovModeDgt, 3),
+		DDGT(immunMinDgt, immunMaxDgt, immunModeDgt, 4) ];
 	iDigits = @[initPopDgt, worldSizeDgt, meshDgt, nInfecDgt];
 	iSteppers = @[initPopStp, worldSizeStp, meshStp, nInfecStp];
     for (NSInteger idx = 0; idx < fDigits.count; idx ++) {
@@ -151,5 +200,13 @@ if (sender != s) s.v = newValue;\
 - (void)iValueChanged:(NSControl *)sender {
 	VALUE_CHANGED(NSInteger, integerValue, initPop, iDigits, iSteppers)
 	[self checkUpdate];
+}
+- (void)dValueChanged:(NSTextField *)sender {
+	DistDigits *dd = dDigits[sender.tag];
+	DistInfo org = [dd dValueChanged:sender];
+	[undoManager registerUndoWithTarget:dd handler:^(DistDigits *target) {
+		[target adjustDigits:&org];
+		[sender sendAction:sender.action to:sender.target];
+	}];
 }
 @end
