@@ -41,8 +41,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface Scenario : NSWindowController 
 	<NSWindowDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate> {
-	IBOutlet NSButton *enabledCBox;
 	IBOutlet NSButton *shiftUpBtn, *shiftDownBtn;
+	IBOutlet NSButton *removeBtn, *applyBtn;
 }
 @property IBOutlet NSOutlineView *outlineView;
 @property (readonly) Document *doc;

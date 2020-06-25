@@ -81,8 +81,10 @@ void in_main_thread(dispatch_block_t block) {
 @implementation Document
 - (Agent **)QListP { return &_QList; }
 - (Agent **)CListP { return &_CList; }
-- (Params *)paramsP { return &params; }
-- (Params *)initParamsP { return &initParams; }
+- (RuntimeParams *)runtimeParamsP { return &runtimeParams; }
+- (RuntimeParams *)initParamsP { return &initParams; }
+- (WorldParams *)worldParamsP { return &worldParams; }
+- (WorldParams *)tmpWorldParamsP { return &tmpWorldParams; }
 - (BOOL)running { return loopMode == LoopRunning; }
 - (void)popLock { [popLock lock]; }
 - (void)popUnlock { [popLock unlock]; }
@@ -119,15 +121,18 @@ void in_main_thread(dispatch_block_t block) {
 	[statInfo reviseColors];
 }
 - (void)setInitialParameters:(NSData *)newParams {
-	NSData *orgParams = [NSData dataWithBytes:&initParams length:sizeof(Params)];
+	NSData *orgParams = [NSData dataWithBytes:&initParams length:sizeof(RuntimeParams)];
 	[self.undoManager registerUndoWithTarget:self handler:
 		^(Document *target) { [target setInitialParameters:orgParams]; }];
-	memcpy(&initParams, newParams.bytes, sizeof(Params));
+	memcpy(&initParams, newParams.bytes, sizeof(RuntimeParams));
 }
 - (void)showScenarioDesc {
+	NSInteger n = scenario.count;
 	scenarioText.stringValue = (scenario == nil)? NSLocalizedString(@"None", nil) :
-		[NSString stringWithFormat:@"%ld items", scenario.count];
+		[NSString stringWithFormat:@"%ld %@", n,
+			NSLocalizedString((n == 1)? @"item" : @"items", nil)];
 }
+- (NSArray *)scenario { return scenario; }
 - (void)setScenario:(NSArray *)newScen {
 	NSArray *orgScen = scenario;
 	[self.undoManager registerUndoWithTarget:self handler:
@@ -136,13 +141,13 @@ void in_main_thread(dispatch_block_t block) {
 	[self showScenarioDesc];
 }
 - (void)addInfected:(NSInteger)n {
-	NSInteger nSusc = 0;
-	for (NSInteger i = 0; i < params.mesh * params.mesh; i ++)
+	NSInteger nSusc = 0, nCells = worldParams.mesh * worldParams.mesh;
+	for (NSInteger i = 0; i < nCells; i ++)
 		for (Agent *a = _Pop[i]; a; a = a->next) if (a->health == Susceptible) nSusc ++;
 	if (nSusc == 0) return;
 	if (n >= nSusc) {
 		n = nSusc;
-		for (NSInteger i = 0; i < params.mesh * params.mesh; i ++)
+		for (NSInteger i = 0; i < nCells; i ++)
 			for (Agent *a = _Pop[i]; a; a = a->next) if (a->health == Susceptible)
 				{ a->health = Asymptomatic; a->daysI = a->daysD = 0; }
 	} else if (n > 0) {
@@ -157,7 +162,7 @@ void in_main_thread(dispatch_block_t block) {
 			return (c < d)? -1 : (c > d)? 1 : 0;
 		});
 		NSInteger idx = idxs[0];
-		for (NSInteger i = 0, j = 0, k = 0; i < params.mesh * params.mesh && j < n; i ++)
+		for (NSInteger i = 0, j = 0, k = 0; i < nCells && j < n; i ++)
 		for (Agent *a = _Pop[i]; a; a = a->next) if (a->health == Susceptible) {
 			if (k == idx) {
 				a->health = Asymptomatic; a->daysI = a->daysD = 0;
@@ -181,7 +186,7 @@ void in_main_thread(dispatch_block_t block) {
 	while (seqIndex < scenario.count) {
 		NSObject *item = scenario[seqIndex ++];
 		if ([item isKindOfClass:NSDictionary.class]) {
-			set_params_from_dict(&params, (NSDictionary *)item);
+			set_params_from_dict(&runtimeParams, &worldParams, (NSDictionary *)item);
 			in_main_thread( ^{ [self->paramPanel adjustControls]; });
 		} else if ([item isKindOfClass:NSNumber.class]) {
 			[self addInfected:((NSNumber *)item).integerValue];
@@ -204,51 +209,58 @@ void in_main_thread(dispatch_block_t block) {
 	[statInfo flushPanels];
 }
 - (void)resetPop {
-	if (initParams.initPop > 0) memcpy(&params, &initParams, sizeof(Params));
+	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
+		memcpy(&worldParams, &tmpWorldParams, sizeof(WorldParams));
+		[self updateChangeCount:NSChangeDone];
+	}
+	if (scenario != nil) memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
+	[paramPanel adjustControls];
 	[popLock lock];
-	if (nMesh != params.mesh) {
-		nMesh = params.mesh;
+	if (nMesh != worldParams.mesh) {
+		nMesh = worldParams.mesh;
 		NSInteger popMemSz = sizeof(void *) * nMesh * nMesh;
 		_Pop = realloc(_Pop, popMemSz);
 		pRange = realloc(pRange, sizeof(NSRange) * nMesh * nMesh);
 		memset(_Pop, 0, popMemSz);
 	} else for (NSInteger i = 0; i < nMesh * nMesh; i ++)
 		free_agent_mems(_Pop + i);
-	if (nPop != params.initPop) {
-		nPop = params.initPop;
+	if (nPop != worldParams.initPop) {
+		nPop = worldParams.initPop;
 		pop = realloc(pop, sizeof(void *) * nPop);
 	}
-	NSInteger nDist = params.dstOB / 100. * nPop;
-	NSInteger iIdx = 0, infecIdxs[params.nInitInfec];
-	for (NSInteger i = 0; i < params.nInitInfec; i ++) {
+	NSInteger nDist = runtimeParams.dstOB / 100. * nPop;
+	NSInteger iIdx = 0, infecIdxs[worldParams.nInitInfec];
+	for (NSInteger i = 0; i < worldParams.nInitInfec; i ++) {
 		NSInteger k = (nPop - i - 1) * random() / 0x7fffffff;
 		for (NSInteger j = 0; j < i; j ++) if (k >= infecIdxs[j]) k ++;
 		infecIdxs[i] = k;
 	}
-	qsort_b(infecIdxs, params.nInitInfec, sizeof(NSInteger), ^int(const void *a, const void *b) {
-		NSInteger *x = (NSInteger *)a, *y = (NSInteger *)b;
-		return (*x < *y)? -1 : (*x > *y)? 1 : 0;
+	qsort_b(infecIdxs, worldParams.nInitInfec, sizeof(NSInteger),
+		^int(const void *a, const void *b) {
+			NSInteger *x = (NSInteger *)a, *y = (NSInteger *)b;
+			return (*x < *y)? -1 : (*x > *y)? 1 : 0;
 	});
 // for (NSInteger i = 0; i < params.nInitInfec; i ++) printf("%ld,", infecIdxs[i]); printf("\n");
 	for (NSInteger i = 0; i < nPop; i ++) {
 		Agent *a = new_agent();
 		a->ID = i;
-		reset_agent(a, &params);
+		reset_agent(a, &runtimeParams, &worldParams);
 		if (i < nDist) a->distancing = YES;
-		if (iIdx < params.nInitInfec && i == infecIdxs[iIdx])
+		if (iIdx < worldParams.nInitInfec && i == infecIdxs[iIdx])
 			{ a->health = Asymptomatic; iIdx ++; }
-		add_agent(a, &params, _Pop);
+		add_agent(a, &worldParams, _Pop);
 	}
 	free_agent_mems(&_QList);
 	free_agent_mems(&_CList);
 	_WarpList = NSMutableArray.new;
 	step = 0;
-	[statInfo reset:nPop infected:params.nInitInfec];
+	[statInfo reset:nPop infected:worldParams.nInitInfec];
 	[popLock unlock];
 	seqIndex = 0;
 	[self setParamsAndConditionFromSequence];
 	daysNum.doubleValue = 0.;
 	[self showCurrentStatistics];
+	loopMode = LoopNone;
 }
 - (instancetype)init {
 	if ((self = [super init]) == nil) return nil;
@@ -259,7 +271,10 @@ void in_main_thread(dispatch_block_t block) {
 	newWarpF = NSMutableArray.new;
 	newWarpLock = NSLock.new;
 	animeSteps = defaultAnimeSteps;
-	memcpy(&params, &userDefaultParams, sizeof(Params));
+	memcpy(&runtimeParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
+	memcpy(&initParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
+	memcpy(&worldParams, &userDefaultWorldParams, sizeof(WorldParams));
+	memcpy(&tmpWorldParams, &userDefaultWorldParams, sizeof(WorldParams));
 	self.undoManager = NSUndoManager.new;
 	return self;
 }
@@ -280,7 +295,7 @@ void in_main_thread(dispatch_block_t block) {
 	if (scenario != nil) [self showScenarioDesc];
 	orgWindowSize = windowController.window.frame.size;
 	orgViewSize = view.frame.size;
-	[self openStatPenel:self];
+//	[self openStatPenel:self];
 }
 - (void)windowWillClose:(NSNotification *)notification {
 	if (scenarioPanel != nil) [scenarioPanel close];
@@ -299,18 +314,18 @@ void in_main_thread(dispatch_block_t block) {
 	return (NSSize){ aSize.width + orgWindowSize.width - orgViewSize.width,
 		aSize.height + orgWindowSize.height - orgViewSize.height };
 }
-static NSString *keyInitialParameters = @"initialParameters", *keyScenario = @"scenario";
+NSString *keyParameters = @"parameters", *keyScenario = @"scenario";
 - (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyAnimeSteps] = @(animeSteps);
-	if (initParams.initPop > 0) dict[keyInitialParameters] = param_dict(&initParams);
 	if (scenario != nil) {
+		dict[keyParameters] = param_dict(&initParams, &worldParams);
 		NSObject *items[scenario.count];
 		for (NSInteger i = 0; i < scenario.count; i ++)
 			items[i] = [scenario[i] isKindOfClass:NSPredicate.class]?
 				((NSPredicate *)scenario[i]).predicateFormat : scenario[i];
 		dict[keyScenario] = [NSArray arrayWithObjects:items count:scenario.count];
-	}
+	} else dict[keyParameters] = param_dict(&runtimeParams, &worldParams);
 	return [NSPropertyListSerialization dataWithPropertyList:dict
 		format:NSPropertyListXMLFormat_v1_0 options:0 error:outError];
 }
@@ -321,8 +336,11 @@ static NSString *keyInitialParameters = @"initialParameters", *keyScenario = @"s
 	if (dict == nil) return NO;
 	NSNumber *num = dict[keyAnimeSteps];
 	if (num != nil) animeSteps = num.integerValue;
-	NSDictionary *initPDict = dict[keyInitialParameters];
-	if (initPDict != nil) set_params_from_dict(&initParams, initPDict);
+	NSDictionary *pDict = dict[keyParameters];
+	if (pDict != nil) {
+		set_params_from_dict(&runtimeParams, &worldParams, pDict);
+		memcpy(&tmpWorldParams, &worldParams, sizeof(WorldParams));
+	}
 	NSArray *seq = dict[keyScenario];
 	if (seq != nil) {
 		NSObject *items[seq.count];
@@ -331,6 +349,7 @@ static NSString *keyInitialParameters = @"initialParameters", *keyScenario = @"s
 				[NSPredicate predicateWithFormat:(NSString *)seq[i]] : seq[i];
 		scenario = [NSArray arrayWithObjects:items count:seq.count];
 		if (scenarioText != nil) [self showScenarioDesc];
+		memcpy(&initParams, &runtimeParams, sizeof(RuntimeParams));
 	}
 	seqIndex = 0;
 	[self setParamsAndConditionFromSequence];
@@ -340,7 +359,7 @@ static NSString *keyInitialParameters = @"initialParameters", *keyScenario = @"s
 	Agent **apA = pop + pRange[iA].location, **apB = pop + pRange[iB].location;
 	for (NSInteger j = 0; j < pRange[iA].length; j ++)
 	for (NSInteger k = 0; k < pRange[iB].length; k ++)
-		interacts(apA[j], apB[k], &params);
+		interacts(apA[j], apB[k], &runtimeParams, &worldParams);
 }
 - (void)addNewWarp:(WarpInfo *)info {
 	[newWarpLock lock];
@@ -360,7 +379,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 	NSInteger tmIdx = 0;
 	mCount ++;
 #endif
-	NSInteger nCells = params.mesh * params.mesh;
+	NSInteger nCells = worldParams.mesh * worldParams.mesh;
 	memset(pRange, 0, sizeof(NSRange) * nCells);
 	NSInteger nInField = 0;
 	for (NSInteger i = 0; i < nCells; i ++) {
@@ -376,7 +395,8 @@ static NSInteger mCount = 0, mCount2 = 0;
 	tm1 = tm2;
 #endif
 
-	Params *para = &params;
+	RuntimeParams *rp = &runtimeParams;
+	WorldParams *wp = &worldParams;
 	Agent **popL = pop;
 	__weak typeof(self) weakSelf = self;
 	for (NSInteger i = 0; i < nCells; i ++) {
@@ -385,7 +405,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 		[self addOperation:^{
 			for (NSInteger j = 0; j < rng.length; j ++)
 			for (NSInteger k = j + 1; k < rng.length; k ++)
-				interacts(ap[j], ap[k], para);
+				interacts(ap[j], ap[k], rp, wp);
 		}];
 	}
 	[self waitAllOperations];
@@ -394,7 +414,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-	NSInteger mesh = params.mesh;
+	NSInteger mesh = worldParams.mesh;
 	for (NSInteger x = 1; x < mesh; x += 2)
 		for (NSInteger y = 0; y < mesh; y ++) [self addOperation:^{
 			[weakSelf gridToGridA:y * mesh + x B:y * mesh + x - 1]; }];
@@ -440,11 +460,11 @@ static NSInteger mCount = 0, mCount2 = 0;
 		NSInteger end = (j < nCores - 1)? (j + 1) * nInField / nCores : nInField;
 		[self addOperation:^{
 			for (NSInteger i = start; i < end; i ++)
-				step_agent(popL[i], para, weakSelf);
+				step_agent(popL[i], rp, wp, weakSelf);
 		}];
 	}
 	for (Agent *a = _QList; a; a = a->next)
-		step_agent_in_quarantine(a, &params, self);
+		step_agent_in_quarantine(a, &worldParams, self);
 	[self waitAllOperations];
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
@@ -461,7 +481,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 		} else a->isWarping = YES;
 		switch (info.mode) {
 			case WarpInside: case WarpToHospital: case WarpToCemeteryF:
-			remove_agent(a, &params, _Pop); break;
+			remove_agent(a, &worldParams, _Pop); break;
 			case WarpBack: case WarpToCemeteryH:
 			remove_from_list(a, &_QList); break;
 		}
@@ -470,12 +490,12 @@ static NSInteger mCount = 0, mCount2 = 0;
 	[newWarpF removeAllObjects];
 	for (NSInteger i = _WarpList.count - 1; i >= 0; i --) {
 		WarpInfo *info = _WarpList[i];
-		if (warp_step(info.agent, &params, self, info.mode, info.goal))
+		if (warp_step(info.agent, &worldParams, self, info.mode, info.goal))
 			[_WarpList removeObjectAtIndex:i];
 	}
 
 	BOOL finished = [statInfo calcStat:_Pop nCells:nCells
-		qlist:_QList clist:_CList warp:_WarpList stepsPerDay:params.stepsPerDay];
+		qlist:_QList clist:_CList warp:_WarpList stepsPerDay:worldParams.stepsPerDay];
 	[popLock unlock];
 	step ++;
 	if (loopMode == LoopRunning) {
@@ -498,23 +518,22 @@ static NSInteger mCount = 0, mCount2 = 0;
 		} else mCount = 0;
 	}
 #endif
-	CGFloat days = floor(step / params.stepsPerDay);
-	in_main_thread(^{
-		[self showCurrentStatistics];
-		self->daysNum.doubleValue = days;
-	});
+}
+- (void)showAllAfterStep {
+	[self showCurrentStatistics];
+	daysNum.doubleValue = floor(step / worldParams.stepsPerDay);
+	spsNum.doubleValue = self->stepsPerSec;
+	view.needsDisplay = YES;
 }
 - (void)runningLoop {
 	while (loopMode == LoopRunning) {
 		[self doOneStep];
 		CGFloat newTime = get_uptime(), timePassed = newTime - prevTime;
-		if (timePassed < 1.) {
+		if (timePassed < 1.)
 			stepsPerSec += (fmin(30., 1. / timePassed) - stepsPerSec) * 0.2;
-			in_main_thread(^{ self->spsNum.doubleValue = self->stepsPerSec; });
-		}
 		prevTime = newTime;
 		if (step % animeSteps == 0) {
-			in_main_thread(^{ self->view.needsDisplay = YES; });
+			in_main_thread(^{ [self showAllAfterStep]; });
 			NSInteger usToWait = (1./30. - timePassed) * 1e6;
 			usleep((unsigned int)((usToWait < 0)? 1 : usToWait));
 		} else usleep(1);
@@ -553,7 +572,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 		case LoopFinished: case LoopEndByCondition: [self goAhead];
 		case LoopEndByUser: case LoopNone: [self doOneStep];
 	}
-	view.needsDisplay = YES;
+	[self showAllAfterStep];
 	loopMode = LoopEndByUser;
 }
 - (IBAction)reset:(id)sender {
@@ -610,12 +629,18 @@ static NSInteger mCount = 0, mCount2 = 0;
 - (void)openParamsFromURL:(NSURL *)url {
 	NSObject *pList = get_propertyList_from_url(url, NSDictionary.class, view.window);
 	if (pList != nil) {
-		Params tmpParams;
-		memcpy(&tmpParams, &params, sizeof(Params));
-		set_params_from_dict(&tmpParams, (NSDictionary *)pList);
+		RuntimeParams tmpRParams;
+		WorldParams tmpWParams;
+		memcpy(&tmpRParams, &runtimeParams, sizeof(RuntimeParams));
+		memcpy(&tmpWParams, &worldParams, sizeof(WorldParams));
+		set_params_from_dict(&tmpRParams, &tmpWParams, (NSDictionary *)pList);
 		[self openParamPanel:self];
-		[paramPanel setParamsWithPointer:&tmpParams];
+		[paramPanel setParamsOfRuntime:&tmpRParams world:&tmpWParams];
 	}
+}
+- (void)revisePanelsAlpha {
+	if (paramPanel != nil) paramPanel.window.alphaValue = panelsAlpha;
+	if (scenarioPanel != nil) scenarioPanel.window.alphaValue = panelsAlpha;
 }
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
 	SEL action = menuItem.action;

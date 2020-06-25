@@ -9,6 +9,8 @@
 #import <Cocoa/Cocoa.h>
 #import "AppDelegate.h"
 
+extern NSString *keyParameters, *keyScenario;
+
 @interface WarpInfo : NSObject
 @property Agent *agent;
 @property CGPoint goal;
@@ -26,7 +28,8 @@
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;
-	Params params, initParams;
+	RuntimeParams runtimeParams, initParams;
+	WorldParams worldParams, tmpWorldParams;
 	NSInteger step;
 	NSLock *popLock;
 	IBOutlet StatInfo *statInfo;
@@ -35,8 +38,10 @@
 @property (readonly) NSMutableArray<WarpInfo *> *WarpList;
 - (Agent **)QListP;
 - (Agent **)CListP;
-- (Params *)paramsP;
-- (Params *)initParamsP;
+- (RuntimeParams *)runtimeParamsP;
+- (RuntimeParams *)initParamsP;
+- (WorldParams *)worldParamsP;
+- (WorldParams *)tmpWorldParamsP;
 - (BOOL)running;
 - (void)popLock;
 - (void)popUnlock;
@@ -46,10 +51,12 @@
 - (void)setPanelTitle:(NSWindow *)panel;
 - (void)reviseColors;
 - (void)setInitialParameters:(NSData *)newParams;
+- (NSArray *)scenario;
 - (void)setScenario:(NSArray *)newScen;
 - (void)addNewWarp:(WarpInfo *)info;
 - (void)openScenarioFromURL:(NSURL *)url;
 - (void)openParamsFromURL:(NSURL *)url;
+- (void)revisePanelsAlpha;
 @end
 
 @interface NSWindowController (ChildWindowExtension)

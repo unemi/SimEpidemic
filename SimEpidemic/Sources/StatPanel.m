@@ -36,8 +36,7 @@ static StatData *new_stat(void) {
 - (void)inc { _cnt ++; }
 @end
 
-//#define IMG_WIDTH (640*4)
-#define IMG_WIDTH (160*4)
+#define IMG_WIDTH (320*4)
 #define IMG_HEIGHT	320
 #define MAX_N_REC	IMG_WIDTH
 @implementation StatInfo
@@ -103,6 +102,7 @@ static StatData *new_stat(void) {
 	[_IncubPHist removeAllObjects];
 	[_RecovPHist removeAllObjects];
 	[_DeathPHist removeAllObjects];
+	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	[self fillImageForOneStep:_statistics atX:0];
 }
 static void count_health(Agent *a, StatData *stat, StatData *tran) {
@@ -178,7 +178,7 @@ static void count_health(Agent *a, StatData *stat, StatData *tran) {
 				newTran->cnt[i] = transCumm.cnt[i] / skipDays;
 			newTran->next = _transit;
 			_transit = newTran;
-			if (days / skipDays > MAX_N_REC) {
+			if (days / skipDays >= MAX_N_REC) {
 				[statLock lock];
 				for (StatData *p = newTran; p; p = p->next) {
 					StatData *q = p->next;

@@ -28,8 +28,11 @@ typedef struct {
 	CGFloat mobFr; // Mobility frequency
 	DistInfo mobDist; // and distance
 	DistInfo incub, fatal, recov, immun; // incubation, fatality, recovery, immunity
-	NSInteger initPop, worldSize, mesh, stepsPerDay, nInitInfec;
-} Params;
+} RuntimeParams;
+typedef struct {
+	NSInteger initPop, worldSize, mesh, nInitInfec, stepsPerDay;
+} WorldParams;
+
 #define PARAM_F1 infec
 #define PARAM_D1 mobDist
 #define PARAM_I1 initPop

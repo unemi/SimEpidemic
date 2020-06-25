@@ -56,3 +56,7 @@
 "Incubation Period" = "潜伏期間";
 "Recovery Period" = "回復までの期間";
 "Fatal Period" = "死亡までの期間";
+"item" = "項目";
+"items" = "項目";
+"Remove scenario from the simulator" = "シナリオをシミュレータから削除";
+"Apply this scenario to the simulator" = "このシナリオをシミュレータに適用";

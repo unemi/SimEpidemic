@@ -33,7 +33,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithDoc:(Document *)dc;
 - (void)adjustControls;
 - (IBAction)changeStepsPerDay:(id)sender;
-- (void)setParamsWithPointer:(Params *)paramsP;
+- (void)setParamsOfRuntime:(const RuntimeParams *)rp world:(const WorldParams *)wp;
 - (IBAction)reset:(id)sender;
 - (IBAction)resetToFactoryDefaults:(id)sender;
 - (IBAction)saveAsUserDefaults:(id)sender;

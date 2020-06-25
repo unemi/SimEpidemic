@@ -62,14 +62,14 @@ NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window) {
 		{ error_msg(@"Property is invalid class.", window, NO); return nil; }
 	return object;
 }
-void load_property_data(NSString *fileType, NSWindow *window,
-	Class class, void (^block)(NSObject *)) {
+void load_property_data(NSArray<NSString *> *fileTypes, NSWindow *window,
+	Class class, void (^block)(NSURL *url, NSObject *)) {
 	NSOpenPanel *op = NSOpenPanel.openPanel;
-	op.allowedFileTypes = @[fileType];
+	op.allowedFileTypes = fileTypes;
 	[op beginSheetModalForWindow:window completionHandler:^(NSModalResponse result) {
 		if (result != NSModalResponseOK) return;
 		NSObject *object = get_propertyList_from_url(op.URL, class, window);
-		if (object != nil) block(object);
+		if (object != nil) block(op.URL, object);
 	}];
 }
 void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) {
@@ -104,42 +104,49 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeInteger, @"initPop", {.i = { 10000, 100, 999900}}},
 	{ ParamTypeInteger, @"worldSize", {.i = { 360, 10, 999999}}},
 	{ ParamTypeInteger, @"mesh", {.i = { 18, 1, 999}}},
-	{ ParamTypeInteger, @"stepsPerDay", {.i = { 4, 1, 999}}},
 	{ ParamTypeInteger, @"nInitInfec", {.i = { 4, 1, 999}}},
+	{ ParamTypeInteger, @"stepsPerDay", {.i = { 4, 1, 999}}},
 	{ ParamTypeNone, nil }
 };
 NSInteger defaultAnimeSteps = 1;
-Params defaultParams, userDefaultParams;
+RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
+WorldParams defaultWorldParams, userDefaultWorldParams;
 NSArray<NSString *> *paramKeys, *paramNames;
 NSArray<NSNumberFormatter *> *paramFormatters;
 NSDictionary<NSString *, NSString *> *paramKeyFromName;
 NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
-NSDictionary *param_dict(Params *pp) {
+NSDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
-	CGFloat *fp = &pp->PARAM_F1;
-	DistInfo *dp = &pp->PARAM_D1;
-	NSInteger *ip = &pp->PARAM_I1;
+	CGFloat *fp = (rp != NULL)? &rp->PARAM_F1 : NULL;
+	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
+	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
-		case ParamTypeFloat: md[p->key] = @(*(fp ++)); break;
-		case ParamTypeDist: md[p->key] = @[@(dp[0].min), @(dp[0].max), @(dp[0].mode)]; break;
-		case ParamTypeInteger: md[p->key] = @(*(ip ++));
+		case ParamTypeFloat: if (fp != NULL) md[p->key] = @(*(fp ++)); break;
+		case ParamTypeDist: if (dp != NULL) {
+			md[p->key] = @[@(dp[0].min), @(dp[0].max), @(dp[0].mode)];
+			dp ++;
+		} break;
+		case ParamTypeInteger: if (ip != NULL) md[p->key] = @(*(ip ++));
 		default: break;
 	}
 	return [NSDictionary dictionaryWithDictionary:md];
 }
 #define IDX_D 1000
 #define IDX_I 2000
-void set_params_from_dict(Params *pp, NSDictionary *dict) {
+void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict) {
+	CGFloat *fp = (rp != NULL)? &rp->PARAM_F1 : NULL;
+	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
+	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
 	for (NSString *key in dict.keyEnumerator) {
 		NSNumber *idxNum = paramIndexFromKey[key];
 		if (idxNum == nil) continue;
 		NSInteger index = idxNum.integerValue;
-		if (index < IDX_D) (&pp->PARAM_F1)[index] = [dict[key] doubleValue];
-		else if (index < IDX_I) {
+		if (index < IDX_D) { if (fp != NULL) fp[index] = [dict[key] doubleValue]; }
+		else if (index < IDX_I) { if (dp != NULL) {
 			NSArray<NSNumber *> *arr = dict[key];
-			(&pp->PARAM_D1)[index - IDX_D] = (DistInfo){
+			dp[index - IDX_D] = (DistInfo){
 				arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
-		} else (&pp->PARAM_I1)[index - IDX_I] = [dict[key] integerValue];
+		}} else if (ip != NULL) ip[index - IDX_I] = [dict[key] integerValue];
 	}
 }
 #define RGB3(r,g,b) ((r<<16)|(g<<8)|b)
@@ -155,8 +162,10 @@ static NSString *colKeys[] = {
 	@"colorBackgournd", @"colorHospital", @"colorCemetery", @"colorText"
 };
 #define DEFAULT_WARP_OPACITY .5
+#define DEFAULT_PANELS_ALPHA .9
 CGFloat warpOpacity = DEFAULT_WARP_OPACITY;
-static NSString *keyWarpOpacity = @"warpOpacity";
+CGFloat panelsAlpha = DEFAULT_PANELS_ALPHA;
+static NSString *keyWarpOpacity = @"warpOpacity", *keyPanelsAlpha = @"panelsAlpha";
 static void setup_colors(void) {
 	NSColorSpace *colSpc = NSColorSpace.genericRGBColorSpace;
 	for (NSInteger i = 0; i < N_COLORS; i ++) {
@@ -176,10 +185,10 @@ static void setup_colors(void) {
 	nCores = NSProcessInfo.processInfo.processorCount;
 	NSInteger nF = 0, nD = 0, nI = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
-		case ParamTypeFloat: (&defaultParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
-		case ParamTypeDist: (&defaultParams.PARAM_D1)[nD ++] = (DistInfo){
+		case ParamTypeFloat: (&defaultRuntimeParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
+		case ParamTypeDist: (&defaultRuntimeParams.PARAM_D1)[nD ++] = (DistInfo){
 			p->v.d.defMin, p->v.d.defMax, p->v.d.defMode}; break;
-		case ParamTypeInteger: (&defaultParams.PARAM_I1)[nI ++] = p->v.i.defaultValue;
+		case ParamTypeInteger: (&defaultWorldParams.PARAM_I1)[nI ++] = p->v.i.defaultValue;
 		default: break;
 	}
 	NSInteger nn = nF + nD + nI;
@@ -206,6 +215,8 @@ static void setup_colors(void) {
 			fmt.allowsFloats = NO;
 			fmt.minimum = @(p->v.i.minValue);
 			fmt.maximum = @(p->v.i.maxValue);
+			fmt.usesGroupingSeparator = YES;
+			fmt.groupingSize = 3;
 			formatters[i - nD] = fmt;
 			default: break;
 		}
@@ -215,7 +226,8 @@ static void setup_colors(void) {
 	paramFormatters = [NSArray arrayWithObjects:formatters count:nF + nI];
 	paramKeyFromName = [NSDictionary dictionaryWithObjects:keys forKeys:names count:nF];
 	paramIndexFromKey = [NSDictionary dictionaryWithObjects:indexes forKeys:keys count:nn];
-	memcpy(&userDefaultParams, &defaultParams, sizeof(Params));
+	memcpy(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams));
+	memcpy(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
 	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 	NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;
 	NSNumber *num;
@@ -225,15 +237,16 @@ static void setup_colors(void) {
 		if ((num = [ud objectForKey:colKeys[i]])) stateRGB[i] = num.integerValue;
 	for (NSInteger i = 0; i < nF; i ++)
 		if ((num = [ud objectForKey:paramInfo[i].key]))
-			(&userDefaultParams.PARAM_F1)[i] = num.doubleValue;
+			(&userDefaultRuntimeParams.PARAM_F1)[i] = num.doubleValue;
 	for (NSInteger i = 0; i < nD; i ++)
 		if ((arr = [ud objectForKey:paramInfo[i + nF].key]))
-			(&userDefaultParams.PARAM_D1)[i] = (DistInfo){
+			(&userDefaultRuntimeParams.PARAM_D1)[i] = (DistInfo){
 				arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
 	for (NSInteger i = 0; i < nI; i ++)
 		if ((num = [ud objectForKey:paramInfo[i + nF + nD].key]))
-			(&userDefaultParams.PARAM_I1)[i] = num.integerValue;
+			(&userDefaultWorldParams.PARAM_I1)[i] = num.integerValue;
 	if ((num = [ud objectForKey:keyWarpOpacity])) warpOpacity = num.doubleValue;
+	if ((num = [ud objectForKey:keyPanelsAlpha])) panelsAlpha = num.doubleValue;
 	setup_colors();
 }
 - (void)application:(NSApplication *)application openURLs:(NSArray<NSURL *> *)urls {
@@ -257,8 +270,12 @@ static void setup_colors(void) {
 		if (stateRGB[i] == defaultStateRGB[i]) [ud removeObjectForKey:colKeys[i]];
 		else [ud setInteger:stateRGB[i] forKey:colKeys[i]];
 	}
-	if (warpOpacity != DEFAULT_WARP_OPACITY)
-		[ud setDouble:warpOpacity forKey:keyWarpOpacity];
+	if (warpOpacity == DEFAULT_WARP_OPACITY)
+		[ud removeObjectForKey:keyWarpOpacity];
+	else [ud setDouble:warpOpacity forKey:keyWarpOpacity];
+	if (panelsAlpha == DEFAULT_WARP_OPACITY)
+		[ud removeObjectForKey:keyPanelsAlpha];
+	else [ud setDouble:panelsAlpha forKey:keyPanelsAlpha];
 }
 - (IBAction)openPreferencePanel:(id)sender {
 	static Preferences *pref = nil;
@@ -280,6 +297,7 @@ static void setup_colors(void) {
 		colWells[i].color = stateColors[i];
 	}
 	warpOpacitySld.doubleValue = warpOpacityDgt.doubleValue = warpOpacity;
+	panelsAlphaSld.doubleValue = panelsAlphaDgt.doubleValue = panelsAlpha;
 }
 - (IBAction)changeAnimeSteps:(id)sender {
 	defaultAnimeSteps = 1 << animeStepper.integerValue;
@@ -307,6 +325,13 @@ static void setup_colors(void) {
 	if (sender != warpOpacitySld) warpOpacitySld.doubleValue = warpOpacity;
 	if (sender != warpOpacityDgt) warpOpacityDgt.doubleValue = warpOpacity;
 }
+- (IBAction)changePanelsAlpha:(NSControl *)sender {
+	panelsAlpha = sender.doubleValue;
+	if (sender != panelsAlphaSld) panelsAlphaSld.doubleValue = panelsAlpha;
+	if (sender != panelsAlphaDgt) panelsAlphaDgt.doubleValue = panelsAlpha;
+	for (Document *doc in NSDocumentController.sharedDocumentController.documents)
+		[doc revisePanelsAlpha];
+}
 - (IBAction)applyToAllDocuments:(id)sender {
 	for (NSInteger i = 0; i < NHealthTypes; i ++)
 		warpColors[i] = [stateColors[i] colorWithAlphaComponent:warpOpacity];
@@ -322,6 +347,9 @@ static void setup_colors(void) {
 		[ud removeObjectForKey:keyWarpOpacity];
 		self->warpOpacitySld.doubleValue = self->warpOpacityDgt.doubleValue = 
 		warpOpacity = DEFAULT_WARP_OPACITY;
+		[ud removeObjectForKey:keyPanelsAlpha];
+		self->panelsAlphaSld.doubleValue = self->panelsAlphaDgt.doubleValue =
+		panelsAlpha = DEFAULT_PANELS_ALPHA;
 		memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 		setup_colors();
 		for (NSInteger i = 0; i < N_COLORS; i ++)

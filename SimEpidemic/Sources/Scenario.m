@@ -376,7 +376,7 @@ static void check_images(void) {
 		ParameterCellView *pView = (ParameterCellView *)self.view;
 		NSInteger index = pView.namePopUp.indexOfSelectedItem;
 		[self addChild:[ParamElmItem.alloc initWithScenario:scenario index:index
-			value:((CGFloat *)scenario.doc.paramsP)[index]]];
+			value:((CGFloat *)scenario.doc.runtimeParamsP)[index]]];
 	} else [super buttonAction:button];
 }
 - (void)dummyAction:(id)sender {}
@@ -618,15 +618,19 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 	check_images();
 	_doc = dc;
 	_undoManager = NSUndoManager.new;
-	itemList = NSMutableArray.new;
 	_intFormatter = NSNumberFormatter.new;
 	_intFormatter.minimum = @0;
-	_intFormatter.maximum = @(dc.paramsP->initPop);
+	_intFormatter.maximum = @(dc.worldParamsP->initPop);
 	return self;
 }
 - (void)windowDidLoad {
     [super windowDidLoad];
+    self.window.alphaValue = panelsAlpha;
     [_doc setPanelTitle:self.window];
+	removeBtn.toolTip = NSLocalizedString(@"Remove scenario from the simulator", nil);
+	applyBtn.toolTip = NSLocalizedString(@"Apply this scenario to the simulator", nil);
+    if (_doc.scenario != nil) [self setScenarioWithArray:_doc.scenario];
+    else itemList = NSMutableArray.new;
 }
 - (void)removeItem:(ScenarioItem *)item {
 	if ([item isKindOfClass:ParamItem.class] ||
@@ -641,12 +645,14 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 }
 //
 - (void)setScenarioWithUndo:(NSMutableArray<ScenarioItem *> *)new {
-	NSMutableArray<ScenarioItem *> *org = itemList;
-	[_undoManager registerUndoWithTarget:self handler:
-		^(Scenario *target) { [target setScenarioWithUndo:org]; }];
-	if (org.count > 0) [_outlineView removeItemsAtIndexes:
-		[NSIndexSet indexSetWithIndexesInRange:(NSRange){0, org.count}]
-		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
+	if (itemList != nil) {
+		NSMutableArray<ScenarioItem *> *org = itemList;
+		[_undoManager registerUndoWithTarget:self handler:
+			^(Scenario *target) { [target setScenarioWithUndo:org]; }];
+		if (org.count > 0) [_outlineView removeItemsAtIndexes:
+			[NSIndexSet indexSetWithIndexesInRange:(NSRange){0, org.count}]
+			inParent:nil withAnimation:NSTableViewAnimationEffectFade];
+	}
 	itemList = new;
 	if (new.count > 0) [_outlineView insertItemsAtIndexes:
 		[NSIndexSet indexSetWithIndexesInRange:(NSRange){0, new.count}]
@@ -751,18 +757,27 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 		ScenarioItem *item = nil;
 		if ([elm isKindOfClass:NSDictionary.class]) {
 			item = [ParamItem.alloc initWithScenario:self];
-			for (NSString *key in ((NSDictionary *)elm).keyEnumerator) {
-				NSInteger index;
-				for (index = 0; index < paramKeys.count; index ++)
-					if ([key isEqualToString:paramKeys[index]]) break;
-				[((ParamItem *)item).children addObject:[ParamElmItem.alloc
-					initWithScenario:self index:index
-						value:[((NSDictionary *)elm)[key] integerValue]]];
+			NSPopUpButton *popup = ((ParameterCellView *)item.view).namePopUp;
+			NSInteger aIdx = -1;
+			for (NSInteger idx = 0; idx < popup.numberOfItems; idx ++) {
+				NSNumber *num = ((NSDictionary *)elm)[paramKeys[idx]];
+				if (num != nil) {
+					 [((ParamItem *)item).children addObject:
+						 [ParamElmItem.alloc initWithScenario:self
+							 index:idx value:num.integerValue]];
+					 [popup itemAtIndex:idx].tag = 1;
+				} else if (aIdx < 0) aIdx = idx;
 			}
+			if (aIdx < 0) ((ParamItem *)item).btnsView.buttons[1].enabled
+				= popup.enabled = NO;
+			else [popup selectItemAtIndex:aIdx];
 		} else if ([elm isKindOfClass:NSString.class]) {
 			item = [CondItem.alloc initWithScenario:self];
 			((CondItem *)item).element = [self itemWithPredicate:
 				[NSPredicate predicateWithFormat:(NSString *)elm] parent:item];
+		} else if ([elm isKindOfClass:NSPredicate.class]) {
+			item = [CondItem.alloc initWithScenario:self];
+			((CondItem *)item).element = [self itemWithPredicate:(NSPredicate *)elm parent:item];
 		} else if ([elm isKindOfClass:NSNumber.class]) {
 			item = [InfecItem.alloc initWithScenario:self];
 			((InfecCellView *)(item.view)).digits.integerValue = ((NSNumber *)elm).integerValue;
@@ -772,7 +787,18 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 	[self setScenarioWithUndo:ma];
 }
 - (IBAction)loadDocument:(id)sender {
-	load_property_data(@"sEpS", self.window, NSArray.class, ^(NSObject *object) {
+	NSWindow *window = self.window;
+	load_property_data(@[@"sEpi", @"sEpS"], self.window, NULL,
+		^(NSURL *url, NSObject *object) {
+		if ([url.pathExtension isEqualToString:@"sEpi"]) {
+			if (![object isKindOfClass:NSDictionary.class])
+				{ error_msg(@"Property is invalid class.", window, NO); return; }
+			else if ((object = ((NSDictionary *)object)[keyScenario]) == nil)
+				{ error_msg([NSString stringWithFormat:@"%@ doesn't include scenario.",
+					url.path], window, NO); return; }
+		}
+		if (![object isKindOfClass:NSArray.class])
+			{ error_msg(@"Property is invalid class.", window, NO); return; }
 		[self setScenarioWithArray:(NSArray *)object];
 		self->savedPList = (NSArray *)object;
 	});
@@ -786,13 +812,14 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 - (IBAction)revertToSaved:(id)sender {
 	if (savedPList != nil) [self setScenarioWithArray:savedPList];
 }
+- (IBAction)remove:(id)sender {
+	_doc.scenario = NSMutableArray.new;
+}
 - (IBAction)apply:(id)sender {
 	NSMutableArray *ma = NSMutableArray.new;
-	if (enabledCBox.state == NSControlStateValueOn) {
-		for (ScenarioItem *item in itemList) {
-			NSObject *elm = item.scenarioElement;
-			if (elm != nil) [ma addObject:elm];
-		}
+	for (ScenarioItem *item in itemList) {
+		NSObject *elm = item.scenarioElement;
+		if (elm != nil) [ma addObject:elm];
 	}
 	_doc.scenario = [NSArray arrayWithArray:ma];
 }

@@ -13,7 +13,7 @@
 static NSInteger intervalDays[] = {0, 1, 2, 7, 10, 14, 30};
 @implementation StatInfo (DataTableExtension)
 - (void)buildTimeEvoData:(NSMutableArray<NSDictionary *> *)ma interval:(NSInteger)interval {
-	NSInteger spd = doc.paramsP->stepsPerDay;
+	NSInteger spd = doc.worldParamsP->stepsPerDay;
 	NSInteger skp = ((interval == 0)? 1 : interval * spd) / skip;
 	if (skp <= 0) return;
 	StatData *stat = self.statistics;
@@ -64,7 +64,7 @@ static NSInteger intervalDays[] = {0, 1, 2, 7, 10, 14, 30};
 - (BOOL)validateInterval:(NSInteger)interval type:(TableType)type {
 	switch (type) {
 		case TableTimeEvo:
-		return (((interval == 0)? 1 : interval * doc.paramsP->stepsPerDay) / skip > 0);
+		return (((interval == 0)? 1 : interval * doc.worldParamsP->stepsPerDay) / skip > 0);
 		case TableTransit:
 		return (interval / skipDays > 0);
 		default: return YES;

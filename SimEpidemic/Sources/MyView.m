@@ -31,7 +31,7 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 		self.bounds = (NSRect){0, 0, 100, 80};
 		frameSize = fSize;
 	}
-	NSInteger m = doc.paramsP->mesh, wSize = doc.paramsP->worldSize;
+	NSInteger m = doc.worldParamsP->mesh, wSize = doc.worldParamsP->worldSize;
 	if (wSize != worldSize) {
 		fontSize = LV_FONT_SIZE * wSize / 500;
 		attr[NSFontAttributeName] = [NSFont userFontOfSize:fontSize];
