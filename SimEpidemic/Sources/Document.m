@@ -58,7 +58,7 @@ void in_main_thread(dispatch_block_t block) {
 @end
 
 @interface Document () {
-	NSInteger seqIndex;
+	NSInteger scenarioIndex;
 	Scenario *scenarioPanel;
 	ParamPanel *paramPanel;
 	DataPanel *dataPanel;
@@ -126,20 +126,6 @@ void in_main_thread(dispatch_block_t block) {
 		^(Document *target) { [target setInitialParameters:orgParams]; }];
 	memcpy(&initParams, newParams.bytes, sizeof(RuntimeParams));
 }
-- (void)showScenarioDesc {
-	NSInteger n = scenario.count;
-	scenarioText.stringValue = (scenario == nil)? NSLocalizedString(@"None", nil) :
-		[NSString stringWithFormat:@"%ld %@", n,
-			NSLocalizedString((n == 1)? @"item" : @"items", nil)];
-}
-- (NSArray *)scenario { return scenario; }
-- (void)setScenario:(NSArray *)newScen {
-	NSArray *orgScen = scenario;
-	[self.undoManager registerUndoWithTarget:self handler:
-		^(Document *target) { target.scenario = orgScen; }];
-	scenario = newScen;
-	[self showScenarioDesc];
-}
 - (void)addInfected:(NSInteger)n {
 	NSInteger nSusc = 0, nCells = worldParams.mesh * worldParams.mesh;
 	for (NSInteger i = 0; i < nCells; i ++)
@@ -181,24 +167,57 @@ void in_main_thread(dispatch_block_t block) {
 		self->view.needsDisplay = YES;
 	});
 }
-- (void)setParamsAndConditionFromSequence {
+- (void)adjustScenarioText {
+	if (scenario != nil) scenarioText.integerValue = scenarioIndex;
+	else scenarioText.stringValue = NSLocalizedString(@"None", nil);
+}
+- (void)execScenario {
 	predicateToStop = nil;
-	while (seqIndex < scenario.count) {
-		NSObject *item = scenario[seqIndex ++];
-		if ([item isKindOfClass:NSDictionary.class]) {
-			set_params_from_dict(&runtimeParams, &worldParams, (NSDictionary *)item);
-			in_main_thread( ^{ [self->paramPanel adjustControls]; });
+	NSMutableDictionary *md = NSMutableDictionary.new;
+	while (scenarioIndex < scenario.count) {
+		NSObject *item = scenario[scenarioIndex ++];
+//NSLog(@"%ld:%@", scenarioIndex, item);
+		if ([item isKindOfClass:NSArray.class]) {
+			if ([((NSArray *)item)[0] isKindOfClass:NSNumber.class]) {
+				NSInteger destIdx = [((NSArray *)item)[0] integerValue];
+				if (((NSArray *)item).count == 1) scenarioIndex = destIdx;
+				else if ([(NSPredicate *)((NSArray *)item)[1] evaluateWithObject:statInfo])
+					scenarioIndex = destIdx;
+			} else md[((NSArray *)item)[0]] = ((NSArray *)item)[1];
+		} else if ([item isKindOfClass:NSDictionary.class]) {	// for upper compatibility
+			[md addEntriesFromDictionary:(NSDictionary *)item];
 		} else if ([item isKindOfClass:NSNumber.class]) {
 			[self addInfected:((NSNumber *)item).integerValue];
 		} else if ([item isKindOfClass:NSPredicate.class]) {
-			in_main_thread( ^{
-				self->stopCond.stringValue = ((NSPredicate *)item).predicateFormat; });
 			predicateToStop = (NSPredicate *)item;
+			in_main_thread( ^{ [self adjustScenarioText]; });
 			break;
 		}
 	}
-	if (predicateToStop == nil)
-		in_main_thread( ^{ self->stopCond.stringValue = NSLocalizedString(@"None", nil); });
+	if (md.count > 0) {
+		set_params_from_dict(&runtimeParams, &worldParams, md);
+		in_main_thread( ^{ [self->paramPanel adjustControls]; });
+	}
+	[statInfo phaseChangedTo:scenarioIndex];
+}
+- (NSArray *)scenario { return scenario; }
+static NSArray<NSNumber *> *phase_info(NSArray *scen) {
+	NSMutableArray<NSNumber *> *ma = NSMutableArray.new;
+	for (NSInteger i = 0; i < scen.count; i ++)
+		if ([scen[i] isKindOfClass:NSPredicate.class])
+			[ma addObject:@(i + 1)];
+	[ma addObject:@(scen.count + 1)];
+	return ma;
+}
+- (void)setScenario:(NSArray *)newScen {
+	if (self.running) return;
+	NSArray *orgScen = scenario;
+	[self.undoManager registerUndoWithTarget:self handler:
+		^(Document *target) { target.scenario = orgScen; }];
+	scenario = newScen;
+	scenarioIndex = 0;
+	statInfo.phaseInfo = phase_info(scenario);
+//	[self execScenario];
 }
 - (void)showCurrentStatistics {
 	StatData *stat = statInfo.statistics;
@@ -256,8 +275,8 @@ void in_main_thread(dispatch_block_t block) {
 	step = 0;
 	[statInfo reset:nPop infected:worldParams.nInitInfec];
 	[popLock unlock];
-	seqIndex = 0;
-	[self setParamsAndConditionFromSequence];
+	scenarioIndex = 0;
+	[self execScenario];
 	daysNum.doubleValue = 0.;
 	[self showCurrentStatistics];
 	loopMode = LoopNone;
@@ -290,9 +309,10 @@ void in_main_thread(dispatch_block_t block) {
 		lvViews[i].integerValue = 0;
 	}
 	windowController.window.delegate = self;
+	if (scenario != nil) statInfo.phaseInfo = phase_info(scenario);
 	[self resetPop];
 	show_anime_steps(animeStepsTxt, animeSteps);
-	if (scenario != nil) [self showScenarioDesc];
+	[self adjustScenarioText];
 	orgWindowSize = windowController.window.frame.size;
 	orgViewSize = view.frame.size;
 //	[self openStatPenel:self];
@@ -315,6 +335,22 @@ void in_main_thread(dispatch_block_t block) {
 		aSize.height + orgWindowSize.height - orgViewSize.height };
 }
 NSString *keyParameters = @"parameters", *keyScenario = @"scenario";
+static NSObject *property_from_element(NSObject *elm) {
+	if ([elm isKindOfClass:NSPredicate.class]) return ((NSPredicate *)elm).predicateFormat;
+	else if (![elm isKindOfClass:NSArray.class]) return elm;
+	else if (![((NSArray *)elm)[0] isKindOfClass:NSNumber.class]) return elm;
+	else if (((NSArray *)elm).count == 1) return elm;
+	else return @[((NSArray *)elm)[0], ((NSPredicate *)((NSArray *)elm)[1]).predicateFormat];
+}
+static NSObject *element_from_property(NSObject *prop) {
+	if ([prop isKindOfClass:NSString.class])
+		return [NSPredicate predicateWithFormat:(NSString *)prop];
+	else if (![prop isKindOfClass:NSArray.class]) return prop;
+	else if (![((NSArray *)prop)[0] isKindOfClass:NSNumber.class]) return prop;
+	else if (((NSArray *)prop).count == 1) return prop;
+	else return @[((NSArray *)prop)[0],
+		[NSPredicate predicateWithFormat:(NSString *)((NSArray *)prop)[1]]];
+}
 - (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyAnimeSteps] = @(animeSteps);
@@ -322,8 +358,7 @@ NSString *keyParameters = @"parameters", *keyScenario = @"scenario";
 		dict[keyParameters] = param_dict(&initParams, &worldParams);
 		NSObject *items[scenario.count];
 		for (NSInteger i = 0; i < scenario.count; i ++)
-			items[i] = [scenario[i] isKindOfClass:NSPredicate.class]?
-				((NSPredicate *)scenario[i]).predicateFormat : scenario[i];
+			items[i] = property_from_element(scenario[i]);
 		dict[keyScenario] = [NSArray arrayWithObjects:items count:scenario.count];
 	} else dict[keyParameters] = param_dict(&runtimeParams, &worldParams);
 	return [NSPropertyListSerialization dataWithPropertyList:dict
@@ -345,14 +380,15 @@ NSString *keyParameters = @"parameters", *keyScenario = @"scenario";
 	if (seq != nil) {
 		NSObject *items[seq.count];
 		for (NSInteger i = 0; i < seq.count; i ++)
-			items[i] = [seq[i] isKindOfClass:NSString.class]?
-				[NSPredicate predicateWithFormat:(NSString *)seq[i]] : seq[i];
+			items[i] = element_from_property(seq[i]);
 		scenario = [NSArray arrayWithObjects:items count:seq.count];
-		if (scenarioText != nil) [self showScenarioDesc];
+		scenarioIndex = 0;
+		if (statInfo != nil) {
+			statInfo.phaseInfo = phase_info(scenario);
+			[self execScenario];
+		}
 		memcpy(&initParams, &runtimeParams, sizeof(RuntimeParams));
 	}
-	seqIndex = 0;
-	[self setParamsAndConditionFromSequence];
 	return YES;
 }
 - (void)gridToGridA:(NSInteger)iA B:(NSInteger)iB {
@@ -537,8 +573,8 @@ static NSInteger mCount = 0, mCount2 = 0;
 			NSInteger usToWait = (1./30. - timePassed) * 1e6;
 			usleep((unsigned int)((usToWait < 0)? 1 : usToWait));
 		} else usleep(1);
-		if (loopMode == LoopEndByCondition && seqIndex < scenario.count) {
-			[self setParamsAndConditionFromSequence];
+		if (loopMode == LoopEndByCondition && scenarioIndex < scenario.count) {
+			[self execScenario];
 			loopMode = LoopRunning;
 		}
 	}
@@ -546,12 +582,13 @@ static NSInteger mCount = 0, mCount2 = 0;
 		self->view.needsDisplay = YES;
 		self->startBtn.title = NSLocalizedString(@"Start", nil);
 		self->stepBtn.enabled = YES;
+		[self->scenarioPanel adjustControls];
 	});
 }
 - (void)goAhead {
 	if (loopMode == LoopFinished) [self resetPop];
 	else if (loopMode == LoopEndByCondition)
-		[self setParamsAndConditionFromSequence];
+		[self execScenario];
 }
 - (IBAction)startStop:(id)sender {
 	if (loopMode != LoopRunning) {
@@ -559,11 +596,13 @@ static NSInteger mCount = 0, mCount2 = 0;
 		startBtn.title = NSLocalizedString(@"Stop", nil);
 		stepBtn.enabled = NO;
 		loopMode = LoopRunning;
+		[scenarioPanel adjustControls];
 		[NSThread detachNewThreadSelector:@selector(runningLoop) toTarget:self withObject:nil];
 	} else {
 		startBtn.title = NSLocalizedString(@"Start", nil);
 		stepBtn.enabled = YES;
 		loopMode = LoopEndByUser;
+		[scenarioPanel adjustControls];
 	}
 }
 - (IBAction)step:(id)sedner {

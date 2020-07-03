@@ -23,7 +23,6 @@
                 <outlet property="startBtn" destination="670-an-uJr" id="BhI-ME-hEo"/>
                 <outlet property="statInfo" destination="0WM-hT-GKX" id="qmJ-Dw-D8d"/>
                 <outlet property="stepBtn" destination="cgf-38-s44" id="TsO-JK-0lv"/>
-                <outlet property="stopCond" destination="PYJ-dJ-tvm" id="sCo-FY-bfL"/>
                 <outlet property="view" destination="qim-G4-87y" id="PQX-ho-i7h"/>
                 <outlet property="window" destination="xOd-HO-29H" id="JIz-fz-R2o"/>
             </connections>
@@ -271,28 +270,10 @@
                             <action selector="openScenarioPanel:" target="-2" id="Dmg-TD-3CK"/>
                         </connections>
                     </button>
-                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="U8Q-D6-YMo">
-                        <rect key="frame" x="272" y="522" width="84" height="14"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" alignment="right" title="Stop condition:" id="pYP-Mv-LW8">
-                            <font key="font" metaFont="smallSystem"/>
-                            <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
-                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
-                        </textFieldCell>
-                    </textField>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="rnW-oB-H90">
                         <rect key="frame" x="100" y="522" width="54" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" alignment="right" title="Scenario:" id="wRX-gD-Icx">
-                            <font key="font" metaFont="smallSystem"/>
-                            <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
-                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
-                        </textFieldCell>
-                    </textField>
-                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="PYJ-dJ-tvm">
-                        <rect key="frame" x="357" y="522" width="116" height="14"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
-                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" title="None" id="AbW-hz-zeQ">
                             <font key="font" metaFont="smallSystem"/>
                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>

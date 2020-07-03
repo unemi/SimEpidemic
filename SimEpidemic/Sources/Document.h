@@ -23,7 +23,7 @@ extern NSString *keyParameters, *keyScenario;
 @interface Document : NSDocument <NSWindowDelegate> {
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
-		*scenarioText, *stopCond, *animeStepsTxt;
+		*scenarioText, *animeStepsTxt;
 	IBOutlet NSButton *startBtn, *stepBtn;
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 

@@ -75,7 +75,8 @@ static NSTextField *label_field(NSString *message) {
 	return msg;
 }
 #define BUTTON_CELL_SIZE {135, 24}
-#define CELL_SIZE {347, 24}
+#define LINEN_CELL_SIZE {30, 24}
+#define CELL_SIZE {346, 24}
 @interface ButtonsCellView : NSTableCellView
 @property (readonly) NSArray<NSButton *> *buttons;
 
@@ -100,8 +101,7 @@ static NSTextField *label_field(NSString *message) {
 @end
 
 @implementation ParameterCellView
-static CGFloat maxWidthOfParamName = 0.;
-- (instancetype)init {
+- (instancetype)initWithValue:(CGFloat)value {
 	NSSize fSize = CELL_SIZE;
 	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
 	set_subview(label_field(@"Parameters"), self, YES);
@@ -111,35 +111,51 @@ static CGFloat maxWidthOfParamName = 0.;
 		[_namePopUp addItemWithTitle:title];
 	}
 	set_subview(_namePopUp, self, YES);
-	if (maxWidthOfParamName == 0.) maxWidthOfParamName = _namePopUp.frame.size.width;
-	return self;
-}
-@end
-@implementation ParamElmCellView
-- (instancetype)initWithKey:(NSString *)key value:(CGFloat)value {
-	NSSize fSize = CELL_SIZE;
-	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
-	NSTextField *nameLabel = label_field(key);
-	nameLabel.alignment = NSTextAlignmentRight;
-	set_subview(nameLabel, self, YES);
-	NSSize sz = nameLabel.frame.size;
-	sz.width = maxWidthOfParamName;
-	[nameLabel setFrameSize:sz];
+	set_subview(label_field(@"⇐"), self, YES);
 	_digits = NSTextField.new;
-	_digits.formatter = paramFormatters[paramIndexFromKey[key].integerValue] ;
 	_digits.doubleValue = 999.9;
 	set_subview(_digits, self, YES);
 	_digits.doubleValue = value;
+	[_namePopUp selectItemAtIndex:0];
 	return self;
 }
 @end
 @interface CondCellView : NSTableCellView
+@property (readonly) NSPopUpButton *typePopUp, *destPopUp;
+@property (readonly) NSTextField *sufixTxt;
 @end
+static NSPoint CCTxtOrg1 = {0,0}, CCTxtOrg2;
 @implementation CondCellView
+- (void)adjustViews:(NSInteger)index {
+	switch (index) {
+		case 0: _destPopUp.hidden = YES;
+		_sufixTxt.stringValue = NSLocalizedString(@"satisfied", nil);
+		[_sufixTxt setFrameOrigin:CCTxtOrg1];
+		break;
+		case 1: _destPopUp.hidden = NO;
+		_sufixTxt.stringValue = NSLocalizedString(@"when satisfied", nil);
+		[_sufixTxt setFrameOrigin:CCTxtOrg2];
+	}
+}
 - (instancetype)init {
 	NSSize fSize = CELL_SIZE;
 	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
 	set_subview(label_field(@"Condition"), self, YES);
+	_typePopUp = NSPopUpButton.new;
+	[_typePopUp addItemWithTitle:NSLocalizedString(@"Run until", nil)];
+	[_typePopUp addItemWithTitle:NSLocalizedString(@"Move to", nil)];
+	set_subview(_typePopUp, self, YES);
+	_destPopUp = NSPopUpButton.new;
+	[_destPopUp addItemWithTitle:@"999"];
+	set_subview(_destPopUp, self, YES);
+	_destPopUp.lastItem.title = @"1";
+	_sufixTxt = label_field(@"when satisfied");
+	set_subview(_sufixTxt, self, YES);
+	if (CCTxtOrg1.x == 0.) {
+		CCTxtOrg1 = _destPopUp.frame.origin;
+		CCTxtOrg2 = _sufixTxt.frame.origin;
+	}
+	[self adjustViews:0];
 	return self;
 }
 @end
@@ -166,12 +182,7 @@ static CGFloat maxWidthOfParamName = 0.;
 	return self;
 }
 @end
-@interface ComparisonCellView : NSTableCellView {
-	__weak NSNumberFormatter *intFormatter;
-	NSInteger maxValue;
-	CGFloat ratioValue;
-}
-@property NSInteger days;
+@interface ComparisonCellView : NSTableCellView
 @property (readonly) NSPopUpButton *varPopUp, *opePopUp, *unitPopUp;
 @property (readonly) NSTextField *digits;
 @end
@@ -189,10 +200,9 @@ static NSPredicateOperatorType operatorTypes[] = {
 	NSGreaterThanOrEqualToPredicateOperatorType, NSLessThanOrEqualToPredicateOperatorType
 };
 static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
-- (instancetype)initWithFormatter:(NSNumberFormatter *)fmt {
+- (instancetype)init {
 	NSSize fSize = CELL_SIZE;
 	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
-	intFormatter = fmt;
 	if (absIntFormatter == nil) {
 		absIntFormatter = NSNumberFormatter.new;
 		absIntFormatter.minimum = @0;
@@ -202,8 +212,6 @@ static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
 		percentFormatter.minimumFractionDigits =
 		percentFormatter.maximumFractionDigits = 3;
 	}
-	maxValue = fmt.maximum.integerValue;
-	ratioValue = .5;
 	_varPopUp = NSPopUpButton.new;
 	_opePopUp = NSPopUpButton.new;
 	_unitPopUp = NSPopUpButton.new;
@@ -217,46 +225,8 @@ static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
 	_digits.stringValue = @"999.999";
 	for (NSControl *cnt in @[_varPopUp, _opePopUp, _digits, _unitPopUp])
 		set_subview(cnt, self, YES);
-	_digits.integerValue = _days = 180;
 	_digits.formatter = absIntFormatter;
-	_digits.delegate = (NSObject<NSTextFieldDelegate> *)self;
-	_varPopUp.target = _unitPopUp.target = self;
-	_varPopUp.action = @selector(chooseVariable:);
-	_unitPopUp.action = @selector(chooseUnit:);
-	_unitPopUp.enabled = NO;
 	return self;
-}
-- (NSInteger)intValue { return maxValue * ratioValue; }
-- (void)setIntValue:(NSInteger)val {
-	ratioValue = (CGFloat)val / maxValue;
-	if  (_unitPopUp.indexOfSelectedItem == 0)
-		_digits.integerValue = self.intValue;
-	else _digits.doubleValue = ratioValue * 1000.;
-}
-- (void)chooseUnit:(id)sender {
-	if (_unitPopUp.indexOfSelectedItem == 0) {
-		_digits.formatter = intFormatter;
-		_digits.integerValue = self.intValue;
-	} else {
-		_digits.formatter = percentFormatter;
-		_digits.doubleValue = ratioValue * 1000.;
-	}
-}
-- (void)chooseVariable:(id)sender {
-	BOOL isAbsValue = (_varPopUp.indexOfSelectedItem == 0);
-	if (_unitPopUp.enabled == isAbsValue) {
-		_unitPopUp.enabled = !isAbsValue;
-		if (isAbsValue) {
-			_digits.formatter = absIntFormatter;
-			_digits.integerValue = _days;
-		} else [self chooseUnit:nil];
-	}
-}
-- (void)controlTextDidEndEditing:(NSNotification *)obj {
-	if (_varPopUp.indexOfSelectedItem == 0)
-		_days = _digits.integerValue;
-	else ratioValue = (_unitPopUp.indexOfSelectedItem == 0)?
-		(CGFloat)_digits.integerValue / maxValue : _digits.doubleValue / 1000.;
 }
 @end
 
@@ -290,6 +260,18 @@ static void check_images(void) {
 	scenario = scen;
 	return self;
 }
+- (void)setLineNumber:(NSInteger)ln {
+	_lnView.textField.integerValue = ln;
+}
+- (void)setupLineNumberView:(NSInteger)ln {
+	_lnView = [NSTableCellView.alloc initWithFrame:(NSRect)LINEN_CELL_SIZE];
+	NSTextField *dgt = label();
+	dgt.frame = (NSRect)LINEN_CELL_SIZE;
+	dgt.alignment = NSTextAlignmentRight;
+	[_lnView addSubview:dgt];
+	_lnView.textField = dgt;
+	self.lineNumber = ln;
+}
 - (void)setupButtonView:(NSArray *)titles {
 	_btnsView = [ButtonsCellView.alloc initWithItem:self titles:titles];
 }
@@ -301,96 +283,37 @@ static void check_images(void) {
 - (NSObject *)propertyObject { return self.scenarioElement; }
 @end
 
-@interface ParamElmItem : ScenarioItem
-@property NSInteger index;
-@end
-@implementation ParamElmItem
-- (instancetype)initWithScenario:(Scenario *)scen index:(NSInteger)index value:(NSInteger)value {
-	if (!(self = [super initWithScenario:scen])) return nil;
-	[super setupButtonView:@[removeImage]];
-	self.view = [ParamElmCellView.alloc initWithKey:paramNames[index] value:value];
-	_index = index;
-	return self;
-}
-- (NSInteger)value { return ((ParamElmCellView *)self.view).digits.integerValue; }
-@end
 @interface ParamItem : ScenarioItem
-@property NSMutableArray<ParamElmItem *> *children;
+@property NSInteger index;
 @end
 @implementation ParamItem
 - (instancetype)initWithScenario:(Scenario *)scen {
 	if (!(self = [super initWithScenario:scen])) return nil;
-	[super setupButtonView:@[removeImage, addImage]];
-	self.view = ParameterCellView.new;
-	_children = NSMutableArray.new;
+	[super setupButtonView:@[removeImage]];
+	self.view = [ParameterCellView.alloc initWithValue:scen.doc.runtimeParamsP->PARAM_F1];
 	NSPopUpButton *namePopUp = ((ParameterCellView *)self.view).namePopUp;
 	namePopUp.target = self;
-	namePopUp.action = @selector(dummyAction:);
+	namePopUp.action = @selector(chooseParameter:);
 	return self;
 }
-- (ScenarioItem *)childItemAt:(NSInteger)idx {
-	return (idx >= 0 && idx < _children.count)? _children[idx] : nil;
-}
-- (void)addChild:(ParamElmItem *)item {
-	ParameterCellView *pView = (ParameterCellView *)self.view;
-	NSInteger index = item.index, aIdx;
-	for (aIdx = 0; aIdx < _children.count; aIdx ++) {
-		NSInteger cIndex = _children[aIdx].index;
-		if (cIndex == index) return;
-		else if (cIndex > index) break;
-	}
-	[_children insertObject:item atIndex:aIdx];
-	pView.namePopUp.selectedItem.tag = 1;
-	[scenario.outlineView insertItemsAtIndexes:[NSIndexSet indexSetWithIndex:aIdx]
-		inParent:self withAnimation:NSTableViewAnimationEffectFade];
-	[scenario.outlineView expandItem:self];
-	NSInteger nParams = pView.namePopUp.numberOfItems;
-	if (_children.count < nParams) {
-		NSArray<NSMenuItem *> *mnItems = pView.namePopUp.itemArray;
-		NSInteger nextIndex = 0;
-		for (NSInteger i = 1; i < nParams; i ++)
-			if (mnItems[(nextIndex = (index + i) % nParams)].tag == 0) break;
-		[pView.namePopUp selectItemAtIndex:nextIndex];
-	} else self.btnsView.buttons[1].enabled = pView.namePopUp.enabled = NO;
+- (void)setParamUndoable:(NSInteger)newIndex value:(CGFloat)newValue {
+	NSInteger orgIndex = _index;
+	CGFloat orgValue = ((ParameterCellView *)self.view).digits.doubleValue;
 	[scenario.undoManager registerUndoWithTarget:self handler:
-		^(ParamItem *prmItem) { [prmItem removeChild:item]; }];
+		^(ParamItem *target) { [target setParamUndoable:orgIndex value:orgValue]; }];
+	if (newIndex >= 0) [((ParameterCellView *)self.view).namePopUp selectItemAtIndex:newIndex];
+	else _index = newIndex;
+	((ParameterCellView *)self.view).digits.doubleValue = newValue;
 }
-- (BOOL)removeChild:(ParamElmItem *)item {
-	NSInteger index = [_children indexOfObject:item];
-	if (index == NSNotFound) return NO;
-	NSPopUpButton *namePopUp = ((ParameterCellView *)self.view).namePopUp;
-	if (_children.count == namePopUp.numberOfItems) {
-		self.btnsView.buttons[1].enabled = namePopUp.enabled = YES;
-		[namePopUp selectItemAtIndex:item.index];
-	}
-	[namePopUp.menu itemAtIndex:item.index].tag = 0;
-	[_children removeObjectAtIndex:index];
-	[scenario.outlineView removeItemsAtIndexes:[NSIndexSet indexSetWithIndex:index]
-		inParent:self withAnimation:NSTableViewAnimationEffectFade];
-	[scenario.undoManager registerUndoWithTarget:self handler:
-		^(ParamItem *prmItem) { [prmItem addChild:item]; }];
-	return YES;
+- (void)chooseParameter:(NSPopUpButton *)sender {
+	NSInteger idx = sender.indexOfSelectedItem;
+	if (idx == _index) return;
+	[self setParamUndoable:-1 value:(&scenario.doc.runtimeParamsP->PARAM_F1)[idx]];
+	_index = idx;
 }
-- (void)buttonAction:(NSButton *)button {
-	if (button.image == addImage) {
-		ParameterCellView *pView = (ParameterCellView *)self.view;
-		NSInteger index = pView.namePopUp.indexOfSelectedItem;
-		[self addChild:[ParamElmItem.alloc initWithScenario:scenario index:index
-			value:((CGFloat *)scenario.doc.runtimeParamsP)[index]]];
-	} else [super buttonAction:button];
-}
-- (void)dummyAction:(id)sender {}
-- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
-	return menuItem.tag == 0;
-}
+- (CGFloat)value { return ((ParameterCellView *)self.view).digits.doubleValue; }
 - (NSObject *)scenarioElement {
-	NSInteger n = _children.count;
-	NSString *keys[n]; NSNumber *vals[n];
-	for (NSInteger i = 0; i < n; i ++) {
-		keys[i] = paramKeys[_children[i].index];
-		vals[i] = @(_children[i].value);
-	}
-	return [NSDictionary dictionaryWithObjects:vals forKeys:keys count:n];
+	return @[paramKeys[_index], @(self.value)];
 }
 @end
 
@@ -423,7 +346,16 @@ static void check_images(void) {
 - (instancetype)initWithScenario:(Scenario *)scen parent:(ScenarioItem *)parnt {
 	if (!(self = [super initWithScenario:scen parent:parnt])) return nil;
 	[super setupButtonView:@[removeImage, @"^C"]];
-	self.view = [ComparisonCellView.alloc initWithFormatter:scen.intFormatter];
+	ComparisonCellView *v = ComparisonCellView.new;
+	self.view = v;
+	maxValue = scen.intFormatter.maximum.integerValue;
+	ratioValue = .5;
+	v.digits.integerValue = days = 180;
+	v.digits.delegate = (NSObject<NSTextFieldDelegate> *)self;
+	v.varPopUp.target = v.unitPopUp.target = self;
+	v.varPopUp.action = @selector(chooseVariable:);
+	v.unitPopUp.action = @selector(chooseUnit:);
+	v.unitPopUp.enabled = NO;
 	return self;
 }
 - (NSPredicate *)predicate {
@@ -432,7 +364,7 @@ static void check_images(void) {
 	return [NSComparisonPredicate.alloc initWithLeftExpression:
 		[NSExpression expressionForKeyPath:varNames[index]]
 		rightExpression:[NSExpression expressionForConstantValue:
-			@((index == 0)? v.days : v.intValue)]
+			@((index == 0)? days : self.intValue)]
 		modifier:0 type:operatorTypes[v.opePopUp.indexOfSelectedItem] options:0];
 }
 - (void)setupWithPredicate:(NSComparisonPredicate *)predicate {
@@ -444,12 +376,85 @@ static void check_images(void) {
 	[v.varPopUp selectItemAtIndex:index];
 	v.unitPopUp.enabled = index > 0;
 	NSNumber *num = predicate.rightExpression.constantValue;
-	if (index == 0) v.days = num.integerValue;
-	else v.intValue = num.integerValue;
+	if (index == 0) days = num.integerValue;
+	else self.intValue = num.integerValue;
 	NSPredicateOperatorType opeType = predicate.predicateOperatorType;
 	for (index = 0; index < N_OPERATORS; index ++)
 		if (operatorTypes[index] == opeType) break;
 	[v.opePopUp selectItemAtIndex:index];
+}
+- (NSInteger)intValue { return maxValue * ratioValue; }
+- (void)setIntValue:(NSInteger)val {
+	ComparisonCellView *v = (ComparisonCellView *)self.view;
+	ratioValue = (CGFloat)val / maxValue;
+	if  (v.unitPopUp.indexOfSelectedItem == 0)
+		v.digits.integerValue = self.intValue;
+	else v.digits.doubleValue = ratioValue * 1000.;
+}
+- (void)chooseUnit:(id)sender {
+	ComparisonCellView *v = (ComparisonCellView *)self.view;
+	BOOL isNewAbs = (v.unitPopUp.indexOfSelectedItem == 0);
+	NSNumberFormatter *newFmt = isNewAbs? scenario.intFormatter : percentFormatter;
+	if (newFmt == v.digits.formatter) return;
+	if (sender != nil) [scenario.undoManager registerUndoWithTarget:v.unitPopUp
+		handler:^(NSPopUpButton *pb) {
+			[pb selectItemAtIndex:isNewAbs? 1 : 0];
+			[pb sendAction:pb.action to:pb.target];
+	}];
+	v.digits.formatter = newFmt;
+	if (isNewAbs) v.digits.integerValue = self.intValue;
+	else v.digits.doubleValue = ratioValue * 1000.;
+}
+- (void)chooseVariable:(id)sender {
+	ComparisonCellView *v = (ComparisonCellView *)self.view;
+	NSInteger newIndex = v.varPopUp.indexOfSelectedItem;
+	if (newIndex == varIndex) return;
+	NSInteger orgIndex = varIndex;
+	[scenario.undoManager registerUndoWithTarget:v.varPopUp
+		handler:^(NSPopUpButton *pb) {
+		[pb selectItemAtIndex:orgIndex];
+		[pb sendAction:pb.action to:pb.target];
+	}];
+	varIndex = newIndex;
+	BOOL isAbsValue = (newIndex == 0);
+	if (v.unitPopUp.enabled == isAbsValue) {
+		v.unitPopUp.enabled = !isAbsValue;
+		if (isAbsValue) {
+			v.digits.formatter = absIntFormatter;
+			v.digits.integerValue = days;
+		} else [self chooseUnit:nil];
+	}
+}
+- (void)setDays:(NSInteger)newDays digits:(NSTextField *)digits {
+	NSInteger orgDays = days;
+	[scenario.undoManager registerUndoWithTarget:self handler:^(ComparisonItem *item) {
+		digits.integerValue = orgDays;
+		[item setDays:orgDays digits:digits];
+	}];
+	days = newDays;
+}
+- (void)setRatio:(CGFloat)newRatio digits:(NSTextField *)digits isAbs:(BOOL)isAbs {
+	NSInteger orgInt = ratioValue * maxValue;
+	CGFloat orgRatio = ratioValue;
+	[scenario.undoManager registerUndoWithTarget:self handler:^(ComparisonItem *item) {
+		if (isAbs) digits.integerValue = orgInt;
+		else digits.doubleValue = orgRatio * 1000.;
+		[item setRatio:orgRatio digits:digits isAbs:isAbs];
+	}];
+	ratioValue = newRatio;
+}
+- (void)controlTextDidEndEditing:(NSNotification *)obj {
+	ComparisonCellView *v = (ComparisonCellView *)self.view;
+	if (v.varPopUp.indexOfSelectedItem == 0) {
+		NSInteger newDays = v.digits.integerValue;
+		if (newDays != days) [self setDays:newDays digits:v.digits];
+	} else {
+		BOOL isAbs = (v.unitPopUp.indexOfSelectedItem == 0);
+		CGFloat newRatio = isAbs?
+			(CGFloat)v.digits.integerValue / maxValue : v.digits.doubleValue / 1000.;
+		if (newRatio != ratioValue)
+			[self setRatio:newRatio digits:v.digits isAbs:isAbs];
+	}
 }
 @end
 static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, ScenarioItem *parnt) {
@@ -461,8 +466,11 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 - (instancetype)initWithScenario:(Scenario *)scen parent:(ScenarioItem *)parnt {
 	if (!(self = [super initWithScenario:scen parent:parnt])) return nil;
 	[super setupButtonView:@[removeImage, @"+P", @"+C", @"^C"]];
-	self.view = CompoundCellView.new;
+	CompoundCellView *cv = CompoundCellView.new;
+	self.view = cv;
 	_children = NSMutableArray.new;
+	cv.opePopUp.target = self;
+	cv.opePopUp.action = @selector(chooseLogicalOperator:);
 	return self;
 }
 - (ScenarioItem *)firstChild {
@@ -507,6 +515,12 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 		if ([child removeChild:item]) return YES;
 	return NO;
 }
+- (void)chooseLogicalOperator:(NSPopUpButton *)sender {
+	[scenario.undoManager registerUndoWithTarget:self handler:^(CompoundItem *target) {
+		[sender selectItemAtIndex:1 - sender.indexOfSelectedItem];
+		[target chooseLogicalOperator:sender];
+	}];
+}
 - (void)buttonAction:(NSButton *)button {
 	if ([button.title hasPrefix:@"+"]) {
 		[self insertChild:new_item_by_button(button, scenario, self) atIndex:_children.count];
@@ -537,12 +551,60 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 		[_children addObject:[scenario itemWithPredicate:subp parent:self]];
 }
 @end
+static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
+	NSInteger m = pb.numberOfItems;
+	if (m > n) for (NSInteger i = n; i < m; i ++) [pb removeItemAtIndex:i];
+	else for (NSInteger i = m; i < n; i ++) [pb addItemWithTitle:@(i + 1).stringValue];
+}
 @implementation CondItem
 - (instancetype)initWithScenario:(Scenario *)scen {
 	if (!(self = [super initWithScenario:scen])) return nil;
 	[super setupButtonView:@[removeImage, @"+P", @"+C"]];
-	self.view = CondCellView.new;
+	CondCellView *v = CondCellView.new;
+	self.view = v;
+	v.typePopUp.target = v.destPopUp.target = self;
+	v.typePopUp.action = @selector(chooseType:);
+	v.destPopUp.action = @selector(chooseDestination:);
+	adjust_num_menu(v.destPopUp, scen.numberOfItems);
 	return self;
+}
+- (NSInteger)condType { return condType; }
+- (NSInteger)destination { return destination; }
+- (void)setDestination:(NSInteger)ln {
+	destination = ln;
+	condType = CondTypeMoveWhen;
+}
+- (void)removeDestMenuItemAtIndex:(NSInteger)idx {
+	NSPopUpButton *pb = ((CondCellView *)self.view).destPopUp;
+	[pb removeItemAtIndex:pb.numberOfItems - 1];
+	if (destination > idx) [pb selectItemAtIndex:(-- destination)];
+}
+- (void)insertDestMenuItemAtIndex:(NSInteger)idx {
+	NSPopUpButton *pb = ((CondCellView *)self.view).destPopUp;
+	[pb addItemWithTitle:@(pb.numberOfItems + 1).stringValue];
+	if (destination > idx) [pb selectItemAtIndex:(++ destination)];
+}
+- (void)chooseType:(NSPopUpButton *)sender {
+	CondType newType = (CondType)sender.indexOfSelectedItem;
+	if (condType == newType) return;
+	CondType orgType = condType;
+	[scenario.undoManager registerUndoWithTarget:self handler:^(CondItem *target) {
+		NSPopUpButton *pb = ((CondCellView *)target.view).typePopUp;
+		[pb selectItemAtIndex:orgType];
+		[pb sendAction:pb.action to:pb.target];
+	}];
+	condType = newType;
+	[(CondCellView *)self.view adjustViews:newType];
+}
+- (void)chooseDestination:(NSPopUpButton *)sender {
+	NSInteger newDest = sender.indexOfSelectedItem;
+	if (newDest == destination) return;
+	NSInteger orgDest = destination;
+	[scenario.undoManager registerUndoWithTarget:self handler:^(CondItem *target) {
+		[sender selectItemAtIndex:orgDest];
+		[target chooseDestination:sender];
+	}];
+	destination = newDest;
 }
 - (void)removeElement {
 	CondElmItem *orgItem = _element;
@@ -589,8 +651,14 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 	else if (_element == nil)
 		[self setNewElement:new_item_by_button(button, scenario, self)];
 }
-- (NSObject *)scenarioElement { return _element.predicate; }
-- (NSObject *)propertyObject { return _element.predicate.predicateFormat; }
+- (NSObject *)representation:(NSObject *)element {
+	return (condType == CondTypeRunUntil)? element :
+		(element != nil)? @[@(destination), element] : @[@(destination)];
+}
+- (NSObject *)scenarioElement { return [self representation:_element.predicate]; }
+- (NSObject *)propertyObject {
+	return [self representation:_element.predicate.predicateFormat];
+}
 @end
 
 @interface InfecItem : ScenarioItem
@@ -623,6 +691,9 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 	_intFormatter.maximum = @(dc.worldParamsP->initPop);
 	return self;
 }
+- (void)adjustControls {
+	removeBtn.enabled = applyBtn.enabled = !_doc.running;
+}
 - (void)windowDidLoad {
     [super windowDidLoad];
     self.window.alphaValue = panelsAlpha;
@@ -631,15 +702,13 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 	applyBtn.toolTip = NSLocalizedString(@"Apply this scenario to the simulator", nil);
     if (_doc.scenario != nil) [self setScenarioWithArray:_doc.scenario];
     else itemList = NSMutableArray.new;
+    [self adjustControls];
 }
+- (NSInteger)numberOfItems { return itemList.count; }
 - (void)removeItem:(ScenarioItem *)item {
 	if ([item isKindOfClass:ParamItem.class] ||
 		[item isKindOfClass:CondItem.class] || [item isKindOfClass:InfecItem.class]) {
 		[self removeItemAtIndex:[itemList indexOfObject:item]];
-	} else if ([item isKindOfClass:ParamElmItem.class]) {
-		for (ScenarioItem *parent in itemList)
-		if ([parent isKindOfClass:ParamItem.class] &&
-			[(ParamItem *)parent removeChild:(ParamElmItem *)item]) break;
 	} else if ([item isKindOfClass:CondElmItem.class])
 		[((CondElmItem *)item).parent removeChild:item];
 }
@@ -663,9 +732,13 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 }
 - (void)removeItemAtIndex:(NSInteger)idx {
 	ScenarioItem *orgItem = itemList[idx];
+	[itemList removeObjectAtIndex:idx];
+	for (NSInteger i = idx; i < itemList.count; i ++)
+		itemList[i].lineNumber = i + 1;
+	for (CondItem *itm in itemList) if ([itm isKindOfClass:CondItem.class])
+		[itm removeDestMenuItemAtIndex:idx];
 	[_undoManager registerUndoWithTarget:self handler:
 		^(Scenario *scen) { [scen insertItem:orgItem atIndex:idx]; }];
-	[itemList removeObjectAtIndex:idx];
 	[_outlineView removeItemsAtIndexes:[NSIndexSet indexSetWithIndex:idx]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
 }
@@ -673,6 +746,10 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 	[_undoManager registerUndoWithTarget:self handler:
 		^(Scenario *scen) { [scen removeItemAtIndex:idx]; }];
 	[itemList insertObject:item atIndex:idx];
+	for (NSInteger i = idx + 1; i < itemList.count; i ++)
+		itemList[i].lineNumber = i + 1;
+	for (CondItem *itm in itemList) if ([itm isKindOfClass:CondItem.class])
+		[itm insertDestMenuItemAtIndex:idx];
 	[_outlineView insertItemsAtIndexes:[NSIndexSet indexSetWithIndex:idx]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
 }
@@ -682,6 +759,7 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 		index = [itemList indexOfObject:[_outlineView itemAtRow:row]];
 		if (index == NSNotFound) index = itemList.count;
 	} else index = itemList.count;
+	[item setupLineNumberView:index + 1];
 	[self insertItem:item atIndex:index];
 }
 - (IBAction)addParameters:(id)sender {
@@ -706,9 +784,7 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 	NSInteger index = [itemList indexOfObject:item];
 	if (index == NSNotFound) {
 		shiftUpBtn.enabled = shiftDownBtn.enabled = NO;
-		if ([item isKindOfClass:ParamElmItem.class])
-			[self.window makeFirstResponder:((ParamElmCellView *)item.view).digits];
-		else if ([item isKindOfClass:CompoundItem.class])
+		if ([item isKindOfClass:CompoundItem.class])
 			[self.window makeFirstResponder:((CompoundCellView *)item.view).opePopUp];
 		else if ([item isKindOfClass:ComparisonItem.class])
 			[self.window makeFirstResponder:((ComparisonCellView *)item.view).varPopUp];
@@ -722,6 +798,8 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 	[_outlineView moveItemAtIndex:index inParent:nil toIndex:index + 1 inParent:nil];
 	[itemList removeObjectAtIndex:index];
 	[itemList insertObject:itemA atIndex:index + 1];
+	itemA.lineNumber = index + 2;
+	itemList[index].lineNumber = index + 1;
 	[self checkSelection];
 	[_undoManager registerUndoWithTarget:self handler:
 		^(Scenario *target) { [target swapItemsAtIndex:index]; }];
@@ -751,26 +829,41 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 		return item;
 	} else return nil;
 }
+- (ParamItem *)paramItemWithKey:(NSString *)key value:(NSNumber *)num {
+	NSInteger idx = [paramKeys indexOfObject:key];
+	if (idx == NSNotFound) return nil;
+	ParamItem *item = [ParamItem.alloc initWithScenario:self];
+	((ParamItem *)item).index = idx;
+	ParameterCellView *cView = (ParameterCellView *)item.view;
+	[cView.namePopUp selectItemAtIndex:idx];
+	cView.digits.doubleValue = num.doubleValue;
+	return item;
+}
 - (void)setScenarioWithArray:(NSArray *)array {
 	NSMutableArray<ScenarioItem *> *ma = NSMutableArray.new;
 	for (NSObject *elm in array) {
 		ScenarioItem *item = nil;
-		if ([elm isKindOfClass:NSDictionary.class]) {
-			item = [ParamItem.alloc initWithScenario:self];
-			NSPopUpButton *popup = ((ParameterCellView *)item.view).namePopUp;
-			NSInteger aIdx = -1;
-			for (NSInteger idx = 0; idx < popup.numberOfItems; idx ++) {
-				NSNumber *num = ((NSDictionary *)elm)[paramKeys[idx]];
-				if (num != nil) {
-					 [((ParamItem *)item).children addObject:
-						 [ParamElmItem.alloc initWithScenario:self
-							 index:idx value:num.integerValue]];
-					 [popup itemAtIndex:idx].tag = 1;
-				} else if (aIdx < 0) aIdx = idx;
+		if ([elm isKindOfClass:NSArray.class]) {
+			if ([((NSArray *)elm)[0] isKindOfClass:NSString.class])
+				item = [self paramItemWithKey:((NSArray *)elm)[0] value:((NSArray *)elm)[1]];
+			else if ([((NSArray *)elm)[0] isKindOfClass:NSNumber.class]) {
+				item = [CondItem.alloc initWithScenario:self];
+				if (((NSArray *)elm).count > 1) ((CondItem *)item).element =
+					[self itemWithPredicate:
+						[((NSArray *)elm)[1] isKindOfClass:NSString.class]?
+							[NSPredicate predicateWithFormat:(NSString *)((NSArray *)elm)[1]] :
+							(NSPredicate *)((NSArray *)elm)[1]
+						parent:item];
+				((CondItem *)item).destination = [((NSArray *)elm)[0] integerValue];
+				[((CondCellView *)item.view).typePopUp selectItemAtIndex:CondTypeMoveWhen];
+				[(CondCellView *)item.view adjustViews:CondTypeMoveWhen];
 			}
-			if (aIdx < 0) ((ParamItem *)item).btnsView.buttons[1].enabled
-				= popup.enabled = NO;
-			else [popup selectItemAtIndex:aIdx];
+		} else if ([elm isKindOfClass:NSDictionary.class]) { // for upper compatibility
+			for (NSString *key in ((NSDictionary *)elm).keyEnumerator) {
+				item = [self paramItemWithKey:key value:((NSDictionary *)elm)[key]];
+				[ma addObject:item];
+			}
+			item = nil;
 		} else if ([elm isKindOfClass:NSString.class]) {
 			item = [CondItem.alloc initWithScenario:self];
 			((CondItem *)item).element = [self itemWithPredicate:
@@ -783,6 +876,15 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 			((InfecCellView *)(item.view)).digits.integerValue = ((NSNumber *)elm).integerValue;
 		}
 		if (item != nil) [ma addObject:item];
+	}
+	for (NSInteger i = 0; i < ma.count; i ++) {
+		[ma[i] setupLineNumberView:i + 1];
+		if ([ma[i] isKindOfClass:CondItem.class]) {
+			CondItem *item = (CondItem *)ma[i];
+			NSPopUpButton *pb = ((CondCellView *)item.view).destPopUp;
+			adjust_num_menu(pb, ma.count);
+			if (item.condType == CondTypeMoveWhen) [pb selectItemAtIndex:item.destination];
+		}
 	}
 	[self setScenarioWithUndo:ma];
 }
@@ -805,7 +907,10 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 }
 - (IBAction)saveDocument:(id)sender {
 	NSMutableArray *ma = NSMutableArray.new;
-	for (ScenarioItem *item in itemList) [ma addObject:item.propertyObject];
+	for (ScenarioItem *item in itemList) {
+		NSObject *elm = item.propertyObject;
+		if (elm != nil) [ma addObject:item.propertyObject];
+	}
 	save_property_data(@"sEpS", self.window, ma);
 	savedPList = [NSArray arrayWithArray:ma];
 }
@@ -830,19 +935,16 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 // NSOutlineViewDataSource methods
 - (id)outlineView:(NSOutlineView *)outlineView child:(NSInteger)index ofItem:(ScenarioItem *)item {
 	return (item == nil)? itemList[index] :
-		[item isKindOfClass:ParamItem.class]? [(ParamItem *)item childItemAt:index] :
 		[item isKindOfClass:CondItem.class]? ((CondItem *)item).element :
 		[item isKindOfClass:CompoundItem.class]? ((CompoundItem *)item).children[index] :
 		nil;
 }
 - (BOOL)outlineView:(NSOutlineView *)outlineView isItemExpandable:(ScenarioItem *)item {
-	return ([item isKindOfClass:ParamItem.class] && ((ParamItem *)item).children.count > 0) ||
-		([item isKindOfClass:CondItem.class] && ((CondItem *)item).element != nil) ||
+	return ([item isKindOfClass:CondItem.class] && ((CondItem *)item).element != nil) ||
 		([item isKindOfClass:CompoundItem.class] && ((CompoundItem *)item).children.count > 0);
 }
 - (NSInteger)outlineView:(NSOutlineView *)outlineView numberOfChildrenOfItem:(ScenarioItem *)item {
 	return (item == nil)? itemList.count :
-		[item isKindOfClass:ParamItem.class]? ((ParamItem *)item).children.count:
 		[item isKindOfClass:CondItem.class]? (((CondItem *)item).element != nil)? 1 : 0 :
 		[item isKindOfClass:CompoundItem.class]? ((CompoundItem *)item).children.count : 0;
 }
@@ -850,7 +952,8 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 - (NSView *)outlineView:(NSOutlineView *)outlineView viewForTableColumn:
 	(NSTableColumn *)tableColumn item:(ScenarioItem *)item {
 	NSString *idStr = tableColumn.identifier;
-	if ([idStr isEqualToString:@"Content"]) return item.view;
+	if ([idStr isEqualToString:@"LineNumber"]) return item.lnView;
+	else if ([idStr isEqualToString:@"Content"]) return item.view;
 	else if ([idStr isEqualToString:@"Buttons"]) return item.btnsView;
 	else return nil;
 }

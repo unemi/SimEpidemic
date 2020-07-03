@@ -23,6 +23,8 @@ NS_ASSUME_NONNULL_BEGIN
 	unsigned char *imgBm;
 	NSInteger popSize, steps, skip, days, skipDays;
 	StatData statCumm, transDaily, transCumm;
+	NSArray<NSNumber *> *phaseInfo;	// line numbers of condition to run util ...
+	NSMutableArray<NSNumber *> *scenarioPhases;	// step, p, s, ... p
 }
 @property (readonly) NSMutableArray<StatPanel *> *statPanels;
 @property (readonly) StatData *statistics, *transit;
@@ -30,6 +32,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (Document *)doc;
 - (void)reviseColors;
 - (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec;
+- (void)setPhaseInfo:(NSArray<NSNumber *> *)info;
+- (void)phaseChangedTo:(NSInteger)lineNumber;
 - (BOOL)calcStat:(Agent *_Nullable *_Nonnull)Pop nCells:(NSInteger)nCells
 	qlist:(Agent *)qlist clist:(Agent *)clist warp:(NSArray<WarpInfo *> *)warp
 	stepsPerDay:(NSInteger)stepsPerDay;

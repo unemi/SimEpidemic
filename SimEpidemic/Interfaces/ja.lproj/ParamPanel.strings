@@ -1,10 +1,10 @@
-"1Gr-vC-VLz.title" = "規定値として保存";
+"1Gr-vC-VLz.title" = "既定値として保存";
 "2uf-Am-Kht.title" = "メッシュ:";
 "4BB-ve-1rN.title" = "割合:";
 "4Bu-FJ-0y9.title" = "日";
 "4SU-KP-KAU.title" = "初期人口:";
 "5e4-ZK-9Xu.title" = "遅れ:";
-"6sA-dH-SYN.title" = "規定値に戻す";
+"6sA-dH-SYN.title" = "既定値に戻す";
 "8ye-Rq-mG5.title" = "最小:";
 "9NK-Ij-sAU.title" = "潜伏期間の日数";
 "BOU-s4-lSa.title" = "隔離 (有症状者)";
@@ -35,7 +35,7 @@
 "Uzo-5F-IFz.title" = "遅れ:";
 "VfJ-c6-14u.title" = "免疫有効期間の日数";
 "Voh-kv-nLT.title" = "最小:";
-"VvD-nT-U0j.title" = "規定値設定を消去";
+"VvD-nT-U0j.title" = "既定値設定を消去";
 "YaA-KE-f7g.title" = "日";
 "a4U-Mx-33N.title" = "最頻値:";
 "a5N-lP-cRC.title" = "社会距離";
@@ -49,7 +49,7 @@
 "jbI-Dw-oSQ.title" = "日";
 "l6q-66-1MR.title" = "最大:";
 "lgf-EA-vVC.title" = "世界のサイズ:";
-"m2i-wp-bC1.title" = "出荷規定値";
+"m2i-wp-bC1.title" = "出荷既定値";
 "onK-ka-H4Z.title" = "初期状態での感染者数:";
 "rh6-ax-Y7G.title" = "読み込む…";
 "vdS-iU-fiy.title" = "感染確率";

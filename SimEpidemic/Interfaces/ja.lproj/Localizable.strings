@@ -60,3 +60,7 @@
 "items" = "項目";
 "Remove scenario from the simulator" = "シナリオをシミュレータから削除";
 "Apply this scenario to the simulator" = "このシナリオをシミュレータに適用";
+"Run until" = "満たすまで実行";
+"Move to" = "満たすなら";
+"satisfied" = "";
+"when satisfied" = "へ移動";

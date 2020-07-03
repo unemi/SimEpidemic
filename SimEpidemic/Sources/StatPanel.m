@@ -45,6 +45,7 @@ static StatData *new_stat(void) {
 	_IncubPHist = NSMutableArray.new;
 	_RecovPHist = NSMutableArray.new;
 	_DeathPHist = NSMutableArray.new;
+	scenarioPhases = NSMutableArray.new;
 	imgBm = malloc(IMG_WIDTH * IMG_HEIGHT * 4);
 	return self;
 }
@@ -102,8 +103,29 @@ static StatData *new_stat(void) {
 	[_IncubPHist removeAllObjects];
 	[_RecovPHist removeAllObjects];
 	[_DeathPHist removeAllObjects];
+	[scenarioPhases removeAllObjects];
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	[self fillImageForOneStep:_statistics atX:0];
+}
+- (void)setPhaseInfo:(NSArray<NSNumber *> *)info {
+	phaseInfo = info;
+#ifdef DEBUG
+char *s = "PI:";
+for (NSNumber *num in phaseInfo) { printf("%s%ld", s, num.integerValue); s = ", "; }
+printf("\n");
+#endif
+}
+- (void)phaseChangedTo:(NSInteger)lineNumber {
+	NSInteger idx = [phaseInfo indexOfObject:@(lineNumber)];
+	if (idx != NSNotFound) {
+		[scenarioPhases addObject:@(steps)];
+		[scenarioPhases addObject:@(idx + 1)];
+	}
+#ifdef DEBUG
+char *s = "SP:";
+for (NSNumber *num in scenarioPhases) { printf("%s%ld", s, num.integerValue); s = ", "; }
+printf("\n");
+#endif
 }
 static void count_health(Agent *a, StatData *stat, StatData *tran) {
 	if (a->health != a->newHealth) {
@@ -205,13 +227,34 @@ static void count_health(Agent *a, StatData *stat, StatData *tran) {
 - (void)flushPanels {
 	for (StatPanel *panel in _statPanels) [panel flushView:self];
 }
+- (void)fillPhaseBackground:(NSSize)size {
+	NSInteger n = scenarioPhases.count;
+	if (n < 2) return;
+	NSMutableSet<NSNumber *> *ms = NSMutableSet.new;
+	for (NSInteger i = 1; i < n; i += 2) [ms addObject:scenarioPhases[i]];
+	NSInteger nPhases = ms.count, idx = 0;
+	NSNumber *phs[nPhases];
+	for (NSNumber *num in ms) phs[idx ++] = num;
+	NSArray<NSNumber *> *phases = [NSArray arrayWithObjects:phs count:nPhases];
+	NSRect rect = {0., 0.,
+		scenarioPhases[0].integerValue * size.width / steps, size.height};
+	for (NSInteger i = 1; i < n; i += 2) {
+		NSInteger phase = [phases indexOfObject:scenarioPhases[i]],
+			step = (i < n - 1)? scenarioPhases[i + 1].integerValue : steps;
+		rect.origin.x += rect.size.width;
+		rect.size.width = step * size.width / steps - rect.origin.x;
+		[[NSColor colorWithHue:((CGFloat)phase) / nPhases
+			saturation:1. brightness:1. alpha:.333] setFill];
+		[NSBezierPath fillRect:rect];
+	}
+}
 static NSRect drawing_area(NSRect area) {
 	CGFloat ticsHeight = NSFont.systemFontSize * 1.4;
 	return (NSRect){area.origin.x, area.origin.y + ticsHeight,
 		area.size.width, area.size.height - ticsHeight};
 }
 static NSMutableDictionary *textAttributes = nil;
-static void draw_tics(NSRect area, NSInteger xMax) {
+static void draw_tics(NSRect area, CGFloat xMax) {
 	CGFloat exp = pow(10., floor(log10(xMax))), mts = xMax / exp;
 	NSInteger intvl = ((mts < 2.)? .2 : (mts < 5.)? .5 : 1.) * exp;
 	CGFloat baseY = NSMinY(area) + NSFont.systemFontSize * 1.4;
@@ -289,17 +332,20 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 	[NSBezierPath fillRect:bounds];
 	switch (type) {
 		case StatWhole: {
+		NSRect dRect = drawing_area(bounds);
+		[self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y}];
 		NSBitmapImageRep *imgRep = [NSBitmapImageRep.alloc
 			initWithBitmapDataPlanes:(unsigned char *[]){imgBm}
 			pixelsWide:IMG_WIDTH pixelsHigh:IMG_HEIGHT bitsPerSample:8 samplesPerPixel:3
 			hasAlpha:NO isPlanar:NO colorSpaceName:NSCalibratedRGBColorSpace
 			bytesPerRow:IMG_WIDTH * 4 bitsPerPixel:32];
-		[imgRep drawInRect:drawing_area(bounds)
+		[imgRep drawInRect:dRect
 			fromRect:(NSRect){0, 0, ((steps == 0)? 1 : steps) / skip, IMG_HEIGHT}
 			operation:NSCompositingOperationCopy fraction:1. respectFlipped:NO hints:nil];
-		draw_tics(bounds, days);
+		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
 		} break;
-		case StatTimeEvo: {
+		case StatTimeEvo:
+		[self fillPhaseBackground:bounds.size];
 		NSRect dRect = drawing_area(bounds);
 		NSUInteger maxValue = ((idxBits & MskTransit) != 0)?
 			show_time_evo(_transit, idxBits, maxTransit, days, skipDays, dRect) :
@@ -309,8 +355,8 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 			[decFormat stringFromNumber:@(maxValue)], maxValue * 100. / popSize]
 				drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
 				withAttributes:textAttributes];
-			draw_tics(bounds, days);
-		} break;
+		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
+		break;
 		case StatPeriods:
 		show_histogram(_IncubPHist, 0, bounds.size, @"Incubation Period");
 		show_histogram(_RecovPHist, 1, bounds.size, @"Recovery Period");
