@@ -49,6 +49,7 @@ extern NSInteger stateRGB[N_COLORS];
 extern NSColor *stateColors[N_COLORS], *warpColors[NHealthTypes];
 extern CGFloat warpOpacity;
 extern CGFloat panelsAlpha;
+extern BOOL makePanelChildWindow;
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @end
@@ -61,5 +62,6 @@ extern CGFloat panelsAlpha;
 		*susColWell, *asyColWell, *symColWell, *recColWell, *dieColWell;
 	IBOutlet NSSlider *warpOpacitySld, *panelsAlphaSld;
 	IBOutlet NSTextField *warpOpacityDgt, *panelsAlphaDgt;
+	IBOutlet NSButton *childWinCBox;
 }
 @end

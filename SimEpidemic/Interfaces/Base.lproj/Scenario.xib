@@ -9,6 +9,7 @@
         <customObject id="-2" userLabel="File's Owner" customClass="Scenario">
             <connections>
                 <outlet property="applyBtn" destination="pQ0-kk-ANe" id="WaY-L5-D3I"/>
+                <outlet property="deselectBtn" destination="d95-4A-YLD" id="RPy-hA-kFM"/>
                 <outlet property="outlineView" destination="fcz-Kl-7rF" id="iS4-2C-YSH"/>
                 <outlet property="removeBtn" destination="0tt-qg-6Am" id="DrE-KK-4ZD"/>
                 <outlet property="shiftDownBtn" destination="7Pu-eP-ER3" id="8M7-ul-pjL"/>
@@ -23,6 +24,7 @@
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="196" y="240" width="520" height="325"/>
             <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1057"/>
+            <value key="minSize" type="size" width="520" height="200"/>
             <view key="contentView" id="se5-gp-TjO">
                 <rect key="frame" x="0.0" y="0.0" width="520" height="325"/>
                 <autoresizingMask key="autoresizingMask"/>
@@ -205,7 +207,7 @@
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="pQ0-kk-ANe">
                         <rect key="frame" x="101" y="13" width="85" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                        <buttonCell key="cell" type="push" title="Apply" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="7Dg-Ve-E7D">
+                        <buttonCell key="cell" type="push" title="Apply" bezelStyle="rounded" alignment="center" enabled="NO" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="7Dg-Ve-E7D">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" metaFont="system"/>
                         </buttonCell>
@@ -266,6 +268,17 @@
                         </buttonCell>
                         <connections>
                             <action selector="remove:" target="-2" id="1xA-Nc-S3N"/>
+                        </connections>
+                    </button>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="d95-4A-YLD">
+                        <rect key="frame" x="378" y="281" width="73" height="27"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Deselect" bezelStyle="rounded" alignment="center" controlSize="small" enabled="NO" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="zTj-tH-kme">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="deselectAll:" target="fcz-Kl-7rF" id="AU7-Md-npB"/>
                         </connections>
                     </button>
                 </subviews>

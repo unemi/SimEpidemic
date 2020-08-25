@@ -52,6 +52,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	[self.undoManager registerUndoWithTarget:self handler:^(DistDigits *dd) {
 		[dd changeDistInfo:orgInfo];
 	}];
+	[(ParamPanel *)minDgt.window.delegate checkUpdate];
 }
 - (void)dValueChanged:(NSTextField *)sender {
 	CGFloat newValue = sender.doubleValue;
@@ -76,6 +77,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 }
 @end
 
+#define N_SUBPANELS 4
 @interface ParamPanel () {
 	Document *doc;
 	NSArray<NSTextField *> *fDigits, *iDigits;
@@ -84,6 +86,8 @@ static NSNumberFormatter *distDgtFmt = nil;
 	NSArray<NSStepper *> *iSteppers;
 	NSUndoManager *undoManager;
 	BOOL hasUserDefaults;
+	NSSize viewSize[N_SUBPANELS];
+	NSRect orgFrame;
 }
 @end
 
@@ -125,10 +129,22 @@ static NSNumberFormatter *distDgtFmt = nil;
 - (void)windowDidLoad {
     [super windowDidLoad];
     self.window.alphaValue = panelsAlpha;
-    fDigits = @[infecDgt, infecDstDgt,
-		qnsRtDgt, qnsDlDgt, qdsRtDgt, qdsDlDgt, dstSTDgt, dstOBDgt, mobFrDgt];
-	fSliders = @[infecSld, infecDstSld,
-		qnsRtSld, qnsDlSld, qdsRtSld, qdsDlSld, dstSTSld, dstOBSld, mobFrSld];
+    NSArray<NSTabViewItem *> *tabs = tabView.tabViewItems;
+    NSView *views[] = {worldPView, pathoPView, measPView, testPView};
+    for (NSInteger i = 0; i < N_SUBPANELS; i ++) {
+		viewSize[i] = views[i].frame.size;
+		tabs[i].view = views[i];
+	}
+	NSRect wFrame = self.window.frame;
+	CGFloat dh = viewSize[0].height - tabs[0].view.frame.size.height;
+	wFrame.size.height += dh; wFrame.origin.y -= dh;
+	[self.window setFrame:wFrame display:NO];
+    fDigits = @[infecDgt, infecDstDgt, dstSTDgt, dstOBDgt, mobFrDgt, cntctTrcDgt,
+		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
+		tstSbjAsyDgt, tstSbjSymDgt];
+	fSliders = @[infecSld, infecDstSld, dstSTSld, dstOBSld, mobFrSld, cntctTrcSld,
+		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
+		tstSbjAsySld, tstSbjSymSld];
 	dDigits = @[
 		DDGT(mobDistMinDgt, mobDistMaxDgt, mobDistModeDgt, 0),
 		DDGT(incubMinDgt, incubMaxDgt, incubModeDgt, 1),
@@ -164,6 +180,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		memcmp(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
     [self adjustControls];
 	[self checkUpdate];
+	makeInitBtn.toolTip = NSLocalizedString(@"Effective with Scenario", nil);
     [doc setPanelTitle:self.window];
 }
 - (IBAction)changeStepsPerDay:(id)sender {
@@ -237,25 +254,48 @@ static NSNumberFormatter *distDgtFmt = nil;
 		}
 	});
 }
-#define VALUE_CHANGED(t,v,m,ds,ss) NSControl *d = ds[sender.tag], *s = ss[sender.tag];\
-t orgValue = (&p->m)[sender.tag];\
-t newValue = sender.v;\
-if (orgValue == newValue) return;\
-[undoManager registerUndoWithTarget:sender handler:^(NSControl *target) {\
-	target.v = orgValue;\
-	[target sendAction:target.action to:target.target]; }];\
-if (sender != d) d.v = newValue;\
-if (sender != s) s.v = newValue;\
-(&p->m)[sender.tag] = newValue;\
-[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :\
-	undoManager.isRedoing? NSChangeRedone : NSChangeDone];\
-[self checkUpdate];
 - (void)fValueChanged:(NSControl *)sender {
 	RuntimeParams *p = doc.runtimeParamsP;
-	VALUE_CHANGED(CGFloat, doubleValue, PARAM_F1, fDigits, fSliders)
+	NSControl *d = fDigits[sender.tag], *s = fSliders[sender.tag];
+	CGFloat orgValue = (&p->PARAM_F1)[sender.tag];
+	CGFloat newValue = sender.doubleValue;
+	if (orgValue == newValue) return;
+	[undoManager registerUndoWithTarget:sender handler:^(NSControl *target) {
+		target.doubleValue = orgValue;
+		[target sendAction:target.action to:target.target]; }];
+	if (sender != d) d.doubleValue = newValue;
+	if (sender != s) s.doubleValue = newValue;
+	(&p->PARAM_F1)[sender.tag] = newValue;
+	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :\
+		undoManager.isRedoing? NSChangeRedone : NSChangeDone];\
+	[self checkUpdate];
 }
 - (void)iValueChanged:(NSControl *)sender {
 	WorldParams *p = doc.tmpWorldParamsP;
-	VALUE_CHANGED(NSInteger, integerValue, PARAM_I1, iDigits, iSteppers)
+	NSControl *d = iDigits[sender.tag], *s = iSteppers[sender.tag];
+	NSInteger orgValue = (&p->PARAM_I1)[sender.tag];
+	NSInteger newValue = sender.integerValue;
+	if (orgValue == newValue) return;
+	[undoManager registerUndoWithTarget:sender handler:^(NSControl *target) {
+		target.integerValue = orgValue;
+		[target sendAction:target.action to:target.target]; }];
+	if (sender != d) d.integerValue = newValue;
+	if (sender != s) s.integerValue = newValue;
+	(&p->PARAM_I1)[sender.tag] = newValue;
+	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :\
+		undoManager.isRedoing? NSChangeRedone : NSChangeDone];\
+	[self checkUpdate];
+}
+// tabview delegate
+- (void)tabView:(NSTabView *)tabView willSelectTabViewItem:(NSTabViewItem *)tabViewItem {
+	orgFrame = tabView.selectedTabViewItem.view.frame;
+}
+- (void)tabView:(NSTabView *)tabView didSelectTabViewItem:(NSTabViewItem *)tabViewItem {
+	NSSize newSz = viewSize[[tabView indexOfTabViewItem:tabViewItem]];
+	NSRect wFrame = self.window.frame;
+	wFrame.size.height += newSz.height - orgFrame.size.height;
+	if ((wFrame.origin.y -= newSz.height - orgFrame.size.height) < 0)
+		wFrame.origin.y = 0.;
+	[self.window setFrame:wFrame display:YES animate:YES];
 }
 @end

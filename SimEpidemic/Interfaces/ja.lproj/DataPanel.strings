@@ -3,7 +3,7 @@
 "OK1-se-3sw.headerCell.title" = "無症状";
 "h6u-Le-79r.headerCell.title" = "無症状";
 "Mfn-Bj-cm3.title" = "コピー";
-"0y6-Ib-EEG.title" = "日増加分";
+"0y6-Ib-EEG.title" = "日毎増加分";
 "Tiz-7Y-cHM.title" = "日毎";
 "F0z-JX-Cv5.title" = "表データ";
 "Lek-Aw-cMa.headerCell.title" = "日";
@@ -33,3 +33,13 @@
 "kYw-s3-1jG.title" = "2日毎";
 "HRu-6q-Rxg.title" = "2週間毎";
 "jcU-Bb-7Q3.title" = "週毎";
+"AUa-4z-JNN.title" = "検査";
+"C4B-N9-QFr.headerCell.title" = "隔離(無)";
+"wCO-zs-rVx.headerCell.title" = "隔離(有)";
+"E9Y-zR-rS0.headerCell.title" = "日";
+"8Tn-2Z-di2.headerCell.title" = "検査数";
+"PTk-ci-4rS.headerCell.title" = "発症者";
+"qCy-P9-pXB.headerCell.title" = "接触者";
+"xsi-Yr-xwT.headerCell.title" = "疑いのある者";
+"zW1-9a-z6Z.headerCell.title" = "陽性";
+"ox3-vO-DBB.headerCell.title" = "陰性";

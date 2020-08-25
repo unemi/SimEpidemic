@@ -15,30 +15,64 @@
 #import "ParamPanel.h"
 #import "StatPanel.h"
 #import "DataPanel.h"
+#import "Parameters.h"
 #define ALLOC_UNIT 2048
 typedef enum {
-	LoopNone, LoopRunning, LoopFinished, LoopEndByUser, LoopEndByCondition
+	LoopNone, LoopRunning, LoopFinished, LoopEndByUser,
+	LoopEndByCondition, LoopEndAsDaysPassed
 } LoopMode;
-static Agent *freePop = NULL;
-static Agent *new_agent(void) {
-	if (freePop == NULL) {
-		freePop = malloc(sizeof(Agent) * ALLOC_UNIT);
-		for (NSInteger i = 0; i < ALLOC_UNIT - 1; i ++)
-			freePop[i].next = freePop + i + 1;
-		freePop[ALLOC_UNIT - 1].next = NULL;
+#define DYNAMIC_STRUCT(t,f,n,fm) static t *f = NULL;\
+static t *n(void) {\
+	if (f == NULL) {\
+		f = malloc(sizeof(t) * ALLOC_UNIT);\
+		for (NSInteger i = 0; i < ALLOC_UNIT - 1; i ++) f[i].next = f + i + 1;\
+		f[ALLOC_UNIT - 1].next = NULL;\
+	}\
+	t *a = f; f = f->next; a->next = NULL; return a;\
+}\
+static void fm(t **ap) {\
+	if (*ap == NULL) return;\
+	for (t *p = *ap; ; p = p->next)\
+		if (p->next == NULL) { p->next = f; break; }\
+	f = *ap; *ap = NULL;\
+}
+DYNAMIC_STRUCT(Agent, freePop, new_agent, free_agent_mems)
+DYNAMIC_STRUCT(TestEntry, freeTestEntries, new_testEntry, free_testEntry_mems)
+DYNAMIC_STRUCT(ContactInfo, freeCInfo, new_cinfo, free_cinfo_mems)
+static NSLock *cInfoLock = nil;
+void add_new_cinfo(Agent *a, Agent *b, NSInteger tm) {
+	if (cInfoLock == nil) cInfoLock = NSLock.new;
+	[cInfoLock lock];
+	ContactInfo *c = new_cinfo();
+	[cInfoLock unlock];
+	c->agent = b; c->timeStamp = tm;
+	c->prev = NULL;
+	if (a->contactInfoHead == NULL) {
+		a->contactInfoHead = a->contactInfoTail = c;
+	} else {
+		c->next = a->contactInfoHead;
+		a->contactInfoHead = c;
+		c->next->prev = c;
 	}
-	Agent *a = freePop;
-	freePop = freePop->next;
-	a->next = NULL;
-	return a;
 }
-static void free_agent_mems(Agent **ap) {
-	if (*ap == NULL) return;
-	for (Agent *p = *ap; ; p = p->next)
-		if (p->next == NULL) { p->next = freePop; break; }
-	freePop = *ap;
-	*ap = NULL;
+static void remove_old_cinfo(Agent *a, NSInteger tm) {
+	ContactInfo *p = a->contactInfoTail;
+	if (p == NULL) return;
+	for ( ; p != NULL; p = p->prev) if (p->timeStamp > tm) break;
+	ContactInfo *gbHead, *gbTail = a->contactInfoTail;
+	if (p == NULL) {
+		gbHead = a->contactInfoHead;
+		a->contactInfoHead = a->contactInfoTail = NULL;
+	} else if (p->next != NULL) {
+		gbHead = p->next;
+		a->contactInfoTail = p;
+		p->next = NULL;
+	} else return;
+	[cInfoLock lock];
+	gbTail->next = freeCInfo; freeCInfo = gbHead;
+	[cInfoLock unlock];
 }
+
 CGFloat get_uptime(void) {
 	struct timespec ts;
 	clock_gettime(CLOCK_UPTIME_RAW, &ts);
@@ -48,12 +82,27 @@ void in_main_thread(dispatch_block_t block) {
 	if ([NSThread isMainThread]) block();
 	else dispatch_async(dispatch_get_main_queue(), block);
 }
+#ifdef DEBUG
+void my_exit(void) {
+	in_main_thread(^{ [NSApp terminate:nil]; });
+}
+#endif
 
 @implementation NSWindowController (ChildWindowExtension)
-- (void)showWindowWithParent:(NSWindow *)parentWindow {
-	if (self.window.parentWindow == nil)
+- (void)setupParentWindow:(NSWindow *)parentWindow {
+	if (self.window.parentWindow == nil && makePanelChildWindow)
 		[parentWindow addChildWindow:self.window ordered:NSWindowAbove];
+}
+- (void)showWindowWithParent:(NSWindow *)parentWindow {
+	[self setupParentWindow:parentWindow];
 	[self showWindow:self];
+}
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+	NSWindow *pWin = self.window.parentWindow;
+	if (pWin != nil) {
+		[pWin removeChildWindow:self.window];
+		[pWin addChildWindow:self.window ordered:NSWindowAbove];
+	}
 }
 @end
 
@@ -67,11 +116,13 @@ void in_main_thread(dispatch_block_t block) {
 	Agent **pop;
 	NSRange *pRange;
 	CGFloat prevTime, stepsPerSec;
-	NSMutableArray<WarpInfo *> *newWarpF;
-	NSLock *newWarpLock;
-	NSInteger animeSteps;
+	NSMutableDictionary<NSNumber *, WarpInfo *> *newWarpF;
+	NSMutableDictionary<NSNumber *, NSNumber *> *testees;
+	NSLock *newWarpLock, *testeesLock;
+	NSInteger animeSteps, stopAtNDays;
 	NSArray *scenario;
 	NSPredicate *predicateToStop;
+	TestEntry *testQueHead, *testQueTail;
 	dispatch_queue_t dispatchQueue;
 	dispatch_group_t dispatchGroup;
 	NSSize orgWindowSize, orgViewSize;
@@ -86,6 +137,10 @@ void in_main_thread(dispatch_block_t block) {
 - (WorldParams *)worldParamsP { return &worldParams; }
 - (WorldParams *)tmpWorldParamsP { return &tmpWorldParams; }
 - (BOOL)running { return loopMode == LoopRunning; }
+- (void)setRunning:(BOOL)newState {
+	BOOL orgState = loopMode == LoopRunning;
+	if (orgState != newState) [self startStop:nil];
+}
 - (void)popLock { [popLock lock]; }
 - (void)popUnlock { [popLock unlock]; }
 - (NSMutableArray<MyCounter *> *)RecovPHist { return statInfo.RecovPHist; }
@@ -135,7 +190,7 @@ void in_main_thread(dispatch_block_t block) {
 		n = nSusc;
 		for (NSInteger i = 0; i < nCells; i ++)
 			for (Agent *a = _Pop[i]; a; a = a->next) if (a->health == Susceptible)
-				{ a->health = Asymptomatic; a->daysI = a->daysD = 0; }
+				{ a->health = Asymptomatic; a->daysInfected = a->daysDiseased = 0; }
 	} else if (n > 0) {
 		NSInteger *idxs = malloc(nSusc * sizeof(NSInteger));
 		for (NSInteger i = 0; i < nSusc; i ++) idxs[i] = i;
@@ -151,7 +206,7 @@ void in_main_thread(dispatch_block_t block) {
 		for (NSInteger i = 0, j = 0, k = 0; i < nCells && j < n; i ++)
 		for (Agent *a = _Pop[i]; a; a = a->next) if (a->health == Susceptible) {
 			if (k == idx) {
-				a->health = Asymptomatic; a->daysI = a->daysD = 0;
+				a->health = Asymptomatic; a->daysInfected = a->daysDiseased = 0;
 				if ((++ j) >= n) break;
 				else idx = idxs[j];
 			}
@@ -168,27 +223,38 @@ void in_main_thread(dispatch_block_t block) {
 	});
 }
 - (void)adjustScenarioText {
-	if (scenario != nil) scenarioText.integerValue = scenarioIndex;
+	if (scenario != nil && scenario.count > 0)
+		scenarioText.integerValue = scenarioIndex;
 	else scenarioText.stringValue = NSLocalizedString(@"None", nil);
 }
 - (void)execScenario {
+	char visitFlags[scenario.count];
+	memset(visitFlags, 0, scenario.count);
 	predicateToStop = nil;
+	if (scenario == nil) return;
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	while (scenarioIndex < scenario.count) {
+		if (visitFlags[scenarioIndex] == YES) {
+			error_msg([NSString stringWithFormat:@"%@: %ld",
+				NSLocalizedString(@"Looping was found in the Scenario.", nil),
+				scenarioIndex + 1],
+				scenarioPanel? scenarioPanel.window : view.window, NO);
+			break;
+		}
+		visitFlags[scenarioIndex] = YES;
 		NSObject *item = scenario[scenarioIndex ++];
-//NSLog(@"%ld:%@", scenarioIndex, item);
 		if ([item isKindOfClass:NSArray.class]) {
-			if ([((NSArray *)item)[0] isKindOfClass:NSNumber.class]) {
+			if ([((NSArray *)item)[0] isKindOfClass:NSNumber.class]) {	// jump N if --
 				NSInteger destIdx = [((NSArray *)item)[0] integerValue];
 				if (((NSArray *)item).count == 1) scenarioIndex = destIdx;
 				else if ([(NSPredicate *)((NSArray *)item)[1] evaluateWithObject:statInfo])
 					scenarioIndex = destIdx;
-			} else md[((NSArray *)item)[0]] = ((NSArray *)item)[1];
+			} else md[((NSArray *)item)[0]] = ((NSArray *)item)[1];	// paramter assignment
 		} else if ([item isKindOfClass:NSDictionary.class]) {	// for upper compatibility
 			[md addEntriesFromDictionary:(NSDictionary *)item];
-		} else if ([item isKindOfClass:NSNumber.class]) {
+		} else if ([item isKindOfClass:NSNumber.class]) {	// add infected individuals
 			[self addInfected:((NSNumber *)item).integerValue];
-		} else if ([item isKindOfClass:NSPredicate.class]) {
+		} else if ([item isKindOfClass:NSPredicate.class]) {	// predicate to stop
 			predicateToStop = (NSPredicate *)item;
 			in_main_thread( ^{ [self adjustScenarioText]; });
 			break;
@@ -198,6 +264,7 @@ void in_main_thread(dispatch_block_t block) {
 		set_params_from_dict(&runtimeParams, &worldParams, md);
 		in_main_thread( ^{ [self->paramPanel adjustControls]; });
 	}
+	if (predicateToStop == nil && scenarioIndex == scenario.count) scenarioIndex ++;
 	[statInfo phaseChangedTo:scenarioIndex];
 }
 - (NSArray *)scenario { return scenario; }
@@ -206,7 +273,11 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	for (NSInteger i = 0; i < scen.count; i ++)
 		if ([scen[i] isKindOfClass:NSPredicate.class])
 			[ma addObject:@(i + 1)];
-	[ma addObject:@(scen.count + 1)];
+	// if the final item is not an unconditional jump then add finale phase.
+	NSArray *item = scen.lastObject;
+	if (![item isKindOfClass:NSArray.class] || item.count != 1 ||
+		![item[0] isKindOfClass:NSNumber.class])
+		[ma addObject:@(scen.count + 1)];
 	return ma;
 }
 - (void)setScenario:(NSArray *)newScen {
@@ -217,7 +288,10 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	scenario = newScen;
 	scenarioIndex = 0;
 	statInfo.phaseInfo = phase_info(scenario);
-//	[self execScenario];
+	[self adjustScenarioText];
+	if (runtimeParams.step == 0) [self execScenario];
+	[scenarioPanel adjustControls:
+		self.undoManager.undoing || self.undoManager.redoing];
 }
 - (void)showCurrentStatistics {
 	StatData *stat = statInfo.statistics;
@@ -232,9 +306,16 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		memcpy(&worldParams, &tmpWorldParams, sizeof(WorldParams));
 		[self updateChangeCount:NSChangeDone];
 	}
-	if (scenario != nil) memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
-	[paramPanel adjustControls];
+	if (scenario != nil) {
+		memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
+		[paramPanel adjustControls];
+	}
 	[popLock lock];
+	for (NSInteger i = 0; i < nMesh * nMesh; i ++)
+		for (Agent *a = _Pop[i]; a != NULL; a = a->next) {
+			free_cinfo_mems(&a->contactInfoHead);
+			a->contactInfoTail = NULL;
+		}
 	if (nMesh != worldParams.mesh) {
 		nMesh = worldParams.mesh;
 		NSInteger popMemSz = sizeof(void *) * nMesh * nMesh;
@@ -272,7 +353,9 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	free_agent_mems(&_QList);
 	free_agent_mems(&_CList);
 	_WarpList = NSMutableArray.new;
-	step = 0;
+	free_testEntry_mems(&testQueHead);
+	testQueTail = NULL;
+	runtimeParams.step = 0;
 	[statInfo reset:nPop infected:worldParams.nInitInfec];
 	[popLock unlock];
 	scenarioIndex = 0;
@@ -287,9 +370,12 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	dispatchQueue = dispatch_queue_create(
 		"jp.ac.soka.unemi.SimEpidemic.queue", DISPATCH_QUEUE_CONCURRENT);
 	popLock = NSLock.new;
-	newWarpF = NSMutableArray.new;
+	newWarpF = NSMutableDictionary.new;
 	newWarpLock = NSLock.new;
+	testees = NSMutableDictionary.new;
+	testeesLock = NSLock.new;
 	animeSteps = defaultAnimeSteps;
+	stopAtNDays = -365;
 	memcpy(&runtimeParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
 	memcpy(&initParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
 	memcpy(&worldParams, &userDefaultWorldParams, sizeof(WorldParams));
@@ -312,6 +398,8 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	if (scenario != nil) statInfo.phaseInfo = phase_info(scenario);
 	[self resetPop];
 	show_anime_steps(animeStepsTxt, animeSteps);
+	stopAtNDaysDgt.integerValue = (stopAtNDays > 0)? stopAtNDays : - stopAtNDays;
+	stopAtNDaysCBox.state = stopAtNDays > 0;
 	[self adjustScenarioText];
 	orgWindowSize = windowController.window.frame.size;
 	orgViewSize = view.frame.size;
@@ -391,6 +479,64 @@ static NSObject *element_from_property(NSObject *prop) {
 	}
 	return YES;
 }
+static NSLock *testEntriesLock = nil;
+- (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason {
+	if (runtimeParams.step - agent->lastTested <
+		runtimeParams.tstInterval * worldParams.stepsPerDay ||
+		agent->isOutOfField) return;
+	[testeesLock lock];
+	testees[@((NSUInteger)agent)] = @(reason);
+	[testeesLock unlock];
+}
+- (void)deliverTestResults:(NSUInteger *)testCount {
+	// check the results of tests
+	NSInteger cTm = runtimeParams.step - runtimeParams.tstProc * worldParams.stepsPerDay;
+	for (TestEntry *entry = testQueHead; entry != NULL; entry = testQueHead) {
+		if (entry->timeStamp > cTm) break;
+		if (entry->isPositive) {
+			testCount[TestPositive] ++;
+			Agent *a = entry->agent;
+			a->orgPt = (CGPoint){a->x, a->y};
+			NSPoint newPt = {
+				(random() * .248 / 0x7fffffff + 1.001) * worldParams.worldSize,
+				(random() * .458 / 0x7fffffff + .501) * worldParams.worldSize};
+			[self addNewWarp:[WarpInfo.alloc initWithAgent:a goal:newPt mode:WarpToHospital]];
+			for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
+				[self testInfectionOfAgent:c->agent reason:TestAsContact];
+			[cInfoLock lock];
+			free_cinfo_mems(&a->contactInfoHead);
+			[cInfoLock unlock];
+			a->contactInfoTail = NULL;
+		} else testCount[TestNegative] ++;
+		testQueHead = entry->next;
+		if (entry->next) entry->next->prev = NULL;
+		else testQueTail = NULL;
+		entry->next = freeTestEntries;
+		freeTestEntries = entry;
+	}
+
+	// enqueue new tests
+	if (testEntriesLock == nil) testEntriesLock = NSLock.new;
+	[testEntriesLock lock];
+	for (NSNumber *num in testees.keyEnumerator) {
+		testCount[testees[num].integerValue] ++;
+		Agent *agent = (Agent *)num.integerValue;
+		TestEntry *entry = new_testEntry();
+		entry->isPositive = (agent->health == Asymptomatic || agent->health == Symptomatic)?
+			(random() < 0x7fffffff * runtimeParams.tstSens / 100.) :
+			(random() > 0x7fffffff * runtimeParams.tstSpec / 100.);
+		agent->lastTested = entry->timeStamp = runtimeParams.step;
+		entry->agent = agent;
+		if ((entry->prev = testQueTail) != NULL) testQueTail->next = entry;
+		else testQueHead = entry;
+		entry->next = NULL;
+		testQueTail = entry;
+	}
+	[testEntriesLock unlock];
+	[testees removeAllObjects];
+	for (NSInteger i = TestAsSymptom; i < TestPositive; i ++)
+		testCount[TestTotal] += testCount[i];
+}
 - (void)gridToGridA:(NSInteger)iA B:(NSInteger)iB {
 	Agent **apA = pop + pRange[iA].location, **apB = pop + pRange[iB].location;
 	for (NSInteger j = 0; j < pRange[iA].length; j ++)
@@ -399,7 +545,7 @@ static NSObject *element_from_property(NSObject *prop) {
 }
 - (void)addNewWarp:(WarpInfo *)info {
 	[newWarpLock lock];
-	[newWarpF addObject:info];
+	newWarpF[@((NSUInteger)info.agent)] = info;
 	[newWarpLock unlock];
 }
 //#define MEASURE_TIME
@@ -424,16 +570,25 @@ static NSInteger mCount = 0, mCount2 = 0;
 		for (Agent *p = _Pop[i]; p; p = p->next) pop[nInField ++] = p;
 	}
 	pRange[nCells - 1].length = nInField - pRange[nCells - 1].location;
-	for (NSInteger i = 0; i < nInField; i ++) reset_for_step(pop[i]);
+	NSInteger oldTimeStamp = runtimeParams.step - worldParams.stepsPerDay * 14;	// two weeks
+	Agent **popL = pop;
+	for (NSInteger j = 0; j < nCores; j ++) {
+		NSInteger start = j * nInField / nCores;
+		NSInteger end = (j < nCores - 1)? (j + 1) * nInField / nCores : nInField;
+		[self addOperation:^{
+			for (NSInteger i = start; i < end; i ++) {
+				reset_for_step(popL[i]);
+				remove_old_cinfo(popL[i], oldTimeStamp);
+		}}];
+	}
+	[self waitAllOperations];
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-
 	RuntimeParams *rp = &runtimeParams;
 	WorldParams *wp = &worldParams;
-	Agent **popL = pop;
 	__weak typeof(self) weakSelf = self;
 	for (NSInteger i = 0; i < nCells; i ++) {
 		Agent **ap = popL + pRange[i].location;
@@ -507,33 +662,40 @@ static NSInteger mCount = 0, mCount2 = 0;
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-
-	for (WarpInfo *info in newWarpF) {
+	NSArray<WarpInfo *> *newInfos = newWarpF.allValues;
+	for (WarpInfo *info in newInfos) {
 		Agent *a = info.agent;
 		if (a->isWarping) {
 			for (NSInteger i = _WarpList.count - 1; i >= 0; i --)
 				if (_WarpList[i].agent == a)
 					{ [_WarpList removeObjectAtIndex:i]; break; }
-		} else a->isWarping = YES;
-		switch (info.mode) {
-			case WarpInside: case WarpToHospital: case WarpToCemeteryF:
-			remove_agent(a, &worldParams, _Pop); break;
-			case WarpBack: case WarpToCemeteryH:
-			remove_from_list(a, &_QList); break;
+		} else {
+			a->isWarping = YES;
+			switch (info.mode) {
+				case WarpInside: case WarpToHospital: case WarpToCemeteryF:
+				remove_agent(a, &worldParams, _Pop); break;
+				case WarpBack: case WarpToCemeteryH:
+				remove_from_list(a, &_QList); break;
+			}
 		}
 	}
-	[_WarpList addObjectsFromArray:newWarpF];
+	[_WarpList addObjectsFromArray:newInfos];
 	[newWarpF removeAllObjects];
 	for (NSInteger i = _WarpList.count - 1; i >= 0; i --) {
 		WarpInfo *info = _WarpList[i];
 		if (warp_step(info.agent, &worldParams, self, info.mode, info.goal))
 			[_WarpList removeObjectAtIndex:i];
 	}
+	
+	NSUInteger testCount[NIntTestTypes];
+	memset(testCount, 0, sizeof(testCount));
+	[self deliverTestResults:testCount];
 
 	BOOL finished = [statInfo calcStat:_Pop nCells:nCells
-		qlist:_QList clist:_CList warp:_WarpList stepsPerDay:worldParams.stepsPerDay];
+		qlist:_QList clist:_CList warp:_WarpList
+		testCount:testCount stepsPerDay:worldParams.stepsPerDay];
 	[popLock unlock];
-	step ++;
+	runtimeParams.step ++;
 	if (loopMode == LoopRunning) {
 		if (finished) loopMode = LoopFinished;
 		else if ([predicateToStop evaluateWithObject:statInfo])
@@ -550,39 +712,43 @@ static NSInteger mCount = 0, mCount2 = 0;
 			mtime[i] = 0;
 		}
 		if (mCount2 >= 10) {
-			if (running) in_main_thread(^{ [self startStop:nil]; });
+			if (self.running) in_main_thread(^{ [self startStop:nil]; });
 		} else mCount = 0;
 	}
 #endif
 }
 - (void)showAllAfterStep {
 	[self showCurrentStatistics];
-	daysNum.doubleValue = floor(step / worldParams.stepsPerDay);
+	daysNum.doubleValue = floor(runtimeParams.step / worldParams.stepsPerDay);
 	spsNum.doubleValue = self->stepsPerSec;
 	view.needsDisplay = YES;
 }
 - (void)runningLoop {
 	while (loopMode == LoopRunning) {
 		[self doOneStep];
-		CGFloat newTime = get_uptime(), timePassed = newTime - prevTime;
-		if (timePassed < 1.)
-			stepsPerSec += (fmin(30., 1. / timePassed) - stepsPerSec) * 0.2;
-		prevTime = newTime;
-		if (step % animeSteps == 0) {
-			in_main_thread(^{ [self showAllAfterStep]; });
-			NSInteger usToWait = (1./30. - timePassed) * 1e6;
-			usleep((unsigned int)((usToWait < 0)? 1 : usToWait));
-		} else usleep(1);
 		if (loopMode == LoopEndByCondition && scenarioIndex < scenario.count) {
 			[self execScenario];
 			loopMode = LoopRunning;
 		}
+		if (stopAtNDays > 0 && stopAtNDays * worldParams.stepsPerDay == runtimeParams.step) {
+			loopMode = LoopEndAsDaysPassed;
+			break;
+		}
+		CGFloat newTime = get_uptime(), timePassed = newTime - prevTime;
+		if (timePassed < 1.)
+			stepsPerSec += (fmin(30., 1. / timePassed) - stepsPerSec) * 0.2;
+		prevTime = newTime;
+		if (runtimeParams.step % animeSteps == 0) {
+			in_main_thread(^{ [self showAllAfterStep]; });
+			NSInteger usToWait = (1./30. - timePassed) * 1e6;
+			usleep((unsigned int)((usToWait < 0)? 1 : usToWait));
+		} else usleep(1);
 	}
 	in_main_thread(^{
 		self->view.needsDisplay = YES;
 		self->startBtn.title = NSLocalizedString(@"Start", nil);
 		self->stepBtn.enabled = YES;
-		[self->scenarioPanel adjustControls];
+		[self->scenarioPanel adjustControls:NO];
 	});
 }
 - (void)goAhead {
@@ -596,20 +762,21 @@ static NSInteger mCount = 0, mCount2 = 0;
 		startBtn.title = NSLocalizedString(@"Stop", nil);
 		stepBtn.enabled = NO;
 		loopMode = LoopRunning;
-		[scenarioPanel adjustControls];
+		[scenarioPanel adjustControls:NO];
 		[NSThread detachNewThreadSelector:@selector(runningLoop) toTarget:self withObject:nil];
 	} else {
 		startBtn.title = NSLocalizedString(@"Start", nil);
 		stepBtn.enabled = YES;
 		loopMode = LoopEndByUser;
-		[scenarioPanel adjustControls];
+		[scenarioPanel adjustControls:NO];
 	}
 }
 - (IBAction)step:(id)sedner {
 	switch (loopMode) {
 		case LoopRunning: return;
 		case LoopFinished: case LoopEndByCondition: [self goAhead];
-		case LoopEndByUser: case LoopNone: [self doOneStep];
+		case LoopEndByUser: case LoopNone: case LoopEndAsDaysPassed:
+		[self doOneStep];
 	}
 	[self showAllAfterStep];
 	loopMode = LoopEndByUser;
@@ -620,6 +787,24 @@ static NSInteger mCount = 0, mCount2 = 0;
 }
 - (IBAction)addOneInfected:(id)sender {
 	[self addInfected:1];
+}
+- (IBAction)switchDaysToStop:(id)sender {
+	BOOL orgState = stopAtNDays > 0, newState = stopAtNDaysCBox.state;
+	if (orgState == newState) return;
+	[self.undoManager registerUndoWithTarget:stopAtNDaysCBox handler:^(NSButton *target) {
+		target.state = orgState;
+		[target sendAction:target.action to:target.target];
+	}];
+	stopAtNDays = - stopAtNDays;
+}
+- (IBAction)changeDaysToStop:(id)sender {
+	NSInteger orgDays = stopAtNDays;
+	[self.undoManager registerUndoWithTarget:stopAtNDaysDgt handler:^(NSTextField *target) {
+		target.integerValue = orgDays;
+		[target sendAction:target.action to:target.target];
+	}];
+	NSInteger days = stopAtNDaysDgt.integerValue;	
+	stopAtNDays = stopAtNDaysCBox.state? days : - days;
 }
 - (IBAction)changeAnimeSteps:(id)sender {
 	NSInteger newSteps = 1 << animeStepper.integerValue;
@@ -680,6 +865,19 @@ static NSInteger mCount = 0, mCount2 = 0;
 - (void)revisePanelsAlpha {
 	if (paramPanel != nil) paramPanel.window.alphaValue = panelsAlpha;
 	if (scenarioPanel != nil) scenarioPanel.window.alphaValue = panelsAlpha;
+}
+- (void)revisePanelChildhood {
+	NSArray<NSWindow *> *children = view.window.childWindows;
+	if (!makePanelChildWindow) {
+		for (NSWindow *child in children)
+			[view.window removeChildWindow:child];
+	} else if (children == nil || children.count == 0) {
+		if (paramPanel != nil) [paramPanel setupParentWindow:view.window];
+		if (scenarioPanel != nil) [scenarioPanel setupParentWindow:view.window];
+		if (dataPanel != nil) [dataPanel setupParentWindow:view.window];
+		for (StatPanel *stp in statInfo.statPanels)
+			[stp setupParentWindow:view.window];
+	}
 }
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
 	SEL action = menuItem.action;

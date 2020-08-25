@@ -10,6 +10,10 @@
 #import "AppDelegate.h"
 
 extern NSString *keyParameters, *keyScenario;
+extern void add_new_cinfo(Agent *a, Agent *b, NSInteger tm);
+#ifdef DEBUG
+extern void my_exit(void);
+#endif
 
 @interface WarpInfo : NSObject
 @property Agent *agent;
@@ -23,16 +27,16 @@ extern NSString *keyParameters, *keyScenario;
 @interface Document : NSDocument <NSWindowDelegate> {
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
-		*scenarioText, *animeStepsTxt;
-	IBOutlet NSButton *startBtn, *stepBtn;
+		*scenarioText, *animeStepsTxt, *stopAtNDaysDgt;
+	IBOutlet NSButton *startBtn, *stepBtn, *stopAtNDaysCBox;
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;
 	RuntimeParams runtimeParams, initParams;
 	WorldParams worldParams, tmpWorldParams;
-	NSInteger step;
 	NSLock *popLock;
 	IBOutlet StatInfo *statInfo;
+// for Scripting
 }
 @property (readonly) Agent **Pop, *QList, *CList;
 @property (readonly) NSMutableArray<WarpInfo *> *WarpList;
@@ -53,10 +57,12 @@ extern NSString *keyParameters, *keyScenario;
 - (void)setInitialParameters:(NSData *)newParams;
 - (NSArray *)scenario;
 - (void)setScenario:(NSArray *)newScen;
+- (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
 - (void)addNewWarp:(WarpInfo *)info;
 - (void)openScenarioFromURL:(NSURL *)url;
 - (void)openParamsFromURL:(NSURL *)url;
 - (void)revisePanelsAlpha;
+- (void)revisePanelChildhood;
 @end
 
 @interface NSWindowController (ChildWindowExtension)

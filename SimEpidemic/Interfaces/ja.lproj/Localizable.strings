@@ -10,11 +10,16 @@
 "mobilityFrequency" = "移動頻度";
 "distancingStrength" = "社会距離強度";
 "distancingObedience" = "社会距離協力率";
-"quarantineSympRate" = "有症状者隔離率";
-"quarantineAsymRate" = "無症状者隔離率";
-"quarantineSympDelay" = "有症状者隔離遅れ";
-"quarantineAsymDelay" = "無症状者隔離遅れ";
+"contactTracing" = "接触者追跡";
+"testDelay" = "検査するまでの遅れ";
+"testInterval" = "検査間隔";
+"testSensitivity" = "検査の感度";
+"testSpecificity" = "検査の特異度";
+"testProcess" = "検査結果にかかる期間";
+"subjectAsymptomatic" = "無症状の検査対象者";
+"subjectSymptomatic" = "有症状の検査対象者";
 
+"Effective with Scenario" = "シナリオ開始時に適用されます。";
 "Start" = "開始";
 "Stop" = "停止";
 "Susceptible" = "未感染者";
@@ -43,6 +48,8 @@
 "dailySymptomatic" = "日当たり発症者数";
 "dailyRecovery" = "日当たり回復者数";
 "dailyDeath" = "日当たり死者数";
+"weeklyPositive" = "週間陽性判明者数";
+"weeklyPositiveRate" = "週間陽性率";
 "people" = "人";
 "per mille" = "パーミル";
 "This operation cannot be undone." = "この操作は取り消せません。";
@@ -51,7 +58,8 @@
 "Will clear the current user's defaults." = "現在の規定値設定を消去します。";
 "Draw in each step." = "毎ステップ描画する";
 "AnimeStepsFormat" = "%ld ステップ毎に描画";
-"max" = "最大";
+"max count" = "最大人数";
+"max rate" = "最大陽性率";
 "HistogramFormat" = "%@\nサンプル数 %ld\n最小 %ld, 最大 %ld\n中央値 %ld\n平均値 %.2f";
 "Incubation Period" = "潜伏期間";
 "Recovery Period" = "回復までの期間";
@@ -64,3 +72,6 @@
 "Move to" = "満たすなら";
 "satisfied" = "";
 "when satisfied" = "へ移動";
+"day" = "日";
+"days" = "日";
+"Looping was found in the Scenario." = "シナリオ内でループが見つかりました。";

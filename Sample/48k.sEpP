@@ -20,7 +20,7 @@
 	<real>1</real>
 	<key>infec</key>
 	<real>50</real>
-	<key>initPop</key>
+	<key>populationSize</key>
 	<integer>48000</integer>
 	<key>mesh</key>
 	<integer>40</integer>

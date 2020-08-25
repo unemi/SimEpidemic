@@ -7,14 +7,17 @@
 */
 "infectionProberbility" = "infection rate";
 "infectionDistance" = "infection distance";
-"quarantineAsymRate" = "asymp. quarantine rate";
-"quarantineAsymDelay" = "asymp. quarantine delay";
-"quarantineSympRate" = "symp. quarantime rate";
-"quarantineSympDelay" = "symp. quarantime delay";
 "distancingStrength" = "distancing strength";
 "distancingObedience" = "distancing obedience";
 "mobilityFrequency" = "mobility frequency";
-"mobilityDistance" = "mobility distance";
+"contactTracing" = "contact tracing";
+"testDelay" = "test delay";
+"testInterval" = "test interval";
+"testSensitivity" = "test sensitivity";
+"testSpecificity" = "test specificity";
+"testProcess" = "test process";
+"subjectAsymptomatic" = "subject asymptomatic";
+"subjectSymptomatic" = "subject symptomatic";
 
 "PreConditionWord" = "";
 "AnimeStepsFormat" = "Draw in each %ld steps.";

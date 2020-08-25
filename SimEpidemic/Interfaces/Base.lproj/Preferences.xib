@@ -13,6 +13,7 @@
                 <outlet property="asyColWell" destination="nT3-Zg-gXL" id="pnN-cT-hNc"/>
                 <outlet property="bgColWell" destination="Vbd-YI-Anx" id="WFj-0W-uz7"/>
                 <outlet property="cemeteryColWell" destination="6Im-Mz-MzT" id="vXA-9X-UE1"/>
+                <outlet property="childWinCBox" destination="XCl-e0-ynW" id="RNS-Ns-F8W"/>
                 <outlet property="dieColWell" destination="aNG-Bn-B9m" id="giD-Qi-FFg"/>
                 <outlet property="hospitalColWell" destination="hpq-UU-ly0" id="gi8-Z7-xZj"/>
                 <outlet property="panelsAlphaDgt" destination="ou4-Jc-2ab" id="YyA-AA-lkJ"/>
@@ -31,14 +32,14 @@
         <window title="Preferences" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" titlebarAppearsTransparent="YES" id="QvC-M9-y7g" customClass="NSPanel">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
-            <rect key="contentRect" x="102" y="761" width="343" height="292"/>
+            <rect key="contentRect" x="102" y="761" width="343" height="314"/>
             <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1057"/>
             <view key="contentView" wantsLayer="YES" id="EiT-Mj-1SZ">
-                <rect key="frame" x="0.0" y="0.0" width="343" height="292"/>
+                <rect key="frame" x="0.0" y="0.0" width="343" height="314"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Z81-u2-NAT">
-                        <rect key="frame" x="18" y="252" width="162" height="16"/>
+                        <rect key="frame" x="18" y="274" width="162" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Draws in every 999 steps." id="IsP-m3-et4">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -47,7 +48,7 @@
                         </textFieldCell>
                     </textField>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Npe-oB-mli">
-                        <rect key="frame" x="197" y="225" width="76" height="16"/>
+                        <rect key="frame" x="197" y="247" width="76" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Susceptible" id="3So-hL-2cK">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -56,7 +57,7 @@
                         </textFieldCell>
                     </textField>
                     <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="cIA-am-4Nq">
-                        <rect key="frame" x="183" y="247" width="19" height="27"/>
+                        <rect key="frame" x="183" y="269" width="19" height="27"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <stepperCell key="cell" continuous="YES" alignment="left" maxValue="6" id="Bze-8B-F6d"/>
                         <connections>
@@ -64,12 +65,12 @@
                         </connections>
                     </stepper>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="QhD-PV-WO6">
-                        <rect key="frame" x="279" y="221" width="44" height="23"/>
+                        <rect key="frame" x="279" y="243" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="klT-gV-yhH">
-                        <rect key="frame" x="182" y="198" width="91" height="16"/>
+                        <rect key="frame" x="182" y="220" width="91" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Asymptomatic" id="yHH-zD-WNU">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -78,12 +79,12 @@
                         </textFieldCell>
                     </textField>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="nT3-Zg-gXL">
-                        <rect key="frame" x="279" y="194" width="44" height="23"/>
+                        <rect key="frame" x="279" y="216" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="x1t-eI-UX6">
-                        <rect key="frame" x="189" y="171" width="84" height="16"/>
+                        <rect key="frame" x="189" y="193" width="84" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Symptomatic" id="qgC-aU-veb">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -92,12 +93,12 @@
                         </textFieldCell>
                     </textField>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="8HE-3b-f4V">
-                        <rect key="frame" x="279" y="167" width="44" height="23"/>
+                        <rect key="frame" x="279" y="189" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="N3l-E0-Tbf">
-                        <rect key="frame" x="204" y="144" width="69" height="16"/>
+                        <rect key="frame" x="204" y="166" width="69" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Recovered" id="rkO-L4-dro">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -106,12 +107,12 @@
                         </textFieldCell>
                     </textField>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="S1H-F4-tEY">
-                        <rect key="frame" x="279" y="140" width="44" height="23"/>
+                        <rect key="frame" x="279" y="162" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="dQh-gB-9QP">
-                        <rect key="frame" x="18" y="225" width="77" height="16"/>
+                        <rect key="frame" x="18" y="247" width="77" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Background" id="soH-Wv-ur8">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -120,12 +121,12 @@
                         </textFieldCell>
                     </textField>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Vbd-YI-Anx">
-                        <rect key="frame" x="101" y="221" width="44" height="23"/>
+                        <rect key="frame" x="101" y="243" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Igl-R5-sqV">
-                        <rect key="frame" x="41" y="198" width="54" height="16"/>
+                        <rect key="frame" x="41" y="220" width="54" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Hospital" id="vpM-UH-3BJ">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -134,12 +135,12 @@
                         </textFieldCell>
                     </textField>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="hpq-UU-ly0">
-                        <rect key="frame" x="101" y="194" width="44" height="23"/>
+                        <rect key="frame" x="101" y="216" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="NEO-a2-x5d">
-                        <rect key="frame" x="32" y="171" width="63" height="16"/>
+                        <rect key="frame" x="32" y="193" width="63" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Cemetery" id="raE-Ts-FFD">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -148,12 +149,12 @@
                         </textFieldCell>
                     </textField>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="6Im-Mz-MzT">
-                        <rect key="frame" x="101" y="167" width="44" height="23"/>
+                        <rect key="frame" x="101" y="189" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="0y9-JI-poH">
-                        <rect key="frame" x="65" y="144" width="30" height="16"/>
+                        <rect key="frame" x="65" y="166" width="30" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Text" id="Gif-31-ho5">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -162,12 +163,12 @@
                         </textFieldCell>
                     </textField>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="rGE-Zw-OTM">
-                        <rect key="frame" x="101" y="140" width="44" height="23"/>
+                        <rect key="frame" x="101" y="162" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="vrV-JN-09c">
-                        <rect key="frame" x="241" y="117" width="32" height="16"/>
+                        <rect key="frame" x="241" y="139" width="32" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Died" id="67g-Ih-ThF">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -176,12 +177,12 @@
                         </textFieldCell>
                     </textField>
                     <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="aNG-Bn-B9m">
-                        <rect key="frame" x="279" y="113" width="44" height="23"/>
+                        <rect key="frame" x="279" y="135" width="44" height="23"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
                     </colorWell>
                     <slider verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="FjL-JZ-God">
-                        <rect key="frame" x="162" y="85" width="111" height="19"/>
+                        <rect key="frame" x="162" y="107" width="111" height="19"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <sliderCell key="cell" continuous="YES" state="on" alignment="left" maxValue="1" doubleValue="0.5" tickMarkPosition="above" sliderType="linear" id="pf2-H2-IIZ"/>
                         <connections>
@@ -189,7 +190,7 @@
                         </connections>
                     </slider>
                     <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="FTX-l9-OGE">
-                        <rect key="frame" x="279" y="84" width="44" height="21"/>
+                        <rect key="frame" x="279" y="106" width="44" height="21"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="0.999" drawsBackground="YES" id="0v8-H4-Zih">
                             <numberFormatter key="formatter" formatterBehavior="custom10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" minimumFractionDigits="3" maximumFractionDigits="3" id="3u6-kH-sdO">
@@ -205,7 +206,7 @@
                         </connections>
                     </textField>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="iYS-Wm-pPs">
-                        <rect key="frame" x="18" y="87" width="140" height="16"/>
+                        <rect key="frame" x="18" y="109" width="140" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Opacity of Warp Traits" id="bXY-01-txI">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -214,7 +215,7 @@
                         </textFieldCell>
                     </textField>
                     <slider verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="UaI-jE-rjG">
-                        <rect key="frame" x="162" y="59" width="111" height="19"/>
+                        <rect key="frame" x="162" y="81" width="111" height="19"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <sliderCell key="cell" continuous="YES" state="on" alignment="left" maxValue="1" doubleValue="0.5" tickMarkPosition="above" sliderType="linear" id="NxF-M3-zGQ"/>
                         <connections>
@@ -222,7 +223,7 @@
                         </connections>
                     </slider>
                     <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ou4-Jc-2ab">
-                        <rect key="frame" x="279" y="58" width="44" height="21"/>
+                        <rect key="frame" x="279" y="80" width="44" height="21"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="0.999" drawsBackground="YES" id="7ym-d9-fNc">
                             <numberFormatter key="formatter" formatterBehavior="custom10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" minimumFractionDigits="3" maximumFractionDigits="3" id="MH6-sN-MWE">
@@ -238,7 +239,7 @@
                         </connections>
                     </textField>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="M6K-wp-caA">
-                        <rect key="frame" x="47" y="61" width="111" height="16"/>
+                        <rect key="frame" x="47" y="83" width="111" height="16"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Opacity of Panels" id="9YA-6b-mXx">
                             <font key="font" usesAppearanceFont="YES"/>
@@ -246,6 +247,17 @@
                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                         </textFieldCell>
                     </textField>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="XCl-e0-ynW">
+                        <rect key="frame" x="18" y="59" width="197" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Makes panels child windows." bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="2nF-yp-q8R">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="switchChildWindow:" target="-2" id="gLc-TN-t9W"/>
+                        </connections>
+                    </button>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="N9M-rg-ylN">
                         <rect key="frame" x="254" y="13" width="75" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
@@ -270,7 +282,7 @@
                     </button>
                 </subviews>
             </view>
-            <point key="canvasLocation" x="-108.5" y="66"/>
+            <point key="canvasLocation" x="-108.5" y="77"/>
         </window>
     </objects>
 </document>

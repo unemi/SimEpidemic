@@ -36,9 +36,29 @@ static NSInteger intervalDays[] = {0, 1, 2, 7, 10, 14, 30};
 		[ma insertObject:@{
 			@"Day":@(i * skipDays), @"Susceptible":@(cnt[Susceptible]),
 			@"Asymptomatic":@(cnt[Asymptomatic]), @"Symptomatic":@(cnt[Symptomatic]),
-			@"Recovered":@(cnt[Recovered]), @"Died":@(cnt[Died])}
+			@"Recovered":@(cnt[Recovered]), @"Died":@(cnt[Died]),
+			@"Q(A)":@(cnt[QuarantineAsym]), @"Q(S)":@(cnt[QuarantineSymp])}
 			atIndex:0];
 	};
+}
+- (void)buildTestsData:(NSMutableArray<NSDictionary *> *)ma interval:(NSInteger)interval {
+	NSInteger skp = interval / skipDays;
+	if (skp <= 0) return;
+	StatData *tran = self.transit;
+	NSInteger count[NIntTestTypes], *data = malloc(sizeof(NSInteger) * NIntTestTypes * days);
+	for (NSInteger i = days - 1; tran && i >= 0; tran = tran->next, i --)
+		memcpy(&data[i * NIntTestTypes], &tran->cnt[NStateIndexes], sizeof(NSInteger) * NIntTestTypes);
+	for (NSInteger i = 0; i < days; i ++) {
+		if (i % skp == 0) memcpy(count, &data[i * NIntTestTypes], sizeof(count));
+		else for (NSInteger j = 0; j < NIntTestTypes; j ++)
+			count[j] += data[i * NIntTestTypes + j];
+		if (i % skp == skp - 1) [ma addObject:@{
+			@"Day":@(i + 1), @"Total":@(count[TestTotal]),
+			@"Symptomatic":@(count[TestAsSymptom]), @"Contact":@(count[TestAsContact]),
+			@"Suspected":@(count[TestAsSuspected]),
+			@"Positive":@(count[TestPositive]), @"Negative":@(count[TestNegative])}];
+	};
+	free(data);
 }
 - (void)buildHistogramData:(NSMutableArray<NSDictionary *> *)ma {
 	NSInteger n[3] = {self.IncubPHist.count, self.RecovPHist.count, self.DeathPHist.count};
@@ -57,6 +77,7 @@ static NSInteger intervalDays[] = {0, 1, 2, 7, 10, 14, 30};
 	switch (type) {
 		case TableTimeEvo: [self buildTimeEvoData:ma interval:interval]; break;
 		case TableTransit: [self buildTransitData:ma interval:interval]; break;
+		case TableTests: [self buildTestsData:ma interval:interval]; break;
 		case TableHistgram: [self buildHistogramData:ma]; break;
 	}
 	return [NSArray arrayWithArray:ma];
@@ -65,7 +86,7 @@ static NSInteger intervalDays[] = {0, 1, 2, 7, 10, 14, 30};
 	switch (type) {
 		case TableTimeEvo:
 		return (((interval == 0)? 1 : interval * doc.worldParamsP->stepsPerDay) / skip > 0);
-		case TableTransit:
+		case TableTransit: case TableTests:
 		return (interval / skipDays > 0);
 		default: return YES;
 	}
@@ -80,7 +101,8 @@ static NSInteger intervalDays[] = {0, 1, 2, 7, 10, 14, 30};
 }
 - (NSTableView *)currentTableView {
 	return (tableType == TableTimeEvo)? timeEvoTableView :
-		(tableType == TableTransit)? transitTableView : histogramTableView;
+		(tableType == TableTransit)? transitTableView :
+		(tableType == TableTests)? testsTableView : histogramTableView;
 }
 - (IBAction)buildData:(NSObject *)sender {
 	TableType newType = (TableType)typePopUp.indexOfSelectedItem;
@@ -89,6 +111,7 @@ static NSInteger intervalDays[] = {0, 1, 2, 7, 10, 14, 30};
 		intervalPopUp.enabled = (newType != TableHistgram);
 		timeEvoScrlView.hidden = (newType != TableTimeEvo);
 		transitScrlView.hidden = (newType != TableTransit);
+		testsScrView.hidden = (newType != TableTests);
 		histogramScrlView.hidden = (newType != TableHistgram);
 	}
 	tableData = [statInfo buildDataArray:newType
@@ -120,6 +143,7 @@ static NSInteger intervalDays[] = {0, 1, 2, 7, 10, 14, 30};
 }
 - (void)windowDidLoad {
     [super windowDidLoad];
+    self.window.alphaValue = panelsAlpha;
     tableType = (TableType)typePopUp.indexOfSelectedItem;
     NSInteger idx = intervalPopUp.indexOfSelectedItem;
     while (idx < intervalPopUp.numberOfItems

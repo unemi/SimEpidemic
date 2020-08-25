@@ -89,22 +89,28 @@ NSString *keyAnimeSteps = @"animeSteps";
 static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"infectionProberbility", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"infectionDistance", {.f = { 4., 1., 20.}}},
-	{ ParamTypeFloat, @"quarantineAsymRate", {.f = { 10., 0., 100.}}},
-	{ ParamTypeFloat, @"quarantineAsymDelay", {.f = { 10., 0., 20.}}},
-	{ ParamTypeFloat, @"quarantineSympRate", {.f = { 80., 0., 100.}}},
-	{ ParamTypeFloat, @"quarantineSympDelay", {.f = { 5., 0., 20.}}},
 	{ ParamTypeFloat, @"distancingStrength", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"contactTracing", {.f = { 20., 0., 100.}}},
+	{ ParamTypeFloat, @"testDelay", {.f = { 1., 0., 10.}}},
+	{ ParamTypeFloat, @"testProcess", {.f = { 1., 0., 10.}}},
+	{ ParamTypeFloat, @"testInterval", {.f = { 2., 0., 10.}}},
+	{ ParamTypeFloat, @"testSensitivity", {.f = { 70., 0., 100.}}},
+	{ ParamTypeFloat, @"testSpecificity", {.f = { 99.8, 0., 100.}}},
+	{ ParamTypeFloat, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
+	{ ParamTypeFloat, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
+
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
 	{ ParamTypeDist, @"fatality", {.d = { 4., 16., 20.}}},
 	{ ParamTypeDist, @"recovery", {.d = { 4., 10., 40.}}},
 	{ ParamTypeDist, @"immunity", {.d = { 30, 180., 360.}}},
-	{ ParamTypeInteger, @"initPop", {.i = { 10000, 100, 999900}}},
+
+	{ ParamTypeInteger, @"populationSize", {.i = { 10000, 100, 999900}}},
 	{ ParamTypeInteger, @"worldSize", {.i = { 360, 10, 999999}}},
 	{ ParamTypeInteger, @"mesh", {.i = { 18, 1, 999}}},
-	{ ParamTypeInteger, @"nInitInfec", {.i = { 4, 1, 999}}},
+	{ ParamTypeInteger, @"initialInfected", {.i = { 4, 1, 999}}},
 	{ ParamTypeInteger, @"stepsPerDay", {.i = { 4, 1, 999}}},
 	{ ParamTypeNone, nil }
 };
@@ -165,7 +171,10 @@ static NSString *colKeys[] = {
 #define DEFAULT_PANELS_ALPHA .9
 CGFloat warpOpacity = DEFAULT_WARP_OPACITY;
 CGFloat panelsAlpha = DEFAULT_PANELS_ALPHA;
-static NSString *keyWarpOpacity = @"warpOpacity", *keyPanelsAlpha = @"panelsAlpha";
+#define DEFAULT_CHILD_WIN YES
+BOOL makePanelChildWindow = DEFAULT_CHILD_WIN;
+static NSString *keyWarpOpacity = @"warpOpacity", *keyPanelsAlpha = @"panelsAlpha",
+	*keyChildWindow = @"makePanelChildWindow";
 static void setup_colors(void) {
 	NSColorSpace *colSpc = NSColorSpace.genericRGBColorSpace;
 	for (NSInteger i = 0; i < N_COLORS; i ++) {
@@ -247,7 +256,9 @@ static void setup_colors(void) {
 			(&userDefaultWorldParams.PARAM_I1)[i] = num.integerValue;
 	if ((num = [ud objectForKey:keyWarpOpacity])) warpOpacity = num.doubleValue;
 	if ((num = [ud objectForKey:keyPanelsAlpha])) panelsAlpha = num.doubleValue;
+	if ((num = [ud objectForKey:keyChildWindow])) makePanelChildWindow = num.boolValue;
 	setup_colors();
+	NSBezierPath.defaultLineJoinStyle = NSLineJoinStyleBevel;
 }
 - (void)application:(NSApplication *)application openURLs:(NSArray<NSURL *> *)urls {
 	NSArray<Document *> *docs = NSDocumentController.sharedDocumentController.documents;
@@ -276,6 +287,9 @@ static void setup_colors(void) {
 	if (panelsAlpha == DEFAULT_WARP_OPACITY)
 		[ud removeObjectForKey:keyPanelsAlpha];
 	else [ud setDouble:panelsAlpha forKey:keyPanelsAlpha];
+	if (makePanelChildWindow == DEFAULT_CHILD_WIN)
+		[ud removeObjectForKey:keyChildWindow];
+	else [ud setBool:makePanelChildWindow forKey:keyChildWindow];
 }
 - (IBAction)openPreferencePanel:(id)sender {
 	static Preferences *pref = nil;
@@ -298,6 +312,7 @@ static void setup_colors(void) {
 	}
 	warpOpacitySld.doubleValue = warpOpacityDgt.doubleValue = warpOpacity;
 	panelsAlphaSld.doubleValue = panelsAlphaDgt.doubleValue = panelsAlpha;
+	childWinCBox.state = makePanelChildWindow;
 }
 - (IBAction)changeAnimeSteps:(id)sender {
 	defaultAnimeSteps = 1 << animeStepper.integerValue;
@@ -332,6 +347,13 @@ static void setup_colors(void) {
 	for (Document *doc in NSDocumentController.sharedDocumentController.documents)
 		[doc revisePanelsAlpha];
 }
+- (IBAction)switchChildWindow:(id)sender {
+	BOOL newValue = childWinCBox.state;
+	if (newValue == makePanelChildWindow) return;
+	makePanelChildWindow = newValue;
+	for (Document *doc in NSDocumentController.sharedDocumentController.documents)
+		[doc revisePanelChildhood];
+}
 - (IBAction)applyToAllDocuments:(id)sender {
 	for (NSInteger i = 0; i < NHealthTypes; i ++)
 		warpColors[i] = [stateColors[i] colorWithAlphaComponent:warpOpacity];
@@ -350,6 +372,8 @@ static void setup_colors(void) {
 		[ud removeObjectForKey:keyPanelsAlpha];
 		self->panelsAlphaSld.doubleValue = self->panelsAlphaDgt.doubleValue =
 		panelsAlpha = DEFAULT_PANELS_ALPHA;
+		[ud removeObjectForKey:keyChildWindow];
+		self->childWinCBox.state = makePanelChildWindow = DEFAULT_CHILD_WIN;
 		memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 		setup_colors();
 		for (NSInteger i = 0; i < N_COLORS; i ++)

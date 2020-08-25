@@ -10,6 +10,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 typedef enum { CondTypeRunUntil, CondTypeMoveWhen } CondType;
+typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 @class Document, Scenario, ButtonsCellView;
 
 @interface ParameterCellView : NSTableCellView
@@ -28,7 +29,7 @@ typedef enum { CondTypeRunUntil, CondTypeMoveWhen } CondType;
 @property (weak) ScenarioItem *parent;
 @end
 @interface ComparisonItem : CondElmItem {
-	NSInteger varIndex;
+	NSInteger varIndex, opeIndex;
 	NSInteger maxValue;
 	CGFloat ratioValue;
 	NSInteger days;
@@ -48,8 +49,8 @@ typedef enum { CondTypeRunUntil, CondTypeMoveWhen } CondType;
 @end
 
 @interface Scenario : NSWindowController 
-	<NSWindowDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate> {
-	IBOutlet NSButton *shiftUpBtn, *shiftDownBtn;
+	<NSWindowDelegate, NSTextFieldDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate> {
+	IBOutlet NSButton *shiftUpBtn, *shiftDownBtn, *deselectBtn;
 	IBOutlet NSButton *removeBtn, *applyBtn;
 }
 @property IBOutlet NSOutlineView *outlineView;
@@ -57,7 +58,7 @@ typedef enum { CondTypeRunUntil, CondTypeMoveWhen } CondType;
 @property (readonly) NSUndoManager *undoManager;
 @property (readonly) NSNumberFormatter *intFormatter;
 - (instancetype)initWithDoc:(Document *)dc;
-- (void)adjustControls;
+- (void)adjustControls:(BOOL)undoOrRedo;
 - (NSInteger)numberOfItems;
 - (void)removeItem:(ScenarioItem *)item;
 - (CondElmItem *)itemWithPredicate:(NSPredicate *)predicate parent:(ScenarioItem *)parent;

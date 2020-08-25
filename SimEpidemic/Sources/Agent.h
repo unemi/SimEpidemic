@@ -16,6 +16,7 @@ typedef enum {
 } AgentDrawType;
 
 @class Document;
+extern BOOL was_hit(WorldParams *wp, CGFloat prob);
 extern void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp);
 extern void reset_for_step(Agent *a);
 extern void remove_from_list(Agent *a, Agent **list);

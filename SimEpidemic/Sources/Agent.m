@@ -45,11 +45,11 @@ static CGFloat my_random(DistInfo *p) {
 	CGFloat a = (p->mode - p->min) / (p->max - p->mode);
 	return a * x / ((a - 1.) * x + 1.) * (p->max - p->min) + p->min;
 }
-static BOOL was_hit(WorldParams *wp, CGFloat prob) {
+BOOL was_hit(WorldParams *wp, CGFloat prob) {
 	return (random() > pow(1. - prob, 1. / wp->stepsPerDay) * 0x7fffffff);
 }
 static void reset_days(Agent *a, RuntimeParams *p) {
-	a->daysI = a->daysD = 0;
+	a->daysInfected = a->daysDiseased = 0;
 	a->daysToRecover = my_random(&p->recov);
 	a->daysToOnset = my_random(&p->incub);
 	a->daysToDie = my_random(&p->fatal) + a->daysToOnset;
@@ -64,9 +64,11 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->vx = cos(th);
 	a->vy = sin(th);
 	a->health = Susceptible;
-	a->distancing = NO;
-	a->isWarping = NO;
+	a->distancing = a->isWarping = NO;
+	a->isOutOfField = YES;
 	reset_days(a, rp);
+	a->contactInfoHead = a->contactInfoTail = NULL;
+	a->lastTested = -999999;
 }
 void reset_for_step(Agent *a) {
 	a->fx = a->fy = 0.;
@@ -82,6 +84,10 @@ static NSInteger index_in_pop(Agent *a, WorldParams *p) {
 	return iy * p->mesh + ix;
 }
 static void add_to_list(Agent *a, Agent **list) {
+#ifdef DEBUG
+for (Agent *b = *list; b != NULL; b = b->next) if (a == b)
+	{ printf("agent %ld is already in the list.\n", a->ID); my_exit(); }
+#endif
 	a->next = *list;
 	a->prev = NULL;
 	if (*list != NULL) (*list)->prev = a;
@@ -93,9 +99,19 @@ void remove_from_list(Agent *a, Agent **list) {
 	if (a->next != NULL) a->next->prev = a->prev;
 }
 void add_agent(Agent *a, WorldParams *wp, Agent **Pop) {
+#ifdef DEBUG
+if (!a->isOutOfField)
+	{ printf("agent %ld is already in the field.\n", a->ID); my_exit(); }
+#endif
+	a->isOutOfField = NO;
 	add_to_list(a, Pop + index_in_pop(a, wp));
 }
 void remove_agent(Agent *a, WorldParams *wp, Agent **Pop) {
+#ifdef DEBUG
+if (a->isOutOfField)
+	{ printf("agent %ld is already out of field.\n", a->ID); my_exit(); }
+#endif
+	a->isOutOfField = YES;
 	remove_from_list(a, Pop + index_in_pop(a, wp));
 }
 static void attracted(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFloat d) {
@@ -105,14 +121,15 @@ static void attracted(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CG
 		a->bestDist = x;
 		a->best = b;
 	}
-	// check infection
-	if (d < rp->infecDst && a->health == Susceptible &&
-	(b->health == Asymptomatic || b->health == Symptomatic)) {
-		CGFloat timeFactor = fmin(1., b->daysI / 2.);
-		CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
-		if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor))
-		a->newHealth = Asymptomatic;
-	}
+	// check contact and infection
+	if (d < rp->infecDst) {
+		if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
+		if (a->health == Susceptible && (b->health == Asymptomatic || b->health == Symptomatic)) {
+			CGFloat timeFactor = fmin(1., b->daysInfected / 2.);
+			CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
+			if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor))
+			a->newHealth = Asymptomatic;
+	}}
 }
 void interacts(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp) {
 	CGFloat dx = b->x - a->x;
@@ -148,27 +165,23 @@ static void cummulate_histgrm(NSMutableArray<MyCounter *> *h, CGFloat d) {
   }
   [h[ds] inc];
 }
-static BOOL patient_step(Agent *a, WorldParams *p, Document *doc) {
-  CGFloat orgDays = a->daysI;
-  a->daysI += 1. / p->stepsPerDay;
-  if (a->health == Symptomatic) a->daysD += 1. / p->stepsPerDay;
+static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, Document *doc) {
   if (a->daysToDie == BIG_NUM) { // in the recovery phase
-	if (a->daysI >= a->daysToRecover) {
-	  if (a->health == Symptomatic) cummulate_histgrm(doc.RecovPHist, a->daysD);
-	  a->newHealth = Recovered;
-	  a->daysI = 0;
+	if (a->daysInfected >= a->daysToRecover) {
+		if (a->health == Symptomatic) cummulate_histgrm(doc.RecovPHist, a->daysDiseased);
+		a->newHealth = Recovered;
+		a->daysInfected = 0;
 	}
-  } else if (a->daysI > a->daysToRecover) {
-	if (orgDays <= a->daysToRecover) { // starts recovery
-	  a->daysToRecover *= 1. + 10. / a->daysToDie;
-	  a->daysToDie = BIG_NUM;
-	}
-  } else if (a->daysI >= a->daysToDie) {
-	cummulate_histgrm(doc.DeathPHist, a->daysD);
+  } else if (a->daysInfected > a->daysToRecover) { // starts recovery
+	a->daysToRecover *= 1. + 10. / a->daysToDie;
+	a->daysToDie = BIG_NUM;
+  } else if (a->daysInfected >= a->daysToDie) {
+	cummulate_histgrm(doc.DeathPHist, a->daysDiseased);
+	died(a, inQuarantine? WarpToCemeteryH : WarpToCemeteryF, p, doc);
 	return YES;
-  } else if (a->health == Asymptomatic && a->daysI >= a->daysToOnset) {
+  } else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset) {
 	a->newHealth = Symptomatic;
-	cummulate_histgrm(doc.IncubPHist, a->daysI);
+	cummulate_histgrm(doc.IncubPHist, a->daysInfected);
   }
   return NO;
 }
@@ -178,27 +191,26 @@ static CGFloat wall(CGFloat d) {
 }
 void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc) {
 	switch (a->health) {
-		case Symptomatic: 
-		case Asymptomatic: if (patient_step(a, wp, doc))
-			{ died(a, WarpToCemeteryF, wp, doc); return; }
+		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
+		a->daysDiseased += 1. / wp->stepsPerDay;
+		if (patient_step(a, wp, NO, doc)) return;
+		else if (a->daysDiseased >= rp->tstDelay && was_hit(wp, rp->tstSbjSym / 100.))
+			[doc testInfectionOfAgent:a reason:TestAsSymptom];
 		break;
-		case Recovered: a->daysI += 1. / wp->stepsPerDay;
-		if (a->daysI > a->imExpr) {
+		case Asymptomatic: a->daysInfected += 1. / wp->stepsPerDay;
+		if (patient_step(a, wp, NO, doc)) return;
+		break;
+		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
+		if (a->daysInfected > a->imExpr) {
 			a->newHealth = Susceptible;
-			a->daysI = a->daysD = 0;
+			a->daysInfected = a->daysDiseased = 0;
 			reset_days(a, rp);
 		} break;
 		default: break;
 	}
+	if (a->health != Symptomatic && was_hit(wp, rp->tstSbjAsy / 100.))
+		[doc testInfectionOfAgent:a reason:TestAsSuspected];
 	NSInteger orgIdx = index_in_pop(a, wp);
-	if ((a->health == Asymptomatic && a->daysI > rp->qnsDl && was_hit(wp, rp->qnsRt / 100.)) ||
-		(a->health == Symptomatic && a->daysD > rp->qdsDl && was_hit(wp, rp->qdsRt / 100.))) {
-		a->orgPt = (CGPoint){a->x, a->y};
-		starts_warping(a, WarpToHospital, (CGPoint){
-			(random() * .248 / 0x7fffffff + 1.001) * wp->worldSize,
-			(random() * .458 / 0x7fffffff + .501) * wp->worldSize}, doc);
-		return;
-	}
 	if (a->health != Symptomatic && was_hit(wp, rp->mobFr / 1000.)) {
 		CGFloat dst = my_random(&rp->mobDist) * wp->worldSize / 100.;
 		CGFloat th = random() * M_PI * 2. / 0x7fffffff;
@@ -250,8 +262,14 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc) {
 	}
 }
 void step_agent_in_quarantine(Agent *a, WorldParams *p, Document *doc) {
-	if (patient_step(a, p, doc)) died(a, WarpToCemeteryH, p, doc);
-	else if (a->health == Recovered)
+	switch (a->health) {
+		case Symptomatic: a->daysDiseased += 1. / p->stepsPerDay;
+		case Asymptomatic: a->daysInfected += 1. / p->stepsPerDay;
+		break;
+		default: starts_warping(a, WarpBack, a->orgPt, doc);
+		return;
+	}
+	if (!patient_step(a, p, YES, doc) && a->health == Recovered)
 		starts_warping(a, WarpBack, a->orgPt, doc);
 }
 BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, CGPoint goal) {

@@ -26,6 +26,22 @@
 - (NSInteger)dailySymptomatic { return self.transit->cnt[Symptomatic]; }
 - (NSInteger)dailyRecovery { return self.transit->cnt[Recovered]; }
 - (NSInteger)dailyDeath { return self.transit->cnt[Died]; }
+- (NSInteger)weeklyPositive { return self.testResultCnt.positive; }
+- (CGFloat)weeklyPositiveRate {
+	TestResultCount tr = self.testResultCnt;
+	return (CGFloat)tr.positive / (tr.positive + tr.negative);
+}
+@end
+
+@implementation NSTextField (UndoExtension)
+- (void)changeDoubleUndoable:(CGFloat)newValue undoManager:(NSUndoManager *)undoManager {
+	CGFloat orgValue = self.doubleValue;
+	if (orgValue == newValue) return;
+	[undoManager registerUndoWithTarget:self handler:^(NSTextField *target) {
+		[target changeDoubleUndoable:orgValue undoManager:undoManager];
+	}];
+	self.doubleValue = newValue;
+}
 @end
 
 static void set_subview(NSControl *cnt, NSView *parent, BOOL leftToRight) {
@@ -101,7 +117,7 @@ static NSTextField *label_field(NSString *message) {
 @end
 
 @implementation ParameterCellView
-- (instancetype)initWithValue:(CGFloat)value {
+- (instancetype)init {
 	NSSize fSize = CELL_SIZE;
 	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
 	set_subview(label_field(@"Parameters"), self, YES);
@@ -115,7 +131,6 @@ static NSTextField *label_field(NSString *message) {
 	_digits = NSTextField.new;
 	_digits.doubleValue = 999.9;
 	set_subview(_digits, self, YES);
-	_digits.doubleValue = value;
 	[_namePopUp selectItemAtIndex:0];
 	return self;
 }
@@ -184,13 +199,20 @@ static NSPoint CCTxtOrg1 = {0,0}, CCTxtOrg2;
 @end
 @interface ComparisonCellView : NSTableCellView
 @property (readonly) NSPopUpButton *varPopUp, *opePopUp, *unitPopUp;
-@property (readonly) NSTextField *digits;
+@property (readonly) NSTextField *digits, *unitTxt;
 @end
 @implementation ComparisonCellView
-#define N_VARIABLES 11
+#define N_VARIABLES 13
 static NSString *varNames[] = {@"days", @"susceptible", @"infected", @"symptomatic",
 	@"recovered", @"died", @"quarantine",
-	@"dailyInfection", @"dailySymptomatic", @"dailyRecovery", @"dailyDeath"};
+	@"dailyInfection", @"dailySymptomatic", @"dailyRecovery", @"dailyDeath",
+	@"weeklyPositive", @"weeklyPositiveRate"
+};
+static VariableType varTypes[] = {VarAbsolute, VarNIndividuals, VarNIndividuals, VarNIndividuals,
+	VarNIndividuals, VarNIndividuals, VarNIndividuals,
+	VarNIndividuals, VarNIndividuals, VarNIndividuals, VarNIndividuals,
+	VarNIndividuals, VarRate
+};
 #define N_OPERATORS 6
 static NSString *operatorTitles[] = {@"=", @"≠", @">", @"<", @"≥", @"≤"};
 static NSString *operatorStrings[] = {@"==", @"!=", @">", @"<", @">=", @"<="};
@@ -225,6 +247,13 @@ static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
 	_digits.stringValue = @"999.999";
 	for (NSControl *cnt in @[_varPopUp, _opePopUp, _digits, _unitPopUp])
 		set_subview(cnt, self, YES);
+	_unitPopUp.hidden = YES;
+	_unitTxt = label_field(@"per mille");
+	NSRect pFrm = _unitPopUp.frame;
+	[_unitTxt setFrameOrigin:(NSPoint){pFrm.origin.x,
+		pFrm.origin.y + (pFrm.size.height - _unitTxt.frame.size.height) / 2.}];
+	[self addSubview:_unitTxt];
+	_unitTxt.stringValue = NSLocalizedString(@"days", nil);
 	_digits.formatter = absIntFormatter;
 	return self;
 }
@@ -290,15 +319,19 @@ static void check_images(void) {
 - (instancetype)initWithScenario:(Scenario *)scen {
 	if (!(self = [super initWithScenario:scen])) return nil;
 	[super setupButtonView:@[removeImage]];
-	self.view = [ParameterCellView.alloc initWithValue:scen.doc.runtimeParamsP->PARAM_F1];
+	self.view = ParameterCellView.new;
 	NSPopUpButton *namePopUp = ((ParameterCellView *)self.view).namePopUp;
 	namePopUp.target = self;
 	namePopUp.action = @selector(chooseParameter:);
+	NSTextField *digits = ((ParameterCellView *)self.view).digits;
+	digits.doubleValue = scen.doc.runtimeParamsP->PARAM_F1;
+	digits.delegate = scen;
 	return self;
 }
+- (CGFloat)value { return ((ParameterCellView *)self.view).digits.doubleValue; }
 - (void)setParamUndoable:(NSInteger)newIndex value:(CGFloat)newValue {
 	NSInteger orgIndex = _index;
-	CGFloat orgValue = ((ParameterCellView *)self.view).digits.doubleValue;
+	CGFloat orgValue = self.value;
 	[scenario.undoManager registerUndoWithTarget:self handler:
 		^(ParamItem *target) { [target setParamUndoable:orgIndex value:orgValue]; }];
 	if (newIndex >= 0) [((ParameterCellView *)self.view).namePopUp selectItemAtIndex:newIndex];
@@ -311,7 +344,6 @@ static void check_images(void) {
 	[self setParamUndoable:-1 value:(&scenario.doc.runtimeParamsP->PARAM_F1)[idx]];
 	_index = idx;
 }
-- (CGFloat)value { return ((ParameterCellView *)self.view).digits.doubleValue; }
 - (NSObject *)scenarioElement {
 	return @[paramKeys[_index], @(self.value)];
 }
@@ -352,10 +384,10 @@ static void check_images(void) {
 	ratioValue = .5;
 	v.digits.integerValue = days = 180;
 	v.digits.delegate = (NSObject<NSTextFieldDelegate> *)self;
-	v.varPopUp.target = v.unitPopUp.target = self;
+	v.varPopUp.target = v.opePopUp.target = v.unitPopUp.target = self;
 	v.varPopUp.action = @selector(chooseVariable:);
+	v.opePopUp.action = @selector(chooseOperation:);
 	v.unitPopUp.action = @selector(chooseUnit:);
-	v.unitPopUp.enabled = NO;
 	return self;
 }
 - (NSPredicate *)predicate {
@@ -364,8 +396,37 @@ static void check_images(void) {
 	return [NSComparisonPredicate.alloc initWithLeftExpression:
 		[NSExpression expressionForKeyPath:varNames[index]]
 		rightExpression:[NSExpression expressionForConstantValue:
-			@((index == 0)? days : self.intValue)]
-		modifier:0 type:operatorTypes[v.opePopUp.indexOfSelectedItem] options:0];
+			@((varTypes[index] == VarAbsolute)? days :
+			 (varTypes[index] == VarNIndividuals)? self.intValue : ratioValue)]
+		modifier:0 type:operatorTypes[opeIndex] options:0];
+}
+- (void)adjustValueAndUnit {
+	ComparisonCellView *v = (ComparisonCellView *)self.view;
+	switch (varTypes[varIndex]) {
+	   case VarAbsolute:
+	   v.unitPopUp.hidden = YES;
+	   v.unitTxt.hidden = NO;
+	   v.unitTxt.stringValue = NSLocalizedString(@"days", nil);
+	   v.digits.formatter = absIntFormatter;
+	   v.digits.integerValue = days;
+	   break;
+	   case VarNIndividuals:
+	   v.unitPopUp.hidden = NO;
+	   v.unitTxt.hidden = YES;
+	   if (v.unitPopUp.indexOfSelectedItem == 0) {
+		   v.digits.formatter = scenario.intFormatter;
+		   v.digits.integerValue = self.intValue;
+	   } else {
+		   v.digits.formatter = percentFormatter;
+		   v.digits.doubleValue = ratioValue * 1000.;
+	   } break;
+	   case VarRate:
+	   v.unitPopUp.hidden = YES;
+	   v.unitTxt.hidden = NO;
+	   v.unitTxt.stringValue = NSLocalizedString(@"per mille", nil);
+	   v.digits.formatter = percentFormatter;
+	   v.digits.doubleValue = ratioValue * 1000.;
+	}
 }
 - (void)setupWithPredicate:(NSComparisonPredicate *)predicate {
 	ComparisonCellView *v = (ComparisonCellView *)self.view;
@@ -373,23 +434,22 @@ static void check_images(void) {
 	NSInteger index;
 	for (index = 0; index < N_VARIABLES; index ++)
 		if ([varName isEqualToString:varNames[index]]) break;
-	[v.varPopUp selectItemAtIndex:index];
-	v.unitPopUp.enabled = index > 0;
+	[v.varPopUp selectItemAtIndex:(varIndex = index)];
 	NSNumber *num = predicate.rightExpression.constantValue;
-	if (index == 0) days = num.integerValue;
-	else self.intValue = num.integerValue;
+	switch (varTypes[index]) {
+		case VarAbsolute: days = num.integerValue; break;
+		case VarNIndividuals: self.intValue = num.integerValue; break;
+		case VarRate: ratioValue = num.doubleValue * 1000.;
+	}
+	[self adjustValueAndUnit];
 	NSPredicateOperatorType opeType = predicate.predicateOperatorType;
 	for (index = 0; index < N_OPERATORS; index ++)
 		if (operatorTypes[index] == opeType) break;
-	[v.opePopUp selectItemAtIndex:index];
+	[v.opePopUp selectItemAtIndex:(opeIndex = index)];
 }
 - (NSInteger)intValue { return maxValue * ratioValue; }
 - (void)setIntValue:(NSInteger)val {
-	ComparisonCellView *v = (ComparisonCellView *)self.view;
 	ratioValue = (CGFloat)val / maxValue;
-	if  (v.unitPopUp.indexOfSelectedItem == 0)
-		v.digits.integerValue = self.intValue;
-	else v.digits.doubleValue = ratioValue * 1000.;
 }
 - (void)chooseUnit:(id)sender {
 	ComparisonCellView *v = (ComparisonCellView *)self.view;
@@ -405,6 +465,15 @@ static void check_images(void) {
 	if (isNewAbs) v.digits.integerValue = self.intValue;
 	else v.digits.doubleValue = ratioValue * 1000.;
 }
+- (void)chooseOperation:(id)sender {
+	ComparisonCellView *v = (ComparisonCellView *)self.view;
+	NSInteger orgIndex = opeIndex;
+	[scenario.undoManager registerUndoWithTarget:v.opePopUp handler:^(NSPopUpButton *pb) {
+		[pb selectItemAtIndex:orgIndex];
+		[pb sendAction:pb.action to:pb.target];
+	}];
+	opeIndex = v.opePopUp.indexOfSelectedItem;
+}
 - (void)chooseVariable:(id)sender {
 	ComparisonCellView *v = (ComparisonCellView *)self.view;
 	NSInteger newIndex = v.varPopUp.indexOfSelectedItem;
@@ -416,14 +485,8 @@ static void check_images(void) {
 		[pb sendAction:pb.action to:pb.target];
 	}];
 	varIndex = newIndex;
-	BOOL isAbsValue = (newIndex == 0);
-	if (v.unitPopUp.enabled == isAbsValue) {
-		v.unitPopUp.enabled = !isAbsValue;
-		if (isAbsValue) {
-			v.digits.formatter = absIntFormatter;
-			v.digits.integerValue = days;
-		} else [self chooseUnit:nil];
-	}
+	if (varTypes[newIndex] != varTypes[orgIndex])
+		[self adjustValueAndUnit];
 }
 - (void)setDays:(NSInteger)newDays digits:(NSTextField *)digits {
 	NSInteger orgDays = days;
@@ -433,27 +496,42 @@ static void check_images(void) {
 	}];
 	days = newDays;
 }
-- (void)setRatio:(CGFloat)newRatio digits:(NSTextField *)digits isAbs:(BOOL)isAbs {
+- (void)setNIndividuals:(CGFloat)newRatio digits:(NSTextField *)digits {
 	NSInteger orgInt = ratioValue * maxValue;
 	CGFloat orgRatio = ratioValue;
 	[scenario.undoManager registerUndoWithTarget:self handler:^(ComparisonItem *item) {
-		if (isAbs) digits.integerValue = orgInt;
-		else digits.doubleValue = orgRatio * 1000.;
-		[item setRatio:orgRatio digits:digits isAbs:isAbs];
+		digits.integerValue = orgInt;
+		[item setNIndividuals:orgRatio digits:digits];
+	}];
+	ratioValue = newRatio;
+}
+- (void)setRatio:(CGFloat)newRatio digits:(NSTextField *)digits {
+	CGFloat orgRatio = ratioValue;
+	[scenario.undoManager registerUndoWithTarget:self handler:^(ComparisonItem *item) {
+		digits.doubleValue = orgRatio * 1000.;
+		[item setRatio:orgRatio digits:digits];
 	}];
 	ratioValue = newRatio;
 }
 - (void)controlTextDidEndEditing:(NSNotification *)obj {
 	ComparisonCellView *v = (ComparisonCellView *)self.view;
-	if (v.varPopUp.indexOfSelectedItem == 0) {
-		NSInteger newDays = v.digits.integerValue;
-		if (newDays != days) [self setDays:newDays digits:v.digits];
-	} else {
-		BOOL isAbs = (v.unitPopUp.indexOfSelectedItem == 0);
-		CGFloat newRatio = isAbs?
-			(CGFloat)v.digits.integerValue / maxValue : v.digits.doubleValue / 1000.;
-		if (newRatio != ratioValue)
-			[self setRatio:newRatio digits:v.digits isAbs:isAbs];
+	switch (varTypes[v.varPopUp.indexOfSelectedItem]) {
+		case VarAbsolute: {
+			NSInteger newDays = v.digits.integerValue;
+			if (newDays != days) [self setDays:newDays digits:v.digits];
+		} break;
+		case VarNIndividuals:
+		if (v.unitPopUp.indexOfSelectedItem == 0) {
+			CGFloat newRatio = (CGFloat)v.digits.integerValue / maxValue;
+			if (newRatio != ratioValue) [self setNIndividuals:newRatio digits:v.digits];
+		} else {
+			CGFloat newRatio = v.digits.doubleValue / 1000.;
+			if (newRatio != ratioValue) [self setRatio:newRatio digits:v.digits];
+		} break;
+		case VarRate: {
+			CGFloat newRatio = v.digits.doubleValue / 1000.;
+			if (newRatio != ratioValue) [self setRatio:newRatio digits:v.digits];
+		}
 	}
 }
 @end
@@ -678,6 +756,8 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 @interface Scenario () {
 	NSMutableArray<ScenarioItem *> *itemList;
 	NSArray *savedPList;
+	NSInteger modificationCount, appliedCount;
+	NSMutableDictionary<NSNumber *, NSNumber *> *valueDict;
 }
 @end
 @implementation Scenario
@@ -689,10 +769,22 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	_intFormatter = NSNumberFormatter.new;
 	_intFormatter.minimum = @0;
 	_intFormatter.maximum = @(dc.worldParamsP->initPop);
+	valueDict = NSMutableDictionary.new;
+	for (NSString *name in @[NSUndoManagerDidCloseUndoGroupNotification,
+		NSUndoManagerDidUndoChangeNotification, NSUndoManagerDidRedoChangeNotification])
+		 [NSNotificationCenter.defaultCenter addObserver:self
+			selector:@selector(checkUndoable:) name:name object:_undoManager];
 	return self;
 }
-- (void)adjustControls {
-	removeBtn.enabled = applyBtn.enabled = !_doc.running;
+- (void)checkUndoable:(NSNotification *)note {
+	NSUndoManager *um = note.object;
+	if (um.undoing) modificationCount --; else modificationCount ++;
+	applyBtn.enabled = modificationCount != appliedCount;
+}
+- (void)adjustControls:(BOOL)undoOrRedo {
+	if (undoOrRedo) appliedCount = -1;
+	removeBtn.enabled = !_doc.running && (_doc.scenario != nil && _doc.scenario.count > 0);
+	applyBtn.enabled = !_doc.running && modificationCount != appliedCount;
 }
 - (void)windowDidLoad {
     [super windowDidLoad];
@@ -702,7 +794,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	applyBtn.toolTip = NSLocalizedString(@"Apply this scenario to the simulator", nil);
     if (_doc.scenario != nil) [self setScenarioWithArray:_doc.scenario];
     else itemList = NSMutableArray.new;
-    [self adjustControls];
+    [self adjustControls:NO];
 }
 - (NSInteger)numberOfItems { return itemList.count; }
 - (void)removeItem:(ScenarioItem *)item {
@@ -727,6 +819,25 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		[NSIndexSet indexSetWithIndexesInRange:(NSRange){0, new.count}]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
 }
+- (void)checkSelection {
+	NSInteger row = _outlineView.selectedRow;
+	if (row < 0) { shiftUpBtn.enabled = shiftDownBtn.enabled = deselectBtn.enabled = NO; return; }
+	ScenarioItem *item = [_outlineView itemAtRow:row];
+	NSInteger index = [itemList indexOfObject:item];
+	if (index == NSNotFound) {
+		shiftUpBtn.enabled = shiftDownBtn.enabled = NO;
+		if ([item isKindOfClass:CompoundItem.class])
+			[self.window makeFirstResponder:((CompoundCellView *)item.view).opePopUp];
+		else if ([item isKindOfClass:ComparisonItem.class])
+			[self.window makeFirstResponder:((ComparisonCellView *)item.view).varPopUp];
+	} else if (index == 0) {
+		shiftUpBtn.enabled = NO;
+		shiftDownBtn.enabled = itemList.count > 1;
+	} else if (index == itemList.count - 1)
+		{ shiftUpBtn.enabled = YES; shiftDownBtn.enabled = NO; }
+	else shiftUpBtn.enabled = shiftDownBtn.enabled = YES;
+	deselectBtn.enabled = YES;
+}
 - (IBAction)resetScenario:(id)sender {
 	[self setScenarioWithUndo:NSMutableArray.new];
 }
@@ -741,6 +852,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		^(Scenario *scen) { [scen insertItem:orgItem atIndex:idx]; }];
 	[_outlineView removeItemsAtIndexes:[NSIndexSet indexSetWithIndex:idx]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
+	[self checkSelection];
 }
 - (void)insertItem:(ScenarioItem *)item atIndex:(NSInteger)idx {
 	[_undoManager registerUndoWithTarget:self handler:
@@ -752,6 +864,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		[itm insertDestMenuItemAtIndex:idx];
 	[_outlineView insertItemsAtIndexes:[NSIndexSet indexSetWithIndex:idx]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
+	[self checkSelection];
 }
 - (void)addTopLevelItem:(ScenarioItem *)item {
 	NSInteger row = _outlineView.selectedRow, index;
@@ -776,22 +889,6 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		^(NSUInteger idx, BOOL * _Nonnull stop) {
 		[self removeItem:[_outlineView itemAtRow:idx]];
 	}];
-}
-- (void)checkSelection {
-	NSInteger row = _outlineView.selectedRow;
-	if (row < 0) { shiftUpBtn.enabled = shiftDownBtn.enabled = NO; return; }
-	ScenarioItem *item = [_outlineView itemAtRow:row];
-	NSInteger index = [itemList indexOfObject:item];
-	if (index == NSNotFound) {
-		shiftUpBtn.enabled = shiftDownBtn.enabled = NO;
-		if ([item isKindOfClass:CompoundItem.class])
-			[self.window makeFirstResponder:((CompoundCellView *)item.view).opePopUp];
-		else if ([item isKindOfClass:ComparisonItem.class])
-			[self.window makeFirstResponder:((ComparisonCellView *)item.view).varPopUp];
-	} else if (index == 0) { shiftUpBtn.enabled = NO; shiftDownBtn.enabled = YES; }
-	else if (index == itemList.count - 1)
-		{ shiftUpBtn.enabled = YES; shiftDownBtn.enabled = NO; }
-	else shiftUpBtn.enabled = shiftDownBtn.enabled = YES;
 }
 - (void)swapItemsAtIndex:(NSInteger)index {
 	ScenarioItem *itemA = itemList[index];
@@ -833,7 +930,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	NSInteger idx = [paramKeys indexOfObject:key];
 	if (idx == NSNotFound) return nil;
 	ParamItem *item = [ParamItem.alloc initWithScenario:self];
-	((ParamItem *)item).index = idx;
+	item.index = idx;
 	ParameterCellView *cView = (ParameterCellView *)item.view;
 	[cView.namePopUp selectItemAtIndex:idx];
 	cView.digits.doubleValue = num.doubleValue;
@@ -927,10 +1024,27 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		if (elm != nil) [ma addObject:elm];
 	}
 	_doc.scenario = [NSArray arrayWithArray:ma];
+	appliedCount = modificationCount;
+	applyBtn.enabled = NO;
+	removeBtn.enabled = ma.count > 0;
 }
 // NSWindowDelagate methods
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
 	return _undoManager;
+}
+// NSTextFieldDelegate to enable undoing
+- (void)controlTextDidBeginEditing:(NSNotification *)note {
+	NSTextField *dgt = note.object;
+	valueDict[@((NSUInteger)dgt)] = @(dgt.doubleValue);
+}
+- (void)controlTextDidEndEditing:(NSNotification *)note {
+	NSTextField *dgt = note.object;
+	NSNumber *key = @((NSUInteger)dgt);
+	CGFloat value = valueDict[key].doubleValue;
+	[valueDict removeObjectForKey:key];
+	if (value == dgt.doubleValue) return;
+	[_undoManager registerUndoWithTarget:dgt handler:^(NSTextField *target) {
+		[target changeDoubleUndoable:value undoManager:self.undoManager]; }];
 }
 // NSOutlineViewDataSource methods
 - (id)outlineView:(NSOutlineView *)outlineView child:(NSInteger)index ofItem:(ScenarioItem *)item {

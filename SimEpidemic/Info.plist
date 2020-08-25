@@ -66,9 +66,11 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>27</string>
+	<string>102</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSAppleScriptEnabled</key>
+	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2020 Tatsuo Unemi. All rights reserved.</string>
 	<key>NSMainNibFile</key>
@@ -79,5 +81,7 @@
 	<true/>
 	<key>NSSupportsSuddenTermination</key>
 	<true/>
+	<key>OSAScriptingDefinition</key>
+	<string>SimEpidemic.sdef</string>
 </dict>
 </plist>

@@ -36,6 +36,18 @@ static StatData *new_stat(void) {
 - (void)inc { _cnt ++; }
 @end
 
+@implementation ULinedButton
+- (void)drawRect:(NSRect)dirtyRect {
+	[super drawRect:dirtyRect];
+	if (_underLineColor == nil) return;
+	NSRect rct = self.bounds;
+	CGFloat y = NSMaxY(rct) - 2.;
+	[_underLineColor setStroke];
+	[NSBezierPath strokeLineFromPoint:(NSPoint){rct.origin.x, y}
+		toPoint:(NSPoint){NSMaxX(rct), y}];
+}
+@end
+
 #define IMG_WIDTH (320*4)
 #define IMG_HEIGHT	320
 #define MAX_N_REC	IMG_WIDTH
@@ -93,8 +105,12 @@ static StatData *new_stat(void) {
 	memset(&statCumm, 0, sizeof(StatData));
 	memset(&transDaily, 0, sizeof(StatData));
 	memset(&transCumm, 0, sizeof(StatData));
+	memset(testCumm, 0, sizeof(testCumm));
+	memset(testResultsW, 0, sizeof(testResultsW));
 	memset(maxCounts, 0, sizeof(maxCounts));
 	memset(maxTransit, 0, sizeof(maxTransit));
+	pRateCumm = maxStepPRate = maxDailyPRate = 0.;
+	_testResultCnt = (TestResultCount){0, 0};
 	_statistics->cnt[Susceptible] = maxCounts[Susceptible] = nPop - nInitInfec;
 	_statistics->cnt[Asymptomatic] = maxCounts[Asymptomatic] = nInitInfec;
 	steps = days = 0;
@@ -134,46 +150,62 @@ static void count_health(Agent *a, StatData *stat, StatData *tran) {
 	}
 	stat->cnt[a->health] ++;
 }
+static CGFloat calc_positive_rate(NSUInteger *count) {
+	NSUInteger tt = count[TestPositive] + count[TestNegative];
+	return (tt == 0)? 0. : (CGFloat)count[TestPositive] / tt;
+}
 - (BOOL)calcStat:(Agent *_Nullable *_Nonnull)Pop nCells:(NSInteger)nCells
 	qlist:(Agent *)qlist clist:(Agent *)clist warp:(NSArray<WarpInfo *> *)warp
-	stepsPerDay:(NSInteger)stepsPerDay {
+	testCount:(NSUInteger *)testCount stepsPerDay:(NSInteger)stepsPerDay {
 	StatData tmpStat;
 	memset(&tmpStat, 0, sizeof(StatData));
 	if (steps % stepsPerDay == 0) memset(&transDaily, 0, sizeof(StatData));
 	steps ++;
 	for (NSInteger i = 0; i < nCells; i ++)
-		for (Agent *a = Pop[i]; a; a = a->next) count_health(a, &tmpStat, &transDaily);
+		for (Agent *a = Pop[i]; a; a = a->next)
+			count_health(a, &tmpStat, &transDaily);
 	for (Agent *a = qlist; a; a = a->next) {
+		NSInteger qIdx = (a->health == Symptomatic)? QuarantineSymp : QuarantineAsym;
 		if (a->gotAtHospital) {
-			transDaily.cnt[a->health - Asymptomatic + QuarantineAsym] ++;
+			transDaily.cnt[qIdx] ++;
 			a->gotAtHospital = NO;
 		} else if (a->health == Asymptomatic && a->newHealth == Symptomatic)
 			transDaily.cnt[QuarantineSymp] ++;
 		count_health(a, &tmpStat, &transDaily);
-		if (a->health == Asymptomatic || a->health == Symptomatic)
-			tmpStat.cnt[a->health - Asymptomatic + QuarantineAsym] ++;
+		tmpStat.cnt[qIdx] ++;
 	}
 	for (WarpInfo *info in warp)
 		count_health(info.agent, &tmpStat, &transDaily);
 	for (Agent *a = clist; a; a = a->next) count_health(a, &tmpStat, &transDaily);
-	for (NSInteger i = 0; i < NIndexes; i ++)
+
+	for (NSInteger i = 0; i < NIntTestTypes; i ++) {
+		transDaily.cnt[i + NStateIndexes] += testCount[i];
+		tmpStat.cnt[i + NStateIndexes] = testCumm[i] += testCount[i];
+	}
+	tmpStat.pRate = calc_positive_rate(testCount);
+
+	for (NSInteger i = 0; i < NIntIndexes; i ++)
 		if (maxCounts[i] < tmpStat.cnt[i]) maxCounts[i] = tmpStat.cnt[i];
+	if (maxStepPRate < tmpStat.pRate) maxStepPRate = tmpStat.pRate;
 
 	NSInteger idxInCum = steps % skip;
 	if (idxInCum == 0) memset(&statCumm, 0, sizeof(StatData));
-	for (NSInteger i = 0; i < NIndexes; i ++) statCumm.cnt[i] += tmpStat.cnt[i];
+	for (NSInteger i = 0; i < NIntIndexes; i ++) statCumm.cnt[i] += tmpStat.cnt[i];
+	statCumm.pRate += tmpStat.pRate;
 	if (idxInCum + 1 >= skip) {
 		StatData *newStat = new_stat();
-		for (NSInteger i = 0; i < NIndexes; i ++)
+		for (NSInteger i = 0; i < NIntIndexes; i ++)
 			newStat->cnt[i] = statCumm.cnt[i] / skip;
+		newStat->pRate = statCumm.pRate / skip;
 		newStat->next = _statistics;
 		_statistics = newStat;
 		if (steps / skip > MAX_N_REC) {
 			[statLock lock];
 			for (StatData *p = newStat; p; p = p->next) {
 				StatData *q = p->next;
-				for (NSInteger i = 0; i < NIndexes; i ++)
+				for (NSInteger i = 0; i < NIntIndexes; i ++)
 					p->cnt[i] = (p->cnt[i] + q->cnt[i]) / 2;
+				p->pRate = (p->pRate + q->pRate) / 2.;
 				p->next = q->next;
 				q->next = freeStat;
 				freeStat = q;
@@ -187,25 +219,41 @@ static void count_health(Agent *a, StatData *stat, StatData *tran) {
 		} else [self fillImageForOneStep:newStat atX:steps / skip];
 	}
 	if (steps % stepsPerDay == stepsPerDay - 1) {
+		NSUInteger *dailyTests = transDaily.cnt + NStateIndexes;
+		transDaily.pRate = calc_positive_rate(dailyTests);
+		if (days < 7) {
+			_testResultCnt.positive += testResultsW[days].positive = dailyTests[TestPositive];
+			_testResultCnt.negative += testResultsW[days].negative = dailyTests[TestNegative];
+		} else {
+			NSInteger idx = days % 7;
+			_testResultCnt.positive += dailyTests[TestPositive] - testResultsW[idx].positive;
+			testResultsW[idx].positive = dailyTests[TestPositive];
+			_testResultCnt.negative += dailyTests[TestNegative] - testResultsW[idx].negative;
+			testResultsW[idx].negative = dailyTests[TestNegative];
+		}
 		days ++;
-		for (NSInteger i = 0; i < NIndexes; i ++)
+		if (maxDailyPRate < transDaily.pRate) maxDailyPRate = transDaily.pRate;
+		for (NSInteger i = 0; i < NIntIndexes; i ++)
 			if (maxTransit[i] < transDaily.cnt[i]) maxTransit[i] = transDaily.cnt[i];
 		idxInCum = days % skipDays;
 		if (idxInCum == 0) memset(&transCumm, 0, sizeof(StatData));
-		for (NSInteger i = 0; i < NIndexes; i ++)
+		for (NSInteger i = 0; i < NIntIndexes; i ++)
 			transCumm.cnt[i] += transDaily.cnt[i];
+		transCumm.pRate += transDaily.pRate;
 		if (idxInCum + 1 >= skipDays) {
 			StatData *newTran = new_stat();
-			for (NSInteger i = 0; i < NIndexes; i ++)
+			for (NSInteger i = 0; i < NIntIndexes; i ++)
 				newTran->cnt[i] = transCumm.cnt[i] / skipDays;
+			newTran->pRate = transCumm.pRate / skipDays;
 			newTran->next = _transit;
 			_transit = newTran;
 			if (days / skipDays >= MAX_N_REC) {
 				[statLock lock];
 				for (StatData *p = newTran; p; p = p->next) {
 					StatData *q = p->next;
-					for (NSInteger i = 0; i < NIndexes; i ++)
+					for (NSInteger i = 0; i < NIntIndexes; i ++)
 						p->cnt[i] = (p->cnt[i] + q->cnt[i]) / 2;
+					p->pRate = (p->pRate + q->pRate) / 2.;
 					p->next = q->next;
 					q->next = freeStat;
 					freeStat = q;
@@ -244,7 +292,7 @@ static void count_health(Agent *a, StatData *stat, StatData *tran) {
 		rect.origin.x += rect.size.width;
 		rect.size.width = step * size.width / steps - rect.origin.x;
 		[[NSColor colorWithHue:((CGFloat)phase) / nPhases
-			saturation:1. brightness:1. alpha:.333] setFill];
+			saturation:1. brightness:1. alpha:.2] setFill];
 		[NSBezierPath fillRect:rect];
 	}
 }
@@ -270,28 +318,48 @@ static void draw_tics(NSRect area, CGFloat xMax) {
 			withAttributes:textAttributes];
 	}
 }
-static NSUInteger show_time_evo(StatData *stData, NSInteger idxBits, NSUInteger maxV[],
-	NSInteger steps, NSInteger skip, NSRect rect) {
-	NSUInteger maxValue = 0;
-	for (NSInteger i = 0; i < NIndexes; i ++) if ((idxBits & 1 << i) != 0)
-		if (maxValue < maxV[i]) maxValue = maxV[i];
-	if (steps > 0 && maxValue > 0) for (NSInteger i = 0; i < NIndexes; i ++)
-	if ((idxBits & 1 << i) != 0 && maxV[i] > 0) {
-		NSBezierPath *path = NSBezierPath.new;
+typedef struct { NSUInteger maxCnt; CGFloat maxRate; } TimeEvoMax;
+static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info, NSUInteger maxV[],
+	NSInteger steps, NSInteger skip, CGFloat maxPRate, NSRect rect) {
+	TimeEvoMax teMax = {0, 0};
+	NSUInteger nPoints = 0, k = 0;
+	NSInteger winSz = (info->idxBits & MskTransit)? info->windowSize : 1;
+	for (NSInteger i = 0; i < NIntIndexes; i ++) if ((info->idxBits & 1 << i) != 0)
+		if (teMax.maxCnt < maxV[i]) teMax.maxCnt = maxV[i];
+	BOOL drawPRate = (info->idxBits & MskTestPRate) != 0;
+	for (StatData *tran = stData; tran != NULL; tran = tran->next) nPoints ++;
+	NSPoint *pts = malloc(sizeof(NSPoint) * nPoints);
+	void (^block)(CGFloat (^)(StatData *), CGFloat, NSUInteger) =
+	^(CGFloat (^getter)(StatData *), CGFloat maxv, NSUInteger k) {
 		StatData *tran = stData;
-		[path moveToPoint:(NSPoint){NSMaxX(rect) - 1.,
-			tran->cnt[i] * rect.size.height / maxValue + rect.origin.y}];
-		tran = tran->next;
-		for (NSInteger j = steps / skip - 1; tran; tran = tran->next, j --)
-			[path lineToPoint:(NSPoint){
+		for (NSInteger j = nPoints - 1; tran && j >= 0; tran = tran->next, j --)
+			pts[j] = (NSPoint){
 				j * (rect.size.width - 1.) / steps * skip + rect.origin.x,
-				tran->cnt[i] * rect.size.height / maxValue + rect.origin.y}];
-		NSColor *col = (i < NHealthTypes)? stateColors[i] :
-			warpColors[i - NHealthTypes + Asymptomatic];
-		[col  setStroke];
+				getter(tran) * rect.size.height / maxv + rect.origin.y};
+		if (winSz > 1) {
+			CGFloat sum = 0, buf[winSz];
+			for (NSInteger j = 0; j < nPoints; j ++) {
+				if (j < winSz) sum += pts[j].y;
+				else sum += pts[j].y - buf[j % winSz];
+				buf[j % winSz] = pts[j].y;
+				pts[j].y = sum / ((j < winSz)? j + 1 : winSz);
+			}
+		}
+		NSBezierPath *path = NSBezierPath.new;
+		[path appendBezierPathWithPoints:pts count:nPoints];
+		[[NSColor colorWithHue:(CGFloat)k / info->nIndexes
+			saturation:1. brightness:1. alpha:1.] setStroke];
 		[path stroke];
+	};
+	if (steps > 0 && teMax.maxCnt > 0) for (NSInteger i = 0; i < NIntIndexes; i ++)
+	if ((info->idxBits & 1 << i) != 0 && maxV[i] > 0)
+		block(^(StatData *tran) { return (CGFloat)tran->cnt[i]; }, teMax.maxCnt, k ++);
+	if (drawPRate && maxPRate > 0) {
+		block(^(StatData *tran) { return tran->pRate; }, maxPRate, k);
+		teMax.maxRate = maxPRate;
 	}
-	return maxValue;
+	free(pts);
+	return teMax;
 }
 static void show_histogram(NSArray<MyCounter *> *hist,
 	NSInteger idx, NSSize size, NSString *title) {
@@ -319,7 +387,7 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 		drawAtPoint:(NSPoint){size.width * idx / 3. + 4., 10.}
 		withAttributes:textAttributes];
 }
-- (void)drawWithType:(StatType)type indexBits:(NSInteger)idxBits bounds:(NSRect)bounds {
+- (void)drawWithType:(StatType)type info:(TimeEvoInfo *)info bounds:(NSRect)bounds {
 	static NSNumberFormatter *decFormat = nil;
 	if (textAttributes == nil) {
 		textAttributes = NSMutableDictionary.new;
@@ -344,19 +412,23 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 			operation:NSCompositingOperationCopy fraction:1. respectFlipped:NO hints:nil];
 		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
 		} break;
-		case StatTimeEvo:
+		case StatTimeEvo: {
 		[self fillPhaseBackground:bounds.size];
 		NSRect dRect = drawing_area(bounds);
-		NSUInteger maxValue = ((idxBits & MskTransit) != 0)?
-			show_time_evo(_transit, idxBits, maxTransit, days, skipDays, dRect) :
-			show_time_evo(_statistics, idxBits, maxCounts, steps, skip, dRect);
-		if (maxValue > 0) [[NSString stringWithFormat:@"%@ %@ (%.2f%%)",
-			NSLocalizedString(@"max", nil),
-			[decFormat stringFromNumber:@(maxValue)], maxValue * 100. / popSize]
-				drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
-				withAttributes:textAttributes];
+		TimeEvoMax teMax = ((info->idxBits & MskTransit) != 0)?
+			show_time_evo(_transit, info, maxTransit, days, skipDays, maxDailyPRate, dRect) :
+			show_time_evo(_statistics, info, maxCounts, steps, skip, maxStepPRate, dRect);
+		NSMutableString *ms = NSMutableString.new;
+		if (teMax.maxCnt > 0) [ms appendFormat:@"%@ %@ (%.2f%%)",
+			NSLocalizedString(@"max count", nil),
+			[decFormat stringFromNumber:@(teMax.maxCnt)], teMax.maxCnt * 100. / popSize];
+		if (teMax.maxRate > 0.) [ms appendFormat:@"%s%@ %.3f%%",
+			(ms.length > 0)? "\n" : "", NSLocalizedString(@"max rate", nil), teMax.maxRate * 100.];
+		if (ms.length > 0) [ms
+			drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
+			withAttributes:textAttributes];
 		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
-		break;
+		} break;
 		case StatPeriods:
 		show_histogram(_IncubPHist, 0, bounds.size, @"Incubation Period");
 		show_histogram(_RecovPHist, 1, bounds.size, @"Recovery Period");
@@ -371,36 +443,122 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 	statInfo = info;
 	return self;
 }
+- (void)setupColorForCBoxes {
+	NSInteger k = 0;
+	for (ULinedButton *cbox in indexCBoxes) {
+		cbox.underLineColor = cbox.state?
+			[NSColor colorWithHue:((CGFloat)(k ++)) / timeEvoInfo.nIndexes
+				saturation:1. brightness:1. alpha:1.] : nil;
+		cbox.needsDisplay = YES;
+	}
+}
+- (NSInteger)setupIndexCbox:(NSArray<NSView *> *)list tag:(NSInteger)tag {
+	for (NSInteger i = 0; i < list.count; i ++) {
+		NSView *view = list[i];
+		if ([view isKindOfClass:NSButton.class]) {
+			((NSButton *)view).target = self;
+			((NSButton *)view).action = @selector(switchIndexSelection:);
+			if ([view isKindOfClass:ULinedButton.class]) {
+				((NSButton *)view).tag = tag;
+				if (((NSButton *)view).state) {
+					timeEvoInfo.idxBits |= tag; timeEvoInfo.nIndexes ++;
+				}
+				[indexCBoxes addObject:(ULinedButton *)view];
+				tag <<= 1;
+			} else {
+				((NSButton *)view).tag = MskTransit;
+				if (((NSButton *)view).state) timeEvoInfo.idxBits |= MskTransit;
+			}
+		} else if ([view isKindOfClass:NSBox.class])
+			if (((NSBox *)view).boxType == NSBoxPrimary)
+				tag = [self setupIndexCbox:((NSBox *)view).contentView.subviews tag:tag];
+	}
+	return tag;
+}
 - (void)windowDidLoad {
 	[super windowDidLoad];
 	[statInfo.doc setPanelTitle:self.window];
-	NSArray<NSButton *> *selBtns = idxSelectionView.subviews;
-	for (NSInteger i = 0; i < selBtns.count; i ++) {
-		selBtns[i].tag = 1 << i;
-		selBtns[i].target = self;
-		selBtns[i].action = @selector(switchIndexSelection:);
-		if (selBtns[i].state == NSControlStateValueOn) idxBits |= 1 << i;
-		selBtns[i].toolTip = selBtns[i].title;
+	indexCBoxes = NSMutableArray.new;
+	[self setupIndexCbox:idxSelectionSheet.contentView.subviews tag:1];
+	[self setupColorForCBoxes];
+	[idxSelectionSheet setFrameOrigin:self.window.frame.origin];
+	timeEvoInfo.windowSize = mvAvrgDgt.integerValue = 1;
+	mvAvrgUnit.stringValue = NSLocalizedString(@"day", nil);
+}
+- (void)windowDidMove:(NSNotification *)notification {
+	if (notification.object == self.window && !idxSelectionSheet.isVisible)
+		[idxSelectionSheet setFrameOrigin:self.window.frame.origin];
+}
+- (void)windowDidResize:(NSNotification *)notification {
+	if (notification.object == self.window) {
+		if (idxSelectionSheet.isVisible) {
+			NSRect mFrm = self.window.frame;
+			NSSize size = idxSelectionSheet.contentView.frame.size;
+			[idxSelectionSheet setFrameOrigin:(NSPoint){
+				mFrm.origin.x + (mFrm.size.width - size.width) / 2.,
+				mFrm.origin.y - size.height }];
+		} else [idxSelectionSheet setFrameOrigin:self.window.frame.origin];
 	}
 }
 - (void)windowWillClose:(NSNotification *)notification {
-	[statInfo statPanelDidClose:self];
+	if (notification.object == self.window) {
+		[statInfo statPanelDidClose:self];
+		isClosing = YES;
+		[idxSelectionSheet close];
+	} else if (notification.object == idxSelectionSheet && !isClosing) {
+		[idxSelectionSheet resignKeyWindow];
+		NSRect pFrm = idxSelectionSheet.frame;
+		pFrm.origin.y = self.window.frame.origin.y;
+		[idxSelectionSheet setFrame:pFrm display:NO animate:YES];
+	}
+}
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+	if (notification.object == idxSelectionSheet) {
+		NSRect mFrm = self.window.frame, pFrm = idxSelectionSheet.frame;
+		if (mFrm.origin.y > pFrm.origin.y) return;
+		[self.window addChildWindow:idxSelectionSheet ordered:NSWindowBelow];
+		pFrm.origin.x = mFrm.origin.x + (mFrm.size.width - pFrm.size.width) / 2.;
+		[idxSelectionSheet setFrameOrigin:pFrm.origin];
+		pFrm.origin.y = mFrm.origin.y - idxSelectionSheet.contentView.frame.size.height;
+		[idxSelectionSheet setFrame:pFrm display:YES animate:YES];
+	} else if (self.window.parentWindow != nil) {
+		NSWindow *pWin = self.window.parentWindow;
+		[pWin removeChildWindow:self.window];
+		[pWin addChildWindow:self.window ordered:NSWindowAbove];
+	}
 }
 - (void)switchIndexSelection:(NSButton *)sender {
-	if (sender.state == NSControlStateValueOn) idxBits |= sender.tag;
-	else idxBits &= ~ sender.tag;
+	BOOL getOn = (sender.state == NSControlStateValueOn);
+	if (getOn) timeEvoInfo.idxBits |= sender.tag;
+	else timeEvoInfo.idxBits &= ~ sender.tag;
+	if (sender.tag < MskTransit) {
+		if (getOn) timeEvoInfo.nIndexes ++; else timeEvoInfo.nIndexes --;
+		[self setupColorForCBoxes];
+	} else mvAvrgView.hidden = !getOn;
+	view.needsDisplay = YES;
+}
+- (IBAction)stepMvAvrg:(id)sender {
+	timeEvoInfo.windowSize = mvAvrgDgt.integerValue = 1 << mvAvrgStp.integerValue;
+	mvAvrgUnit.stringValue =
+		NSLocalizedString((timeEvoInfo.windowSize > 1)? @"days" : @"day", nil);
 	view.needsDisplay = YES;
 }
 - (void)drawView:(NSRect)bounds {
 	[statInfo drawWithType:(StatType)typePopUp.indexOfSelectedItem
-		indexBits:idxBits bounds:bounds];
+		info:&timeEvoInfo bounds:bounds];
 }
 - (IBAction)flushView:(id)sender {
 	if (sender == typePopUp) {
 		NSInteger idx = typePopUp.indexOfSelectedItem;
-		idxSelectionView.hidden = (idx != StatTimeEvo);
+		if ((idxSelectionBtn.enabled = (idx == StatTimeEvo))) {
+			if (idxSelectionBtn.state) [idxSelectionSheet makeKeyAndOrderFront:nil];
+		} else if (idxSelectionBtn.state) [idxSelectionSheet close];
 	}
 	view.needsDisplay = YES;
+}
+- (IBAction)openCloseIdxSheet:(id)sender {
+	if (idxSelectionSheet.isVisible) [idxSelectionSheet close];
+	else [idxSelectionSheet makeKeyAndOrderFront:sender];
 }
 @end
 

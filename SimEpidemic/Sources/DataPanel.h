@@ -10,13 +10,15 @@
 #import "CommonTypes.h"
 
 NS_ASSUME_NONNULL_BEGIN
-typedef enum { TableTimeEvo, TableTransit, TableHistgram } TableType;
+typedef enum { TableTimeEvo, TableTransit, TableTests, TableHistgram } TableType;
 @class StatInfo;
 
 @interface DataPanel : NSWindowController
 	<NSWindowDelegate, NSTableViewDataSource> {
-	IBOutlet NSScrollView *timeEvoScrlView, *transitScrlView, *histogramScrlView;
-	IBOutlet NSTableView *timeEvoTableView, *transitTableView, *histogramTableView;
+	IBOutlet NSScrollView
+		*timeEvoScrlView, *transitScrlView, *testsScrView, *histogramScrlView;
+	IBOutlet NSTableView
+		*timeEvoTableView, *transitTableView, *testsTableView, *histogramTableView;
 	IBOutlet NSPopUpButton *typePopUp, *intervalPopUp;
 	StatInfo *statInfo;
 	NSArray<NSDictionary<NSString *, NSNumber *> *> *tableData;
