@@ -4,7 +4,7 @@
 </style>
 
 ---
-# simepidemic HTTP Server版仕様書 ver. 0 $\alpha$
+# simepidemic HTTP Server版仕様書 ver. 0 *α*
 著者：畝見達夫，作成：令和2年9月1日，編集：9月5日
 
 このドキュメントでは，感染シミュレータ SimEpidemic の HTTP server 版における，起動オプション，クライアントとの間のプロトコル等の仕様について述べる。
@@ -19,15 +19,19 @@ UNIX の標準的な起動方法によりバックグラウンドで実行する
 
 コマンドオプションは以下のとおり。
 
-* <span class=myForm>-port *ポート番号*</span> : HTTP サーバのポート番号を指定する。既定値は 8000。
-* <span class=myForm>-format *n*</span> :
+* <span class=myForm>-p, --port *ポート番号*</span> : HTTP サーバのポート番号を指定する。既定値は 8000。
+* <span class=myForm>-f, --format *n*</span> :
 [JSON フォーマットオプション](#JSONForm)の既定値を指定する。
 このオプションを指定しない場合の既定値は 0。
+<a name=ComOptDirectory></a>
+* <span class=myForm>-d, --directory *パス*</span> : HTML などのファイルが格納されているディレクトリのパス。
+絶対パスあるいは、`simepidemic` コマンドを起動したときの作業ディレクトリからの相対パス。
+既定値はコマンド起動時の作業ディレクトリ。
 
-例：ポート番号 8001番を仕様し、JSONのフォーマットに段つけと辞書キーのソートを指定して、
+例：ポート番号 8001番を使用し、JSONのフォーマットに段つけと辞書キーのソートを指定して、
 バックグラウンドで実行を開始する。
 
-	# simepidemic -port 8001 -format 3 &
+	$ simepidemic -p 8001 -f 3 &
 
 ## HTTP 要求と応答
 クライアント側からの要求にサーバが応答する。
@@ -39,6 +43,15 @@ javascript 等で書かれたコードにより制御されるWEBブラウザ等
 [パラメータ設定](#SetParams)や[実行制御](#Control)など，応答としてデータを返す必要のない要求に
 対しては，サーバは `text/plain` 型のエラー等の情報を示すデータを返す。
 特に以下の説明で記述がない場合データは `OK` のみである。 
+
+シミュレータへの要求コマンドではなく、`.html`，`.css`，`.js`，`.jpg`
+などのファイル拡張子を伴うパスが指定された場合は．
+該当するファイルがホスト側に存在すれば，通常の WEB サーバと同様その内容を応答する。
+サーバのトップディレクトリ `/` の `GET` 要求に対しては、`index.html` ファイルが存在すれば，
+その内容を応答する。
+これらのファイルは，既定値では `simepidemic`
+コマンドが起動された状態での作業ディレクトリ下にあるものと仮定される。
+ディレクトリの位置は [コマンドライン・オプション `-d`](#ComOptDirectory) で指定可能である。
 
 ## パラメータ値の取得
 ### 要求 `GET /getParams`
@@ -52,11 +65,12 @@ javascript 等で書かれたコードにより制御されるWEBブラウザ等
 	
 例：JSON の辞書形式のデータを myParams.json に保存する。
 
-	<form method="get" action="getParams">
-	<input type="hidden" name="options" value=3></input>
-	<input type="text" name="save" value="myParams"></input>
-	<input type="submit" value="Save"></input>
+	<form method="get" action="getParams" target="saveResult">
+	<input type="hidden" name="format" value=0>
+	<input type="text" name="save" value="myParams">
+	<input type="submit" value="保存">
 	</form>
+	応答: <iframe name="saveResult" height=20></iframe>
 		
 
 ### 応答 `Content-type: application/json`
@@ -70,10 +84,12 @@ javascript 等で書かれたコードにより制御されるWEBブラウザ等
 
 例：ユーザが指定したファイルからパラメータを読み込み設定する。
 	
-	<form method="post" action="setParams">
-	<input type="file" accept="application/json"></input>
-	<input type="submit" value="Load"></input>
+	<form method="post" action="setParams"
+	  enctype="multipart/form-data" target="loadParamResult">
+	<input type="file" accept="application/json">
+	<input type="submit" value="読み込む">
 	</form>
+	応答: <iframe name="loadParamResult"></iframe>
 
 #### 積載情報: `Content-type: application/x-www-form-urlencoded`
  [パラメータ名](#ParamNames) と パラメータ値 の組みの集合。
@@ -83,11 +99,11 @@ javascript 等で書かれたコードにより制御されるWEBブラウザ等
 	<form method="post" action="setParams">
 	<table>
 	<tr><td align="right">人口</td>
-		<td><input type="number" name="populationSize"/></td></tr>
+		<td><input type="number" name="populationSize"></td></tr>
 	<tr><td align="right">世界の大きさ</td>
-		<td><input type="number" name="worldSize"/></td></tr>
+		<td><input type="number" name="worldSize"></td></tr>
 	</table><br/>
-	<input type="submit" value="Set"/>
+	<input type="submit" value="設定"/>
 	</form>
 
 <a name=ParamNames></a>
@@ -126,16 +142,18 @@ JSON形式では３つの要素からなる配列で表現される。
 
 <a name=Control></a>
 ## 実行の制御
-シミュレーションの実行の開始 `start`，停止 `stop`，1ステップ進む `step` のコマンド１つを，
+シミュレーションの実行の
+開始 `start`，停止 `stop`，1ステップ進む `step` ，および世界の初期化 `reset` のコマンド１つを，
 要求行に入れた `GET` メソッドによりクライアントからサーバへ指示する。
 サーバからの応答として，問題がなければ OK がテキストとして返る。
 
-例：開始，一歩，停止の3つのボタン
+例：開始，一歩，停止、初期化の4つのボタン
 		
 	<form method="get" target="result">
-	<input type="submit" value="開始" formaction="start"></input>
-	<input type="submit" value="一歩" formaction="step"></input>
-	<input type="submit" value="停止" formaction="stop"></input>
+	<input type="submit" value="開始" formaction="start">
+	<input type="submit" value="一歩" formaction="step">
+	<input type="submit" value="停止" formaction="stop">
+	<input type="submit" value="初期化" formaction="reset">
 	</form>
 	応答: <iframe name="result" width=100 height=20></iframe>
 
@@ -162,13 +180,13 @@ JSON形式では３つの要素からなる配列で表現される。
  例：経過日数と各健康状態の現在の人数を取得し、iframe の内容として格納する。
  
 	<form method="get" action="/getIndexes" target="currentIndexes">
-	<input type="hidden" name="day" value=1></input>
-	<input type="hidden" name="susceptible" value=1></input>
-	<input type="hidden" name="asymptomatic" value=1></input>
-	<input type="hidden" name="symptomatic" value=1></input>
-	<input type="hidden" name="recovered" value=1></input>
-	<input type="hidden" name="died" value=1></input>
-	<input type="submit" value="現在の人口構成"></input>
+	<input type="hidden" name="day" value=1>
+	<input type="hidden" name="susceptible" value=1>
+	<input type="hidden" name="asymptomatic" value=1>
+	<input type="hidden" name="symptomatic" value=1>
+	<input type="hidden" name="recovered" value=1>
+	<input type="hidden" name="died" value=1>
+	<input type="submit" value="現在の人口構成">
 	</form>
 	<iframe name="currentIndexes"></iframe>
 
@@ -193,6 +211,7 @@ JSON形式では３つの要素からなる配列で表現される。
 
 | 統計指標名 | 日本語名 | 型 | 単位 | 範囲 | 履歴 | 日ごと | 現在数 | 累積 |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| `isRunning` | 実行中 | 真偽値 | - | true/false |||||
 | `step` | ステップ数 | 整数 | - | > 0 |||◯||
 | `days` | 経過日数 | 実数 | 日 | > 0 |||◯||
 | `susceptible` | 未感染者数 | 整数 | 人 | < 初期人口 | ◯ | ◯ | ◯ ||
@@ -218,10 +237,10 @@ JSON形式では３つの要素からなる配列で表現される。
 
 | 統計指標名 | 日本語名 | 横軸 | 縦軸 | 備考 |
 | ---- | ---- | ---- | ---- | ---- |
-| `incubasionPeriod` | 潜伏期間 | 日 | 人 | 発症者の内 |
+| `incubasionPeriod` | 潜伏期間 | 日 | 人 | 発症者の内，感染から発症まで |
 | `recoveryPeriod` | 快復期間 | 日 | 人 | 発症から快復まで |
 | `fatalPeriod` | 生存期間 | 日 | 人 | 発症から死亡まで |
-| `infects` | 感染数 | 人 | 人 | 感染させた数 |
+| `infects` | 感染数 | 人 | 人 | 感染させた人数 |
 | `contacts` | 接触者数 | 人日 | 人 | 未実装|
 
 </div>
