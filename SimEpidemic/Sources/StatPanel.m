@@ -34,8 +34,12 @@ static StatData *new_stat(void) {
 	return self;
 }
 - (void)inc { _cnt ++; }
+- (void)dec { _cnt --; }
+- (NSString *)description
+	{ return [NSString stringWithFormat:@"<MyCounter: cnt=%ld>", _cnt]; }
 @end
 
+#ifndef NOGUI
 @implementation ULinedButton
 - (void)drawRect:(NSRect)dirtyRect {
 	[super drawRect:dirtyRect];
@@ -45,6 +49,18 @@ static StatData *new_stat(void) {
 	[_underLineColor setStroke];
 	[NSBezierPath strokeLineFromPoint:(NSPoint){rct.origin.x, y}
 		toPoint:(NSPoint){NSMaxX(rct), y}];
+}
+@end
+#endif
+
+@implementation NSValue (InfectionExtension)
++ (NSValue *)valueWithInfect:(InfectionCntInfo)info {
+	return [NSValue valueWithBytes:&info objCType:@encode(InfectionCntInfo)];
+}
+- (InfectionCntInfo)infectValue {
+	InfectionCntInfo info;
+	[self getValue:&info];
+	return info;
 }
 @end
 
@@ -57,11 +73,15 @@ static StatData *new_stat(void) {
 	_IncubPHist = NSMutableArray.new;
 	_RecovPHist = NSMutableArray.new;
 	_DeathPHist = NSMutableArray.new;
+	_NInfectsHist = NSMutableArray.new;
 	scenarioPhases = NSMutableArray.new;
 	imgBm = malloc(IMG_WIDTH * IMG_HEIGHT * 4);
 	return self;
 }
 - (Document *)doc { return doc; }
+#ifdef NOGUI
+- (void)setDoc:(Document *)docu { doc = docu; }
+#endif
 - (void)fillImageForOneStep:(StatData *)stat atX:(NSInteger)ix {
 	static HealthType typeOrder[] =
 		{Died, Susceptible, Recovered, Asymptomatic, Symptomatic};
@@ -82,7 +102,9 @@ static StatData *new_stat(void) {
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	for (NSInteger x = steps / skip; x >= 0 && p; x --, p = p->next)
 		[self fillImageForOneStep:p atX:x];
+#ifndef NOGUI
 	[self flushPanels];
+#endif
 }
 - (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec {
 	if (statLock == nil) statLock = NSLock.new;
@@ -119,6 +141,9 @@ static StatData *new_stat(void) {
 	[_IncubPHist removeAllObjects];
 	[_RecovPHist removeAllObjects];
 	[_DeathPHist removeAllObjects];
+	[_NInfectsHist removeAllObjects];
+	[_NInfectsHist addObject:MyCounter.new];
+	_NInfectsHist[0].cnt = nInitInfec;
 	[scenarioPhases removeAllObjects];
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	[self fillImageForOneStep:_statistics atX:0];
@@ -154,9 +179,15 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 	NSUInteger tt = count[TestPositive] + count[TestNegative];
 	return (tt == 0)? 0. : (CGFloat)count[TestPositive] / tt;
 }
-- (BOOL)calcStat:(Agent *_Nullable *_Nonnull)Pop nCells:(NSInteger)nCells
-	qlist:(Agent *)qlist clist:(Agent *)clist warp:(NSArray<WarpInfo *> *)warp
-	testCount:(NSUInteger *)testCount stepsPerDay:(NSInteger)stepsPerDay {
+- (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
+	infects:(NSArray<NSArray<NSValue *> *> *)infects {
+	Agent **Pop = doc.Pop;
+	WorldParams *wp = doc.worldParamsP;
+	NSInteger nCells = wp->mesh * wp->mesh;
+	Agent *qlist = doc.QList, *clist = doc.CList;
+	NSArray<WarpInfo *> *warp = doc.WarpList;
+	NSInteger stepsPerDay = wp->stepsPerDay;
+
 	StatData tmpStat;
 	memset(&tmpStat, 0, sizeof(StatData));
 	if (steps % stepsPerDay == 0) memset(&transDaily, 0, sizeof(StatData));
@@ -261,8 +292,19 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 				[statLock unlock];
 				skipDays *= 2;
 	}}}
+	for (NSArray<NSValue *> *arr in infects) for (NSValue *val in arr) {
+		InfectionCntInfo info = val.infectValue;
+		if (_NInfectsHist.count < info.newV + 1) {
+			NSInteger n = info.newV + 1 - _NInfectsHist.count;
+			for (NSInteger j = 0; j < n; j ++)
+				[_NInfectsHist addObject:MyCounter.new];
+		}
+		if (info.orgV >= 0) [_NInfectsHist[info.orgV] dec];
+		[_NInfectsHist[info.newV] inc];
+	}
 	return _statistics->cnt[Asymptomatic] + _statistics->cnt[Symptomatic] == 0;
 }
+#ifndef NOGUI
 - (void)openStatPanel:(NSWindow *)parentWindow {
 	StatPanel *statPnl = [StatPanel.alloc initWithInfo:self];
 	if (_statPanels == nil) _statPanels = NSMutableArray.new;
@@ -362,7 +404,7 @@ static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info, NSUInteger 
 	return teMax;
 }
 static void show_histogram(NSArray<MyCounter *> *hist,
-	NSInteger idx, NSSize size, NSString *title) {
+	NSRect area, NSColor *color, NSString *title) {
 	NSInteger n = hist.count;
 	if (n == 0) return;
 	NSInteger max = 0, ns = 0, st = -1, sum = 0;
@@ -376,16 +418,21 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 	NSInteger m = 0, md = 0;
 	for (NSInteger i = st; i < n; i ++)
 		if ((m += hist[i].cnt) > ns / 2) { md = i; break; }
-	static HealthType colIdx[] = {Asymptomatic, Recovered, Died};
-	[stateColors[colIdx[idx]] setFill];
-	CGFloat w = size.width / 3. / (n - st);
+	[color setFill];
+	CGFloat w = area.size.width / (n - st);
 	for (NSInteger i = st; i < n; i ++)
-		[NSBezierPath fillRect:(NSRect){(i - st) * w + idx * size.width / 3., 0.,
-			w, hist[i].cnt * size.height / max}];
+		[NSBezierPath fillRect:(NSRect){(i - st) * w + area.origin.x, area.origin.y,
+			w, hist[i].cnt * area.size.height / max}];
 	[[NSString stringWithFormat:NSLocalizedString(@"HistogramFormat", nil),
-		NSLocalizedString(title, nil), ns, st, n, md, ((CGFloat)sum) / ns]
-		drawAtPoint:(NSPoint){size.width * idx / 3. + 4., 10.}
+		NSLocalizedString(title, nil), ns, st, n - 1, md, ((CGFloat)sum) / ns]
+		drawAtPoint:(NSPoint){area.origin.x + 4., 10.}
 		withAttributes:textAttributes];
+}
+static void show_period_hist(NSArray<MyCounter *> *hist,
+	NSInteger idx, NSSize size, NSString *title) {
+	static HealthType colIdx[] = {Asymptomatic, Recovered, Died};
+	NSRect area = {size.width * idx / 3., 0., size.width / 3., size.height};
+	show_histogram(hist, area, stateColors[colIdx[idx]], title);
 }
 - (void)drawWithType:(StatType)type info:(TimeEvoInfo *)info bounds:(NSRect)bounds {
 	static NSNumberFormatter *decFormat = nil;
@@ -430,13 +477,18 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
 		} break;
 		case StatPeriods:
-		show_histogram(_IncubPHist, 0, bounds.size, @"Incubation Period");
-		show_histogram(_RecovPHist, 1, bounds.size, @"Recovery Period");
-		show_histogram(_DeathPHist, 2, bounds.size, @"Fatal Period");
+		show_period_hist(_IncubPHist, 0, bounds.size, @"Incubation Period");
+		show_period_hist(_RecovPHist, 1, bounds.size, @"Recovery Period");
+		show_period_hist(_DeathPHist, 2, bounds.size, @"Fatal Period");
+		break;
+		case StatSpreaders:
+		show_histogram(_NInfectsHist, bounds, NSColor.grayColor, @"Spreaders");
 	}
 }
+#endif
 @end
 
+#ifndef NOGUI
 @implementation StatPanel
 - (instancetype)initWithInfo:(StatInfo *)info {
 	if (!(self = [super initWithWindowNibName:@"StatPanel"])) return nil;
@@ -568,3 +620,4 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 	[statPanel drawView:self.bounds];
 }
 @end
+#endif

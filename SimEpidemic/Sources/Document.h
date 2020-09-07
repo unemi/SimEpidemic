@@ -25,6 +25,7 @@ extern void my_exit(void);
 @class MyView, LegendView, StatInfo, MyCounter;
 
 @interface Document : NSDocument <NSWindowDelegate> {
+#ifndef NOGUI
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
 		*scenarioText, *animeStepsTxt, *stopAtNDaysDgt;
@@ -32,6 +33,7 @@ extern void my_exit(void);
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;
+#endif
 	RuntimeParams runtimeParams, initParams;
 	WorldParams worldParams, tmpWorldParams;
 	NSLock *popLock;
@@ -52,17 +54,26 @@ extern void my_exit(void);
 - (NSMutableArray<MyCounter *> *)RecovPHist;
 - (NSMutableArray<MyCounter *> *)IncubPHist;
 - (NSMutableArray<MyCounter *> *)DeathPHist;
-- (void)setPanelTitle:(NSWindow *)panel;
-- (void)reviseColors;
 - (void)setInitialParameters:(NSData *)newParams;
 - (NSArray *)scenario;
 - (void)setScenario:(NSArray *)newScen;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
 - (void)addNewWarp:(WarpInfo *)info;
+#ifdef NOGUI
+- (void)start;
+- (void)step;
+- (void)stop;
+- (void)resetPop;
+- (NSData *)JSONdataWithOptions:(NSUInteger)options error:(NSError **)outError;
+- (BOOL)readFromJSONData:(NSData *)data error:(NSError **)outError;
+#else
+- (void)setPanelTitle:(NSWindow *)panel;
+- (void)reviseColors;
 - (void)openScenarioFromURL:(NSURL *)url;
 - (void)openParamsFromURL:(NSURL *)url;
 - (void)revisePanelsAlpha;
 - (void)revisePanelChildhood;
+#endif
 @end
 
 @interface NSWindowController (ChildWindowExtension)

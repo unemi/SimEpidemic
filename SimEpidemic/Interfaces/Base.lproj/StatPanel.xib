@@ -46,9 +46,18 @@
                             <font key="font" metaFont="smallSystem"/>
                             <menu key="menu" id="NgJ-qu-xok">
                                 <items>
-                                    <menuItem title="Whole" state="on" id="bx5-Wa-prO"/>
-                                    <menuItem title="Time Evolution" id="8Ze-2j-ZQ8"/>
-                                    <menuItem title="Periods" id="Isv-8W-LbA"/>
+                                    <menuItem title="Whole" state="on" id="bx5-Wa-prO">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                    </menuItem>
+                                    <menuItem title="Time Evolution" id="8Ze-2j-ZQ8">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                    </menuItem>
+                                    <menuItem title="Periods" id="Isv-8W-LbA">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                    </menuItem>
+                                    <menuItem title="Spreaders" id="HJl-Zm-o4v">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                    </menuItem>
                                 </items>
                             </menu>
                         </popUpButtonCell>

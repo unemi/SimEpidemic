@@ -41,7 +41,6 @@ DYNAMIC_STRUCT(TestEntry, freeTestEntries, new_testEntry, free_testEntry_mems)
 DYNAMIC_STRUCT(ContactInfo, freeCInfo, new_cinfo, free_cinfo_mems)
 static NSLock *cInfoLock = nil;
 void add_new_cinfo(Agent *a, Agent *b, NSInteger tm) {
-	if (cInfoLock == nil) cInfoLock = NSLock.new;
 	[cInfoLock lock];
 	ContactInfo *c = new_cinfo();
 	[cInfoLock unlock];
@@ -88,6 +87,7 @@ void my_exit(void) {
 }
 #endif
 
+#ifndef NOGUI
 @implementation NSWindowController (ChildWindowExtension)
 - (void)setupParentWindow:(NSWindow *)parentWindow {
 	if (self.window.parentWindow == nil && makePanelChildWindow)
@@ -105,6 +105,7 @@ void my_exit(void) {
 	}
 }
 @end
+#endif
 
 @interface Document () {
 	NSInteger scenarioIndex;
@@ -137,10 +138,12 @@ void my_exit(void) {
 - (WorldParams *)worldParamsP { return &worldParams; }
 - (WorldParams *)tmpWorldParamsP { return &tmpWorldParams; }
 - (BOOL)running { return loopMode == LoopRunning; }
+#ifndef NOGUI
 - (void)setRunning:(BOOL)newState {
 	BOOL orgState = loopMode == LoopRunning;
 	if (orgState != newState) [self startStop:nil];
 }
+#endif
 - (void)popLock { [popLock lock]; }
 - (void)popUnlock { [popLock unlock]; }
 - (NSMutableArray<MyCounter *> *)RecovPHist { return statInfo.RecovPHist; }
@@ -152,6 +155,7 @@ void my_exit(void) {
 - (void)waitAllOperations {
 	dispatch_group_wait(dispatchGroup, DISPATCH_TIME_FOREVER);
 }
+#ifndef NOGUI
 - (void)setPanelTitle:(NSWindow *)panel {
 	NSString *orgTitle = panel.title;
 	NSScanner *scan = [NSScanner scannerWithString:orgTitle];
@@ -175,6 +179,7 @@ void my_exit(void) {
 	}
 	[statInfo reviseColors];
 }
+#endif
 - (void)setInitialParameters:(NSData *)newParams {
 	NSData *orgParams = [NSData dataWithBytes:&initParams length:sizeof(RuntimeParams)];
 	[self.undoManager registerUndoWithTarget:self handler:
@@ -217,16 +222,20 @@ void my_exit(void) {
 	if (loopMode == LoopFinished) loopMode = LoopEndByUser;
 	statInfo.statistics->cnt[Susceptible] -= n;
 	statInfo.statistics->cnt[Asymptomatic] += n;
+#ifndef NOGUI
 	in_main_thread(^{
 		[self showCurrentStatistics];
 		self->view.needsDisplay = YES;
 	});
+#endif
 }
+#ifndef NOGUI
 - (void)adjustScenarioText {
 	if (scenario != nil && scenario.count > 0)
 		scenarioText.integerValue = scenarioIndex;
 	else scenarioText.stringValue = NSLocalizedString(@"None", nil);
 }
+#endif
 - (void)execScenario {
 	char visitFlags[scenario.count];
 	memset(visitFlags, 0, scenario.count);
@@ -238,7 +247,12 @@ void my_exit(void) {
 			error_msg([NSString stringWithFormat:@"%@: %ld",
 				NSLocalizedString(@"Looping was found in the Scenario.", nil),
 				scenarioIndex + 1],
-				scenarioPanel? scenarioPanel.window : view.window, NO);
+#ifdef NOGUI
+				nil,
+#else
+				scenarioPanel? scenarioPanel.window : view.window,
+#endif
+				NO);
 			break;
 		}
 		visitFlags[scenarioIndex] = YES;
@@ -256,7 +270,9 @@ void my_exit(void) {
 			[self addInfected:((NSNumber *)item).integerValue];
 		} else if ([item isKindOfClass:NSPredicate.class]) {	// predicate to stop
 			predicateToStop = (NSPredicate *)item;
+#ifndef NOGUI
 			in_main_thread( ^{ [self adjustScenarioText]; });
+#endif
 			break;
 		}
 	}
@@ -288,11 +304,16 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	scenario = newScen;
 	scenarioIndex = 0;
 	statInfo.phaseInfo = phase_info(scenario);
+#ifndef NOGUI
 	[self adjustScenarioText];
+#endif
 	if (runtimeParams.step == 0) [self execScenario];
+#ifndef NOGUI
 	[scenarioPanel adjustControls:
 		self.undoManager.undoing || self.undoManager.redoing];
+#endif
 }
+#ifndef NOGUI
 - (void)showCurrentStatistics {
 	StatData *stat = statInfo.statistics;
 	for (NSInteger i = 0; i < NHealthTypes; i ++)
@@ -301,6 +322,7 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	qDSNum.integerValue = stat->cnt[QuarantineSymp];
 	[statInfo flushPanels];
 }
+#endif
 - (void)resetPop {
 	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
 		memcpy(&worldParams, &tmpWorldParams, sizeof(WorldParams));
@@ -346,8 +368,10 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		a->ID = i;
 		reset_agent(a, &runtimeParams, &worldParams);
 		if (i < nDist) a->distancing = YES;
-		if (iIdx < worldParams.nInitInfec && i == infecIdxs[iIdx])
-			{ a->health = Asymptomatic; iIdx ++; }
+		if (iIdx < worldParams.nInitInfec && i == infecIdxs[iIdx]) {
+			a->health = Asymptomatic; iIdx ++;
+			a->nInfects = 0;
+		}
 		add_agent(a, &worldParams, _Pop);
 	}
 	free_agent_mems(&_QList);
@@ -360,12 +384,15 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	[popLock unlock];
 	scenarioIndex = 0;
 	[self execScenario];
+#ifndef NOGUI
 	daysNum.doubleValue = 0.;
 	[self showCurrentStatistics];
+#endif
 	loopMode = LoopNone;
 }
 - (instancetype)init {
 	if ((self = [super init]) == nil) return nil;
+	if (cInfoLock == nil) cInfoLock = NSLock.new;
 	dispatchGroup = dispatch_group_create();
 	dispatchQueue = dispatch_queue_create(
 		"jp.ac.soka.unemi.SimEpidemic.queue", DISPATCH_QUEUE_CONCURRENT);
@@ -381,8 +408,14 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	memcpy(&worldParams, &userDefaultWorldParams, sizeof(WorldParams));
 	memcpy(&tmpWorldParams, &userDefaultWorldParams, sizeof(WorldParams));
 	self.undoManager = NSUndoManager.new;
+#ifdef NOGUI
+	statInfo = StatInfo.new;
+	statInfo.doc = self;
+	[self resetPop];
+#endif
 	return self;
 }
+#ifndef NOGUI
 - (NSString *)windowNibName { return @"Document"; }
 - (void)windowControllerDidLoadNib:(NSWindowController *)windowController {
 	static NSString *lvNames[] = {
@@ -422,6 +455,7 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	return (NSSize){ aSize.width + orgWindowSize.width - orgViewSize.width,
 		aSize.height + orgWindowSize.height - orgViewSize.height };
 }
+#endif
 NSString *keyParameters = @"parameters", *keyScenario = @"scenario";
 static NSObject *property_from_element(NSObject *elm) {
 	if ([elm isKindOfClass:NSPredicate.class]) return ((NSPredicate *)elm).predicateFormat;
@@ -439,7 +473,7 @@ static NSObject *element_from_property(NSObject *prop) {
 	else return @[((NSArray *)prop)[0],
 		[NSPredicate predicateWithFormat:(NSString *)((NSArray *)prop)[1]]];
 }
-- (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
+- (NSDictionary *)documentDictionary {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyAnimeSteps] = @(animeSteps);
 	if (scenario != nil) {
@@ -449,14 +483,9 @@ static NSObject *element_from_property(NSObject *prop) {
 			items[i] = property_from_element(scenario[i]);
 		dict[keyScenario] = [NSArray arrayWithObjects:items count:scenario.count];
 	} else dict[keyParameters] = param_dict(&runtimeParams, &worldParams);
-	return [NSPropertyListSerialization dataWithPropertyList:dict
-		format:NSPropertyListXMLFormat_v1_0 options:0 error:outError];
+	return dict;
 }
-- (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError {
-	NSDictionary *dict = [NSPropertyListSerialization
-		propertyListWithData:data options:NSPropertyListImmutable
-		format:NULL error:outError];
-	if (dict == nil) return NO;
+- (BOOL)readFromDictionary:(NSDictionary *)dict {
 	NSNumber *num = dict[keyAnimeSteps];
 	if (num != nil) animeSteps = num.integerValue;
 	NSDictionary *pDict = dict[keyParameters];
@@ -479,6 +508,31 @@ static NSObject *element_from_property(NSObject *prop) {
 	}
 	return YES;
 }
+#ifdef NOGUI
+- (NSData *)JSONdataWithOptions:(NSUInteger)options error:(NSError **)outError {
+	return [NSJSONSerialization dataWithJSONObject:[self documentDictionary]
+		options:options error:outError];
+}
+- (BOOL)readFromJSONData:(NSData *)data error:(NSError **)outError {
+	NSDictionary *dict = [NSJSONSerialization
+		JSONObjectWithData:data options:0 error:outError];
+	if (dict == nil) return NO;
+	return [self readFromDictionary:dict];
+}
+#else
+- (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
+	NSDictionary *dict = [self documentDictionary];
+	return [NSPropertyListSerialization dataWithPropertyList:dict
+		format:NSPropertyListXMLFormat_v1_0 options:0 error:outError];
+}
+- (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError {
+	NSDictionary *dict = [NSPropertyListSerialization
+		propertyListWithData:data options:NSPropertyListImmutable
+		format:NULL error:outError];
+	if (dict == nil) return NO;
+	return [self readFromDictionary:dict];
+}
+#endif
 static NSLock *testEntriesLock = nil;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason {
 	if (runtimeParams.step - agent->lastTested <
@@ -522,7 +576,7 @@ static NSLock *testEntriesLock = nil;
 		testCount[testees[num].integerValue] ++;
 		Agent *agent = (Agent *)num.integerValue;
 		TestEntry *entry = new_testEntry();
-		entry->isPositive = (agent->health == Asymptomatic || agent->health == Symptomatic)?
+		entry->isPositive = is_infected(agent)?
 			(random() < 0x7fffffff * runtimeParams.tstSens / 100.) :
 			(random() > 0x7fffffff * runtimeParams.tstSpec / 100.);
 		agent->lastTested = entry->timeStamp = runtimeParams.step;
@@ -643,15 +697,25 @@ static NSInteger mCount = 0, mCount2 = 0;
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-
+// Step
+	NSMutableArray<NSValue *> *infectors[nCores];
 	NSUInteger transitCnt[NHealthTypes][nCores];
 	memset(transitCnt, 0, sizeof(transitCnt));
 	for (NSInteger j = 0; j < nCores; j ++) {
 		NSInteger start = j * nInField / nCores;
 		NSInteger end = (j < nCores - 1)? (j + 1) * nInField / nCores : nInField;
+		NSMutableArray<NSValue *> *infec = infectors[j] = NSMutableArray.new;
 		[self addOperation:^{
-			for (NSInteger i = start; i < end; i ++)
-				step_agent(popL[i], rp, wp, weakSelf);
+			for (NSInteger i = start; i < end; i ++) {
+				Agent *a = popL[i];
+				step_agent(a, rp, wp, weakSelf);
+				if (a->newNInfects > 0) {
+					[infec addObject:[NSValue valueWithInfect:
+						(InfectionCntInfo){a->nInfects, a->nInfects + a->newNInfects}]];
+					a->nInfects += a->newNInfects;
+					a->newNInfects = 0;
+				}
+			}
 		}];
 	}
 	for (Agent *a = _QList; a; a = a->next)
@@ -691,9 +755,11 @@ static NSInteger mCount = 0, mCount2 = 0;
 	memset(testCount, 0, sizeof(testCount));
 	[self deliverTestResults:testCount];
 
-	BOOL finished = [statInfo calcStat:_Pop nCells:nCells
-		qlist:_QList clist:_CList warp:_WarpList
-		testCount:testCount stepsPerDay:worldParams.stepsPerDay];
+//	BOOL finished = [statInfo calcStat:_Pop nCells:nCells
+//		qlist:_QList clist:_CList warp:_WarpList
+//		testCount:testCount stepsPerDay:worldParams.stepsPerDay];
+	BOOL finished = [statInfo calcStatWithTestCount:testCount infects:
+		[NSArray arrayWithObjects:infectors count:nCores]];
 	[popLock unlock];
 	runtimeParams.step ++;
 	if (loopMode == LoopRunning) {
@@ -717,12 +783,14 @@ static NSInteger mCount = 0, mCount2 = 0;
 	}
 #endif
 }
+#ifndef NOGUI
 - (void)showAllAfterStep {
 	[self showCurrentStatistics];
 	daysNum.doubleValue = floor(runtimeParams.step / worldParams.stepsPerDay);
 	spsNum.doubleValue = self->stepsPerSec;
 	view.needsDisplay = YES;
 }
+#endif
 - (void)runningLoop {
 	while (loopMode == LoopRunning) {
 		[self doOneStep];
@@ -738,24 +806,49 @@ static NSInteger mCount = 0, mCount2 = 0;
 		if (timePassed < 1.)
 			stepsPerSec += (fmin(30., 1. / timePassed) - stepsPerSec) * 0.2;
 		prevTime = newTime;
+#ifndef NOGUI
 		if (runtimeParams.step % animeSteps == 0) {
 			in_main_thread(^{ [self showAllAfterStep]; });
 			NSInteger usToWait = (1./30. - timePassed) * 1e6;
 			usleep((unsigned int)((usToWait < 0)? 1 : usToWait));
-		} else usleep(1);
+		} else
+#endif
+		usleep(1);
 	}
+#ifndef NOGUI
 	in_main_thread(^{
 		self->view.needsDisplay = YES;
 		self->startBtn.title = NSLocalizedString(@"Start", nil);
 		self->stepBtn.enabled = YES;
 		[self->scenarioPanel adjustControls:NO];
 	});
+#endif
 }
 - (void)goAhead {
 	if (loopMode == LoopFinished) [self resetPop];
 	else if (loopMode == LoopEndByCondition)
 		[self execScenario];
 }
+#ifdef NOGUI
+- (void)start {
+	if (loopMode == LoopRunning) return;
+	[self goAhead];
+	loopMode = LoopRunning;
+	[NSThread detachNewThreadSelector:@selector(runningLoop) toTarget:self withObject:nil];
+}
+- (void)step {
+	switch (loopMode) {
+		case LoopRunning: return;
+		case LoopFinished: case LoopEndByCondition: [self goAhead];
+		case LoopEndByUser: case LoopNone: case LoopEndAsDaysPassed:
+		[self doOneStep];
+	}
+	loopMode = LoopEndByUser;
+}
+- (void)stop {
+	if (loopMode == LoopRunning) loopMode = LoopEndByUser;
+}
+#else
 - (IBAction)startStop:(id)sender {
 	if (loopMode != LoopRunning) {
 		[self goAhead];
@@ -763,7 +856,8 @@ static NSInteger mCount = 0, mCount2 = 0;
 		stepBtn.enabled = NO;
 		loopMode = LoopRunning;
 		[scenarioPanel adjustControls:NO];
-		[NSThread detachNewThreadSelector:@selector(runningLoop) toTarget:self withObject:nil];
+		[NSThread detachNewThreadSelector:
+			@selector(runningLoop) toTarget:self withObject:nil];
 	} else {
 		startBtn.title = NSLocalizedString(@"Start", nil);
 		stepBtn.enabled = YES;
@@ -890,6 +984,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 		return animeStepper.integerValue > animeStepper.minValue;
 	return YES;
 }
+#endif
 @end
 
 @implementation WarpInfo

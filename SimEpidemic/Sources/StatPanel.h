@@ -22,13 +22,25 @@ typedef struct {
 @interface MyCounter : NSObject
 @property NSInteger cnt;
 - (void)inc;
+- (void)dec;
 @end
 
+#ifndef NOGUI
 @interface ULinedButton : NSButton
 @property NSColor *underLineColor;
 @end
+#endif
 
-@class Document, StatPanel, WarpInfo;
+typedef struct { int orgV, newV; } InfectionCntInfo;
+@interface NSValue (InfectionExtension)
++ (NSValue *)valueWithInfect:(InfectionCntInfo)info;
+- (InfectionCntInfo)infectValue;
+@end
+
+@class Document, WarpInfo;
+#ifndef NOGUI
+@class StatPanel;
+#endif
 @interface StatInfo : NSObject {
 	IBOutlet Document *doc;
 	NSUInteger maxCounts[NIntIndexes], maxTransit[NIntIndexes];
@@ -37,28 +49,33 @@ typedef struct {
 	StatData statCumm, transDaily, transCumm;
 	NSUInteger testCumm[NIntTestTypes];
 	TestResultCount testResultsW[7];
-	CGFloat maxStepPRate, maxDailyPRate, pRateCumm;
+	CGFloat maxStepPRate, maxDailyPRate, pRateCumm;	// Rate of positive
 	NSArray<NSNumber *> *phaseInfo;	// line numbers of condition to run util ...
 	NSMutableArray<NSNumber *> *scenarioPhases;	// step, p, s, ... p
 }
-@property (readonly) NSMutableArray<StatPanel *> *statPanels;
 @property (readonly) StatData *statistics, *transit;
 @property (readonly) TestResultCount testResultCnt;	// weekly total
-@property (readonly) NSMutableArray<MyCounter *> *IncubPHist, *RecovPHist, *DeathPHist;
+@property (readonly) NSMutableArray<MyCounter *>
+	*IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
 - (Document *)doc;
 - (void)reviseColors;
 - (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec;
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info;
 - (void)phaseChangedTo:(NSInteger)lineNumber;
-- (BOOL)calcStat:(Agent *_Nullable *_Nonnull)Pop nCells:(NSInteger)nCells
-	qlist:(Agent *)qlist clist:(Agent *)clist warp:(NSArray<WarpInfo *> *)warp
-	testCount:(NSUInteger *)testCount stepsPerDay:(NSInteger)stepsPerDay;
+- (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
+	infects:(NSArray<NSArray<NSValue *> *> *)infects;
+#ifdef NOGUI
+- (void)setDoc:(Document *)doc;
+#else
+@property (readonly) NSMutableArray<StatPanel *> *statPanels;
 - (void)openStatPanel:(NSWindow *)parentWindow;
 - (void)flushPanels;
+#endif
 @end
 
+#ifndef NOGUI
 typedef enum {
-	StatWhole, StatTimeEvo, StatPeriods
+	StatWhole, StatTimeEvo, StatPeriods, StatSpreaders
 } StatType;
 typedef enum {
 	MskSusceptible = (1<<Susceptible),
@@ -99,5 +116,5 @@ typedef enum {
 - (instancetype)initWithInfo:(StatInfo *)info;
 - (IBAction)flushView:(id)sender;
 @end
-
+#endif
 NS_ASSUME_NONNULL_END

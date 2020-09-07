@@ -48,6 +48,9 @@ static CGFloat my_random(DistInfo *p) {
 BOOL was_hit(WorldParams *wp, CGFloat prob) {
 	return (random() > pow(1. - prob, 1. / wp->stepsPerDay) * 0x7fffffff);
 }
+BOOL is_infected(Agent *a) {
+	return a->health == Asymptomatic || a->health == Symptomatic;
+}
 static void reset_days(Agent *a, RuntimeParams *p) {
 	a->daysInfected = a->daysDiseased = 0;
 	a->daysToRecover = my_random(&p->recov);
@@ -64,6 +67,8 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->vx = cos(th);
 	a->vy = sin(th);
 	a->health = Susceptible;
+	a->nInfects = -1;
+	a->newNInfects = 0;
 	a->distancing = a->isWarping = NO;
 	a->isOutOfField = YES;
 	reset_days(a, rp);
@@ -124,12 +129,14 @@ static void attracted(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CG
 	// check contact and infection
 	if (d < rp->infecDst) {
 		if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
-		if (a->health == Susceptible && (b->health == Asymptomatic || b->health == Symptomatic)) {
-			CGFloat timeFactor = fmin(1., b->daysInfected / 2.);
+		if (a->health == Susceptible && is_infected(b)) {
+			CGFloat timeFactor = fmin(1., b->daysInfected / b->daysToOnset * 2.);
 			CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
-			if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor))
-			a->newHealth = Asymptomatic;
-	}}
+			if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor)) {
+				a->newHealth = Asymptomatic;
+				if (a->nInfects < 0) a->newNInfects = 1;
+				b->newNInfects ++;
+	}}}
 }
 void interacts(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp) {
 	CGFloat dx = b->x - a->x;

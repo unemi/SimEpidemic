@@ -10,6 +10,9 @@
 #import "CommonTypes.h"
 #define N_ENV_COLORS 4
 #define N_COLORS (NHealthTypes+N_ENV_COLORS)
+#define DEFAULT_WARP_OPACITY .5
+#define DEFAULT_PANELS_ALPHA .9
+#define DEFAULT_CHILD_WIN YES
 
 enum { ColBackground = NHealthTypes,
 	ColHospital, ColCemetery, ColText };
@@ -35,6 +38,7 @@ extern NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *wi
 extern void load_property_data(NSArray<NSString *> *fileTypes, NSWindow *window,
 	Class class, void (^block)(NSURL *url, NSObject *));
 extern void save_property_data(NSString *fileType, NSWindow *window, NSObject *object);
+extern void setup_colors(void);
 extern NSString *keyAnimeSteps;
 extern NSInteger defaultAnimeSteps;
 extern RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
@@ -45,23 +49,13 @@ extern NSDictionary<NSString *, NSString *> *paramKeyFromName;
 extern NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
 extern NSDictionary *param_dict(RuntimeParams *rp, WorldParams *wp);
 extern void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *d);
-extern NSInteger stateRGB[N_COLORS];
+extern NSInteger defaultStateRGB[N_COLORS], stateRGB[N_COLORS];
 extern NSColor *stateColors[N_COLORS], *warpColors[NHealthTypes];
+extern NSString *colKeys[];
 extern CGFloat warpOpacity;
 extern CGFloat panelsAlpha;
 extern BOOL makePanelChildWindow;
+extern NSString *keyWarpOpacity, *keyPanelsAlpha, *keyChildWindow;
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
-@end
-
-@interface Preferences : NSWindowController {
-	IBOutlet NSStepper *animeStepper;
-	IBOutlet NSTextField *animeStepTxt;
-	IBOutlet NSColorWell
-		*bgColWell, *hospitalColWell, *cemeteryColWell, *textColWell,
-		*susColWell, *asyColWell, *symColWell, *recColWell, *dieColWell;
-	IBOutlet NSSlider *warpOpacitySld, *panelsAlphaSld;
-	IBOutlet NSTextField *warpOpacityDgt, *panelsAlphaDgt;
-	IBOutlet NSButton *childWinCBox;
-}
 @end
