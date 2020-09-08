@@ -64,9 +64,6 @@ static StatData *new_stat(void) {
 }
 @end
 
-#define IMG_WIDTH (320*4)
-#define IMG_HEIGHT	320
-#define MAX_N_REC	IMG_WIDTH
 @implementation StatInfo
 - (instancetype)init {
 	if (!(self = [super init])) return nil;
@@ -80,6 +77,8 @@ static StatData *new_stat(void) {
 }
 - (Document *)doc { return doc; }
 #ifdef NOGUI
+- (NSInteger)skipSteps { return skip; }
+- (NSInteger)skipDays { return skipDays; }
 - (void)setDoc:(Document *)docu { doc = docu; }
 #endif
 - (void)fillImageForOneStep:(StatData *)stat atX:(NSInteger)ix {

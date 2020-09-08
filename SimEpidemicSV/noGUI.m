@@ -10,6 +10,7 @@
 #import <arpa/inet.h>
 #import "noGUI.h"
 #import "AppDelegate.h"
+#import "StatPanel.h"
 #include "noGUIInfo.h"
 #define SERVER_PORT 8000U
 #define BUFFER_SIZE 8192
@@ -25,21 +26,21 @@ static void unix_error_msg(NSString *msg, int code) {
 NSMutableArray<Document *> *theDocuments = nil;
 static NSUInteger JSONOptions = 0;
 static NSString *fileDirectory;
-static NSDictionary *extToMime;
+static NSDictionary *extToMime, *codeMeaning, *indexNames;
 static NSDateFormatter *dateFormat = nil;
-static NSDictionary *codeMeaning;
 static NSString *headerFormat = @"HTTP/1.1 %03d %@\nDate: %@\nServer: simepidemic\n\
-Content-Length: %ld\nConnection: keep-alive\n%@\n";
+Content-Length: %ld\nConnection: keep-alive\n%@%@\n";
 
 @interface ProcContext : NSObject {
-	NSMutableData *bufData;
+	NSMutableData *bufData;	// buffer to receive
 	long dataLength;
 }
 @property (readonly) Document *document;
 @property (readonly) NSDictionary<NSString *, NSString *> *query;
 @property (readonly) int desc, code;
-@property NSString *type;
-@property NSData *content;
+@property NSString *type, *moreHeader;
+@property NSObject *content;
+@property NSInteger fileSize;
 @end
 @implementation ProcContext
 - (instancetype)initWithSocket:(int)desc {
@@ -72,35 +73,50 @@ static void send_bytes(int desc, const char *bytes, NSInteger size) {
 	printf("<--- %ld bytes.\n%s", size, buf);
 #endif
 }
-- (void)sendData {
-	NSInteger size = 0;
-	const char *bytes = NULL;
-	if ([_content isKindOfClass:NSData.class]) {
-		size = ((NSData *)_content).length;
-		bytes = ((NSData *)_content).bytes;
-	} else if ([_content isKindOfClass:NSString.class]) {
-		size = ((NSString *)_content).length;
-		bytes = ((NSString *)_content).UTF8String;
-	} else return;
+- (void)sendHeader {
 	NSString *dateStr = [dateFormat stringFromDate:NSDate.date],
 		*meaning = codeMeaning[@(_code)];
 	NSString *header = [NSString stringWithFormat:headerFormat, _code,
-		(meaning == nil)? @"" : meaning, dateStr, size,
-		(_type == nil)? @"" : [NSString stringWithFormat:@"Content-Type: %@\n", _type]];
+		(meaning == nil)? @"" : meaning, dateStr, _fileSize,
+		(_type == nil)? @"" : [NSString stringWithFormat:@"Content-Type: %@\n", _type],
+		(_moreHeader == nil)? @"" : _moreHeader];
 	send_bytes(_desc, header.UTF8String, header.length);
-	send_bytes(_desc, bytes, size);
+}
+- (void)sendData {
+	if ([_content isKindOfClass:NSInputStream.class]) {
+		[self sendHeader];
+		NSInputStream *stream = (NSInputStream *)_content;
+		[stream open];
+		@try {
+			NSMutableData *data = [NSMutableData dataWithLength:BUFFER_SIZE];
+			const char *bytes = data.mutableBytes;
+			NSInteger size;
+			while ((size = [stream read:(uint8_t *)bytes maxLength:BUFFER_SIZE]) > 0)
+				send_bytes(_desc, bytes, size);
+		} @catch (id _) {}
+		[stream close];
+	} else {
+		const char *bytes = NULL;
+		if ([_content isKindOfClass:NSData.class]) {
+			_fileSize = ((NSData *)_content).length;
+			bytes = ((NSData *)_content).bytes;
+		} else if ([_content isKindOfClass:NSString.class]) {
+			_fileSize = ((NSString *)_content).length;
+			bytes = ((NSString *)_content).UTF8String;
+		} else return;
+		[self sendHeader];
+		send_bytes(_desc, bytes, _fileSize);
+	}
 }
 - (void)setErrorMessage:(NSString *)msg {
 	_code = [msg substringToIndex:3].intValue;
 	_type = @"text/plain";
-	_content = [NSData dataWithBytes:msg.UTF8String length:msg.length];
+	_content = msg;
 }
 - (void)setOKMessage {
-	static NSData *OKData = nil;
-	if (OKData == nil) OKData = [NSData dataWithBytes:"OK" length:2];
 	_code = 200;
 	_type = @"text/plain";
-	_content = OKData;
+	_content = @"OK";
 }
 static NSString *bad_request_message(NSString *req) {
 	NSString *shortend = (req.length < 20)? req :
@@ -111,15 +127,30 @@ static NSString *bad_request_message(NSString *req) {
 - (void)respondFile:(NSString *)path {
 	NSError *error;
 	NSString *exPath = [fileDirectory stringByAppendingString:path];
-	_content = [NSData dataWithContentsOfFile:exPath options:0 error:&error];
-	if (_content == nil) @throw [NSString stringWithFormat:
-		@"404 File access denied: \"%@\" %@", exPath, error.localizedDescription];
-	_type = extToMime[path.pathExtension];
-	_code = 200;
+	@try {
+		NSDictionary *attr =
+			[NSFileManager.defaultManager attributesOfItemAtPath:exPath error:&error];
+		if (attr == nil) @throw error;
+		NSNumber *num = attr[NSFileSize];
+		if (num == nil) @throw @"500 Couldn't get the file size.";
+		_fileSize = num.integerValue;
+		if (_fileSize < BUFFER_SIZE) {
+			_content = [NSData dataWithContentsOfFile:exPath options:0 error:&error];
+			if (_content == nil) @throw error;
+		} else {
+			_content = [NSInputStream inputStreamWithFileAtPath:exPath];
+			if (_content == nil) @throw @"500 Couldn't make an input stream.";
+		}
+		_type = extToMime[path.pathExtension];
+		_code = 200;
+	} @catch (NSError *error) {
+		@throw [NSString stringWithFormat:
+			@"404 File access denied: \"%@\" %@", exPath, error.localizedDescription];
+	} @catch (NSString *msg) { @throw msg; }
 }
 - (void)makeResponse {
 	if (theDocuments.count > 0) _document = theDocuments[0];
-	_content = nil;
+	_content = _moreHeader = nil;
 	NSString *req = [NSString stringWithUTF8String:bufData.bytes];
 	NSScanner *scan = [NSScanner scannerWithString:req];
 	NSString *method, *request, *command, *optionStr, *JSONStr = nil;
@@ -226,9 +257,17 @@ static NSString *bad_request_message(NSString *req) {
 	_content = [NSJSONSerialization dataWithJSONObject:
 		 param_dict(_document.runtimeParamsP, _document.worldParamsP) 
 		 options:self.JSONOptions error:&error];
-	if (_content == nil) return;
+	if (_content == nil) @throw [NSString stringWithFormat:
+		@"500 Couldn't make a JSON data: %@", error.localizedDescription];
 	NSString *savePath = _query[@"save"];
-	if (savePath == nil) _type = @"application/json";
+	if (savePath != nil) {
+		NSString *ext =
+			[[savePath pathExtension] isEqualToString:@"json"]? @"" : @".json";
+		_moreHeader = [NSString stringWithFormat:
+			@"Content-Disposition: attachment; filename=\"%@%@\"\n", savePath, ext];
+	}
+	_type = @"application/json";
+	_code = 200;
 }
 - (void)setParams {
 	if (_document == nil) return;
@@ -247,13 +286,25 @@ static NSString *bad_request_message(NSString *req) {
 printf("--- parameters\n%s\n", dict.description.UTF8String);
 #endif
 }
-- (void)start { [_document start]; }
+- (void)start {
+	NSString *opStr = _query[@"stopAt"];
+	[_document start:(opStr == nil)? 0 : opStr.integerValue];
+}
 - (void)step { [_document step]; }
 - (void)stop { [_document stop]; }
 - (void)reset { [_document resetPop]; }
+static NSObject *make_history(StatData *st, NSInteger nItems,
+	NSNumber *(^getter)(StatData *)) {
+	if (nItems == 1) return getter(st);
+	NSMutableArray *ma = NSMutableArray.new;
+	for (NSInteger i = 0; i < nItems && st != NULL; i ++, st = st->next)
+		[ma insertObject:getter(st) atIndex:0];
+	return ma;
+}
 - (void)getIndexes {
 	if (_document == nil) return;
 	NSError *error;
+	NSInteger fromDay = MAX_INT32, fromStep = MAX_INT32, daysWindow = 0;
 	NSMutableSet *idxNames = NSMutableSet.new;
 	for (NSString *key in _query.keyEnumerator) {
 		if ([key isEqualToString:@"name"]) {
@@ -266,14 +317,46 @@ printf("--- parameters\n%s\n", dict.description.UTF8String);
 			if (![array isKindOfClass:NSArray.class])
 				@throw @"417 Index name list must be an array of strings.";
 			[idxNames addObjectsFromArray:array];
-		} else if ([key hasPrefix:@"from"]) {
+		} else if ([key isEqualToString:@"fromDay"]) {
+			fromDay = _query[key].integerValue;
+		} else if ([key isEqualToString:@"fromStep"]) {
+			fromStep = _query[key].integerValue;
+		} else if ([key isEqualToString:@"window"]) {
+			daysWindow = _query[key].integerValue;
 		} else if (_query[key].integerValue != 0)
 			[idxNames addObject:key];
 	}
 	if (idxNames.count == 0) @throw @"417 Index name is not sepcified.";
+	RuntimeParams *rp = _document.runtimeParamsP;
+	WorldParams *wp = _document.worldParamsP;
+	if (fromDay != MAX_INT32) fromStep = fromDay * wp->stepsPerDay;
+	else if (fromStep != MAX_INT32) fromDay = fromStep / wp->stepsPerDay;
+	NSInteger nDays, nSteps;
+	nSteps = (fromStep < 0)? -fromStep :
+		(rp->step < fromStep)? 1 : rp->step - fromStep + 1;
+	nDays = (fromDay == MAX_INT32)? 1 : (nSteps + wp->stepsPerDay - 1) / wp->stepsPerDay;
 	NSMutableDictionary *md = NSMutableDictionary.new;
+	StatInfo *statInfo = _document.statInfo;
+	StatData *statData = (daysWindow == 0)? statInfo.statistics : statInfo.transit;
+	NSInteger nItems = (daysWindow == 0)?
+		(nSteps - 1) / statInfo.skipSteps + 1 : (nDays - 1) / statInfo.skipDays + 1;
 	for (NSString *idxName in idxNames) {
-	}
+		if ([idxName isEqualToString:@"isRunning"])
+			md[idxName] = @(_document.running);
+		else if ([idxName isEqualToString:@"step"]) md[idxName] = @(rp->step);
+		else if ([idxName isEqualToString:@"days"])
+			md[idxName] = @((CGFloat)rp->step / wp->stepsPerDay);
+		else if ([idxName isEqualToString:@"testPositiveRate"])
+			md[idxName] = make_history(statData, nItems,
+				^(StatData *st) { return @(st->pRate); });
+		else {
+			NSNumber *num = indexNames[idxName];
+			if (num != nil) {
+				NSInteger idx = num.integerValue;
+				md[idxName] = make_history(statData, nItems,
+					^(StatData *st) { return @(st->cnt[idx]); });
+	}}}
+	if (md.count == 0) @throw @"417 No valid index names are specified.";
 	_content = [NSJSONSerialization dataWithJSONObject:md
 		options:self.JSONOptions error:&error];
 	if (_content == nil) @throw [NSString stringWithFormat:
@@ -342,6 +425,18 @@ static NSDictionary *ext_mime_map(void) {
 	}
 	return md;
 } }
+static NSDictionary *index_name_map(void) {
+	static NSString *names[] = {
+		@"susceptible", @"asymptomatic", @"symptomatic", @"recovered", @"died",
+		@"quarantineAsymptomatic", @"quarantineSymptomatic",
+		@"tests", @"testAsSymptom", @"testAsContact", @"testAsSuspected",
+		@"testPositive", @"testNegative",
+	nil};
+	NSInteger n = 0; while (names[n] != nil) n ++;
+	NSNumber *idxes[n];
+	for (NSInteger i = 0; i < n; i ++) idxes[i] = @(i);
+	return [NSDictionary dictionaryWithObjects:idxes forKeys:names count:n];
+}
 static void interaction_thread(int desc) {
 @autoreleasepool {
 	NSThread.currentThread.name = @"Network interaction";
@@ -418,6 +513,7 @@ int main(int argc, const char * argv[]) {
 //
 	codeMeaning = code_meaning_map();
 	extToMime = ext_mime_map();
+	indexNames = index_name_map();
 
 // Open the server side socket to wait for connection request from a client.
 	name.sin_port = EndianU16_NtoB((unsigned short)port);

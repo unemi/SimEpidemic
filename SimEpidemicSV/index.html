@@ -29,9 +29,9 @@
 	<form method="post" action="setParams" target="setParamResult">
 	<table>
 	<tr><td align="right">人口</td>
-		<td><input type="number" name="populationSize"></td></tr>
+		<td><input type="number" name="populationSize" style="width:12ex"></td></tr>
 	<tr><td align="right">世界の大きさ</td>
-		<td><input type="number" name="worldSize"></td></tr>
+		<td><input type="number" name="worldSize" style="width:12ex"></td></tr>
 	</table><br/>
 	<input type="submit" value="Set">
 	</form>
@@ -48,13 +48,17 @@
 	<hr/>
 <h2>getIndexes</h2>
 	<form method="get" action="/getIndexes" target="currentIndexes">
-	<input type="hidden" name="day" value=1>
+	<input type="hidden" name="days" value=1>
 	<input type="hidden" name="susceptible" value=1>
 	<input type="hidden" name="asymptomatic" value=1>
 	<input type="hidden" name="symptomatic" value=1>
 	<input type="hidden" name="recovered" value=1>
 	<input type="hidden" name="died" value=1>
-	<input type="submit" value="現在の人口構成">
+	<input type="checkbox" name="window" value=1 checked> 日ごと
+	<span width="3ex">&nbsp;</span>
+	日数:<input type="number" name="fromDay" value="-10" style="width:8ex">
+	<span width="3ex">&nbsp;</span>
+	<input type="submit" value="人口構成">
 	</form>
 	<iframe name="currentIndexes"></iframe>
 	<hr/>

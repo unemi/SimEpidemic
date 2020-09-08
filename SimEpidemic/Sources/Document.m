@@ -830,8 +830,9 @@ static NSInteger mCount = 0, mCount2 = 0;
 		[self execScenario];
 }
 #ifdef NOGUI
-- (void)start {
+- (void)start:(NSInteger)stopAt {
 	if (loopMode == LoopRunning) return;
+	if (stopAt > 0) stopAtNDays = stopAt;
 	[self goAhead];
 	loopMode = LoopRunning;
 	[NSThread detachNewThreadSelector:@selector(runningLoop) toTarget:self withObject:nil];
@@ -848,6 +849,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 - (void)stop {
 	if (loopMode == LoopRunning) loopMode = LoopEndByUser;
 }
+- (StatInfo *)statInfo { return statInfo; }
 #else
 - (IBAction)startStop:(id)sender {
 	if (loopMode != LoopRunning) {

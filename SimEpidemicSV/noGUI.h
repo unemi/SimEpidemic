@@ -8,6 +8,7 @@
 
 #import <AppKit/AppKit.h>
 #import "Document.h"
+#define MAX_INT32 0x7fffffff
 
 extern NSMutableArray<Document *> *theDocuments;
 extern void connection_thread(void);

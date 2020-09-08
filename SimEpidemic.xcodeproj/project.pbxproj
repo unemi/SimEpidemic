@@ -101,7 +101,6 @@
 		2378766825027AE500897003 /* simepidemic-model.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-model.md"; sourceTree = "<group>"; };
 		2378766925027AE500897003 /* simepidemic-http-server.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-http-server.md"; sourceTree = "<group>"; };
 		2378766B25027AE500897003 /* Pathogenesis.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Pathogenesis.svg; sourceTree = "<group>"; };
-		2378768325027AE500897003 /* simepidemic-model.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = "simepidemic-model.pdf"; sourceTree = "<group>"; };
 		2387B42324FCD2190039796A /* Preferences.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Preferences.h; sourceTree = "<group>"; };
 		2387B42424FCD2190039796A /* Preferences.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Preferences.m; sourceTree = "<group>"; };
 		238A8F27246694D300604BF4 /* StatPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StatPanel.h; sourceTree = "<group>"; };
@@ -226,7 +225,6 @@
 				2378766825027AE500897003 /* simepidemic-model.md */,
 				2378766925027AE500897003 /* simepidemic-http-server.md */,
 				2378766A25027AE500897003 /* Figures */,
-				2378768325027AE500897003 /* simepidemic-model.pdf */,
 			);
 			path = Documents;
 			sourceTree = "<group>";
@@ -355,7 +353,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nif [ $CONFIGURATION != Debug ]; then\ncd SimEpidemicSV\nawk -F, '{printf \"%s, '\"`date '+%Y/%m/%d %H:%M:%S'`\"' '$USER'\\\";\\n\",$1}' noGUIInfo.h > noGUIInfo$$.tmp\nmv noGUIInfo$$.tmp noGUIInfo.h\nfi\n";
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n#env | sort > /tmp/x.txt\nif [ $CONFIGURATION != Debug ]; then\ncd SimEpidemicSV\nawk -F, '{printf \"%s, '\"`date '+%Y/%m/%d %H:%M:%S'`\"' '$USER'\\\";\\n\",$1}' noGUIInfo.h > noGUIInfo$$.tmp\nmv noGUIInfo$$.tmp noGUIInfo.h\nfi\n";
 		};
 		236F7B3D2485277B004ABB83 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;

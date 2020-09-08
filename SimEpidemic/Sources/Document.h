@@ -60,10 +60,11 @@ extern void my_exit(void);
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
 - (void)addNewWarp:(WarpInfo *)info;
 #ifdef NOGUI
-- (void)start;
+- (void)start:(NSInteger)stopAt;
 - (void)step;
 - (void)stop;
 - (void)resetPop;
+- (StatInfo *)statInfo;
 - (NSData *)JSONdataWithOptions:(NSUInteger)options error:(NSError **)outError;
 - (BOOL)readFromJSONData:(NSData *)data error:(NSError **)outError;
 #else

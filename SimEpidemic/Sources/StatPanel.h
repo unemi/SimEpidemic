@@ -8,6 +8,9 @@
 
 #import <Cocoa/Cocoa.h>
 #import "CommonTypes.h"
+#define IMG_WIDTH (320*4)
+#define IMG_HEIGHT	320
+#define MAX_N_REC	IMG_WIDTH
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -65,6 +68,8 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects;
 #ifdef NOGUI
+- (NSInteger)skipSteps;
+- (NSInteger)skipDays;
 - (void)setDoc:(Document *)doc;
 #else
 @property (readonly) NSMutableArray<StatPanel *> *statPanels;
