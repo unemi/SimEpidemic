@@ -5,7 +5,7 @@
 
 ---
 # simepidemic HTTP Server版仕様書 ver. 0 *α*
-著者：畝見達夫，作成：令和2年9月1日，編集：9月8日
+著者：畝見達夫，作成：令和2年9月1日，編集：9月9日
 
 このドキュメントでは，感染シミュレータ SimEpidemic の HTTP server 版における，起動オプション，クライアントとの間のプロトコル等の仕様について述べる。
 
@@ -56,6 +56,8 @@ javascript 等で書かれたコードにより制御されるWEBブラウザ等
 シミュレータへの要求コマンドではなく、`.html`，`.css`，`.js`，`.jpg`
 などのファイル拡張子を伴うパスが指定された場合は．
 該当するファイルがホスト側に存在すれば，通常の WEB サーバと同様その内容を応答する。
+ただし，動画や音声などのためのストリーミングによる発信は実装されておらず，
+これらのファイルを指定した場合は 415 (Unsupported Media Type) エラーになる。
 サーバのトップディレクトリ `/` の `GET` 要求に対しては、`index.html` ファイルが存在すれば，
 その内容を応答する。
 これらのファイルは，既定値では `simepidemic`
@@ -87,9 +89,15 @@ javascript 等で書かれたコードにより制御されるWEBブラウザ等
 
 <a name=SetParams></a>
 ## パラメータ値の設定
+シミュレーションを実行するときに使われるパラメータ値を設定する。
+パラメータは，*世界*，*発症機序*，*対策*，*検査* の4種類に分類される。
+詳細は，[パラメータ名と型](#ParamNames)を参照。
+このうち世界に分類されるパラメータは，シミュレーション開始前でなければ適用できない。
+シミュレーションの途中で世界パラメータの設定を行うと，新たに指定された値は予約として記録され，
+次に[世界を初期化](#Control)したときに反映される。
 ### 要求 `POST /setParams`
-#### 積載情報: `Content-type: application/json`
- [パラメータ名](#ParamNames) をキー，設定するパラメータ値を値とする辞書形式。
+#### 積載情報: `Content-type: multipart/form-data`
+ [パラメータ名](#ParamNames) をキー，設定するパラメータ値を値とする辞書形式の JSON データのパートを含む。
 
 例：ユーザが指定したファイルからパラメータを読み込み設定する。
 	
@@ -155,7 +163,7 @@ JSON形式では３つの要素からなる配列で表現される。
 開始 `start`，停止 `stop`，1ステップ進む `step` ，および世界の初期化 `reset` のコマンド１つを，
 要求行に入れた `GET` メソッドによりクライアントからサーバへ指示する。
 サーバからの応答として，問題がなければ OK がテキストとして返る。
-開始要求には <span class=myForm>stopAt=<*n*></span> を付けることができ，
+開始要求には問い合わせ情報として <span class=myForm>stopAt=<*n*></span> を付けることができ，
 実行日数が整数 *n* に到達した時点で停止する。この指定がなければ `stop` 要求があるか，
 あるいは，感染者が 0 になるまで実行が継続される。
 
@@ -207,7 +215,7 @@ JSON形式では３つの要素からなる配列で表現される。
 	</form>
 	<iframe name="currentIndexes"></iframe>
 
-### 要求 `GET /getDistribution` *未実装*
+### 要求 `GET /getDistribution`
 * <span class="myForm">names=[<*統計指標名1*>, <*統計指標名2*>, ...]</span>
 *または* <span class="myForm"><*統計指標名*>=1</span> *いずれか必須* :
 取得したい[統計指標名](#IndexNames)を指定する。後者の形式は複数含めても良い。
@@ -216,6 +224,15 @@ JSON形式では３つの要素からなる配列で表現される。
 ### 応答 `Content-type: application/json`
  [統計指標名](#IndexNames) をキー，指標値のベクトルを値とする辞書形式。
  各ベクトルの第1要素は横軸の最小値，第2要素以降に刻みごとの値が入る。
+ 
+ 例：潜伏期間と快復期間の分布を取得し、iframe の内容として格納する。
+
+	<form method="get" action="/getDistribution" target="distribution">
+	<input type="hidden" name="incubasionPeriod" value=1>
+	<input type="hidden" name="recoveryPeriod" value=1>
+	<input type="submit" value="日数の分布">
+	</form>
+	<iframe name="distribution"></iframe>
 
 <a name=IndexNames></a>
 ## 統計指標名と型
@@ -263,13 +280,86 @@ JSON形式では３つの要素からなる配列で表現される。
 
 </div>
 
+<a name=Scenario></a>
+## シナリオの設定
+統計指標の変化を調べる条件とパラメータ値変更等の操作の列で表現される *シナリオ* を設定する。
+シナリオが実行されるとパラメータ値が変化する。シミュレーション開始時点でのパラメータ値は，
+シナリオを設定した時点でのパラメータ値が初期値として記録され，
+世界の初期化が行われると，パラメータ値もその記録された値に戻る。
+### 要求 `POST /setScenario`
+#### 積載情報: `Content-type: multipart/form-data`
+シナリオを表現する JSON データを含む。
+
+例：ユーザが指定したファイルからパラメータを読み込み設定する。
+
+	<form method="post" action="setScenario"
+		 enctype="multipart/form-data" target="loadScenario">
+	<input type="file" name="upload" accept="application/json">
+	<input type="submit" value="読み込む">
+	</form>
+	応答: <iframe name="loadScenario" height=20></iframe>
+
+#### 積載情報: `Content-type: x-www-form-urlencoded`
+* <span class=myForm>scenario=<*JSONデータ*></span> *必須* :
+設定したいシナリオを表現する JSON データの文字列を指定する。
+
+### シナリオのデータ表現
+シナリオは複数の，*条件*，*追加感染者数*，または，*操作*を要素とする配列である。
+
+* **条件** : 配列または文字列型で表現される。配列の第1要素は整数，第2要素は文字列である。
+条件式は文字列で表現され，条件用の統計指標の値と定数値の大小比較を基本述語とする。
+比較演算子は `==`, `!=`, `>`, `>=`, `<`, `<=` の6種類である。
+それらを論理和 `OR` または論理積 `AND` で結合し，さらにそれらを入れ子にした式の文字列で表現することもできる。
+入れ子の結合関係を明確にするため，式を `()` で囲むことができる。
+配列の第1要素の整数は，条件が満たされた場合のシナリオ内の移動先を示す。
+整数の値は配列内の0から始まるインデックス番号である。
+単独の文字列の場合は，条件が満足されると，配列内のその次の要素に制御が移る。
+いずれの場合も，条件が満足されるまでシミュレーションが実行される。
+* **追加感染者数** : 整数で表現される。この要素に実行が渡ると，
+現在の世界にいる未感染者から指定された人数をランダムに選び，未発症感染者に変更する。
+* **操作** : 配列で表現される。操作可能なパラメータの名前と新たな値の組。
+操作可能なパラメータは，パラメータと型の表にある「世界」以外に分類され，実数または整数を型とする
+つぎの13のパラメータである。
+`infectionProberbility`, `infectionDistance`, `distancingStrength`, `distancingObedience`, `mobilityFrequency`, `contactTracing`, `testDelay`, `testProcess`, `testInterval`, `testSensitivity`, `testSpecificity`, `subjectAsymptomatic`, `subjectSymptomatic`。
+
+追加感染者数または操作の要素が配列内で連続して存在する場合は，
+それらの先頭に制御が移った時点で一気にそれらすべての要素が実行される。
+制御がシナリオの最後に達した場合は，それ以上シナリオは実行されない。
+世界が初期化された場合は，シナリオの制御は先頭に戻る。
+
+アプリ版の SimEpidemic バージョン 1.6.2 以降では，シナリオを JSON 形式でも保存・読込が可能になっているので、
+そのシナリオパネルで編集した内容をファイルに保存し利用することが可能である。
+SimEpidemic のシナリオパネルで JSON 形式で保存するには，保存先のファイル名の拡張子を `json` にする。
+
+### 条件用の統計指標
+シナリオの条件として使える統計指標は以下の表のとおり。
+<div style="font-size:8pt">
+
+| 統計指標名 | 日本語名 | 単位 | 備考 |
+| ---- | ---- | ---- | ---- |
+| `days` |  経過日数 | 日 | |
+| `susceptible` | 未感染者数 | 人 | 現在数 |
+| `infected` | 感染者数 | 人 | 未発症者と発症者の現在数の合計 |
+| `symptomatic` | 発症者数 | 人 | 現在数 |
+| `recovered` | 快復者数 | 人 | 免疫保持者の現在数 |
+| `died` | 死亡者数 | 人 | 現在数＝累積 |
+| `quarantine` | 隔離数 | 人 | 現在数 |
+| `dailyInfection` | 当日の新規感染者数 | 人 | 実数。検査とは無関係 |
+| `dailySymptomatic` | 当日の新規発症者数 | 人 |  |
+| `dailyRecovery` | 当日の新規快復者数 | 人 |  |
+| `dailyDeath` | 当日の死亡者数 | 人 |  |
+| `weeklyPositive` | 週間陽性数 | 人 | 過去7日間の陽性判明件数の合計 |
+| `weeklyPositiveRate` | 週間陽性率 | 率 0.0〜1.0 | 過去7日間の陽性判明数を検査数で割った値 |
+
+</div>
+
 <a name=JSONForm></a>
 ## JSONフォーマットオプション
 
 * option として与える整数の意味  
 1 ... pretty print ... 入れ子の深さに応じて段つけを行う。  
 2 ... sorted keys ... 辞書内の要素をキー文字列のアルファベット順に並び替える。  
-4 ... allow fragments  
+4 ... allow fragments ... 配列，辞書以外の要素のみのデータも許可する。このシステムでは無意味。  
 8 ... without escaping slashes  
 ビットごと論理和を取ることで複数のオプションを同時に設定する。  
 既定値は0。
