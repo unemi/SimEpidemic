@@ -70,7 +70,9 @@ NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window) {
 	NSError *error;
 	NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
 	if (data == nil) { error_msg(error, window, NO); return nil; }
-	NSObject *object = [NSPropertyListSerialization propertyListWithData:data
+	NSObject *object = [url.pathExtension isEqualToString:@"json"]?
+	[NSJSONSerialization JSONObjectWithData:data options:0 error:&error] :
+	[NSPropertyListSerialization propertyListWithData:data
 		options:NSPropertyListImmutable format:NULL error:&error];
 	if (object == nil) { error_msg(error, window, NO); return nil; }
 	if (class != NULL && ![object isKindOfClass:class])
@@ -89,11 +91,13 @@ void load_property_data(NSArray<NSString *> *fileTypes, NSWindow *window,
 }
 void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) {
 	NSSavePanel *sp = NSSavePanel.savePanel;
-	sp.allowedFileTypes = @[fileType];
+	sp.allowedFileTypes = @[fileType, @"json"];
 	[sp beginSheetModalForWindow:window completionHandler:^(NSModalResponse result) {
 		if (result != NSModalResponseOK) return;
 		NSError *error;
-		NSData *data = [NSPropertyListSerialization dataWithPropertyList:object
+		NSData *data = [sp.URL.pathExtension isEqualToString:@"json"]?
+		[NSJSONSerialization dataWithJSONObject:object options:0 error:&error] :
+		[NSPropertyListSerialization dataWithPropertyList:object
 			format:NSPropertyListXMLFormat_v1_0 options:0 error:&error];
 		if (data == nil) { error_msg(error, window, NO); return; }
 		if (![data writeToURL:sp.URL options:0 error:&error])

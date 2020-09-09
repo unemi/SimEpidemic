@@ -61,6 +61,21 @@
 	<input type="submit" value="人口構成">
 	</form>
 	<iframe name="currentIndexes"></iframe>
-	<hr/>
+<h2>getDistribution</h2>
+	<form method="get" action="/getDistribution" target="distribution">
+	<input type="hidden" name="incubasionPeriod" value=1>
+	<input type="hidden" name="recoveryPeriod" value=1>
+	<input type="submit" value="日数の分布">
+	</form>
+	<iframe name="distribution"></iframe>
+<hr/>
+<h2>setScenario</h2>
+	<form method="post" action="setScenario"
+		 enctype="multipart/form-data" target="loadScenario">
+	<input type="file" name="upload" accept="application/json">
+	<input type="submit" value="読み込む">
+	</form>
+	応答: <iframe name="loadScenario" height=20></iframe>
+<hr/>
 </body>
 </html>

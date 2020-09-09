@@ -1,1 +1,1 @@
-static char version[] = "simepidemic ver 0.0, 2020/09/07 16:44:59 unemi";
+static char version[] = "simepidemic ver 0.0, 2020/09/09 13:26:17 unemi";

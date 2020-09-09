@@ -240,7 +240,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 }
 - (IBAction)loadDocument:(id)sender {
 	NSWindow *window = self.window;
-	load_property_data(@[@"sEpi", @"sEpP"], self.window, NSDictionary.class,
+	load_property_data(@[@"sEpi", @"sEpP", @"json"], self.window, NSDictionary.class,
 		^(NSURL *url, NSObject *obj) {
 		NSDictionary *dict = (NSDictionary *)obj;
 		if ([url.pathExtension isEqualToString:@"sEpi"]) dict = dict[keyParameters];

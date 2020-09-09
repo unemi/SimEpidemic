@@ -38,9 +38,9 @@ Content-Length: %ld\nConnection: keep-alive\n%@%@\n";
 @property (readonly) Document *document;
 @property (readonly) NSDictionary<NSString *, NSString *> *query;
 @property (readonly) int desc, code;
-@property NSString *type, *moreHeader;
-@property NSObject *content;
-@property NSInteger fileSize;
+@property (readonly) NSString *method, *type, *moreHeader;
+@property (readonly) NSObject *content;
+@property (readonly) NSInteger fileSize;
 @end
 @implementation ProcContext
 - (instancetype)initWithSocket:(int)desc {
@@ -65,12 +65,22 @@ Content-Length: %ld\nConnection: keep-alive\n%@%@\n";
 	return dataLength;
 }
 static void send_bytes(int desc, const char *bytes, NSInteger size) {
-	if (send(desc, bytes, size, 0) < size) @throw @"send answer";
+	ssize_t result = send(desc, bytes, size, 0);
+	if (result < 0) @throw @(errno);
+	else if (result < size) @throw @"send answer";
 #ifdef DEBUG
-	char buf[size + 1];
-	memcpy(buf, bytes, size);
-	buf[size] = '\0';
-	printf("<--- %ld bytes.\n%s", size, buf);
+	printf("<--- %ld bytes.\n", size);
+	if (size < 512) {
+		char buf[size + 1];
+		memcpy(buf, bytes, size);
+		for (NSInteger i = 0; i < size; i ++)
+		if (buf[i] < ' ') switch (buf[i]) {
+			case '\n': case '\t': break;
+			default: buf[i] = '.';
+		}
+		buf[size] = '\0';
+		printf("%s\n", buf);
+	}
 #endif
 }
 - (void)sendHeader {
@@ -83,17 +93,18 @@ static void send_bytes(int desc, const char *bytes, NSInteger size) {
 	send_bytes(_desc, header.UTF8String, header.length);
 }
 - (void)sendData {
-	if ([_content isKindOfClass:NSInputStream.class]) {
+	if ([_method isEqualToString:@"HEAD"]) [self sendHeader];
+	else if ([_content isKindOfClass:NSInputStream.class]) {
 		[self sendHeader];
 		NSInputStream *stream = (NSInputStream *)_content;
 		[stream open];
 		@try {
 			NSMutableData *data = [NSMutableData dataWithLength:BUFFER_SIZE];
-			const char *bytes = data.mutableBytes;
+			char *bytes = data.mutableBytes;
 			NSInteger size;
 			while ((size = [stream read:(uint8_t *)bytes maxLength:BUFFER_SIZE]) > 0)
 				send_bytes(_desc, bytes, size);
-		} @catch (id _) {}
+		} @catch (NSObject *obj) { NSLog(@"%@", obj);  }
 		[stream close];
 	} else {
 		const char *bytes = NULL;
@@ -128,20 +139,27 @@ static NSString *bad_request_message(NSString *req) {
 	NSError *error;
 	NSString *exPath = [fileDirectory stringByAppendingString:path];
 	@try {
+		NSString *ext = path.pathExtension;
+		_type = extToMime[ext];
+		if (_type == nil) @throw [NSString stringWithFormat:
+			@"415 It doesn't support the path extension: %@.", ext];
 		NSDictionary *attr =
 			[NSFileManager.defaultManager attributesOfItemAtPath:exPath error:&error];
 		if (attr == nil) @throw error;
 		NSNumber *num = attr[NSFileSize];
 		if (num == nil) @throw @"500 Couldn't get the file size.";
 		_fileSize = num.integerValue;
-		if (_fileSize < BUFFER_SIZE) {
+		NSDate *modDate = attr[NSFileModificationDate];
+		if (modDate != nil) _moreHeader = [NSString stringWithFormat:
+			@"Last-Modified: %@\n", [dateFormat stringFromDate:modDate]];
+		if ([_method isEqualToString:@"HEAD"]) _content = nil;
+		else if (_fileSize < BUFFER_SIZE) {
 			_content = [NSData dataWithContentsOfFile:exPath options:0 error:&error];
 			if (_content == nil) @throw error;
 		} else {
 			_content = [NSInputStream inputStreamWithFileAtPath:exPath];
 			if (_content == nil) @throw @"500 Couldn't make an input stream.";
 		}
-		_type = extToMime[path.pathExtension];
 		_code = 200;
 	} @catch (NSError *error) {
 		@throw [NSString stringWithFormat:
@@ -153,14 +171,16 @@ static NSString *bad_request_message(NSString *req) {
 	_content = _moreHeader = nil;
 	NSString *req = [NSString stringWithUTF8String:bufData.bytes];
 	NSScanner *scan = [NSScanner scannerWithString:req];
-	NSString *method, *request, *command, *optionStr, *JSONStr = nil;
+	NSString *request, *command, *optionStr, *JSONStr = nil;
 	@try {
+		NSString *method;
 		if (![scan scanUpToString:@" " intoString:&method])
 			@throw bad_request_message(req);
 		[scan scanCharactersFromSet:NSCharacterSet.whitespaceCharacterSet intoString:NULL];
 		if (![scan scanUpToString:@" " intoString:&request])
 			@throw bad_request_message(req);
-		if ([method isEqualToString:@"GET"]) {
+		_method = method;
+		if ([method isEqualToString:@"GET"] || [method isEqualToString:@"HEAD"]) {
 			if ([request isEqualToString:@"/"])
 				{ [self respondFile:@"index.html"]; @throw @0; }
 			scan = [NSScanner scannerWithString:request];
@@ -224,7 +244,8 @@ static NSString *bad_request_message(NSString *req) {
 		SEL selector = NSSelectorFromString(command);
 		if (![self respondsToSelector:selector]) {
 			@throw [@"404 Unknown command: " stringByAppendingString:command];
-		} else {
+		} else if ([method isEqualToString:@"HEAD"]) [self setOKMessage];
+		else {
 			if (optionStr == nil) _query = nil;
 			else {
 				NSArray<NSString *> *opArray = [optionStr componentsSeparatedByString:@"&"];
@@ -240,37 +261,47 @@ static NSString *bad_request_message(NSString *req) {
 					_query = [NSDictionary dictionaryWithObjects:objs forKeys:keys count:m];
 				} else _query = nil;
 			}
-			[self performSelectorOnMainThread:selector withObject:nil waitUntilDone:YES];
+//			[self performSelectorOnMainThread:selector withObject:nil waitUntilDone:YES];
+			[self performSelector:selector];
 			if (_content == nil) [self setOKMessage];
 		}
 	} @catch (NSString *info) { [self setErrorMessage:info];
 	} @catch (NSNumber *num) {}
 	[self sendData];
 }
+- (void)checkDocument {
+	if (_document == nil) @throw @"500 No target world exist.";
+}
 - (NSUInteger)JSONOptions {
 	NSString *valueStr = _query[@"format"];
 	return (valueStr == nil)? JSONOptions : valueStr.integerValue;
 }
-- (void)getParams {
-	if (_document == nil) return;
+- (void)setJSONDataAsResponse:(NSObject *)object {
 	NSError *error;
-	_content = [NSJSONSerialization dataWithJSONObject:
-		 param_dict(_document.runtimeParamsP, _document.worldParamsP) 
-		 options:self.JSONOptions error:&error];
+	_content = [NSJSONSerialization dataWithJSONObject:object 
+		options:self.JSONOptions error:&error];
 	if (_content == nil) @throw [NSString stringWithFormat:
 		@"500 Couldn't make a JSON data: %@", error.localizedDescription];
-	NSString *savePath = _query[@"save"];
-	if (savePath != nil) {
-		NSString *ext =
-			[[savePath pathExtension] isEqualToString:@"json"]? @"" : @".json";
-		_moreHeader = [NSString stringWithFormat:
-			@"Content-Disposition: attachment; filename=\"%@%@\"\n", savePath, ext];
-	}
 	_type = @"application/json";
 	_code = 200;
 }
+- (void)getInfo:(NSObject *)plist {
+	[self checkDocument];
+	NSString *savePath = _query[@"save"];
+	if (savePath != nil) {
+		NSString *extension = @"json";
+		_moreHeader = [NSString stringWithFormat:
+			@"Content-Disposition: attachment; filename=\"%@\"\n",
+			[[savePath pathExtension] isEqualToString:extension]? savePath :
+			[savePath stringByAppendingPathExtension:extension]];
+	}
+	[self setJSONDataAsResponse:plist];
+}
+- (void)getParams {
+	[self getInfo:param_dict(_document.runtimeParamsP, _document.worldParamsP)];
+}
 - (void)setParams {
-	if (_document == nil) return;
+	[self checkDocument];
 	NSDictionary *dict = nil;
 	NSString *JSONstr = _query[@"JSON"];
 	if (JSONstr != nil) {
@@ -285,39 +316,47 @@ static NSString *bad_request_message(NSString *req) {
 #ifdef DEBUG
 printf("--- parameters\n%s\n", dict.description.UTF8String);
 #endif
+	RuntimeParams *rp = _document.runtimeParamsP;
+	WorldParams *wp = (rp->step == 0)?
+		_document.worldParamsP : _document.tmpWorldParamsP;
+	set_params_from_dict(rp, wp, dict);
 }
 - (void)start {
+	[self checkDocument];
 	NSString *opStr = _query[@"stopAt"];
 	[_document start:(opStr == nil)? 0 : opStr.integerValue];
 }
-- (void)step { [_document step]; }
-- (void)stop { [_document stop]; }
-- (void)reset { [_document resetPop]; }
+- (void)step { [self checkDocument]; [_document step]; }
+- (void)stop { [self checkDocument]; [_document stop]; }
+- (void)reset { [self checkDocument]; [_document resetPop]; }
 static NSObject *make_history(StatData *st, NSInteger nItems,
 	NSNumber *(^getter)(StatData *)) {
-	if (nItems == 1) return getter(st);
+	if (nItems == 1 && st != NULL) return getter(st);
 	NSMutableArray *ma = NSMutableArray.new;
 	for (NSInteger i = 0; i < nItems && st != NULL; i ++, st = st->next)
 		[ma insertObject:getter(st) atIndex:0];
 	return ma;
 }
-- (void)getIndexes {
-	if (_document == nil) return;
+- (void)collectNamesInto:(NSMutableSet *)nameSet {
 	NSError *error;
+	NSString *arrStr = [_query[@"names"] stringByRemovingPercentEncoding];
+	NSData *data = [arrStr dataUsingEncoding:NSUTF8StringEncoding];
+	NSArray *array = [NSJSONSerialization JSONObjectWithData:data
+		options:0 error:&error];
+	if (array == nil) @throw [NSString stringWithFormat:
+		@"417 %@", error.localizedDescription];
+	if (![array isKindOfClass:NSArray.class])
+		@throw @"417 Index name list must be an array of strings.";
+	[nameSet addObjectsFromArray:array];
+}
+- (void)getIndexes {
+	[self checkDocument];
 	NSInteger fromDay = MAX_INT32, fromStep = MAX_INT32, daysWindow = 0;
 	NSMutableSet *idxNames = NSMutableSet.new;
 	for (NSString *key in _query.keyEnumerator) {
-		if ([key isEqualToString:@"name"]) {
-			NSString *arrStr = [_query[key] stringByRemovingPercentEncoding];
-			NSData *data = [arrStr dataUsingEncoding:NSUTF8StringEncoding];
-			NSArray *array = [NSJSONSerialization JSONObjectWithData:data
-				options:0 error:&error];
-			if (array == nil) @throw [NSString stringWithFormat:
-				@"417 %@", error.localizedDescription];
-			if (![array isKindOfClass:NSArray.class])
-				@throw @"417 Index name list must be an array of strings.";
-			[idxNames addObjectsFromArray:array];
-		} else if ([key isEqualToString:@"fromDay"]) {
+		if ([key isEqualToString:@"names"])
+			[self collectNamesInto:idxNames];
+		else if ([key isEqualToString:@"fromDay"]) {
 			fromDay = _query[key].integerValue;
 		} else if ([key isEqualToString:@"fromStep"]) {
 			fromStep = _query[key].integerValue;
@@ -357,15 +396,58 @@ static NSObject *make_history(StatData *st, NSInteger nItems,
 					^(StatData *st) { return @(st->cnt[idx]); });
 	}}}
 	if (md.count == 0) @throw @"417 No valid index names are specified.";
-	_content = [NSJSONSerialization dataWithJSONObject:md
-		options:self.JSONOptions error:&error];
-	if (_content == nil) @throw [NSString stringWithFormat:
-		@"417 %@", error.localizedDescription];
-	_type = @"application/json";
-	_code = 200;
+	[self setJSONDataAsResponse:md];
 }
 - (void)getDistribution {
-	if (_document == nil) return;
+	[self checkDocument];
+	StatInfo *statInfo = _document.statInfo;
+	NSDictionary<NSString *, NSArray<MyCounter *> *> *nameMap =
+		@{@"incubasionPeriod":statInfo.IncubPHist,
+		@"recoveryPeriod":statInfo.RecovPHist,
+		@"fatalPeriod":statInfo.DeathPHist,
+		@"infects":statInfo.NInfectsHist };
+	NSMutableSet *distNames = NSMutableSet.new;
+	for (NSString *key in _query.keyEnumerator) {
+		if ([key isEqualToString:@"names"])
+			[self collectNamesInto:distNames];
+		else if (_query[key].integerValue != 0)
+			[distNames addObject:key];
+	}
+	if (distNames.count == 0) @throw @"417 Distribution name is not sepcified.";
+	NSMutableDictionary *md = NSMutableDictionary.new;
+	for (NSString *distName in distNames) {
+		NSArray<MyCounter *> *hist = nameMap[distName];
+		if (hist == nil) continue;
+		NSMutableArray *ma = NSMutableArray.new;
+		NSInteger st = -1, n = hist.count;
+		for (NSInteger i = 0; i < n; i ++) {
+			NSInteger cnt = hist[i].cnt;
+			if (st == -1 && cnt > 0) [ma addObject:@((st = i))];
+			if (st >= 0) [ma addObject:@(cnt)];
+		}
+		md[distName] = ma;
+	}
+	if (md.count == 0) @throw @"417 No valid distribution names are specified.";
+	[self setJSONDataAsResponse:md];
+}
+- (void)getScenario {
+	[self getInfo:[_document scenarioPList]];
+}
+- (void)setScenario {
+	[self checkDocument];
+	NSString *source = _query[@"scenario"];
+	if (source == nil) source = _query[@"JSON"];
+	if (source == nil) @throw @"417 Scenario data is missing.";
+	NSData *data = [[source stringByRemovingPercentEncoding]
+		dataUsingEncoding:NSUTF8StringEncoding];
+	NSError *error;
+	NSArray *plist = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+	if (plist == nil) @throw [NSString stringWithFormat:
+		@"417 Failed to interprete JSON data: %@", error.localizedDescription];
+	if (![plist isKindOfClass:NSArray.class])
+		@throw @"417 JSON data doesn't represent an array form.";
+	@try { [_document setScenarioWithPList:plist]; }
+	@catch (NSString *msg) { @throw [@"500 " stringByAppendingString:msg]; }
 }
 @end
 static NSDictionary *code_meaning_map(void) {
@@ -392,8 +474,7 @@ static NSDictionary *ext_mime_map(void) {
 	NSDictionary *defaultMap = @{
 		@"html":@"text/html", @"css":@"text/css", @"js":@"text/javascript",
 		@"txt":@"text/plain",
-		@"jpg":@"image/jpeg", @"jpeg":@"image/jpeg", @"jfif":@"image/jpeg",
-		@"png":@"image/png", @"tif":@"image/tiff", @"tiff":@"image/tiff",
+		@"jpg":@"image/jpeg", @"jpeg":@"image/jpeg", @"png":@"image/png",
 		@"svg":@"image/svg+xml", @"ico":@"image/x-icon", @"gif":@"image/gif",
 	};
 @autoreleasepool {
@@ -414,6 +495,8 @@ static NSDictionary *ext_mime_map(void) {
 			NSString *mimeType, *extension;
 			[scan scanUpToCharactersFromSet:NSCharacterSet.whitespaceCharacterSet
 				intoString:&mimeType];
+			NSString *category = [mimeType componentsSeparatedByString:@"/"][0];
+			if ([@[@"application", @"image", @"text"] indexOfObject:category] != NSNotFound)
 			while (!scan.atEnd) {
 				[scan scanUpToCharactersFromSet:NSCharacterSet.alphanumericCharacterSet
 					intoString:NULL];

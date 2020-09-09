@@ -65,8 +65,8 @@ extern void my_exit(void);
 - (void)stop;
 - (void)resetPop;
 - (StatInfo *)statInfo;
-- (NSData *)JSONdataWithOptions:(NSUInteger)options error:(NSError **)outError;
-- (BOOL)readFromJSONData:(NSData *)data error:(NSError **)outError;
+- (NSArray *)scenarioPList;
+- (void)setScenarioWithPList:(NSArray *)plist;
 #else
 - (void)setPanelTitle:(NSWindow *)panel;
 - (void)reviseColors;

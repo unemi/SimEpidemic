@@ -473,15 +473,39 @@ static NSObject *element_from_property(NSObject *prop) {
 	else return @[((NSArray *)prop)[0],
 		[NSPredicate predicateWithFormat:(NSString *)((NSArray *)prop)[1]]];
 }
+- (NSArray *)scenarioPList {
+	NSObject *items[scenario.count];
+	for (NSInteger i = 0; i < scenario.count; i ++)
+		items[i] = property_from_element(scenario[i]);
+	return [NSArray arrayWithObjects:items count:scenario.count];
+}
+- (void)setScenarioWithPList:(NSArray *)plist {
+	NSObject *items[plist.count];
+	for (NSInteger i = 0; i < plist.count; i ++) {
+		items[i] = element_from_property(plist[i]);
+		if (items[i] == nil) @throw [NSString stringWithFormat:
+			@"Could not convert it to a scenario element: %@", plist[i]];
+	}
+#ifndef NOGUI
+	NSArray *orgScen = scenario;
+#endif
+	scenario = [NSArray arrayWithObjects:items count:plist.count];
+	scenarioIndex = 0;
+	if (statInfo != nil) {
+		statInfo.phaseInfo = phase_info(scenario);
+		[self execScenario];
+	}
+#ifndef NOGUI
+	if (orgScen == nil)
+#endif
+		memcpy(&initParams, &runtimeParams, sizeof(RuntimeParams));
+}
 - (NSDictionary *)documentDictionary {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyAnimeSteps] = @(animeSteps);
 	if (scenario != nil) {
 		dict[keyParameters] = param_dict(&initParams, &worldParams);
-		NSObject *items[scenario.count];
-		for (NSInteger i = 0; i < scenario.count; i ++)
-			items[i] = property_from_element(scenario[i]);
-		dict[keyScenario] = [NSArray arrayWithObjects:items count:scenario.count];
+		dict[keyScenario] = [self scenarioPList];
 	} else dict[keyParameters] = param_dict(&runtimeParams, &worldParams);
 	return dict;
 }
@@ -495,31 +519,12 @@ static NSObject *element_from_property(NSObject *prop) {
 	}
 	NSArray *seq = dict[keyScenario];
 	if (seq != nil) {
-		NSObject *items[seq.count];
-		for (NSInteger i = 0; i < seq.count; i ++)
-			items[i] = element_from_property(seq[i]);
-		scenario = [NSArray arrayWithObjects:items count:seq.count];
-		scenarioIndex = 0;
-		if (statInfo != nil) {
-			statInfo.phaseInfo = phase_info(scenario);
-			[self execScenario];
-		}
-		memcpy(&initParams, &runtimeParams, sizeof(RuntimeParams));
+		@try { [self setScenarioWithPList:seq]; }
+		@catch (NSString *msg) { error_msg(msg, nil, NO); }
 	}
 	return YES;
 }
-#ifdef NOGUI
-- (NSData *)JSONdataWithOptions:(NSUInteger)options error:(NSError **)outError {
-	return [NSJSONSerialization dataWithJSONObject:[self documentDictionary]
-		options:options error:outError];
-}
-- (BOOL)readFromJSONData:(NSData *)data error:(NSError **)outError {
-	NSDictionary *dict = [NSJSONSerialization
-		JSONObjectWithData:data options:0 error:outError];
-	if (dict == nil) return NO;
-	return [self readFromDictionary:dict];
-}
-#else
+#ifndef NOGUI
 - (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
 	NSDictionary *dict = [self documentDictionary];
 	return [NSPropertyListSerialization dataWithPropertyList:dict

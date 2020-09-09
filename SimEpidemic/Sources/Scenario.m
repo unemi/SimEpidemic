@@ -987,7 +987,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 }
 - (IBAction)loadDocument:(id)sender {
 	NSWindow *window = self.window;
-	load_property_data(@[@"sEpi", @"sEpS"], self.window, NULL,
+	load_property_data(@[@"sEpi", @"sEpS", @"json"], self.window, NULL,
 		^(NSURL *url, NSObject *object) {
 		if ([url.pathExtension isEqualToString:@"sEpi"]) {
 			if (![object isKindOfClass:NSDictionary.class])
