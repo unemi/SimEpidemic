@@ -27,6 +27,8 @@
 		233D9E0B2486B14A00498A77 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 233D9E0D2486B14A00498A77 /* InfoPlist.strings */; };
 		235639CD247111A200F941A6 /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 235639CB247111A200F941A6 /* Scenario.m */; };
 		23576D3F24D80FCC00120D3F /* SimEpidemic.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 23576D3E24D80FCC00120D3F /* SimEpidemic.sdef */; };
+		235B7E782509D7AE0016090F /* ProcContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 235B7E772509D7AE0016090F /* ProcContext.m */; };
+		235B7E7B2509F6800016090F /* DataCompress.m in Sources */ = {isa = PBXBuildFile; fileRef = 235B7E7A2509F6800016090F /* DataCompress.m */; };
 		235D657B2462564600487784 /* ParamPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 235D65792462564600487784 /* ParamPanel.m */; };
 		2365DEC525061537006C2A95 /* noGUI.m in Sources */ = {isa = PBXBuildFile; fileRef = 2365DEC325061537006C2A95 /* noGUI.m */; };
 		2365DEC72506159A006C2A95 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F02457D2C6005ADCCF /* AppDelegate.m */; };
@@ -90,6 +92,10 @@
 		235639CA247111A200F941A6 /* Scenario.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scenario.h; sourceTree = "<group>"; };
 		235639CB247111A200F941A6 /* Scenario.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Scenario.m; sourceTree = "<group>"; };
 		23576D3E24D80FCC00120D3F /* SimEpidemic.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = SimEpidemic.sdef; sourceTree = "<group>"; };
+		235B7E762509D7AE0016090F /* ProcContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProcContext.h; sourceTree = "<group>"; };
+		235B7E772509D7AE0016090F /* ProcContext.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ProcContext.m; sourceTree = "<group>"; };
+		235B7E792509F6800016090F /* DataCompress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DataCompress.h; sourceTree = "<group>"; };
+		235B7E7A2509F6800016090F /* DataCompress.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DataCompress.m; sourceTree = "<group>"; };
 		235D65782462564600487784 /* ParamPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ParamPanel.h; sourceTree = "<group>"; };
 		235D65792462564600487784 /* ParamPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ParamPanel.m; sourceTree = "<group>"; };
 		2365DEB62506145A006C2A95 /* simepidemic */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepidemic; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -106,6 +112,7 @@
 		238A8F27246694D300604BF4 /* StatPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StatPanel.h; sourceTree = "<group>"; };
 		238A8F28246694D300604BF4 /* StatPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StatPanel.m; sourceTree = "<group>"; };
 		238C4526248B783B00FB5F89 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/Preferences.xib; sourceTree = "<group>"; };
+		23C75A48250A5D0300A24F51 /* favicon.ico */ = {isa = PBXFileReference; lastKnownFileType = image.ico; path = favicon.ico; sourceTree = "<group>"; };
 		23D6E02B24D59DDD00A5D604 /* Parameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Parameters.h; sourceTree = "<group>"; };
 		23D6E02C24D59DDD00A5D604 /* Parameters.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Parameters.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -211,10 +218,15 @@
 		2365DEB72506145A006C2A95 /* SimEpidemicSV */ = {
 			isa = PBXGroup;
 			children = (
+				23C75A48250A5D0300A24F51 /* favicon.ico */,
 				2365DEC62506154B006C2A95 /* index.html */,
 				2365DEC225061537006C2A95 /* noGUI.h */,
 				2365DEC325061537006C2A95 /* noGUI.m */,
 				2365DEC425061537006C2A95 /* noGUIInfo.h */,
+				235B7E762509D7AE0016090F /* ProcContext.h */,
+				235B7E772509D7AE0016090F /* ProcContext.m */,
+				235B7E792509F6800016090F /* DataCompress.h */,
+				235B7E7A2509F6800016090F /* DataCompress.m */,
 			);
 			path = SimEpidemicSV;
 			sourceTree = "<group>";
@@ -402,6 +414,8 @@
 				2365DEC92506159A006C2A95 /* Agent.m in Sources */,
 				2365DECA2506159A006C2A95 /* StatPanel.m in Sources */,
 				2365DEC525061537006C2A95 /* noGUI.m in Sources */,
+				235B7E782509D7AE0016090F /* ProcContext.m in Sources */,
+				235B7E7B2509F6800016090F /* DataCompress.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

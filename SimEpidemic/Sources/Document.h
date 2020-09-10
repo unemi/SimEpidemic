@@ -60,6 +60,10 @@ extern void my_exit(void);
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
 - (void)addNewWarp:(WarpInfo *)info;
 #ifdef NOGUI
+@property (readonly) NSLock *lastTLock;
+@property NSDate *lastTouch;
+@property NSNumber *docKey;
+- (BOOL)touch;
 - (void)start:(NSInteger)stopAt;
 - (void)step;
 - (void)stop;

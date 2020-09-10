@@ -254,7 +254,6 @@ void setup_colors(void) {
 	memcpy(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
 	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 #ifdef NOGUI
-	[theDocuments addObject:Document.new];
 	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
 #else
 	NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;

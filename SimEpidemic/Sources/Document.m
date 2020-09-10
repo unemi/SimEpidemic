@@ -409,6 +409,7 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	memcpy(&tmpWorldParams, &userDefaultWorldParams, sizeof(WorldParams));
 	self.undoManager = NSUndoManager.new;
 #ifdef NOGUI
+	_lastTLock = NSLock.new;
 	statInfo = StatInfo.new;
 	statInfo.doc = self;
 	[self resetPop];
@@ -820,7 +821,9 @@ static NSInteger mCount = 0, mCount2 = 0;
 #endif
 		usleep(1);
 	}
-#ifndef NOGUI
+#ifdef NOGUI
+	if (loopMode != LoopEndByUser) [self touch];
+#else
 	in_main_thread(^{
 		self->view.needsDisplay = YES;
 		self->startBtn.title = NSLocalizedString(@"Start", nil);
@@ -835,6 +838,13 @@ static NSInteger mCount = 0, mCount2 = 0;
 		[self execScenario];
 }
 #ifdef NOGUI
+- (BOOL)touch {
+	BOOL result;
+	[_lastTLock lock];
+	if ((result = (_docKey != nil))) _lastTouch = NSDate.date;
+	[_lastTLock unlock];
+	return result;
+}
 - (void)start:(NSInteger)stopAt {
 	if (loopMode == LoopRunning) return;
 	if (stopAt > 0) stopAtNDays = stopAt;

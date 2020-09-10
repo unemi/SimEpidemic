@@ -10,5 +10,9 @@
 #import "Document.h"
 #define MAX_INT32 0x7fffffff
 
-extern NSMutableArray<Document *> *theDocuments;
+extern NSMutableDictionary<NSNumber *, Document *> *theDocuments;
+extern NSUInteger JSONOptions;
+extern NSString *fileDirectory;
+extern NSDictionary *extToMime, *codeMeaning, *indexNames;
+extern NSDateFormatter *dateFormat;
 extern void connection_thread(void);
