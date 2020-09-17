@@ -1015,7 +1015,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	if (savedPList != nil) [self setScenarioWithArray:savedPList];
 }
 - (IBAction)remove:(id)sender {
-	_doc.scenario = NSMutableArray.new;
+	_doc.scenario = @[];
 }
 - (IBAction)apply:(id)sender {
 	NSMutableArray *ma = NSMutableArray.new;

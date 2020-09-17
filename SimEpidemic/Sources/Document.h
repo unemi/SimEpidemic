@@ -11,6 +11,7 @@
 
 extern NSString *keyParameters, *keyScenario;
 extern void add_new_cinfo(Agent *a, Agent *b, NSInteger tm);
+extern void in_main_thread(dispatch_block_t block);
 #ifdef DEBUG
 extern void my_exit(void);
 #endif
@@ -24,8 +25,8 @@ extern void my_exit(void);
 
 @class MyView, LegendView, StatInfo, MyCounter;
 
-@interface Document : NSDocument <NSWindowDelegate> {
 #ifndef NOGUI
+@interface Document : NSDocument <NSWindowDelegate> {
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
 		*scenarioText, *animeStepsTxt, *stopAtNDaysDgt;
@@ -33,12 +34,13 @@ extern void my_exit(void);
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;
+#else
+@interface Document : NSObject {
 #endif
 	RuntimeParams runtimeParams, initParams;
 	WorldParams worldParams, tmpWorldParams;
 	NSLock *popLock;
 	IBOutlet StatInfo *statInfo;
-// for Scripting
 }
 @property (readonly) Agent **Pop, *QList, *CList;
 @property (readonly) NSMutableArray<WarpInfo *> *WarpList;
@@ -54,15 +56,15 @@ extern void my_exit(void);
 - (NSMutableArray<MyCounter *> *)RecovPHist;
 - (NSMutableArray<MyCounter *> *)IncubPHist;
 - (NSMutableArray<MyCounter *> *)DeathPHist;
-- (void)setInitialParameters:(NSData *)newParams;
 - (NSArray *)scenario;
-- (void)setScenario:(NSArray *)newScen;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
 - (void)addNewWarp:(WarpInfo *)info;
 #ifdef NOGUI
+@property (readonly) NSString *ID;
 @property (readonly) NSLock *lastTLock;
 @property NSDate *lastTouch;
 @property NSNumber *docKey;
+@property void (^stopCallBack)(LoopMode);
 - (BOOL)touch;
 - (void)start:(NSInteger)stopAt;
 - (void)step;
@@ -72,8 +74,10 @@ extern void my_exit(void);
 - (NSArray *)scenarioPList;
 - (void)setScenarioWithPList:(NSArray *)plist;
 #else
+- (void)setScenario:(NSArray *)newScen;
 - (void)setPanelTitle:(NSWindow *)panel;
 - (void)reviseColors;
+- (void)setInitialParameters:(NSData *)newParams;
 - (void)openScenarioFromURL:(NSURL *)url;
 - (void)openParamsFromURL:(NSURL *)url;
 - (void)revisePanelsAlpha;

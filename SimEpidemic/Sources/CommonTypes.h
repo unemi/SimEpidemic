@@ -29,6 +29,11 @@ typedef enum {
 	WarpInside, WarpToHospital, WarpToCemeteryF, WarpToCemeteryH, WarpBack
 } WarpType;
 
+typedef enum {
+	LoopNone, LoopRunning, LoopFinished, LoopEndByUser,
+	LoopEndByCondition, LoopEndAsDaysPassed
+} LoopMode;
+
 typedef struct {
 	CGFloat min, max, mode;
 } DistInfo;

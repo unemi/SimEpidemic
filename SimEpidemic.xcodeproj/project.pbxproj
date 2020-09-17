@@ -38,6 +38,7 @@
 		2387B42524FCD2190039796A /* Preferences.m in Sources */ = {isa = PBXBuildFile; fileRef = 2387B42424FCD2190039796A /* Preferences.m */; };
 		238A8F2A246694D300604BF4 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
 		238C4527248B783B00FB5F89 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 238C4525248B783B00FB5F89 /* Preferences.xib */; };
+		23AF0269250F98840074EF87 /* BatchJob.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AF0268250F98840074EF87 /* BatchJob.m */; };
 		23D6E02D24D59DDD00A5D604 /* Parameters.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6E02C24D59DDD00A5D604 /* Parameters.m */; };
 /* End PBXBuildFile section */
 
@@ -102,7 +103,6 @@
 		2365DEC225061537006C2A95 /* noGUI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = noGUI.h; sourceTree = "<group>"; };
 		2365DEC325061537006C2A95 /* noGUI.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = noGUI.m; sourceTree = "<group>"; };
 		2365DEC425061537006C2A95 /* noGUIInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = noGUIInfo.h; sourceTree = "<group>"; };
-		2365DEC62506154B006C2A95 /* index.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
 		23666C63248C99BB00061274 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Preferences.strings; sourceTree = "<group>"; };
 		2378766825027AE500897003 /* simepidemic-model.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-model.md"; sourceTree = "<group>"; };
 		2378766925027AE500897003 /* simepidemic-http-server.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-http-server.md"; sourceTree = "<group>"; };
@@ -112,7 +112,10 @@
 		238A8F27246694D300604BF4 /* StatPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StatPanel.h; sourceTree = "<group>"; };
 		238A8F28246694D300604BF4 /* StatPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StatPanel.m; sourceTree = "<group>"; };
 		238C4526248B783B00FB5F89 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/Preferences.xib; sourceTree = "<group>"; };
-		23C75A48250A5D0300A24F51 /* favicon.ico */ = {isa = PBXFileReference; lastKnownFileType = image.ico; path = favicon.ico; sourceTree = "<group>"; };
+		239A1AF32513707B00B92DAD /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
+		239A1AF4251370AA00B92DAD /* favicon.ico */ = {isa = PBXFileReference; lastKnownFileType = image.ico; path = favicon.ico; sourceTree = "<group>"; };
+		23AF0267250F98840074EF87 /* BatchJob.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BatchJob.h; sourceTree = "<group>"; };
+		23AF0268250F98840074EF87 /* BatchJob.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BatchJob.m; sourceTree = "<group>"; };
 		23D6E02B24D59DDD00A5D604 /* Parameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Parameters.h; sourceTree = "<group>"; };
 		23D6E02C24D59DDD00A5D604 /* Parameters.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Parameters.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -218,8 +221,7 @@
 		2365DEB72506145A006C2A95 /* SimEpidemicSV */ = {
 			isa = PBXGroup;
 			children = (
-				23C75A48250A5D0300A24F51 /* favicon.ico */,
-				2365DEC62506154B006C2A95 /* index.html */,
+				239A1AEE25136D0200B92DAD /* DocumentRoot */,
 				2365DEC225061537006C2A95 /* noGUI.h */,
 				2365DEC325061537006C2A95 /* noGUI.m */,
 				2365DEC425061537006C2A95 /* noGUIInfo.h */,
@@ -227,6 +229,8 @@
 				235B7E772509D7AE0016090F /* ProcContext.m */,
 				235B7E792509F6800016090F /* DataCompress.h */,
 				235B7E7A2509F6800016090F /* DataCompress.m */,
+				23AF0267250F98840074EF87 /* BatchJob.h */,
+				23AF0268250F98840074EF87 /* BatchJob.m */,
 			);
 			path = SimEpidemicSV;
 			sourceTree = "<group>";
@@ -247,6 +251,15 @@
 				2378766B25027AE500897003 /* Pathogenesis.svg */,
 			);
 			path = Figures;
+			sourceTree = "<group>";
+		};
+		239A1AEE25136D0200B92DAD /* DocumentRoot */ = {
+			isa = PBXGroup;
+			children = (
+				239A1AF32513707B00B92DAD /* index.html */,
+				239A1AF4251370AA00B92DAD /* favicon.ico */,
+			);
+			path = DocumentRoot;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -411,6 +424,7 @@
 			files = (
 				2365DEC72506159A006C2A95 /* AppDelegate.m in Sources */,
 				2365DEC82506159A006C2A95 /* Document.m in Sources */,
+				23AF0269250F98840074EF87 /* BatchJob.m in Sources */,
 				2365DEC92506159A006C2A95 /* Agent.m in Sources */,
 				2365DECA2506159A006C2A95 /* StatPanel.m in Sources */,
 				2365DEC525061537006C2A95 /* noGUI.m in Sources */,

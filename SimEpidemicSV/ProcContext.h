@@ -11,9 +11,11 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class Document;
+extern Document *make_new_world(NSString *type, NSNumber *ip4addr);
+
 @interface ProcContext : NSObject {
 	int desc, code;
-	NSNumber *docKey;
+	NSNumber *ip4addr;
 	Document *document;
 	NSMutableData *bufData;	// buffer to receive
 	long dataLength;
@@ -24,6 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 - (instancetype)initWithSocket:(int)desc ip:(uint32)ipaddr;
 - (long)receiveData:(NSInteger)length;
+- (void)notImplementedYet;
 - (void)makeResponse;
 @end
 

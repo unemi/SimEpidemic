@@ -16,11 +16,10 @@
 #import "StatPanel.h"
 #import "DataPanel.h"
 #import "Parameters.h"
+#ifdef NOGUI
+#import "noGUI.h"
+#endif
 #define ALLOC_UNIT 2048
-typedef enum {
-	LoopNone, LoopRunning, LoopFinished, LoopEndByUser,
-	LoopEndByCondition, LoopEndAsDaysPassed
-} LoopMode;
 #define DYNAMIC_STRUCT(t,f,n,fm) static t *f = NULL;\
 static t *n(void) {\
 	if (f == NULL) {\
@@ -127,6 +126,9 @@ void my_exit(void) {
 	dispatch_queue_t dispatchQueue;
 	dispatch_group_t dispatchGroup;
 	NSSize orgWindowSize, orgViewSize;
+#ifdef NOGUI
+	__weak NSTimer *runtimeTimer;
+#endif
 }
 @end
 
@@ -179,13 +181,13 @@ void my_exit(void) {
 	}
 	[statInfo reviseColors];
 }
-#endif
 - (void)setInitialParameters:(NSData *)newParams {
 	NSData *orgParams = [NSData dataWithBytes:&initParams length:sizeof(RuntimeParams)];
 	[self.undoManager registerUndoWithTarget:self handler:
 		^(Document *target) { [target setInitialParameters:orgParams]; }];
 	memcpy(&initParams, newParams.bytes, sizeof(RuntimeParams));
 }
+#endif
 - (void)addInfected:(NSInteger)n {
 	NSInteger nSusc = 0, nCells = worldParams.mesh * worldParams.mesh;
 	for (NSInteger i = 0; i < nCells; i ++)
@@ -285,6 +287,7 @@ void my_exit(void) {
 }
 - (NSArray *)scenario { return scenario; }
 static NSArray<NSNumber *> *phase_info(NSArray *scen) {
+	if (scen.count == 0) return scen;
 	NSMutableArray<NSNumber *> *ma = NSMutableArray.new;
 	for (NSInteger i = 0; i < scen.count; i ++)
 		if ([scen[i] isKindOfClass:NSPredicate.class])
@@ -296,6 +299,7 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		[ma addObject:@(scen.count + 1)];
 	return ma;
 }
+#ifndef NOGUI
 - (void)setScenario:(NSArray *)newScen {
 	if (self.running) return;
 	NSArray *orgScen = scenario;
@@ -304,16 +308,11 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	scenario = newScen;
 	scenarioIndex = 0;
 	statInfo.phaseInfo = phase_info(scenario);
-#ifndef NOGUI
 	[self adjustScenarioText];
-#endif
 	if (runtimeParams.step == 0) [self execScenario];
-#ifndef NOGUI
 	[scenarioPanel adjustControls:
 		self.undoManager.undoing || self.undoManager.redoing];
-#endif
 }
-#ifndef NOGUI
 - (void)showCurrentStatistics {
 	StatData *stat = statInfo.statistics;
 	for (NSInteger i = 0; i < NHealthTypes; i ++)
@@ -326,7 +325,9 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 - (void)resetPop {
 	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
 		memcpy(&worldParams, &tmpWorldParams, sizeof(WorldParams));
+#ifndef NOGUI
 		[self updateChangeCount:NSChangeDone];
+#endif
 	}
 	if (scenario != nil) {
 		memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
@@ -407,12 +408,14 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	memcpy(&initParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
 	memcpy(&worldParams, &userDefaultWorldParams, sizeof(WorldParams));
 	memcpy(&tmpWorldParams, &userDefaultWorldParams, sizeof(WorldParams));
-	self.undoManager = NSUndoManager.new;
 #ifdef NOGUI
+	_ID = new_uniq_string();
 	_lastTLock = NSLock.new;
 	statInfo = StatInfo.new;
 	statInfo.doc = self;
 	[self resetPop];
+#else
+	self.undoManager = NSUndoManager.new;
 #endif
 	return self;
 }
@@ -475,22 +478,28 @@ static NSObject *element_from_property(NSObject *prop) {
 		[NSPredicate predicateWithFormat:(NSString *)((NSArray *)prop)[1]]];
 }
 - (NSArray *)scenarioPList {
+	if (scenario == nil || scenario.count == 0) return @[];
 	NSObject *items[scenario.count];
 	for (NSInteger i = 0; i < scenario.count; i ++)
 		items[i] = property_from_element(scenario[i]);
 	return [NSArray arrayWithObjects:items count:scenario.count];
 }
 - (void)setScenarioWithPList:(NSArray *)plist {
-	NSObject *items[plist.count];
-	for (NSInteger i = 0; i < plist.count; i ++) {
-		items[i] = element_from_property(plist[i]);
-		if (items[i] == nil) @throw [NSString stringWithFormat:
-			@"Could not convert it to a scenario element: %@", plist[i]];
+	NSArray *newScen;
+	if (plist.count == 0) newScen = plist;
+	else {
+		NSObject *items[plist.count];
+		for (NSInteger i = 0; i < plist.count; i ++) {
+			items[i] = element_from_property(plist[i]);
+			if (items[i] == nil) @throw [NSString stringWithFormat:
+				@"Could not convert it to a scenario element: %@", plist[i]];
+		}
+		newScen = [NSArray arrayWithObjects:items count:plist.count];
 	}
 #ifndef NOGUI
 	NSArray *orgScen = scenario;
 #endif
-	scenario = [NSArray arrayWithObjects:items count:plist.count];
+	scenario = newScen;
 	scenarioIndex = 0;
 	if (statInfo != nil) {
 		statInfo.phaseInfo = phase_info(scenario);
@@ -823,6 +832,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 	}
 #ifdef NOGUI
 	if (loopMode != LoopEndByUser) [self touch];
+	if (_stopCallBack != nil) _stopCallBack(loopMode);
 #else
 	in_main_thread(^{
 		self->view.needsDisplay = YES;
@@ -851,6 +861,8 @@ static NSInteger mCount = 0, mCount2 = 0;
 	[self goAhead];
 	loopMode = LoopRunning;
 	[NSThread detachNewThreadSelector:@selector(runningLoop) toTarget:self withObject:nil];
+	runtimeTimer = [NSTimer scheduledTimerWithTimeInterval:maxRuntime repeats:NO
+		block:^(NSTimer * _Nonnull timer) { [self stop]; }];
 }
 - (void)step {
 	switch (loopMode) {
@@ -861,8 +873,12 @@ static NSInteger mCount = 0, mCount2 = 0;
 	}
 	loopMode = LoopEndByUser;
 }
-- (void)stop {
+- (void)stop { // should run in the same thread with [self start]
 	if (loopMode == LoopRunning) loopMode = LoopEndByUser;
+	if (self->runtimeTimer != nil) {
+		if (self->runtimeTimer.valid) [self->runtimeTimer invalidate];
+		self->runtimeTimer = nil;
+	}
 }
 - (StatInfo *)statInfo { return statInfo; }
 #else

@@ -7,20 +7,21 @@
 //
 
 #import <sys/socket.h>
+#import <os/log.h>
 #import "ProcContext.h"
 #import "noGUI.h"
 #import "StatPanel.h"
 #import "DataCompress.h"
-#define DOC_TIMEOUT 1200
 #define BUFFER_SIZE 8192
 
+static NSArray<NSString *> *commandList = nil;
 static NSString *headerFormat = @"HTTP/1.1 %03d %@\nDate: %@\nServer: simepidemic\n\
-Content-Length: %ld\nConnection: keep-alive\n%@%@\n";
+%@Connection: keep-alive\n%@%@\n";
 
 @implementation Document (TimeOutExtension)
 - (void)expirationCheck:(NSTimer *)timer {
-	if (theDocuments[self.docKey] != self) return;
-	NSTimeInterval nextCheck = DOC_TIMEOUT;
+	if (theDocuments[self.ID] != self) return;
+	NSTimeInterval nextCheck = documentTimeout;
 	[self.lastTLock lock];
 	if (!self.running) {
 		NSDate *lastT = self.lastTouch;
@@ -31,26 +32,42 @@ Content-Length: %ld\nConnection: keep-alive\n%@%@\n";
 	if (nextCheck > 0.) [NSTimer scheduledTimerWithTimeInterval:nextCheck target:self
 		selector:@selector(expirationCheck:) userInfo:nil repeats:NO];
 	else {
-		theDocuments[self.docKey] = nil;
-		self.docKey = nil;
+		os_log(OS_LOG_DEFAULT, "World %@ closed by timeout.", self.ID);
+		[theDocuments removeObjectForKey:self.ID];
+		if (self.docKey != nil) [defaultDocuments removeObjectForKey:self.docKey];
 	}
 	[self.lastTLock unlock];
 }
 @end
 
+Document *make_new_world(NSString *type, NSNumber *ip4addr) {
+	if (theDocuments.count >= maxNDocuments) @throw [NSString stringWithFormat:
+		@"500 This server already have too many (%ld) worlds.", maxNDocuments];
+	Document *doc = Document.new;
+	theDocuments[doc.ID] = doc;
+	[NSTimer scheduledTimerWithTimeInterval:documentTimeout target:doc
+		selector:@selector(expirationCheck:) userInfo:nil repeats:NO];
+	os_log(OS_LOG_DEFAULT,
+		"%@ world %{network:in_addr}d:%@ was created. %ld world(s) in total.",
+		type, ip4addr.intValue, doc.ID, theDocuments.count);
+	return doc;
+}
 @implementation ProcContext
 - (instancetype)initWithSocket:(int)dsc ip:(uint32)ipaddr {
 	if (!(self = [super init])) return nil;
 	desc = dsc;
 	bufData = [NSMutableData dataWithLength:BUFFER_SIZE];
-	docKey = @(ipaddr);
+	ip4addr = @(ipaddr);
+	if (commandList == nil) commandList = @[
+		@"getWorldID", @"newWorld", @"closeWorld",
+		@"getParams", @"setParams",
+		@"start", @"step", @"stop", @"reset",
+		@"getIndexes", @"getDistribution", @"getPopulation",
+		@"getScenario", @"setScenario",
+		@"submitJob", @"getJobStatus", @"getJobQueueStatus",
+		@"stopJob", @"getJobResults"
+	];
 	return self;
-}
-- (void)setupNewWorld {
-	theDocuments[docKey] = document = Document.new;
-	document.docKey = docKey;
-	[NSTimer scheduledTimerWithTimeInterval:DOC_TIMEOUT target:document
-		selector:@selector(expirationCheck:) userInfo:nil repeats:NO];
 }
 - (long)receiveData:(NSInteger)length {
 	unsigned char *buf = bufData.mutableBytes;
@@ -86,19 +103,21 @@ static void send_bytes(int desc, const char *bytes, NSInteger size) {
 	}
 #endif
 }
-- (void)sendHeader {
+- (NSInteger)sendHeader {
 	NSString *dateStr = [dateFormat stringFromDate:NSDate.date],
 		*meaning = codeMeaning[@(code)];
 	NSString *header = [NSString stringWithFormat:headerFormat, code,
-		(meaning == nil)? @"" : meaning, dateStr, fileSize,
+		(meaning == nil)? @"" : meaning, dateStr,
+		(fileSize == 0)? @"" : [NSString stringWithFormat:@"Content-Length: %ld\n", fileSize],
 		(type == nil)? @"" : [NSString stringWithFormat:@"Content-Type: %@\n", type],
 		(moreHeader == nil)? @"" : moreHeader];
 	send_bytes(desc, header.UTF8String, header.length);
+	return header.length;
 }
-- (void)sendData {
-	if ([method isEqualToString:@"HEAD"]) [self sendHeader];
+- (NSInteger)sendData {
+	if ([method isEqualToString:@"HEAD"]) return [self sendHeader];
 	else if ([content isKindOfClass:NSInputStream.class]) {
-		[self sendHeader];
+		NSInteger length = [self sendHeader];
 		NSInputStream *stream = (NSInputStream *)content;
 		[stream open];
 		@try {
@@ -106,9 +125,10 @@ static void send_bytes(int desc, const char *bytes, NSInteger size) {
 			char *bytes = data.mutableBytes;
 			NSInteger size;
 			while ((size = [stream read:(uint8_t *)bytes maxLength:BUFFER_SIZE]) > 0)
-				send_bytes(desc, bytes, size);
+				{ send_bytes(desc, bytes, size); length += size; }
 		} @catch (NSObject *obj) { NSLog(@"%@", obj);  }
 		[stream close];
+		return length;
 	} else {
 		const char *bytes = NULL;
 		if ([content isKindOfClass:NSData.class]) {
@@ -117,13 +137,19 @@ static void send_bytes(int desc, const char *bytes, NSInteger size) {
 		} else if ([content isKindOfClass:NSString.class]) {
 			fileSize = ((NSString *)content).length;
 			bytes = ((NSString *)content).UTF8String;
-		} else return;
-		[self sendHeader];
+		} else return [self sendHeader];
+		NSInteger length = [self sendHeader];
 		for (NSInteger sizeLeft = fileSize; sizeLeft > 0; sizeLeft -= BUFFER_SIZE) {
 			send_bytes(desc, bytes, (sizeLeft < BUFFER_SIZE)? sizeLeft : BUFFER_SIZE);
 			bytes += BUFFER_SIZE;
 		}
+		return length + fileSize;
 	}
+}
+- (void)notImplementedYet {
+	code = 501;
+	type = @"text/plain";
+	content = @"Not implemented yet.";
 }
 - (void)setErrorMessage:(NSString *)msg {
 	code = [msg substringToIndex:3].intValue;
@@ -172,19 +198,30 @@ static NSString *bad_request_message(NSString *req) {
 			@"404 File access denied: \"%@\" %@", exPath, error.localizedDescription];
 	} @catch (NSString *msg) { @throw msg; }
 }
+static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerStr) {
+	NSMutableDictionary<NSString *, NSString *> *headers = NSMutableDictionary.new;
+	for (NSString *entry in [headerStr componentsSeparatedByString:@"\r\n"]) {
+		NSScanner *sc = [NSScanner scannerWithString:entry];
+		NSString *name;
+		if ([sc scanUpToString:@": " intoString:&name])
+			headers[name] = [entry substringFromIndex:sc.scanLocation + 2];
+	}
+	return headers;
+}
 - (void)makeResponse {
+	printf("makeResponse 1\n");
 	content = moreHeader = nil;
 	NSString *req = [NSString stringWithUTF8String:bufData.bytes];
 	NSScanner *scan = [NSScanner scannerWithString:req];
 	NSString *request, *command, *optionStr, *JSONStr = nil;
 	@try {
-		NSString *method;
-		if (![scan scanUpToString:@" " intoString:&method])
+		NSString *methodName;
+		if (![scan scanUpToString:@" " intoString:&methodName])
 			@throw bad_request_message(req);
 		[scan scanCharactersFromSet:NSCharacterSet.whitespaceCharacterSet intoString:NULL];
 		if (![scan scanUpToString:@" " intoString:&request])
 			@throw bad_request_message(req);
-		method = method;
+		method = methodName;
 		if ([method isEqualToString:@"GET"] || [method isEqualToString:@"HEAD"]) {
 			if ([request isEqualToString:@"/"])
 				{ [self respondFile:@"index.html"]; @throw @0; }
@@ -204,19 +241,12 @@ static NSString *bad_request_message(NSString *req) {
 			NSString *headerStr;
 			if (![scan scanUpToString:@"\r\n\r\n" intoString:&headerStr])
 				@throw bad_request_message(req);
-			scan = [NSScanner scannerWithString:headerStr];
-			NSString *contentType = nil;
-			[scan scanUpToString:@"Content-Type: " intoString:NULL];
-			if (scan.atEnd) @throw @"400 No content type indicated.";
-			scan.scanLocation = scan.scanLocation + 14;
-			if (![scan scanUpToString:@"\r\n" intoString:&contentType])
-				@throw @"400 Content type is missing.";
-			NSInteger contentLength;
-			scan.scanLocation = 0;
-			[scan scanUpToString:@"Content-Length: " intoString:NULL];
-			if (scan.atEnd) @throw @"411 No content length indicated.";
-			scan.scanLocation = scan.scanLocation + 16;
-			if (![scan scanInteger:&contentLength]) @throw @"411 Content length is missing.";
+			NSDictionary<NSString *, NSString *> *headers = header_dictionary(headerStr);
+			NSString *contentType = headers[@"Content-Type"];
+			if (contentType == nil) @throw @"411 No content type indicated.";
+			NSString *numStr = headers[@"Content-Length"];
+			if (numStr == nil) @throw @"411 No content length indicated.";
+			NSInteger contentLength = numStr.integerValue;
 			if (contentLength > BUFFER_SIZE - 1) @throw @"413 Payload is too large.";
 			[self receiveData:contentLength];
 			if ([contentType isEqualToString:@"application/x-www-form-urlencoded"])
@@ -226,13 +256,19 @@ static NSString *bad_request_message(NSString *req) {
 				[scan scanUpToString:@"boundary=" intoString:NULL];
 				if (scan.atEnd) @throw @"417 No boundary string specified.";
 				NSString *boundary =
-					[contentType substringFromIndex:scan.scanLocation + 9];				
+					[contentType substringFromIndex:scan.scanLocation + 9];
 				scan = [NSScanner scannerWithString:
 					[NSString stringWithUTF8String:bufData.bytes]];
+				[scan scanUpToString:@"Content-Disposition: " intoString:NULL];
+				[scan scanUpToString:@"name=" intoString:NULL];
+				if (scan.atEnd) @throw @"417 No name specified.";
+				NSString *nameOptionStr, *fileOptionStr;
+				[scan scanUpToString:@";" intoString:&nameOptionStr];
 				[scan scanUpToString:@"filename=" intoString:NULL];
 				if (scan.atEnd) @throw @"417 No filename specified.";
-				[scan scanUpToString:@"\r\n" intoString:&optionStr];
-				optionStr = [optionStr
+				[scan scanUpToString:@"\r\n" intoString:&fileOptionStr];
+				optionStr = [[NSString stringWithFormat:@"%@&%@",
+					nameOptionStr, fileOptionStr]
 					stringByReplacingOccurrencesOfString:@"\"" withString:@""];
 				[scan scanUpToString:@"Content-Type: application/json" intoString:NULL];
 				if (scan.atEnd) @throw @"417 No JSON data received.";
@@ -246,8 +282,7 @@ static NSString *bad_request_message(NSString *req) {
 				@"415 Unexpected content-type: %@", contentType];
 		} else @throw
 			[NSString stringWithFormat:@"405 \"%@\" method is not allowed.", method];
-		SEL selector = NSSelectorFromString(command);
-		if (![self respondsToSelector:selector]) {
+		if (![commandList containsObject:command]) {
 			@throw [@"404 Unknown command: " stringByAppendingString:command];
 		} else if ([method isEqualToString:@"HEAD"]) [self setOKMessage];
 		else {
@@ -266,14 +301,35 @@ static NSString *bad_request_message(NSString *req) {
 					query = [NSDictionary dictionaryWithObjects:objs forKeys:keys count:m];
 				} else query = nil;
 			}
-			if (document == nil || ![document touch]) [self setupNewWorld];
-//			[self performSelectorOnMainThread:selector withObject:nil waitUntilDone:YES];
-			[self performSelector:selector];
+			[self performSelector:NSSelectorFromString(command)];
 			if (content == nil) [self setOKMessage];
 		}
 	} @catch (NSString *info) { [self setErrorMessage:info];
 	} @catch (NSNumber *num) {}
-	[self sendData];
+//
+	NSInteger length = [self sendData];
+	char *p = bufData.mutableBytes;
+	NSInteger idx = 0;
+	for (; idx < 80; idx ++) if (p[idx] < ' ') { p[idx] = '\0'; break; }
+	if (idx >= 80) memcpy(p + idx, "...", 4);
+	os_log(OS_LOG_DEFAULT, "%d %ld %{network:in_addr}d %s",
+		code, length, ip4addr.intValue, p);
+}
+- (void)checkDocument {
+	NSString *worldID = query[@"world"];
+	if (worldID == nil) worldID = query[@"name"];
+	if (worldID == nil || [worldID isEqualToString:@"default"]) {
+		document = defaultDocuments[ip4addr];
+		if (document == nil || ![document touch]) {
+			document = make_new_world(@"Default", ip4addr);
+			defaultDocuments[ip4addr] = document;
+			document.docKey = ip4addr;
+		}
+	} else {
+		document = theDocuments[worldID];
+		if (document == nil) @throw [NSString stringWithFormat:
+			@"500 World of ID %@ doesn't exist.", worldID];
+	}
 }
 - (NSUInteger)JSONOptions {
 	NSString *valueStr = query[@"format"];
@@ -289,6 +345,7 @@ static NSString *bad_request_message(NSString *req) {
 	code = 200;
 }
 - (void)getInfo:(NSObject *)plist {
+	[self checkDocument];
 	NSString *savePath = query[@"save"];
 	if (savePath != nil) {
 		NSString *extension = @"json";
@@ -299,13 +356,38 @@ static NSString *bad_request_message(NSString *req) {
 	}
 	[self setJSONDataAsResponse:plist];
 }
+- (void)setWorldIDAsResponse {
+	content = document.ID;
+	type = @"text/plain";
+	code = 200;
+}
+- (void)getWorldID {
+	[self checkDocument];
+	[self setWorldIDAsResponse];
+}
+- (void)newWorld {
+	document = make_new_world(@"New", ip4addr);
+	[self setWorldIDAsResponse];
+}
+- (void)closeWorld {
+	NSString *worldID = query[@"world"];
+	if (worldID == nil) @throw @"417 World ID is missing.";
+	Document *doc = theDocuments[worldID];
+	if (doc == nil) @throw [NSString stringWithFormat:
+		@"500 World of ID %@ doesn't exist.", worldID];
+	else if (doc.docKey != nil)
+		@throw @"500 It's not allowed to close a default world.";
+	else [theDocuments removeObjectForKey:worldID];
+}
 - (void)getParams {
+	[self checkDocument];
 	[document popLock];
 	NSObject *plist = param_dict(document.runtimeParamsP, document.worldParamsP);
 	[document popUnlock];
 	[self getInfo:plist];
 }
 - (void)setParams {
+	[self checkDocument];
 	NSDictionary *dict = nil;
 	NSString *JSONstr = query[@"JSON"];
 	if (JSONstr != nil) {
@@ -325,15 +407,26 @@ printf("--- parameters\n%s\n", dict.description.UTF8String);
 	WorldParams *wp = (rp->step == 0)?
 		document.worldParamsP : document.tmpWorldParamsP;
 	set_params_from_dict(rp, wp, dict);
+	NSInteger popSize = wp->initPop;
+	if (popSize > maxPopSize) wp->initPop = maxPopSize;
 	[document popUnlock];
+	if (popSize > maxPopSize) @throw [NSString stringWithFormat:
+		@"200 The specified population size %ld is too large.\
+It was adjusted to maxmimum value: %ld.", popSize, maxPopSize];
 }
 - (void)start {
+	[self checkDocument];
 	NSString *opStr = query[@"stopAt"];
-	[document start:(opStr == nil)? 0 : opStr.integerValue];
+	Document *doc = document;
+	in_main_thread(^{ [doc start:(opStr == nil)? 0 : opStr.integerValue]; });
 }
-- (void)step { [document step]; }
-- (void)stop { [document stop]; }
-- (void)reset { [document resetPop]; }
+- (void)step { [self checkDocument]; [document step]; }
+- (void)stop {
+	[self checkDocument];
+	Document *doc = document;
+	in_main_thread(^{ [doc stop]; });
+}
+- (void)reset { [self checkDocument]; [document resetPop]; }
 static NSObject *make_history(StatData *st, NSInteger nItems,
 	NSNumber *(^getter)(StatData *)) {
 	if (nItems == 1 && st != NULL) return getter(st);
@@ -355,6 +448,7 @@ static NSObject *make_history(StatData *st, NSInteger nItems,
 	[nameSet addObjectsFromArray:array];
 }
 - (void)getIndexes {
+	[self checkDocument];
 	NSInteger fromDay = MAX_INT32, fromStep = MAX_INT32, daysWindow = 0;
 	NSMutableSet *idxNames = NSMutableSet.new;
 	for (NSString *key in query.keyEnumerator) {
@@ -405,6 +499,7 @@ static NSObject *make_history(StatData *st, NSInteger nItems,
 	[self setJSONDataAsResponse:md];
 }
 - (void)getDistribution {
+	[self checkDocument];
 	StatInfo *statInfo = document.statInfo;
 	NSDictionary<NSString *, NSArray<MyCounter *> *> *nameMap =
 		@{@"incubasionPeriod":statInfo.IncubPHist,
@@ -449,6 +544,7 @@ static int store_agent_xyh(Agent *a, uint8 *buf, NSInteger worldSize) {
 		int_coord(a->x, worldSize), int_coord(a->y, worldSize), a->health);
 }
 - (void)getPopulation {
+	[self checkDocument];
 	[document popLock];
 	WorldParams *wp = document.worldParamsP;
 	Agent **pop = document.Pop;
@@ -493,12 +589,14 @@ printf("%d agents -> %ld bytes\n", nAgents, dstData.length);
 	}
 }
 - (void)getScenario {
+	[self checkDocument];
 	[document popLock];
 	NSObject *plist = [document scenarioPList];
 	[document popUnlock];
 	[self getInfo:plist];
 }
 - (void)setScenario {
+	[self checkDocument];
 	if (document.runtimeParamsP->step > 0 || document.running)
 		@throw @"500 setScenario command can be issued only before starting the simulation.";
 	NSString *source = query[@"scenario"];

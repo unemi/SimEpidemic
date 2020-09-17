@@ -1,0 +1,87 @@
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>SimEpidemic noGUITest</title>
+</head>
+<body>
+<h2>getParams</h2>
+<table><tr><td style="vertical-align: top">
+	<form method="get" action="getParams" target="currentParams">
+	<input type="hidden" name="format" value=3>
+	<input type="submit" value="取得">
+	</form>
+	<form method="get" action="getParams" target="currentParams">
+	<input type="hidden" name="format" value=0>
+	<input type="text" name="save" value="myParams">
+	<input type="submit" value="保存">
+	</form>
+	</td>
+<td><iframe name="currentParams"></iframe></td></tr></table>
+<hr/>
+<h2>setParams</h2>
+	<form method="post" action="setParams"
+		enctype="multipart/form-data" target="loadParamResult">
+	<input type="file" name="default" accept="application/json">
+	<input type="submit" value="読み込む">
+	</form>
+	応答: <iframe name="loadParamResult" height=20></iframe>
+<hr/>
+	<form method="post" action="setParams" target="setParamResult">
+	<table>
+	<tr><td align="right">人口</td>
+		<td><input type="number" name="populationSize" style="width:12ex"></td></tr>
+	<tr><td align="right">世界の大きさ</td>
+		<td><input type="number" name="worldSize" style="width:12ex"></td></tr>
+	</table><br/>
+	<input type="submit" value="Set">
+	</form>
+	応答: <iframe name="setParamResult" height=20></iframe>
+	<hr/>
+<h2>control</h2>
+	<form method="get" target="controlResult">
+	<input type="submit" value="開始" formaction="start">
+	<input type="submit" value="一歩" formaction="step">
+	<input type="submit" value="停止" formaction="stop">
+	<input type="submit" value="初期化" formaction="reset">
+	</form>
+	応答: <iframe name="controlResult" height=20></iframe>
+	<hr/>
+<h2>getIndexes</h2>
+	<form method="get" action="/getIndexes" target="currentIndexes">
+	<input type="hidden" name="days" value=1>
+	<input type="hidden" name="susceptible" value=1>
+	<input type="hidden" name="asymptomatic" value=1>
+	<input type="hidden" name="symptomatic" value=1>
+	<input type="hidden" name="recovered" value=1>
+	<input type="hidden" name="died" value=1>
+	<input type="checkbox" name="window" value=1 checked> 日ごと
+	<span width="3ex">&nbsp;</span>
+	日数:<input type="number" name="fromDay" value="-10" style="width:8ex">
+	<span width="3ex">&nbsp;</span>
+	<input type="submit" value="人口構成">
+	</form>
+	<iframe name="currentIndexes"></iframe>
+<h2>getDistribution</h2>
+	<form method="get" action="/getDistribution" target="distribution">
+	<input type="hidden" name="incubasionPeriod" value=1>
+	<input type="hidden" name="recoveryPeriod" value=1>
+	<input type="submit" value="日数の分布">
+	</form>
+	<iframe name="distribution"></iframe>
+<hr/>
+<h2>getPopulation</h2>
+	<form method="get" action="getPopulation" target="populationData">
+	<input type="submit" value="フィールド個体情報">
+	</form>
+	<iframe name="populationData"></iframe>
+<hr/>
+<h2>setScenario</h2>
+	<form method="post" action="setScenario"
+		 enctype="multipart/form-data" target="loadScenario">
+	<input type="file" name="upload" accept="application/json">
+	<input type="submit" value="読み込む">
+	</form>
+	応答: <iframe name="loadScenario" height=20></iframe>
+<hr/>
+</body>
+</html>
