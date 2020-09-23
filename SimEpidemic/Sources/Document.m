@@ -16,6 +16,7 @@
 #import "StatPanel.h"
 #import "DataPanel.h"
 #import "Parameters.h"
+#import "Gatherings.h"
 #ifdef NOGUI
 #import "noGUI.h"
 #endif
@@ -116,6 +117,7 @@ void my_exit(void) {
 	Agent **pop;
 	NSRange *pRange;
 	CGFloat prevTime, stepsPerSec;
+	NSMutableArray<NSLock *> *cellLocks;
 	NSMutableDictionary<NSNumber *, WarpInfo *> *newWarpF;
 	NSMutableDictionary<NSNumber *, NSNumber *> *testees;
 	NSLock *newWarpLock, *testeesLock;
@@ -123,6 +125,8 @@ void my_exit(void) {
 	NSArray *scenario;
 	NSPredicate *predicateToStop;
 	TestEntry *testQueHead, *testQueTail;
+	GatheringMap *gatheringsMap;
+	NSMutableArray<Gathering *> *gatherings;
 	dispatch_queue_t dispatchQueue;
 	dispatch_group_t dispatchGroup;
 	NSSize orgWindowSize, orgViewSize;
@@ -145,6 +149,7 @@ void my_exit(void) {
 	BOOL orgState = loopMode == LoopRunning;
 	if (orgState != newState) [self startStop:nil];
 }
+- (NSArray<Gathering *> *)gatherings { return gatherings; }
 #endif
 - (void)popLock { [popLock lock]; }
 - (void)popUnlock { [popLock unlock]; }
@@ -333,6 +338,7 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
 		[paramPanel adjustControls];
 	}
+	gatherings = NSMutableArray.new;
 	[popLock lock];
 	for (NSInteger i = 0; i < nMesh * nMesh; i ++)
 		for (Agent *a = _Pop[i]; a != NULL; a = a->next) {
@@ -340,13 +346,23 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 			a->contactInfoTail = NULL;
 		}
 	if (nMesh != worldParams.mesh) {
+		NSInteger nCOrg = nMesh * nMesh, nCNew = worldParams.mesh * worldParams.mesh;
+		if (nCOrg < nCNew) {
+			if (cellLocks == nil) cellLocks = NSMutableArray.new;
+			for (NSInteger i = nCOrg; i < nCNew; i ++)
+				[cellLocks addObject:NSLock.new];
+		} else [cellLocks removeObjectsInRange:(NSRange){nCNew, nCOrg - nCNew}];
 		nMesh = worldParams.mesh;
-		NSInteger popMemSz = sizeof(void *) * nMesh * nMesh;
+		NSInteger popMemSz = sizeof(void *) * nCNew;
 		_Pop = realloc(_Pop, popMemSz);
-		pRange = realloc(pRange, sizeof(NSRange) * nMesh * nMesh);
+		pRange = realloc(pRange, sizeof(NSRange) * nCNew);
 		memset(_Pop, 0, popMemSz);
-	} else for (NSInteger i = 0; i < nMesh * nMesh; i ++)
-		free_agent_mems(_Pop + i);
+		gatheringsMap = NSMutableDictionary.new;
+	} else {
+		for (NSInteger i = 0; i < nMesh * nMesh; i ++)
+			free_agent_mems(_Pop + i);
+		[gatheringsMap removeAllObjects];
+	}
 	if (nPop != worldParams.initPop) {
 		nPop = worldParams.initPop;
 		pop = realloc(pop, sizeof(void *) * nPop);
@@ -650,14 +666,25 @@ static NSInteger mCount = 0, mCount2 = 0;
 				remove_old_cinfo(popL[i], oldTimeStamp);
 		}}];
 	}
+	RuntimeParams *rp = &runtimeParams;
+	WorldParams *wp = &worldParams;
+	manage_gatherings(gatherings, gatheringsMap, wp, rp);
+	[self waitAllOperations];
+//
+	Agent **popMap = _Pop;
+	[gatheringsMap enumerateKeysAndObjectsUsingBlock:^(NSNumber * _Nonnull key,
+		NSMutableArray<Gathering *> * _Nonnull obj, BOOL * _Nonnull stop) {
+		[self addOperation:^{
+			for (Agent *a = popMap[key.integerValue]; a != NULL; a = a->next) {
+				if (!is_infected(a)) for (Gathering *gat in obj) [gat affectToAgent:a];
+		}}];
+	}];
 	[self waitAllOperations];
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-	RuntimeParams *rp = &runtimeParams;
-	WorldParams *wp = &worldParams;
 	__weak typeof(self) weakSelf = self;
 	for (NSInteger i = 0; i < nCells; i ++) {
 		Agent **ap = popL + pRange[i].location;
@@ -723,7 +750,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 		[self addOperation:^{
 			for (NSInteger i = start; i < end; i ++) {
 				Agent *a = popL[i];
-				step_agent(a, rp, wp, weakSelf);
+				step_agent(a, rp, wp, weakSelf, cellLocks);
 				if (a->newNInfects > 0) {
 					[infec addObject:[NSValue valueWithInfect:
 						(InfectionCntInfo){a->nInfects, a->nInfects + a->newNInfects}]];
@@ -896,6 +923,14 @@ static NSInteger mCount = 0, mCount2 = 0;
 		stepBtn.enabled = YES;
 		loopMode = LoopEndByUser;
 		[scenarioPanel adjustControls:NO];
+#ifdef DEBUGx
+printf("%ld gatherings, %ld cells\n", gatherings.count, gatheringsMap.count);
+for (Gathering *g in gatherings) [g printInfo:&worldParams];
+NSArray *keys = [gatheringsMap.allKeys sortedArrayUsingSelector:@selector(compare:)];
+for (NSNumber *key in keys)
+	printf("%ld:%ld, ", key.integerValue, gatheringsMap[key].count);
+printf("\n");
+#endif
 	}
 }
 - (IBAction)step:(id)sedner {

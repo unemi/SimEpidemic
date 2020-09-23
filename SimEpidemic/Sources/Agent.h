@@ -16,6 +16,7 @@ typedef enum {
 } AgentDrawType;
 
 @class Document;
+extern CGFloat my_random(DistInfo *p);
 extern BOOL was_hit(WorldParams *wp, CGFloat prob);
 extern BOOL is_infected(Agent *a);
 extern void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp);
@@ -24,7 +25,8 @@ extern void remove_from_list(Agent *a, Agent **list);
 extern void add_agent(Agent *a, WorldParams *wp, Agent **Pop);
 extern void remove_agent(Agent *a, WorldParams *p, Agent **Pop);
 extern void interacts(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp);
-extern void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc);
+extern void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
+	NSArray<NSLock *> *cellLocks);
 extern BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, CGPoint goal);
 extern void step_agent_in_quarantine(Agent *a, WorldParams *p, Document *doc);
 extern void warp_show(Agent *a, WarpType mode, CGPoint goal,

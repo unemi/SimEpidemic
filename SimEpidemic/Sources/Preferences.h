@@ -14,7 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet NSTextField *animeStepTxt;
 	IBOutlet NSColorWell
-		*bgColWell, *hospitalColWell, *cemeteryColWell, *textColWell,
+		*bgColWell, *hospitalColWell, *cemeteryColWell, *textColWell, *gatherColWell,
 		*susColWell, *asyColWell, *symColWell, *recColWell, *dieColWell;
 	IBOutlet NSSlider *warpOpacitySld, *panelsAlphaSld;
 	IBOutlet NSTextField *warpOpacityDgt, *panelsAlphaDgt;

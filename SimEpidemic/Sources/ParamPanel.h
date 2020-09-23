@@ -14,20 +14,25 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface ParamPanel : NSWindowController
 	<NSWindowDelegate, NSTabViewDelegate> {
-	IBOutlet NSView *worldPView, *pathoPView, *measPView, *testPView;
+	IBOutlet NSView *worldPView, *movePView, *pathoPView, *measPView, *testPView;
 	IBOutlet NSTabView *tabView;
+	IBOutlet NSTextField *massDgt, *fricDgt, *avoidDgt;
+	IBOutlet NSSlider *massSld, *fricSld, *avoidSld;
 	IBOutlet NSTextField *infecDgt, *infecDstDgt;
 	IBOutlet NSTextField
 		*mobDistMinDgt, *mobDistMaxDgt, *mobDistModeDgt,
 		*incubMinDgt, *incubMaxDgt, *incubModeDgt,
 		*fatalMinDgt, *fatalMaxDgt, *fatalModeDgt,
 		*recovMinDgt, *recovMaxDgt, *recovModeDgt,
-		*immunMinDgt, *immunMaxDgt, *immunModeDgt;
+		*immunMinDgt, *immunMaxDgt, *immunModeDgt,
+		*gatSZMinDgt, *gatSZMaxDgt, *gatSZModeDgt,
+		*gatDRMinDgt, *gatDRMaxDgt, *gatDRModeDgt,
+		*gatSTMinDgt, *gatSTMaxDgt, *gatSTModeDgt;
 	IBOutlet NSSlider *infecSld, *infecDstSld;
 	IBOutlet NSTextField *initPopDgt, *worldSizeDgt, *stepsPerDayDgt, *meshDgt, *nInfecDgt;
 	IBOutlet NSStepper *initPopStp, *worldSizeStp, *stepsPerDayStp, *meshStp, *nInfecStp;
-	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *mobFrDgt, *cntctTrcDgt;
-	IBOutlet NSSlider *dstSTSld, *dstOBSld, *mobFrSld, *cntctTrcSld;
+	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *mobFrDgt, *gatFrDgt, *cntctTrcDgt;
+	IBOutlet NSSlider *dstSTSld, *dstOBSld, *mobFrSld, *gatFrSld, *cntctTrcSld;
 	IBOutlet NSTextField *tstDelayDgt, *tstProcDgt, *tstIntvlDgt, *tstSensDgt, *tstSpecDgt,
 		*tstSbjAsyDgt, *tstSbjSymDgt;
 	IBOutlet NSSlider *tstDelaySld, *tstProcSld, *tstIntvlSld, *tstSensSld, *tstSpecSld,

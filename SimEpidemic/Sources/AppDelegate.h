@@ -8,14 +8,14 @@
 
 #import <Cocoa/Cocoa.h>
 #import "CommonTypes.h"
-#define N_ENV_COLORS 4
+#define N_ENV_COLORS 5
 #define N_COLORS (NHealthTypes+N_ENV_COLORS)
 #define DEFAULT_WARP_OPACITY .5
 #define DEFAULT_PANELS_ALPHA .9
 #define DEFAULT_CHILD_WIN YES
 
 enum { ColBackground = NHealthTypes,
-	ColHospital, ColCemetery, ColText };
+	ColHospital, ColCemetery, ColText, ColGathering };
 typedef enum {
 	ParamTypeNone, ParamTypeFloat, ParamTypeDist, ParamTypeInteger
 } ParamType;

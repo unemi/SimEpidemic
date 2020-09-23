@@ -27,7 +27,7 @@ static CGFloat random_guassian(CGFloat mu, CGFloat sigma) {
 	return x * sigma + mu;
 }
 #define EXP_BASE .02
-static CGFloat my_random(DistInfo *p) {
+CGFloat my_random(DistInfo *p) {
 	if (p->mode == p->min) return (pow(EXP_BASE, random() / (CGFloat)0x7fffffff) - EXP_BASE)
 		/ (1. - EXP_BASE) * (p->max - p->min) + p->min;
 	else if (p->mode == p->max) return (1. - pow(EXP_BASE, random() / (CGFloat)0x7fffffff))
@@ -145,9 +145,10 @@ void interacts(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp) {
 	CGFloat d = sqrt(d2);
 	CGFloat viewRange = wp->worldSize / wp->mesh;
 	if (d >= viewRange) { return; }
-	CGFloat dd = ((d < viewRange * 0.8)? 1.0 : (1 - d / viewRange) / 0.2) / d / d2;
-	CGFloat ax = dx * dd * AVOIDANCE;
-	CGFloat ay = dy * dd * AVOIDANCE;
+	CGFloat dd = ((d < viewRange * 0.8)? 1.0 : (1 - d / viewRange) / 0.2) / d / d2
+		 * AVOIDANCE * rp->avoidance / 50.;
+	CGFloat ax = dx * dd;
+	CGFloat ay = dy * dd;
 	a->fx -= ax;
 	a->fy -= ay;
 	b->fx += ax;
@@ -194,9 +195,10 @@ static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, Document *
 }
 static CGFloat wall(CGFloat d) {
 	if (d < .02) d = .02;
-	return AVOIDANCE / d / d;
+	return AVOIDANCE * 20. / d / d;
 }
-void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc) {
+void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
+	NSArray<NSLock *> *cellLocks) {
 	switch (a->health) {
 		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
 		a->daysDiseased += 1. / wp->stepsPerDay;
@@ -236,7 +238,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc) {
 		}
 		a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 		a->fy += wall(a->y) - wall(wp->worldSize - a->y);
-		CGFloat speed = ((a->health == Symptomatic)? .01 : .05) / wp->stepsPerDay;
+		CGFloat mass = ((a->health == Symptomatic)? 200. : 10.) * rp->mass / 100.;
 		if (a->best != NULL && !a->distancing) {
 			CGFloat dx = a->best->x - a->x;
 			CGFloat dy = a->best->y - a->y;
@@ -244,17 +246,17 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc) {
 			a->fx += dx / d;
 			a->fy += dy / d;
 		}
-		CGFloat frac = pow(0.96, 1.0 / wp->stepsPerDay);
-		a->vx = a->vx * frac + a->fx / wp->stepsPerDay;
-		a->vy = a->vy * frac + a->fy / wp->stepsPerDay;
+		CGFloat fric = pow(1. - .2 * rp->friction / 100., 1.0 / wp->stepsPerDay);
+		a->vx = a->vx * fric + a->fx / mass / wp->stepsPerDay;
+		a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
 		CGFloat v = hypot(a->vx, a->vy);
-		CGFloat maxV = 20.0;
+		CGFloat maxV = 80.0 / wp->stepsPerDay;
 		if (v > maxV) { 
 			a->vx *= maxV / v; 
 			a->vy *= maxV / v;
 		}
-		a->x += a->vx * speed;
-		a->y += a->vy * speed;
+		a->x += a->vx / wp->stepsPerDay;
+		a->y += a->vy / wp->stepsPerDay;
 		if (a->x < AGENT_RADIUS) a->x = AGENT_RADIUS * 2 - a->x;
 		else if (a->x > wp->worldSize - AGENT_RADIUS)
 			a->x = (wp->worldSize - AGENT_RADIUS) * 2 - a->x;
@@ -264,8 +266,12 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc) {
 	}
 	NSInteger newIdx = index_in_pop(a, wp);
 	if (newIdx != orgIdx) {
+		[cellLocks[orgIdx] lock];
 		remove_from_list(a, doc.Pop + orgIdx);
+		[cellLocks[orgIdx] unlock];
+		[cellLocks[newIdx] lock];
 		add_to_list(a, doc.Pop + newIdx);
+		[cellLocks[newIdx] unlock];
 	}
 }
 void step_agent_in_quarantine(Agent *a, WorldParams *p, Document *doc) {

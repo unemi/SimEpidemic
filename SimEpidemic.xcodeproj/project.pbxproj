@@ -40,6 +40,8 @@
 		238C4527248B783B00FB5F89 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 238C4525248B783B00FB5F89 /* Preferences.xib */; };
 		23AF0269250F98840074EF87 /* BatchJob.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AF0268250F98840074EF87 /* BatchJob.m */; };
 		23D6E02D24D59DDD00A5D604 /* Parameters.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6E02C24D59DDD00A5D604 /* Parameters.m */; };
+		23DAF068251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
+		23DAF069251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -118,6 +120,8 @@
 		23AF0268250F98840074EF87 /* BatchJob.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BatchJob.m; sourceTree = "<group>"; };
 		23D6E02B24D59DDD00A5D604 /* Parameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Parameters.h; sourceTree = "<group>"; };
 		23D6E02C24D59DDD00A5D604 /* Parameters.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Parameters.m; sourceTree = "<group>"; };
+		23DAF066251737FB00C41E76 /* Gatherings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Gatherings.h; sourceTree = "<group>"; };
+		23DAF067251737FB00C41E76 /* Gatherings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Gatherings.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,6 +218,8 @@
 				235639CB247111A200F941A6 /* Scenario.m */,
 				23D6E02B24D59DDD00A5D604 /* Parameters.h */,
 				23D6E02C24D59DDD00A5D604 /* Parameters.m */,
+				23DAF066251737FB00C41E76 /* Gatherings.h */,
+				23DAF067251737FB00C41E76 /* Gatherings.m */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -407,6 +413,7 @@
 				233420D22468156200C93F8E /* DataPanel.m in Sources */,
 				232055F42457D2C6005ADCCF /* Document.m in Sources */,
 				232790BA24587B670017AEC2 /* Agent.m in Sources */,
+				23DAF068251737FB00C41E76 /* Gatherings.m in Sources */,
 				238A8F2A246694D300604BF4 /* StatPanel.m in Sources */,
 				235D657B2462564600487784 /* ParamPanel.m in Sources */,
 				23D6E02D24D59DDD00A5D604 /* Parameters.m in Sources */,
@@ -425,6 +432,7 @@
 				2365DEC72506159A006C2A95 /* AppDelegate.m in Sources */,
 				2365DEC82506159A006C2A95 /* Document.m in Sources */,
 				23AF0269250F98840074EF87 /* BatchJob.m in Sources */,
+				23DAF069251737FB00C41E76 /* Gatherings.m in Sources */,
 				2365DEC92506159A006C2A95 /* Agent.m in Sources */,
 				2365DECA2506159A006C2A95 /* StatPanel.m in Sources */,
 				2365DEC525061537006C2A95 /* noGUI.m in Sources */,
@@ -657,7 +665,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.6.2;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -677,7 +685,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.6.2;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

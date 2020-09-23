@@ -74,6 +74,7 @@ extern void my_exit(void);
 - (NSArray *)scenarioPList;
 - (void)setScenarioWithPList:(NSArray *)plist;
 #else
+- (NSArray<Gathering *> *)gatherings;
 - (void)setScenario:(NSArray *)newScen;
 - (void)setPanelTitle:(NSWindow *)panel;
 - (void)reviseColors;

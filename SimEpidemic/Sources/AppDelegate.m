@@ -106,11 +106,15 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 }
 NSString *keyAnimeSteps = @"animeSteps";
 static ParamInfo paramInfo[] = {
+	{ ParamTypeFloat, @"mass", {.f = { 50., 10., 100.}}},
+	{ ParamTypeFloat, @"friction", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"avoidance", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"infectionProberbility", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"infectionDistance", {.f = { 4., 1., 20.}}},
 	{ ParamTypeFloat, @"distancingStrength", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"gatheringFrequency", {.f = { 30., 0., 100.}}},
 	{ ParamTypeFloat, @"contactTracing", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"testDelay", {.f = { 1., 0., 10.}}},
 	{ ParamTypeFloat, @"testProcess", {.f = { 1., 0., 10.}}},
@@ -124,13 +128,16 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
 	{ ParamTypeDist, @"fatality", {.d = { 4., 16., 20.}}},
 	{ ParamTypeDist, @"recovery", {.d = { 4., 10., 40.}}},
-	{ ParamTypeDist, @"immunity", {.d = { 30, 180., 360.}}},
+	{ ParamTypeDist, @"immunity", {.d = { 30., 180., 360.}}},
+	{ ParamTypeDist, @"gatheringSize", {.d = { 5., 10., 20.}}},
+	{ ParamTypeDist, @"gatheringDuration", {.d = { 24., 48., 168.}}},
+	{ ParamTypeDist, @"gatheringStrength", {.d = { 50., 80., 100.}}},
 
 	{ ParamTypeInteger, @"populationSize", {.i = { 10000, 100, 999900}}},
 	{ ParamTypeInteger, @"worldSize", {.i = { 360, 10, 999999}}},
 	{ ParamTypeInteger, @"mesh", {.i = { 18, 1, 999}}},
 	{ ParamTypeInteger, @"initialInfected", {.i = { 4, 1, 999}}},
-	{ ParamTypeInteger, @"stepsPerDay", {.i = { 4, 1, 999}}},
+	{ ParamTypeInteger, @"stepsPerDay", {.i = { 16, 1, 999}}},
 	{ ParamTypeNone, nil }
 };
 NSInteger defaultAnimeSteps = 1;
@@ -177,13 +184,14 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 #define RGB3(r,g,b) ((r<<16)|(g<<8)|b)
 NSInteger defaultStateRGB[N_COLORS] = {
 	RGB3(39,85,154), RGB3(246,214,0), RGB3(250,48,46), RGB3(32,120,100), RGB3(182,182,182),
-	RGB3(0,0,0), RGB3(64,0,0), RGB3(51,51,51), RGB3(255,255,255)
+	RGB3(0,0,0), RGB3(64,0,0), RGB3(51,51,51), RGB3(255,255,255), RGB3(64,64,0)
 }, stateRGB[N_COLORS];
 NSColor *stateColors[N_COLORS] = {nil}, *warpColors[NHealthTypes];
 NSString *colKeys[] = {
 	@"colorSusceptible", @"colorAsymptomatic", @"colorSymptomatic",
 	@"colorRecovered", @"colorDied",
-	@"colorBackgournd", @"colorHospital", @"colorCemetery", @"colorText"
+	@"colorBackgournd", @"colorHospital", @"colorCemetery", @"colorText",
+	@"colorGathering"
 };
 CGFloat warpOpacity = DEFAULT_WARP_OPACITY;
 CGFloat panelsAlpha = DEFAULT_PANELS_ALPHA;

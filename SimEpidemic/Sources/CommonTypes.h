@@ -39,21 +39,24 @@ typedef struct {
 } DistInfo;
 
 typedef struct {
+	CGFloat mass, friction, avoidance;
 	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat dstST, dstOB; // Distancing strength and obedience
 	CGFloat mobFr; // Mobility frequency
+	CGFloat gatFr; // Gathering's frequency
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
 	DistInfo mobDist; // and distance
 	DistInfo incub, fatal, recov, immun; // incubation, fatality, recovery, immunity
+	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
 	NSInteger step;
 } RuntimeParams;
 typedef struct {
 	NSInteger initPop, worldSize, mesh, nInitInfec, stepsPerDay;
 } WorldParams;
 
-#define PARAM_F1 infec
+#define PARAM_F1 mass
 #define PARAM_D1 mobDist
 #define PARAM_I1 initPop
 
@@ -75,6 +78,10 @@ typedef struct ContactInfoRec {
 	NSInteger timeStamp;
 	struct AgentRec *agent;
 } ContactInfo;
+
+@class Gathering;
+typedef NSMutableDictionary<NSNumber *, NSMutableArray<Gathering *> *>
+	GatheringMap;
 
 typedef struct AgentRec {
 	NSInteger ID;

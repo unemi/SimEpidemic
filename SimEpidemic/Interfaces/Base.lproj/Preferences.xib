@@ -15,6 +15,7 @@
                 <outlet property="cemeteryColWell" destination="6Im-Mz-MzT" id="vXA-9X-UE1"/>
                 <outlet property="childWinCBox" destination="XCl-e0-ynW" id="RNS-Ns-F8W"/>
                 <outlet property="dieColWell" destination="aNG-Bn-B9m" id="giD-Qi-FFg"/>
+                <outlet property="gatherColWell" destination="fFo-e8-MVq" id="liY-xf-Www"/>
                 <outlet property="hospitalColWell" destination="hpq-UU-ly0" id="gi8-Z7-xZj"/>
                 <outlet property="panelsAlphaDgt" destination="ou4-Jc-2ab" id="YyA-AA-lkJ"/>
                 <outlet property="panelsAlphaSld" destination="UaI-jE-rjG" id="EkB-Cx-ODU"/>
@@ -280,6 +281,20 @@
                             <action selector="clearUserDefaults:" target="-2" id="eDt-5C-28v"/>
                         </connections>
                     </button>
+                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fkK-es-7A8">
+                        <rect key="frame" x="18" y="139" width="77" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" alignment="right" title="Gatherings" id="KPS-Ql-uCB">
+                            <font key="font" usesAppearanceFont="YES"/>
+                            <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <colorWell fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fFo-e8-MVq">
+                        <rect key="frame" x="101" y="135" width="44" height="23"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <color key="color" red="0.05813049898" green="0.055541899059999997" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                    </colorWell>
                 </subviews>
             </view>
             <point key="canvasLocation" x="-108.5" y="77"/>

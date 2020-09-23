@@ -16,7 +16,7 @@ static __weak NSColorWell *colWells[N_COLORS];
 - (void)windowDidLoad {
 	show_anime_steps(animeStepTxt, defaultAnimeSteps);
 	NSArray<NSColorWell *> *cws = @[susColWell, asyColWell, symColWell, recColWell, dieColWell,
-		bgColWell, hospitalColWell, cemeteryColWell, textColWell];
+		bgColWell, hospitalColWell, cemeteryColWell, textColWell, gatherColWell];
 	for (NSInteger i = 0; i < N_COLORS; i ++) {
 		colWells[i] = cws[i];
 		colWells[i].tag = i;

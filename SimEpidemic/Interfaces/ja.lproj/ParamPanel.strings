@@ -41,9 +41,13 @@
 "yyW-IJ-yuF.title" = "距離:";
 "z8O-Vr-wDF.title" = "1日当たりステップ数:";
 "23H-m2-8Da.label" = "世界";
+"cOf-UR-qip.label" = "移動";
 "hA8-Al-CXr.label" = "発症機序";
 "1Zm-Vd-69y.label" = "対策";
 "BYt-ZJ-NiV.label" = "検査";
+"JbA-TU-Pq4.title" = "質量:";
+"elp-UN-0Pr.title" = "摩擦:";
+"3sk-cE-5S5.title" = "衝突回避:";
 "XA3-JG-Xrd.title" = "感度:";
 "kpg-At-5ec.title" = "特異度:";
 "JiO-cY-Ahu.title" = "処理期間:";
@@ -58,3 +62,11 @@
 "nye-Nx-D74.title" = "検査の遅れ:";
 "bKB-AV-bUi.title" = "検査間隔:";
 "4BB-ve-1rN.title" = "割合:";
+"sKr-zD-pTP.title" = "イベント・集会など";
+"zdr-Ge-qxM.title" = "頻度:";
+"Vcr-PA-WMg.title" = "領域サイズ:";
+"hVV-kI-drp.title" = "持続時間:";
+"tab-2r-jdh.title" = "強さ (%):";
+"AdB-cs-9q4.title" = "最小";
+"ogJ-xv-fmx.title" = "最大";
+"FXW-Y2-TAr.title" = "最頻値";

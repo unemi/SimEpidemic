@@ -77,7 +77,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 }
 @end
 
-#define N_SUBPANELS 4
+#define N_SUBPANELS 5
 @interface ParamPanel () {
 	Document *doc;
 	NSArray<NSTextField *> *fDigits, *iDigits;
@@ -130,7 +130,7 @@ static NSNumberFormatter *distDgtFmt = nil;
     [super windowDidLoad];
     self.window.alphaValue = panelsAlpha;
     NSArray<NSTabViewItem *> *tabs = tabView.tabViewItems;
-    NSView *views[] = {worldPView, pathoPView, measPView, testPView};
+    NSView *views[] = {worldPView, movePView, pathoPView, measPView, testPView};
     for (NSInteger i = 0; i < N_SUBPANELS; i ++) {
 		viewSize[i] = views[i].frame.size;
 		tabs[i].view = views[i];
@@ -139,10 +139,12 @@ static NSNumberFormatter *distDgtFmt = nil;
 	CGFloat dh = viewSize[0].height - tabs[0].view.frame.size.height;
 	wFrame.size.height += dh; wFrame.origin.y -= dh;
 	[self.window setFrame:wFrame display:NO];
-    fDigits = @[infecDgt, infecDstDgt, dstSTDgt, dstOBDgt, mobFrDgt, cntctTrcDgt,
+    fDigits = @[massDgt, fricDgt, avoidDgt,
+		infecDgt, infecDstDgt, dstSTDgt, dstOBDgt, mobFrDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt];
-	fSliders = @[infecSld, infecDstSld, dstSTSld, dstOBSld, mobFrSld, cntctTrcSld,
+	fSliders = @[massSld, fricSld, avoidSld,
+		infecSld, infecDstSld, dstSTSld, dstOBSld, mobFrSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld];
 	dDigits = @[
@@ -150,7 +152,10 @@ static NSNumberFormatter *distDgtFmt = nil;
 		DDGT(incubMinDgt, incubMaxDgt, incubModeDgt, 1),
 		DDGT(fatalMinDgt, fatalMaxDgt, fatalModeDgt, 2),
 		DDGT(recovMinDgt, recovMaxDgt, recovModeDgt, 3),
-		DDGT(immunMinDgt, immunMaxDgt, immunModeDgt, 4) ];
+		DDGT(immunMinDgt, immunMaxDgt, immunModeDgt, 4),
+		DDGT(gatSZMinDgt, gatSZMaxDgt, gatSZModeDgt, 5),
+		DDGT(gatDRMinDgt, gatDRMaxDgt, gatDRModeDgt, 6),
+		DDGT(gatSTMinDgt, gatSTMaxDgt, gatSTModeDgt, 7) ];
 	iDigits = @[initPopDgt, worldSizeDgt, meshDgt, nInfecDgt];
 	iSteppers = @[initPopStp, worldSizeStp, meshStp, nInfecStp];
     for (NSInteger idx = 0; idx < fDigits.count; idx ++) {
@@ -184,7 +189,7 @@ static NSNumberFormatter *distDgtFmt = nil;
     [doc setPanelTitle:self.window];
 }
 - (IBAction)changeStepsPerDay:(id)sender {
-	WorldParams *wp = doc.worldParamsP;
+	WorldParams *wp = doc.tmpWorldParamsP;
 	NSInteger orgExp = round(log2(wp->stepsPerDay));
 	[undoManager registerUndoWithTarget:stepsPerDayStp handler:^(NSStepper *target) {
 		target.integerValue = orgExp;
