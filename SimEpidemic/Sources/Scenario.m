@@ -121,7 +121,7 @@ static NSTextField *label_field(NSString *message) {
 	NSSize fSize = CELL_SIZE;
 	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
 	set_subview(label_field(@"Parameters"), self, YES);
-	_namePopUp = NSPopUpButton.new; 
+	_namePopUp = NSPopUpButton.new;
 	for (NSString *title in paramNames) {
 		if ([paramKeyFromName[title] isEqualTo:@"initPop"]) break;
 		[_namePopUp addItemWithTitle:title];
@@ -324,7 +324,7 @@ static void check_images(void) {
 	namePopUp.target = self;
 	namePopUp.action = @selector(chooseParameter:);
 	NSTextField *digits = ((ParameterCellView *)self.view).digits;
-	digits.doubleValue = scen.doc.runtimeParamsP->PARAM_F1;
+	digits.doubleValue = scen.doc.runtimeParamsP->PARAM_FS1;
 	digits.delegate = scen;
 	return self;
 }
@@ -341,11 +341,12 @@ static void check_images(void) {
 - (void)chooseParameter:(NSPopUpButton *)sender {
 	NSInteger idx = sender.indexOfSelectedItem;
 	if (idx == _index) return;
-	[self setParamUndoable:-1 value:(&scenario.doc.runtimeParamsP->PARAM_F1)[idx]];
+	[self setParamUndoable:-1 value:(&scenario.doc.runtimeParamsP->PARAM_FS1)[idx]];
 	_index = idx;
 }
 - (NSObject *)scenarioElement {
-	return @[paramKeys[_index], @(self.value)];
+	NSString *name = ((ParameterCellView *)self.view).namePopUp.titleOfSelectedItem;
+	return @[paramKeyFromName[name], @(self.value)];
 }
 @end
 
@@ -927,12 +928,13 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	} else return nil;
 }
 - (ParamItem *)paramItemWithKey:(NSString *)key value:(NSNumber *)num {
-	NSInteger idx = [paramKeys indexOfObject:key];
-	if (idx == NSNotFound) return nil;
 	ParamItem *item = [ParamItem.alloc initWithScenario:self];
-	item.index = idx;
 	ParameterCellView *cView = (ParameterCellView *)item.view;
-	[cView.namePopUp selectItemAtIndex:idx];
+	NSPopUpButton *prmPopUp = cView.namePopUp;
+	NSInteger idx = [prmPopUp indexOfItemWithTitle:NSLocalizedString(key, nil)];
+	if (idx == -1) return nil;
+	item.index = idx;
+	[prmPopUp selectItemAtIndex:idx];
 	cView.digits.doubleValue = num.doubleValue;
 	return item;
 }

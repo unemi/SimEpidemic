@@ -22,6 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 @property CGFloat scale;
 @property NSPoint offset;
+@property BOOL showGatherings;
 @end
 
 @interface LegendView: NSView {

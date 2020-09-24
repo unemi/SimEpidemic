@@ -67,7 +67,8 @@ static void record_gat(Gathering *gat, GatheringMap *map,
 	CGFloat dx = p.x - a->x, dy = p.y - a->y, d = hypot(dx, dy);
 	if (d > size + SURROUND || d < size - SURROUND) return;
 	CGFloat f = strength / SURROUND * GATHERING_FORCE *
-		((d > size)? size + SURROUND - d : d - size + SURROUND);
+		((d > size)? size + SURROUND - d :
+		 (size > SURROUND)? d - size + SURROUND : d * SURROUND / size);
 	a->fx += dx / d * f;
 	a->fy += dy / d * f;
 }
@@ -103,8 +104,10 @@ void manage_gatherings(
 			[gatherings[i] removeFromMap:gatMap];
 			[gatherings removeObjectAtIndex:i];
 		}
+//	caliculate the numner of gathering circles
+//	using random number in exponetial distribution.
 	NSInteger nNewGat = round(rp->gatFr / wp->stepsPerDay
-		* wp->worldSize * wp->worldSize / 1e6 *
+		* wp->worldSize * wp->worldSize / 1e5 *
 		- log(random() / (CGFloat)0x7fffffff * .9999 + .0001));
 	for (NSInteger i = 0; i < nNewGat; i ++)
 		[gatherings addObject:[Gathering.alloc initWithMap:gatMap world:wp runtime:rp]];

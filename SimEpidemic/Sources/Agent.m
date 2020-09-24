@@ -129,8 +129,10 @@ static void attracted(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CG
 	// check contact and infection
 	if (d < rp->infecDst) {
 		if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
-		if (a->health == Susceptible && is_infected(b)) {
-			CGFloat timeFactor = fmin(1., b->daysInfected / b->daysToOnset * 2.);
+		if (a->health == Susceptible && is_infected(b) &&
+			b->daysInfected > rp->contagDelay) {
+			CGFloat timeFactor = fmin(1., (b->daysInfected - rp->contagDelay) /
+				(b->daysInfected - fmin(rp->contagPeak, b->daysToOnset)));
 			CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
 			if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor)) {
 				a->newHealth = Asymptomatic;
@@ -246,7 +248,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 			a->fx += dx / d;
 			a->fy += dy / d;
 		}
-		CGFloat fric = pow(1. - .2 * rp->friction / 100., 1.0 / wp->stepsPerDay);
+		CGFloat fric = pow(1. - .5 * rp->friction / 100., 1. / wp->stepsPerDay);
 		a->vx = a->vx * fric + a->fx / mass / wp->stepsPerDay;
 		a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
 		CGFloat v = hypot(a->vx, a->vy);

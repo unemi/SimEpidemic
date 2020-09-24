@@ -743,6 +743,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 	NSMutableArray<NSValue *> *infectors[nCores];
 	NSUInteger transitCnt[NHealthTypes][nCores];
 	memset(transitCnt, 0, sizeof(transitCnt));
+	NSMutableArray<NSLock *> *locks = cellLocks;
 	for (NSInteger j = 0; j < nCores; j ++) {
 		NSInteger start = j * nInField / nCores;
 		NSInteger end = (j < nCores - 1)? (j + 1) * nInField / nCores : nInField;
@@ -750,7 +751,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 		[self addOperation:^{
 			for (NSInteger i = start; i < end; i ++) {
 				Agent *a = popL[i];
-				step_agent(a, rp, wp, weakSelf, cellLocks);
+				step_agent(a, rp, wp, weakSelf, locks);
 				if (a->newNInfects > 0) {
 					[infec addObject:[NSValue valueWithInfect:
 						(InfectionCntInfo){a->nInfects, a->nInfects + a->newNInfects}]];
@@ -967,6 +968,17 @@ printf("\n");
 	}];
 	NSInteger days = stopAtNDaysDgt.integerValue;	
 	stopAtNDays = stopAtNDaysCBox.state? days : - days;
+}
+- (IBAction)switchShowGatherings:(id)sender {
+	BOOL newValue = showGatheringsCBox.state == NSControlStateValueOn;
+	if (newValue == view.showGatherings) return;
+	[self.undoManager registerUndoWithTarget:showGatheringsCBox
+		handler:^(NSButton *target) {
+		target.state = 1 - target.state;
+		[target sendAction:target.action to:target.target];
+	}];
+	view.showGatherings = newValue;
+	view.needsDisplay = YES;
 }
 - (IBAction)changeAnimeSteps:(id)sender {
 	NSInteger newSteps = 1 << animeStepper.integerValue;

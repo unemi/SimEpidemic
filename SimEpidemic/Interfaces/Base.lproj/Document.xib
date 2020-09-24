@@ -19,6 +19,7 @@
                 <outlet property="qDSNum" destination="cdS-6l-yC3" id="QvI-2x-h4e"/>
                 <outlet property="qNSNum" destination="Tgb-tI-PQH" id="f23-il-ajI"/>
                 <outlet property="scenarioText" destination="Awo-S3-2Qp" id="FkL-Sa-7tC"/>
+                <outlet property="showGatheringsCBox" destination="IFU-W9-eTe" id="ugJ-zr-fPC"/>
                 <outlet property="spsNum" destination="AJg-mE-B4N" id="fVh-6g-Eue"/>
                 <outlet property="startBtn" destination="670-an-uJr" id="BhI-ME-hEo"/>
                 <outlet property="statInfo" destination="0WM-hT-GKX" id="qmJ-Dw-D8d"/>
@@ -293,7 +294,7 @@
                         </textFieldCell>
                     </textField>
                     <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="XKh-Mv-6xc">
-                        <rect key="frame" x="523" y="517" width="15" height="22"/>
+                        <rect key="frame" x="523" y="518" width="15" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
                         <stepperCell key="cell" controlSize="small" continuous="YES" alignment="left" maxValue="6" id="laV-fR-r2p"/>
                         <connections>
@@ -301,7 +302,7 @@
                         </connections>
                     </stepper>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="E7P-hB-gL3">
-                        <rect key="frame" x="394" y="522" width="125" height="14"/>
+                        <rect key="frame" x="394" y="523" width="125" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" alignment="right" title="Draw in each 64 steps." id="Ish-oU-6UJ">
                             <font key="font" metaFont="smallSystem"/>
@@ -345,6 +346,17 @@
                             <action selector="changeDaysToStop:" target="-2" id="UEI-WI-Jij"/>
                         </connections>
                     </textField>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="IFU-W9-eTe">
+                        <rect key="frame" x="280" y="521" width="110" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Show gatherings" bezelStyle="regularSquare" imagePosition="left" controlSize="small" inset="2" id="tBP-Qv-dNi">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="switchShowGatherings:" target="-2" id="Fbc-RO-T1K"/>
+                        </connections>
+                    </button>
                 </subviews>
                 <constraints>
                     <constraint firstItem="uPW-ug-3V2" firstAttribute="leading" secondItem="Tgb-tI-PQH" secondAttribute="trailing" constant="11" id="0hr-gI-iPy"/>

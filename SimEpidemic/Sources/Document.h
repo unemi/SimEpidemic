@@ -30,7 +30,7 @@ extern void my_exit(void);
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
 		*scenarioText, *animeStepsTxt, *stopAtNDaysDgt;
-	IBOutlet NSButton *startBtn, *stepBtn, *stopAtNDaysCBox;
+	IBOutlet NSButton *startBtn, *stepBtn, *stopAtNDaysCBox, *showGatheringsCBox;
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;

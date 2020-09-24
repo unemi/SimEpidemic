@@ -109,20 +109,23 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"mass", {.f = { 50., 10., 100.}}},
 	{ ParamTypeFloat, @"friction", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"avoidance", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloat, @"infectionProberbility", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloat, @"infectionDistance", {.f = { 4., 1., 20.}}},
-	{ ParamTypeFloat, @"distancingStrength", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
-	{ ParamTypeFloat, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloat, @"gatheringFrequency", {.f = { 30., 0., 100.}}},
-	{ ParamTypeFloat, @"contactTracing", {.f = { 20., 0., 100.}}},
-	{ ParamTypeFloat, @"testDelay", {.f = { 1., 0., 10.}}},
-	{ ParamTypeFloat, @"testProcess", {.f = { 1., 0., 10.}}},
-	{ ParamTypeFloat, @"testInterval", {.f = { 2., 0., 10.}}},
-	{ ParamTypeFloat, @"testSensitivity", {.f = { 70., 0., 100.}}},
-	{ ParamTypeFloat, @"testSpecificity", {.f = { 99.8, 0., 100.}}},
-	{ ParamTypeFloat, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
-	{ ParamTypeFloat, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
+	{ ParamTypeFloat, @"contagionDelay", {.f = { .5, 0., 10.}}},
+	{ ParamTypeFloat, @"contagionPeak", {.f = { 3., 1., 10.}}},
+
+	{ ParamTypeFloatS, @"infectionProberbility", {.f = { 80., 0., 100.}}},
+	{ ParamTypeFloatS, @"infectionDistance", {.f = { 3., .1, 10.}}},
+	{ ParamTypeFloatS, @"distancingStrength", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloatS, @"distancingObedience", {.f = { 20., 0., 100.}}},
+	{ ParamTypeFloatS, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloatS, @"gatheringFrequency", {.f = { 30., 0., 100.}}},
+	{ ParamTypeFloatS, @"contactTracing", {.f = { 20., 0., 100.}}},
+	{ ParamTypeFloatS, @"testDelay", {.f = { 1., 0., 10.}}},
+	{ ParamTypeFloatS, @"testProcess", {.f = { 1., 0., 10.}}},
+	{ ParamTypeFloatS, @"testInterval", {.f = { 2., 0., 10.}}},
+	{ ParamTypeFloatS, @"testSensitivity", {.f = { 70., 0., 100.}}},
+	{ ParamTypeFloatS, @"testSpecificity", {.f = { 99.8, 0., 100.}}},
+	{ ParamTypeFloatS, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
+	{ ParamTypeFloatS, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
 
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
@@ -153,7 +156,8 @@ NSDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
 	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
-		case ParamTypeFloat: if (fp != NULL) md[p->key] = @(*(fp ++)); break;
+		case ParamTypeFloat: case ParamTypeFloatS:
+			if (fp != NULL) md[p->key] = @(*(fp ++)); break;
 		case ParamTypeDist: if (dp != NULL) {
 			md[p->key] = @[@(dp[0].min), @(dp[0].max), @(dp[0].mode)];
 			dp ++;
@@ -215,9 +219,11 @@ void setup_colors(void) {
 @implementation AppDelegate
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
 	nCores = NSProcessInfo.processInfo.processorCount;
-	NSInteger nF = 0, nD = 0, nI = 0;
+	NSInteger nF = 0, nFS = 0, nD = 0, nI = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
-		case ParamTypeFloat: (&defaultRuntimeParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
+		case ParamTypeFloatS: nFS ++;
+		case ParamTypeFloat:
+			(&defaultRuntimeParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
 		case ParamTypeDist: (&defaultRuntimeParams.PARAM_D1)[nD ++] = (DistInfo){
 			p->v.d.defMin, p->v.d.defMax, p->v.d.defMode}; break;
 		case ParamTypeInteger: (&defaultWorldParams.PARAM_I1)[nI ++] = p->v.i.defaultValue;
@@ -231,7 +237,8 @@ void setup_colors(void) {
 		ParamInfo *p = paramInfo + i;
 		keys[i] = p->key;
 		switch (p->type) {
-			case ParamTypeFloat: indexes[i] = @(i);
+			case ParamTypeFloat: case ParamTypeFloatS:
+			indexes[i] = @(i);
 			names[i] = NSLocalizedString(p->key, nil);
 			fmt = NSNumberFormatter.new;
 			fmt.allowsFloats = YES;
@@ -254,7 +261,7 @@ void setup_colors(void) {
 		}
 	}
 	paramKeys = [NSArray arrayWithObjects:keys count:nn];
-	paramNames = [NSArray arrayWithObjects:names count:nF];
+	paramNames = [NSArray arrayWithObjects:names + nF - nFS count:nFS];
 	paramFormatters = [NSArray arrayWithObjects:formatters count:nF + nI];
 	paramKeyFromName = [NSDictionary dictionaryWithObjects:keys forKeys:names count:nF];
 	paramIndexFromKey = [NSDictionary dictionaryWithObjects:indexes forKeys:keys count:nn];

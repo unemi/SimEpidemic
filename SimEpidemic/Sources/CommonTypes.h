@@ -40,6 +40,7 @@ typedef struct {
 
 typedef struct {
 	CGFloat mass, friction, avoidance;
+	CGFloat contagDelay, contagPeak; // contagion delay and peak;
 	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat dstST, dstOB; // Distancing strength and obedience
 	CGFloat mobFr; // Mobility frequency
@@ -48,7 +49,7 @@ typedef struct {
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
 	DistInfo mobDist; // and distance
-	DistInfo incub, fatal, recov, immun; // incubation, fatality, recovery, immunity
+	DistInfo incub, fatal, recov, immun; // contagiousness, incubation, fatality, recovery, immunity
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
 	NSInteger step;
 } RuntimeParams;
@@ -57,6 +58,7 @@ typedef struct {
 } WorldParams;
 
 #define PARAM_F1 mass
+#define PARAM_FS1 infec
 #define PARAM_D1 mobDist
 #define PARAM_I1 initPop
 

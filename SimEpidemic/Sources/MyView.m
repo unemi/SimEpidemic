@@ -67,10 +67,11 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 			if (should_draw_rect(cellRect, dRect)) for (Agent *a = pop[i]; a; a = a->next)
 				show_agent(a, dType, dRect, pathsI);
 		}
-		CGFloat rgb[3];
-		[stateColors[ColGathering] getRed:rgb green:rgb+1 blue:rgb+2 alpha:NULL];
-		for (Gathering *gat in doc.gatherings) [gat drawItWithRGB:rgb rect:dRect];
-	}
+		if (_showGatherings) {
+			CGFloat rgb[3];
+			[stateColors[ColGathering] getRed:rgb green:rgb+1 blue:rgb+2 alpha:NULL];
+			for (Gathering *gat in doc.gatherings) [gat drawItWithRGB:rgb rect:dRect];
+	}}
 	attr[NSForegroundColorAttributeName] = stateColors[ColText];
 	if (NSIntersectsRect(cemeteryRect, dRect)) {
 		[stateColors[ColCemetery] setFill];

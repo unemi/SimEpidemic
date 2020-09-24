@@ -140,11 +140,13 @@ static NSNumberFormatter *distDgtFmt = nil;
 	wFrame.size.height += dh; wFrame.origin.y -= dh;
 	[self.window setFrame:wFrame display:NO];
     fDigits = @[massDgt, fricDgt, avoidDgt,
-		infecDgt, infecDstDgt, dstSTDgt, dstOBDgt, mobFrDgt, gatFrDgt, cntctTrcDgt,
+		infecDgt, infecDstDgt, contagDDgt, contagPDgt,
+		dstSTDgt, dstOBDgt, mobFrDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt];
 	fSliders = @[massSld, fricSld, avoidSld,
-		infecSld, infecDstSld, dstSTSld, dstOBSld, mobFrSld, gatFrSld, cntctTrcSld,
+		infecSld, infecDstSld, contagDSld, contagPSld,
+		dstSTSld, dstOBSld, mobFrSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld];
 	dDigits = @[
