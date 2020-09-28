@@ -1,0 +1,54 @@
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>SimEpidemic noGUITest: BatchJob</title>
+<script type="text/javascript">
+function getJobID(ifrm) {
+	let jobID = ifrm.contentDocument.getElementsByTagName('pre')[0].innerText;
+	console.log("jobID = " + jobID);
+	const jobIDs = document.getElementsByClassName('JobID');
+	for (var i = 0; i < jobIDs.length; i ++)
+		jobIDs[i].value = jobID;
+}
+</script>
+</head>
+<body>
+<h1>BatchJob</h1>
+<h2>Submission</h2>
+<form method="post" action="submitJob" target="submission">
+	<textarea name="job" rows="10" cols="60">
+{"stopAt":100,"n":3,
+"params":{"stepsPerDay":4},
+"out":[
+	"asymptomatic","symptomatic","recovered","died",
+	"dailyTestPositive","dailyTestNegative",
+	"incubasionPeriod","recoveryPeriod","fatalPeriod","infects"]}
+	</textarea>
+	<input type="submit" value="投入">
+	</form>
+<iframe name="submission" height=24 onload="getJobID(this);"></iframe>
+<hr/>
+<h2>Job Status / Stop</h2>
+<form method="get" target="jobStatus">
+	Job ID: <input class="JobID" type="text" name="job">
+	<input type="submit" value="状態" formaction="getJobStatus">
+	<input type="submit" value="実行中止" formaction="stopJob">
+</form>
+<iframe name="jobStatus" height=24 width=400></iframe>
+<hr/>
+<h2>Job Results</h2>
+<form method="get" action="getJobResults" target="jobResults">
+	Job ID: <input class="JobID" type="text" name="job">
+	<input type="submit" value="結果">
+</form>
+<iframe name="jobResults" width=400></iframe>
+<hr/>
+<form method="get" action="getJobResults" target="jobResultSave">
+	Job ID: <input class="JobID" type="text" name="job">
+	File to save: <input type="text" name="save" value="MyResult">
+	<input type="submit" value="保存">
+</form>
+<iframe name="jobResultSave" height=24></iframe>
+<hr/>
+</body>
+</html>

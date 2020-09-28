@@ -63,7 +63,7 @@ extern void my_exit(void);
 @property (readonly) NSString *ID;
 @property (readonly) NSLock *lastTLock;
 @property NSDate *lastTouch;
-@property NSNumber *docKey;
+@property NSString *docKey;
 @property void (^stopCallBack)(LoopMode);
 - (BOOL)touch;
 - (void)start:(NSInteger)stopAt;

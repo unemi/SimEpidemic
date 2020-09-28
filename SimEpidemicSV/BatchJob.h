@@ -18,7 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 	NSMutableDictionary<NSNumber *, Document *> *runningTrials;
 	NSMutableArray<Document *> *availableWorlds;
 	NSInteger nextTrialNumber;
-	NSNumber *ip4addr;
+	NSString *browserID;
+	NSArray<NSString *> *output_n, *output_d, *output_D;
 }
 @property (readonly) NSString *ID;
 @property (readonly) NSDictionary<NSString *, NSNumber *> *parameters;

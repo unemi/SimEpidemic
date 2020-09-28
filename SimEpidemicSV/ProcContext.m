@@ -40,7 +40,7 @@ static NSString *headerFormat = @"HTTP/1.1 %03d %@\nDate: %@\nServer: simepidemi
 }
 @end
 
-Document *make_new_world(NSString *type, NSNumber *ip4addr) {
+Document *make_new_world(NSString *type, NSString *browserID) {
 	if (theDocuments.count >= maxNDocuments) @throw [NSString stringWithFormat:
 		@"500 This server already have too many (%ld) worlds.", maxNDocuments];
 	Document *doc = Document.new;
@@ -48,8 +48,8 @@ Document *make_new_world(NSString *type, NSNumber *ip4addr) {
 	[NSTimer scheduledTimerWithTimeInterval:documentTimeout target:doc
 		selector:@selector(expirationCheck:) userInfo:nil repeats:NO];
 	os_log(OS_LOG_DEFAULT,
-		"%@ world %{network:in_addr}d:%@ was created. %ld world(s) in total.",
-		type, ip4addr.intValue, doc.ID, theDocuments.count);
+		"%@ world %@ was created for %@. %ld world(s) in total.",
+		type, doc.ID, browserID, theDocuments.count);
 	return doc;
 }
 @implementation ProcContext
@@ -57,7 +57,7 @@ Document *make_new_world(NSString *type, NSNumber *ip4addr) {
 	if (!(self = [super init])) return nil;
 	desc = dsc;
 	bufData = [NSMutableData dataWithLength:BUFFER_SIZE];
-	ip4addr = @(ipaddr);
+	ip4addr = ipaddr;
 	if (commandList == nil) commandList = @[
 		@"getWorldID", @"newWorld", @"closeWorld",
 		@"getParams", @"setParams",
@@ -209,7 +209,6 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	return headers;
 }
 - (void)makeResponse {
-	printf("makeResponse 1\n");
 	content = moreHeader = nil;
 	NSString *req = [NSString stringWithUTF8String:bufData.bytes];
 	NSScanner *scan = [NSScanner scannerWithString:req];
@@ -313,17 +312,24 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	for (; idx < 80; idx ++) if (p[idx] < ' ') { p[idx] = '\0'; break; }
 	if (idx >= 80) memcpy(p + idx, "...", 4);
 	os_log(OS_LOG_DEFAULT, "%d %ld %{network:in_addr}d %s",
-		code, length, ip4addr.intValue, p);
+		code, length, ip4addr, p);
+}
+static NSString *ip4_string(uint32 ip4addr) {
+	uint32 a = EndianU32_BtoN(ip4addr);
+	return [NSString stringWithFormat:@"%d.%d.%d.%d",
+		a >> 24, (a >> 16) & 0xff, (a >> 8) & 0xff, a & 0xff];
 }
 - (void)checkDocument {
-	NSString *worldID = query[@"world"];
+	NSString *brwsID = query[@"me"], *worldID = query[@"world"];
+	if (brwsID != nil) browserID = brwsID;
 	if (worldID == nil) worldID = query[@"name"];
 	if (worldID == nil || [worldID isEqualToString:@"default"]) {
-		document = defaultDocuments[ip4addr];
+		document = defaultDocuments[browserID];
 		if (document == nil || ![document touch]) {
-			document = make_new_world(@"Default", ip4addr);
-			defaultDocuments[ip4addr] = document;
-			document.docKey = ip4addr;
+			if (browserID == nil) browserID = ip4_string(ip4addr);
+			document = make_new_world(@"Default", browserID);
+			defaultDocuments[browserID] = document;
+			document.docKey = browserID;
 		}
 	} else {
 		document = theDocuments[worldID];
@@ -331,14 +337,11 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 			@"500 World of ID %@ doesn't exist.", worldID];
 	}
 }
-- (NSUInteger)JSONOptions {
-	NSString *valueStr = query[@"format"];
-	return (valueStr == nil)? JSONOptions : valueStr.integerValue;
-}
 - (void)setJSONDataAsResponse:(NSObject *)object {
+	NSString *valueStr = query[@"format"];
 	NSError *error;
 	content = [NSJSONSerialization dataWithJSONObject:object 
-		options:self.JSONOptions error:&error];
+		options:(valueStr == nil)? JSONOptions : valueStr.integerValue error:&error];
 	if (content == nil) @throw [NSString stringWithFormat:
 		@"500 Couldn't make a JSON data: %@", error.localizedDescription];
 	type = @"application/json";
@@ -366,7 +369,8 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	[self setWorldIDAsResponse];
 }
 - (void)newWorld {
-	document = make_new_world(@"New", ip4addr);
+	document = make_new_world(@"New",
+		(browserID == nil)? ip4_string(ip4addr) : browserID);
 	[self setWorldIDAsResponse];
 }
 - (void)closeWorld {
@@ -498,14 +502,14 @@ static NSObject *make_history(StatData *st, NSInteger nItems,
 	if (md.count == 0) @throw @"417 No valid index names are specified.";
 	[self setJSONDataAsResponse:md];
 }
+- (NSDictionary<NSString *, NSArray<MyCounter *> *> *)distributionNameMap {
+	StatInfo *statInfo = document.statInfo;
+	return [NSDictionary dictionaryWithObjects:
+			@[statInfo.IncubPHist, statInfo.RecovPHist,
+			statInfo.DeathPHist, statInfo.NInfectsHist] forKeys:distributionNames];
+}
 - (void)getDistribution {
 	[self checkDocument];
-	StatInfo *statInfo = document.statInfo;
-	NSDictionary<NSString *, NSArray<MyCounter *> *> *nameMap =
-		@{@"incubasionPeriod":statInfo.IncubPHist,
-		@"recoveryPeriod":statInfo.RecovPHist,
-		@"fatalPeriod":statInfo.DeathPHist,
-		@"infects":statInfo.NInfectsHist };
 	NSMutableSet *distNames = NSMutableSet.new;
 	for (NSString *key in query.keyEnumerator) {
 		if ([key isEqualToString:@"names"])
@@ -515,6 +519,7 @@ static NSObject *make_history(StatData *st, NSInteger nItems,
 	}
 	if (distNames.count == 0) @throw @"417 Distribution name is not sepcified.";
 	NSMutableDictionary *md = NSMutableDictionary.new;
+	NSDictionary<NSString *, NSArray<MyCounter *> *> *nameMap = self.distributionNameMap;
 	[document popLock];
 	for (NSString *distName in distNames) {
 		NSArray<MyCounter *> *hist = nameMap[distName];

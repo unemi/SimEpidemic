@@ -2,8 +2,22 @@
 <head>
 <meta charset="utf-8"/>
 <title>SimEpidemic noGUITest</title>
+<script type="text/javascript">
+function setup() {
+	const browserID = "" + Date.now();
+	const forms = document.forms;
+	for (var i = 0; i < forms.length; i ++) {
+		const elm = document.createElement('input');
+		elm.type = 'hidden';
+		elm.name = 'me';
+		elm.value = browserID;
+		forms[i].appendChild(elm);
+	}
+}
+</script>
 </head>
-<body>
+<body onload="setup()">
+<a href="batch.html">Batch Job</a>
 <h2>getParams</h2>
 <table><tr><td style="vertical-align: top">
 	<form method="get" action="getParams" target="currentParams">

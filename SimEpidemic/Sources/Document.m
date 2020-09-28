@@ -841,7 +841,8 @@ static NSInteger mCount = 0, mCount2 = 0;
 			[self execScenario];
 			loopMode = LoopRunning;
 		}
-		if (stopAtNDays > 0 && stopAtNDays * worldParams.stepsPerDay == runtimeParams.step) {
+		if (stopAtNDays > 0 && runtimeParams.step
+			== stopAtNDays * worldParams.stepsPerDay - 1) {
 			loopMode = LoopEndAsDaysPassed;
 			break;
 		}

@@ -232,7 +232,6 @@ void setup_colors(void) {
 	NSInteger nn = nF + nD + nI;
 	NSString *keys[nn], *names[nF];
 	NSNumber *indexes[nn];
-	NSNumberFormatter *formatters[nF + nI], *fmt;
 	for (NSInteger i = 0; i < nn; i ++) {
 		ParamInfo *p = paramInfo + i;
 		keys[i] = p->key;
@@ -240,6 +239,28 @@ void setup_colors(void) {
 			case ParamTypeFloat: case ParamTypeFloatS:
 			indexes[i] = @(i);
 			names[i] = NSLocalizedString(p->key, nil);
+			break;
+			case ParamTypeDist: indexes[i] = @(i - nF + IDX_D); break;
+			case ParamTypeInteger: indexes[i] = @(i - nF - nD + IDX_I);
+			default: break;
+		}
+	}
+	paramKeys = [NSArray arrayWithObjects:keys count:nn];
+	paramNames = [NSArray arrayWithObjects:names + nF - nFS count:nFS];
+	paramKeyFromName = [NSDictionary dictionaryWithObjects:keys forKeys:names count:nF];
+	paramIndexFromKey = [NSDictionary dictionaryWithObjects:indexes forKeys:keys count:nn];
+	memcpy(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams));
+	memcpy(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
+	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
+#ifdef NOGUI
+	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
+#else
+	NSNumberFormatter *formatters[nF + nI], *fmt;
+	for (NSInteger i = 0; i < nn; i ++) {
+		ParamInfo *p = paramInfo + i;
+		keys[i] = p->key;
+		switch (p->type) {
+			case ParamTypeFloat: case ParamTypeFloatS:
 			fmt = NSNumberFormatter.new;
 			fmt.allowsFloats = YES;
 			fmt.minimum = @(p->v.f.minValue);
@@ -248,8 +269,7 @@ void setup_colors(void) {
 			fmt.minimumIntegerDigits = 1;
 			formatters[i] = fmt;
 			break;
-			case ParamTypeDist: indexes[i] = @(i - nF + IDX_D); break;
-			case ParamTypeInteger: indexes[i] = @(i - nF - nD + IDX_I);
+			case ParamTypeInteger:
 			fmt = NSNumberFormatter.new;
 			fmt.allowsFloats = NO;
 			fmt.minimum = @(p->v.i.minValue);
@@ -260,18 +280,9 @@ void setup_colors(void) {
 			default: break;
 		}
 	}
-	paramKeys = [NSArray arrayWithObjects:keys count:nn];
-	paramNames = [NSArray arrayWithObjects:names + nF - nFS count:nFS];
 	paramFormatters = [NSArray arrayWithObjects:formatters count:nF + nI];
-	paramKeyFromName = [NSDictionary dictionaryWithObjects:keys forKeys:names count:nF];
-	paramIndexFromKey = [NSDictionary dictionaryWithObjects:indexes forKeys:keys count:nn];
-	memcpy(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams));
-	memcpy(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
-	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
-#ifdef NOGUI
-	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
-#else
 	NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;
+
 	NSNumber *num;
 	NSArray<NSNumber *> *arr;
 	if ((num = [ud objectForKey:keyAnimeSteps])) defaultAnimeSteps = num.integerValue;

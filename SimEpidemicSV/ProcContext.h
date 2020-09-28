@@ -10,12 +10,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class Document;
-extern Document *make_new_world(NSString *type, NSNumber *ip4addr);
+@class Document, MyCounter;
+extern Document *make_new_world(NSString *type, NSString *browserID);
 
 @interface ProcContext : NSObject {
 	int desc, code;
-	NSNumber *ip4addr;
+	uint32 ip4addr;
+	NSString *browserID;
 	Document *document;
 	NSMutableData *bufData;	// buffer to receive
 	long dataLength;
@@ -26,8 +27,11 @@ extern Document *make_new_world(NSString *type, NSNumber *ip4addr);
 }
 - (instancetype)initWithSocket:(int)desc ip:(uint32)ipaddr;
 - (long)receiveData:(NSInteger)length;
+- (void)setOKMessage;
 - (void)notImplementedYet;
 - (void)makeResponse;
+- (void)setJSONDataAsResponse:(NSObject *)object;
+- (NSDictionary<NSString *, NSArray<MyCounter *> *> *)distributionNameMap;
 @end
 
 NS_ASSUME_NONNULL_END

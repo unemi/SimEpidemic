@@ -27,13 +27,14 @@ static void unix_error_msg(NSString *msg, int code) {
 }
 
 NSMutableDictionary<NSString *, id> *infoDictionary = nil;
-NSMutableDictionary<NSNumber *, Document *> *defaultDocuments = nil;
+NSMutableDictionary<NSString *, Document *> *defaultDocuments = nil;
 NSMutableDictionary<NSString *, Document *> *theDocuments = nil;
 NSUInteger JSONOptions = 0;
 NSInteger maxPopSize = 1000000, maxNDocuments = 128, maxRuntime = 48*3600,
 	documentTimeout = 20*60, maxJobsInQueue = 64, maxTrialsAtSameTime = 4;
 NSString *fileDirectory = nil, *dataDirectory = nil;
 NSDictionary *extToMime, *codeMeaning, *indexNames;
+NSArray *distributionNames;
 NSDateFormatter *dateFormat = nil;
 static NSString *infoFilename = @"simeipInfo.plist",
 	*keyUniqIDCounter = @"uniqIDCounter", *keyUniqIDChars = @"uniqIDChars";
@@ -249,6 +250,8 @@ printf("fileDir=%s\ndataDir=%s\n", fileDirectory.UTF8String, dataDirectory.UTF8S
 	codeMeaning = code_meaning_map();
 	extToMime = ext_mime_map();
 	indexNames = index_name_map();
+	distributionNames =
+		@[@"incubasionPeriod", @"recoveryPeriod", @"fatalPeriod", @"infects"];
 //
 	signal(SIGTERM, catch_signal);
 // Open the server side socket to wait for connection request from a client.
