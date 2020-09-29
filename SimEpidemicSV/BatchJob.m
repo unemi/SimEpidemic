@@ -8,10 +8,10 @@
 
 #import "BatchJob.h"
 #import "noGUI.h"
+#import "ProcContext.h"
 #import "Document.h"
 #import "StatPanel.h"
 #import <os/log.h>
-#import <unistd.h>
 
 typedef enum { IdxTypeIndex, IdxTypeTestI, IdxTypeTestF, IdxTypeUnknown } IndexType;
 static NSDictionary *indexNameToIndex = nil, *testINameToIdx = nil;
@@ -75,11 +75,12 @@ static NSDictionary *indexNameToIndex = nil, *testINameToIdx = nil;
 - (NSArray *)objectOfHistgramTableWithNames:(NSArray *)names {
 	NSMutableArray<NSString *> *head = [NSMutableArray arrayWithArray:names];
 	NSMutableArray<NSMutableArray<MyCounter *> *> *cols = NSMutableArray.new;
+	NSDictionary *histDict = [NSDictionary dictionaryWithObjects:
+		@[self.IncubPHist, self.RecovPHist, self.DeathPHist, self.NInfectsHist]
+		forKeys:distributionNames];
 	for (NSString *name in names) {
-		if ([name isEqualToString:@"incubasionPeriod"]) [cols addObject:self.IncubPHist];
-		else if ([name isEqualToString:@"recoveryPeriod"]) [cols addObject:self.RecovPHist];
-		else if ([name isEqualToString:@"fatalPeriod"]) [cols addObject:self.DeathPHist];
-		else if ([name isEqualToString:@"infects"]) [cols addObject:self.NInfectsHist];
+		NSMutableArray<MyCounter *> *hist = histDict[name];
+		if (hist != nil) [cols addObject:hist];
 		else [head removeObject:name];
 	}
 	[head insertObject:@"" atIndex:0];
@@ -135,13 +136,55 @@ static JobController *theJobController = nil;
 	return [jobQueue indexOfObject:job];
 }
 @end
-
 static NSString *batch_job_dir(void) {
 	static NSString *batchJobDir = nil;
 	if (batchJobDir == nil) batchJobDir =
 		[dataDirectory stringByAppendingPathComponent:@"BatchJob"];
 	return batchJobDir;
 }
+void schedule_job_expiration_check(void) { // called from AppDelegate
+	[NSTimer scheduledTimerWithTimeInterval:3600 repeats:YES
+	block:^(NSTimer * _Nonnull timer) {
+		@try {
+			NSFileManager *fm = NSFileManager.defaultManager;
+			NSURL *url = [NSURL fileURLWithPath:batch_job_dir()];
+			NSDirectoryEnumerator *dirEnum = [fm enumeratorAtURL:url
+				includingPropertiesForKeys:@[NSURLContentModificationDateKey] options:
+				NSDirectoryEnumerationSkipsSubdirectoryDescendants |
+				NSDirectoryEnumerationSkipsHiddenFiles
+				errorHandler:^BOOL(NSURL * _Nonnull url, NSError * _Nonnull error) {
+					os_log_error(OS_LOG_DEFAULT, "Job record enumeration %@: %@",
+						url.absoluteString, error.localizedDescription);
+					return YES;
+				}];
+			NSDate *pastDate = [NSDate dateWithTimeIntervalSinceNow:
+				jobRecExpirationHours * -3600.];
+			NSMutableArray<NSURL *> *dirsTobeRemoved = NSMutableArray.new;
+			NSError *error;
+			for (NSURL *url in dirEnum) {
+				NSDictionary *attr = [fm attributesOfItemAtPath:url.path error:&error];
+				if (attr == nil) {
+					os_log_error(OS_LOG_DEFAULT,
+						"Job record %@ failed to get attributes. %@",
+						url.path, error.localizedDescription);
+					continue;
+				}
+				NSDate *modDate = attr[NSURLContentModificationDateKey];
+				if (modDate == nil) os_log_error(OS_LOG_DEFAULT,
+					"Job record %@ failed to get the content modification date.", url.path);
+				else if ([pastDate compare:modDate] == NSOrderedDescending)
+					[dirsTobeRemoved addObject:url];
+			}
+			for (NSURL *url in dirsTobeRemoved)
+				if (![fm removeItemAtURL:url error:&error])
+					os_log_error(OS_LOG_DEFAULT, "Job record %@ couldn't be removed. %@",
+						url.path, error.localizedDescription);
+		} @catch (NSException *excp) {
+			os_log_error(OS_LOG_DEFAULT, "Job record expiration check: %@", excp.reason);
+		}
+	}];
+}
+
 @implementation BatchJob
 - (instancetype)initWithInfo:(NSDictionary *)info browser:(NSString *)brwsID {
 	if (!(self = [super init])) return nil;

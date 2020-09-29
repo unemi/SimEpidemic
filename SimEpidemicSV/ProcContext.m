@@ -10,9 +10,11 @@
 #import <os/log.h>
 #import "ProcContext.h"
 #import "noGUI.h"
+#import "Document.h"
 #import "StatPanel.h"
 #import "DataCompress.h"
 #define BUFFER_SIZE 8192
+#define MAX_INT32 0x7fffffff
 
 static NSArray<NSString *> *commandList = nil;
 static NSString *headerFormat = @"HTTP/1.1 %03d %@\nDate: %@\nServer: simepidemic\n\

@@ -585,7 +585,8 @@ static NSLock *testEntriesLock = nil;
 			NSPoint newPt = {
 				(random() * .248 / 0x7fffffff + 1.001) * worldParams.worldSize,
 				(random() * .458 / 0x7fffffff + .501) * worldParams.worldSize};
-			[self addNewWarp:[WarpInfo.alloc initWithAgent:a goal:newPt mode:WarpToHospital]];
+			[self addNewWarp:[WarpInfo.alloc initWithAgent:a
+				goal:newPt mode:WarpToHospital]];
 			for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
 				[self testInfectionOfAgent:c->agent reason:TestAsContact];
 			[cInfoLock lock];
@@ -603,7 +604,8 @@ static NSLock *testEntriesLock = nil;
 	// enqueue new tests
 	if (testEntriesLock == nil) testEntriesLock = NSLock.new;
 	[testEntriesLock lock];
-	for (NSNumber *num in testees.keyEnumerator) {
+	[testeesLock lock];
+	for (NSNumber *num in testees) {
 		testCount[testees[num].integerValue] ++;
 		Agent *agent = (Agent *)num.integerValue;
 		TestEntry *entry = new_testEntry();
@@ -617,6 +619,7 @@ static NSLock *testEntriesLock = nil;
 		entry->next = NULL;
 		testQueTail = entry;
 	}
+	[testeesLock unlock];
 	[testEntriesLock unlock];
 	[testees removeAllObjects];
 	for (NSInteger i = TestAsSymptom; i < TestPositive; i ++)

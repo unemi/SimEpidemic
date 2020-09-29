@@ -7,11 +7,12 @@
 //
 
 #import <AppKit/AppKit.h>
-#import "ProcContext.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @class Document;
+
+extern void schedule_job_expiration_check(void);
 
 @interface BatchJob : NSObject {
 	NSLock *lock;
@@ -26,9 +27,6 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly) NSArray *scenario;
 @property (readonly) NSInteger stopAt, nIteration;
 - (void)runNextTrial;
-@end
-
-@interface ProcContext (BatchJobExtension)
 @end
 
 @interface JobController : NSObject {

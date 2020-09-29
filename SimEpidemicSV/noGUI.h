@@ -7,14 +7,14 @@
 //
 
 #import <AppKit/AppKit.h>
-#import "Document.h"
-#define MAX_INT32 0x7fffffff
 
+@class Document;
 extern NSMutableDictionary<NSString *, Document *> *defaultDocuments;
 extern NSMutableDictionary<NSString *, Document *> *theDocuments;
 extern NSUInteger JSONOptions;
 extern NSInteger maxPopSize, maxNDocuments, maxRuntime,
-	documentTimeout, maxJobsInQueue, maxTrialsAtSameTime;
+	documentTimeout, maxJobsInQueue, maxTrialsAtSameTime,
+	jobRecExpirationHours;
 extern NSString *fileDirectory, *dataDirectory;
 extern NSDictionary *extToMime, *codeMeaning, *indexNames;
 extern NSArray *distributionNames;

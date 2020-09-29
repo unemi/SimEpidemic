@@ -10,6 +10,7 @@
 #import "Document.h"
 #ifdef NOGUI
 #import "../../SimEpidemicSV/noGUI.h"
+#import "../../SimEpidemicSV/BatchJob.h"
 #else
 #import "Preferences.h"
 #endif
@@ -254,6 +255,7 @@ void setup_colors(void) {
 	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 #ifdef NOGUI
 	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
+	schedule_job_expiration_check(); // defined in BatchJob.m
 #else
 	NSNumberFormatter *formatters[nF + nI], *fmt;
 	for (NSInteger i = 0; i < nn; i ++) {
