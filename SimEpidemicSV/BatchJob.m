@@ -143,42 +143,47 @@ static NSString *batch_job_dir(void) {
 	return batchJobDir;
 }
 void schedule_job_expiration_check(void) { // called from AppDelegate
+#ifdef DEBUG
+	[NSTimer scheduledTimerWithTimeInterval:1 repeats:NO
+#else
 	[NSTimer scheduledTimerWithTimeInterval:3600 repeats:YES
+#endif
 	block:^(NSTimer * _Nonnull timer) {
 		@try {
 			NSFileManager *fm = NSFileManager.defaultManager;
-			NSURL *url = [NSURL fileURLWithPath:batch_job_dir()];
-			NSDirectoryEnumerator *dirEnum = [fm enumeratorAtURL:url
-				includingPropertiesForKeys:@[NSURLContentModificationDateKey] options:
-				NSDirectoryEnumerationSkipsSubdirectoryDescendants |
-				NSDirectoryEnumerationSkipsHiddenFiles
-				errorHandler:^BOOL(NSURL * _Nonnull url, NSError * _Nonnull error) {
-					os_log_error(OS_LOG_DEFAULT, "Job record enumeration %@: %@",
-						url.absoluteString, error.localizedDescription);
-					return YES;
-				}];
+			NSString *dirPath = batch_job_dir();
+			NSDirectoryEnumerator *dirEnum = [fm enumeratorAtPath:dirPath];
 			NSDate *pastDate = [NSDate dateWithTimeIntervalSinceNow:
 				jobRecExpirationHours * -3600.];
-			NSMutableArray<NSURL *> *dirsTobeRemoved = NSMutableArray.new;
-			NSError *error;
-			for (NSURL *url in dirEnum) {
-				NSDictionary *attr = [fm attributesOfItemAtPath:url.path error:&error];
+			NSMutableArray<NSString *> *dirsTobeRemoved = NSMutableArray.new;
+			for (NSString *path in dirEnum) {
+				NSDictionary *attr = dirEnum.fileAttributes;
 				if (attr == nil) {
 					os_log_error(OS_LOG_DEFAULT,
-						"Job record %@ failed to get attributes. %@",
-						url.path, error.localizedDescription);
+						"Job record %@ failed to get attributes", path);
 					continue;
 				}
-				NSDate *modDate = attr[NSURLContentModificationDateKey];
+				if (![attr[NSFileType] isEqualTo:NSFileTypeDirectory]) continue;
+				NSDate *modDate = attr[NSFileModificationDate];
 				if (modDate == nil) os_log_error(OS_LOG_DEFAULT,
-					"Job record %@ failed to get the content modification date.", url.path);
+					"Job record %@ failed to get the content modification date.", path);
 				else if ([pastDate compare:modDate] == NSOrderedDescending)
-					[dirsTobeRemoved addObject:url];
+					[dirsTobeRemoved addObject:path];
+				[dirEnum skipDescendents];
 			}
-			for (NSURL *url in dirsTobeRemoved)
-				if (![fm removeItemAtURL:url error:&error])
+			if (dirsTobeRemoved.count > 0) {
+				NSMutableString *ms = NSMutableString.new;
+				NSString *pnc = @"";
+				for (NSString *name in dirsTobeRemoved)
+					{ [ms appendFormat:@"%@%@", pnc, name]; pnc = @", "; }
+				os_log(OS_LOG_DEFAULT, "Job records %@ are going to be removed.", ms);
+			}
+			NSError *error;
+			for (NSString *path in dirsTobeRemoved)
+				if (![fm removeItemAtPath:
+					[dirPath stringByAppendingPathComponent:path] error:&error])
 					os_log_error(OS_LOG_DEFAULT, "Job record %@ couldn't be removed. %@",
-						url.path, error.localizedDescription);
+						path, error.localizedDescription);
 		} @catch (NSException *excp) {
 			os_log_error(OS_LOG_DEFAULT, "Job record expiration check: %@", excp.reason);
 		}
