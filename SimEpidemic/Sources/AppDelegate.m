@@ -217,6 +217,9 @@ void setup_colors(void) {
 		}
 	}
 }
+#ifdef NOGUI
+static NSCondition *checkAlive = nil;
+#endif
 @implementation AppDelegate
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
 	nCores = NSProcessInfo.processInfo.processorCount;
@@ -254,7 +257,11 @@ void setup_colors(void) {
 	memcpy(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
 	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 #ifdef NOGUI
-	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
+	NSCondition *cond = checkAlive = NSCondition.new;
+	[NSThread detachNewThreadWithBlock:^{
+		connection_thread();
+		[cond signal];
+	}];
 	schedule_job_expiration_check(); // defined in BatchJob.m
 #else
 	NSNumberFormatter *formatters[nF + nI], *fmt;
@@ -307,7 +314,12 @@ void setup_colors(void) {
 	NSBezierPath.defaultLineJoinStyle = NSLineJoinStyleBevel;
 #endif
 }
-#ifndef NOGUI
+#ifdef NOGUI
+- (void)applicationWillTerminate:(NSNotification *)notification {
+	stillAlive = NO;
+	[checkAlive wait];
+}
+#else
 - (void)application:(NSApplication *)application openURLs:(NSArray<NSURL *> *)urls {
 	NSArray<Document *> *docs = NSDocumentController.sharedDocumentController.documents;
 	if (docs.count == 0) return;

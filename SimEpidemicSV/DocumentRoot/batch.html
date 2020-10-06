@@ -4,7 +4,9 @@
 <title>SimEpidemic noGUITest: BatchJob</title>
 <script type="text/javascript">
 function getJobID(ifrm) {
-	let jobID = ifrm.contentDocument.getElementsByTagName('pre')[0].innerText;
+	const plainTextObjs = ifrm.contentDocument.getElementsByTagName('pre');
+	if (plainTextObjs.length == 0) return;
+	const jobID = plainTextObjs[0].innerText;
 	const jobIDs = document.getElementsByClassName('JobID');
 	for (var i = 0; i < jobIDs.length; i ++)
 		jobIDs[i].value = jobID;

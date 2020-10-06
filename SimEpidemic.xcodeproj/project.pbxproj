@@ -106,6 +106,7 @@
 		2365DEC325061537006C2A95 /* noGUI.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = noGUI.m; sourceTree = "<group>"; };
 		2365DEC425061537006C2A95 /* noGUIInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = noGUIInfo.h; sourceTree = "<group>"; };
 		23666C63248C99BB00061274 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Preferences.strings; sourceTree = "<group>"; };
+		236BD9D2252ADD5300A1D21D /* control.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = control.html; sourceTree = "<group>"; };
 		2372797525203323000BC3C5 /* batch.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = batch.html; sourceTree = "<group>"; };
 		2378766825027AE500897003 /* simepidemic-model.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-model.md"; sourceTree = "<group>"; };
 		2378766925027AE500897003 /* simepidemic-http-server.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-http-server.md"; sourceTree = "<group>"; };
@@ -265,6 +266,7 @@
 			children = (
 				239A1AF32513707B00B92DAD /* index.html */,
 				2372797525203323000BC3C5 /* batch.html */,
+				236BD9D2252ADD5300A1D21D /* control.html */,
 				239A1AF4251370AA00B92DAD /* favicon.ico */,
 			);
 			path = DocumentRoot;

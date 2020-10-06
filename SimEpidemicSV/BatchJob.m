@@ -13,26 +13,9 @@
 #import "StatPanel.h"
 #import <os/log.h>
 
-typedef enum { IdxTypeIndex, IdxTypeTestI, IdxTypeTestF, IdxTypeUnknown } IndexType;
-static NSDictionary *indexNameToIndex = nil, *testINameToIdx = nil;
 @implementation StatInfo (JobResultExtension)
 - (NSArray *)objectWithStatData:(StatData *)statData
 	skip:(NSInteger)stepSkip names:(NSArray *)names {
-	if (indexNameToIndex == nil) indexNameToIndex = @{
-		@"susceptible":@(Susceptible),
-		@"asymptomatic":@(Asymptomatic),
-		@"symptomatic":@(Symptomatic),
-		@"recovered":@(Recovered),
-		@"died":@(Died),
-		@"quarantineAsym":@(QuarantineAsym),
-		@"quarantineSymp":@(QuarantineSymp)};
-	if (testINameToIdx == nil) testINameToIdx = @{
-		@"testTotal":@(TestTotal),
-		@"testAsSymptom":@(TestAsSymptom),
-		@"testAsContact":@(TestAsContact),
-		@"testAsSuspected":@(TestAsSuspected),
-		@"testPositive":@(TestPositive),
-		@"testNegative":@(TestNegative)};
 	struct { IndexType type; NSInteger idx; } idxs[names.count];
 	for (NSInteger i = 0; i < names.count; i ++) {
 		NSNumber *num;
@@ -111,7 +94,7 @@ static JobController *theJobController = nil;
 - (void)tryNewTrial:(BOOL)trialFinished {
 	[lock lock];
 	if (trialFinished) nRunningTrials --;
-	if (jobQueue.count > 0 && nRunningTrials < maxTrialsAtSameTime) {
+	while (jobQueue.count > 0 && nRunningTrials < maxTrialsAtSameTime) {
 		[jobQueue[0] runNextTrial];
 		nRunningTrials ++;
 	}
@@ -124,10 +107,10 @@ static JobController *theJobController = nil;
 	[lock unlock];
 	[self tryNewTrial:NO];
 }
-- (void)jobDidComplete:(BatchJob *)job {
-	[lock lock];
+- (void)removeJobFromQueue:(BatchJob *)job shouldLock:(BOOL)shouldLock {
+	if (shouldLock) [lock lock];
 	[jobQueue removeObject:job];
-	[lock unlock];
+	if (shouldLock) [lock unlock];
 }
 - (BatchJob *)jobFromID:(NSString *)jobID { return theJobs[jobID]; }
 - (NSInteger)queueLength { return jobQueue.count; }
@@ -144,10 +127,11 @@ static NSString *batch_job_dir(void) {
 }
 void schedule_job_expiration_check(void) { // called from AppDelegate
 #ifdef DEBUG
-	[NSTimer scheduledTimerWithTimeInterval:1 repeats:NO
+	CGFloat interval = 1.; BOOL repeats = NO;
 #else
-	[NSTimer scheduledTimerWithTimeInterval:3600 repeats:YES
+	CGFloat interval = 3600.; BOOL repeats = YES;
 #endif
+	[NSTimer scheduledTimerWithTimeInterval:interval repeats:repeats
 	block:^(NSTimer * _Nonnull timer) {
 		@try {
 			NSFileManager *fm = NSFileManager.defaultManager;
@@ -191,7 +175,18 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 }
 
 @implementation BatchJob
-- (instancetype)initWithInfo:(NSDictionary *)info browser:(NSString *)brwsID {
+- (void)monitorProgress {
+	if (runningTrials.count == 0) return;
+	char buf[128];
+	int k = 0;
+	for (NSNumber *num in runningTrials) {
+		k += snprintf(buf + k, 128 - k, "%ld:%ld, ", num.integerValue,
+			runningTrials[num].runtimeParamsP->step);
+		if (k >= 127) break;
+	}
+	os_log(OS_LOG_DEFAULT, "%s", buf);
+}
+- (instancetype)initWithInfo:(NSDictionary *)info {
 	if (!(self = [super init])) return nil;
 	_ID = new_uniq_string();
 	_parameters = info[@"params"];
@@ -200,7 +195,6 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 	_stopAt = ((num = info[@"stopAt"]) == nil)? 0 : num.integerValue;
 	_nIteration = ((num = info[@"n"]) == nil)? 1 : num.integerValue;
 	if (_nIteration <= 1) _nIteration = 1;
-	browserID = brwsID;
 	NSArray<NSString *> *output = info[@"out"];
 	NSInteger n = output.count, nn = 0, nd = 0, nD = 0;
 	NSString *an[n], *ad[n], *aD[n];
@@ -209,8 +203,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 		else if ([key hasPrefix:@"daily"]) {
 			unichar uc = [key characterAtIndex:5];
 			if (uc < 'A' || uc > 'Z') continue;
-			NSString *newKey = [NSString stringWithFormat:@"%c%@",
-				uc + 'a' - 'A', [key substringFromIndex:6]];
+			NSString *newKey = key.stringByRemovingFirstWord;
 			if (indexNames[newKey] != nil) ad[nd ++] = newKey;
 		} if ([distributionNames containsObject:key]) aD[nD ++] = key;
 	}
@@ -220,6 +213,10 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 	lock = NSLock.new;
 	runningTrials = NSMutableDictionary.new;
 	availableWorlds = NSMutableArray.new;
+
+	in_main_thread(^{
+		[NSTimer scheduledTimerWithTimeInterval:.5 repeats:YES block:
+			^(NSTimer * _Nonnull timer) { [self monitorProgress]; }]; });
 	return self;
 }
 - (void)makeDataFileWith:(NSNumber *)number type:(NSString *)type
@@ -242,7 +239,8 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 		number, _nIteration, _ID,
 		(mode == LoopFinished)? @"no more infected individuals" :
 		(mode == LoopEndByCondition)? @"condition in scenario" :
-		(mode == LoopEndAsDaysPassed)? @"specified days passed" : @"unknown reason");
+		(mode == LoopEndAsDaysPassed)? @"specified days passed" :
+		(mode == LoopEndByTimeLimit)? @"time limit reached" : @"unknown reason");
 	@try {
 		BOOL isDir;
 		NSError *error;
@@ -268,35 +266,38 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 		os_log_error(OS_LOG_DEFAULT, "%@", error.localizedDescription);
 	}
 // check next trial
-	if (nextTrialNumber >= _nIteration)
-		[theJobController jobDidComplete:self];
-	else {
-		[lock lock];
-		[availableWorlds addObject:runningTrials[number]];
-		[runningTrials removeObjectForKey:number];
-		[lock unlock];
+	[lock lock];
+	[availableWorlds addObject:runningTrials[number]];
+	[runningTrials removeObjectForKey:number];
+	if (nextTrialNumber >= _nIteration) {
+		for (Document *doc in availableWorlds) [doc discardMemory];
+		[availableWorlds removeAllObjects];
 	}
+	[lock unlock];
 	[theJobController tryNewTrial:YES];
 }
 - (void)runNextTrial {
 	Document *doc = nil;
 	[lock lock];
 	if (availableWorlds.count <= 0) {
-		doc = make_new_world(@"Job", browserID);
+		doc = make_new_world(@"Job", nil);
 		[doc setScenarioWithPList:_scenario];
-		set_params_from_dict(doc.initParamsP, doc.worldParamsP, _parameters);
+		set_params_from_dict(doc.runtimeParamsP, doc.worldParamsP, _parameters);
+		set_params_from_dict(doc.initParamsP, doc.tmpWorldParamsP, _parameters);
 	} else {
 		doc = [availableWorlds lastObject];
 		[availableWorlds removeLastObject];
 		[doc resetPop];
 	}
 	NSNumber *trialNumb = @(++ nextTrialNumber);
-	[lock unlock];
+	runningTrials[trialNumb] = doc;
+	if (nextTrialNumber >= _nIteration)
+		[theJobController removeJobFromQueue:self shouldLock:NO];
 	doc.stopCallBack = ^(LoopMode mode){
 		[self trialDidFinish:trialNumb mode:mode];
 	};
 	[doc start:_stopAt];
-	runningTrials[trialNumb] = doc;
+	[lock unlock];
 	os_log(OS_LOG_DEFAULT, "Trial %@/%ld of job %@ started on world %@.",
 		trialNumb, _nIteration, _ID, doc.ID);
 }
@@ -307,8 +308,12 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 		@"finished":@(nextTrialNumber - nowProcessed) };
 }
 - (void)stop {
-	for (Document *doc in runningTrials.objectEnumerator) [doc stop];
-	[theJobController jobDidComplete:self];
+	[lock lock];
+	for (Document *doc in runningTrials.objectEnumerator)
+		[doc stop:LoopEndByUser];
+	if (nextTrialNumber < _nIteration)
+		[theJobController removeJobFromQueue:self shouldLock:YES];
+	[lock unlock];
 }
 @end
 
@@ -326,7 +331,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 		jobData options:0 error:&error];
 	if (jobInfo == nil)
 		@throw [NSString stringWithFormat:@"417 %@", error.localizedDescription];
-	BatchJob *job = [BatchJob.alloc initWithInfo:jobInfo browser:browserID];
+	BatchJob *job = [BatchJob.alloc initWithInfo:jobInfo];
 	if (job == nil) @throw @"500 Couldn't make a batch job.";
 	if (theJobController == nil) theJobController = JobController.new;
 	os_log(OS_LOG_DEFAULT, "Job %@ was submitted from %{network:in_addr}d.",

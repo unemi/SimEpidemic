@@ -26,7 +26,14 @@ static StatData *new_stat(void) {
 	memset(a, 0, sizeof(StatData));
 	return a;
 }
-
+static void free_stat_mem(StatData **memp) {
+	if (*memp == NULL) return;
+	StatData **p = memp;
+	while ((*p)->next) p = &((*p)->next);
+	*p = freeStat;
+	freeStat = *memp;
+	*memp = NULL;
+}
 @implementation MyCounter
 - (instancetype)init {
 	if ((self = [super init]) == nil) return nil;
@@ -72,7 +79,9 @@ static StatData *new_stat(void) {
 	_DeathPHist = NSMutableArray.new;
 	_NInfectsHist = NSMutableArray.new;
 	scenarioPhases = NSMutableArray.new;
+#ifndef NOGUI
 	imgBm = malloc(IMG_WIDTH * IMG_HEIGHT * 4);
+#endif
 	return self;
 }
 - (Document *)doc { return doc; }
@@ -80,7 +89,12 @@ static StatData *new_stat(void) {
 - (NSInteger)skipSteps { return skip; }
 - (NSInteger)skipDays { return skipDays; }
 - (void)setDoc:(Document *)docu { doc = docu; }
-#endif
+- (void)discardMemory {
+	doc = nil;
+	free_stat_mem(&_statistics);
+	free_stat_mem(&_transit);
+}
+#else
 - (void)fillImageForOneStep:(StatData *)stat atX:(NSInteger)ix {
 	static HealthType typeOrder[] =
 		{Died, Susceptible, Recovered, Asymptomatic, Symptomatic};
@@ -101,26 +115,14 @@ static StatData *new_stat(void) {
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	for (NSInteger x = steps / skip; x >= 0 && p; x --, p = p->next)
 		[self fillImageForOneStep:p atX:x];
-#ifndef NOGUI
 	[self flushPanels];
-#endif
 }
+#endif
 - (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec {
 	if (statLock == nil) statLock = NSLock.new;
 	[statLock lock];
-	if (_statistics != NULL) {
-		StatData **p = &_statistics;
-		while ((*p)->next) p = &((*p)->next);
-		*p = freeStat;
-		freeStat = _statistics;
-	}
-	if (_transit != NULL) {
-		StatData **p = &_transit;
-		while ((*p)->next) p = &((*p)->next);
-		*p = freeStat;
-		freeStat = _transit;
-		_transit = NULL;
-	}
+	free_stat_mem(&_statistics);
+	free_stat_mem(&_transit);
 	[statLock unlock];
 	_statistics = new_stat();
 	memset(&statCumm, 0, sizeof(StatData));
@@ -144,15 +146,19 @@ static StatData *new_stat(void) {
 	[_NInfectsHist addObject:MyCounter.new];
 	_NInfectsHist[0].cnt = nInitInfec;
 	[scenarioPhases removeAllObjects];
+#ifndef NOGUI
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	[self fillImageForOneStep:_statistics atX:0];
+#endif
 }
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info {
 	phaseInfo = info;
 #ifdef DEBUG
-char *s = "PI:";
-for (NSNumber *num in phaseInfo) { printf("%s%ld", s, num.integerValue); s = ", "; }
-printf("\n");
+if (phaseInfo.count > 0) {
+	char *s = "PI:";
+	for (NSNumber *num in phaseInfo) { printf("%s%ld", s, num.integerValue); s = ", "; }
+	printf("\n");
+}
 #endif
 }
 - (void)phaseChangedTo:(NSInteger)lineNumber {
@@ -162,9 +168,12 @@ printf("\n");
 		[scenarioPhases addObject:@(idx + 1)];
 	}
 #ifdef DEBUG
-char *s = "SP:";
-for (NSNumber *num in scenarioPhases) { printf("%s%ld", s, num.integerValue); s = ", "; }
-printf("\n");
+if (scenarioPhases.count > 0) {
+	char *s = "SP:";
+	for (NSNumber *num in scenarioPhases)
+		{ printf("%s%ld", s, num.integerValue); s = ", "; }
+	printf("\n");
+}
 #endif
 }
 static void count_health(Agent *a, StatData *stat, StatData *tran) {
@@ -242,11 +251,15 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 			}
 			[statLock unlock];
 			skip *= 2;
+#ifdef NOGUI
+		}
+#else
 			StatData *p = newStat;
 			memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 			for (NSInteger x = steps / skip; x >= 0 && p; x --, p = p->next)
 				[self fillImageForOneStep:p atX:x];
 		} else [self fillImageForOneStep:newStat atX:steps / skip];
+#endif
 	}
 	if (steps % stepsPerDay == stepsPerDay - 1) {
 		NSUInteger *dailyTests = transDaily.cnt + NStateIndexes;

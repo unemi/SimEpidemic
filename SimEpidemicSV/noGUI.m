@@ -12,6 +12,7 @@
 #import <os/log.h>
 #import "noGUI.h"
 #import "AppDelegate.h"
+#import "Document.h"
 #import "StatPanel.h"
 #import "noGUIInfo.h"
 #import "ProcContext.h"
@@ -36,8 +37,9 @@ NSInteger maxPopSize = 1000000, maxNDocuments = 128, maxRuntime = 48*3600,
 NSString *fileDirectory = nil, *dataDirectory = nil;
 NSDictionary *extToMime, *codeMeaning, *indexNames;
 NSArray *distributionNames;
+NSDictionary *indexNameToIndex = nil, *testINameToIdx = nil;
 NSDateFormatter *dateFormat = nil;
-static NSString *infoFilename = @"simeipInfo.plist",
+static NSString *pidFilename = @"pid", *infoFilename = @"simeipInfo.plist",
 	*keyUniqIDCounter = @"uniqIDCounter", *keyUniqIDChars = @"uniqIDChars";
 static BOOL infoChanged = NO;
 
@@ -138,6 +140,25 @@ static NSDictionary *index_name_map(void) {
 	for (NSInteger i = 0; i < n; i ++) idxes[i] = @(i);
 	return [NSDictionary dictionaryWithObjects:idxes forKeys:names count:n];
 }
+static NSDictionary *index_name_to_index(void) {
+	return @{
+	@"susceptible":@(Susceptible),
+	@"asymptomatic":@(Asymptomatic),
+	@"symptomatic":@(Symptomatic),
+	@"recovered":@(Recovered),
+	@"died":@(Died),
+	@"quarantineAsym":@(QuarantineAsym),
+	@"quarantineSymp":@(QuarantineSymp)};
+}
+static NSDictionary *test_index_name_to_index(void) {
+	return @{
+	@"testTotal":@(TestTotal),
+	@"testAsSymptom":@(TestAsSymptom),
+	@"testAsContact":@(TestAsContact),
+	@"testAsSuspected":@(TestAsSuspected),
+	@"testPositive":@(TestPositive),
+	@"testNegative":@(TestNegative)};
+}
 static NSString *path_from_unix_string(const char *pathName) {
 	NSString *path = [NSString stringWithUTF8String:pathName];
 	return [path hasPrefix:@"/"]? path :
@@ -159,15 +180,19 @@ static void interaction_thread(int desc, uint32 ipaddr) {
 		if ([context receiveData:-1] > 0) [context makeResponse];
 		else @throw @0;
 	} @catch (id _) { isConnected = NO; } }
-	close(desc);
+	in_main_thread(^{
+		[context connectionWillClose];
+		close(desc);
+	});
 	os_log_debug(OS_LOG_DEFAULT, "Receiving thread ended (%d).", desc);
 }}
+BOOL stillAlive = YES;
 void connection_thread(void) {
 	unsigned int addrlen;
 	int desc = -1;
 	os_log_debug(OS_LOG_DEFAULT, "Connection thread started.");
 	NSThread.currentThread.name = @"Network connection";
-	for (;;) @autoreleasepool {
+	while (stillAlive) @autoreleasepool {
 		struct sockaddr_in name;
 		for (;;) {
 			name = nameTemplate;
@@ -179,28 +204,26 @@ void connection_thread(void) {
 		[NSThread detachNewThreadWithBlock:
 			^{ interaction_thread(desc, name.sin_addr.s_addr); }];
 	}
-//	close(soc); soc = -1;
+	close(soc); soc = -1;
 #ifdef DEBUG
-//	NSLog(@"Connection thread ended.");
+	NSLog(@"Connection thread ended.");
 #endif
 }
 void catch_signal(int sig) {
 #ifdef DEBUG
 	fprintf(stderr, "I caught a signal %d.\n", sig);
 #endif
-	if (sig == SIGTERM) {
-		if (infoChanged) {
-			NSData *infoData = [NSPropertyListSerialization
-				dataWithPropertyList:infoDictionary
-				format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL];
-			if (infoData) [infoData writeToFile:
-				[dataDirectory stringByAppendingPathComponent:infoFilename] atomically:YES];
-		}
+	if (infoChanged) {
+		NSData *infoData = [NSPropertyListSerialization
+			dataWithPropertyList:infoDictionary
+			format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL];
+		if (infoData) [infoData writeToFile:
+			[dataDirectory stringByAppendingPathComponent:infoFilename] atomically:YES];
+	}
 // better to wait for all of the sending processes completed.
 //		shutdown(soc, SHUT_RDWR);
-		os_log(OS_LOG_DEFAULT, "Stopped.");
-		[NSApp terminate:nil];
-	}
+	os_log(OS_LOG_DEFAULT, "Quit.");
+	[NSApp terminate:nil];
 }
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
@@ -212,18 +235,20 @@ int main(int argc, const char * argv[]) {
 			if (i + 1 < argc) port = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
 			if (i + 1 < argc) JSONOptions = atoi(argv[++ i]);
-		} else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--directory") == 0) {
+		} else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--documentRoot") == 0) {
 			if (i + 1 < argc) fileDirectory = path_from_unix_string(argv[++ i]);
 		} else if (strcmp(argv[i], "-D") == 0 || strcmp(argv[i], "--dataStorage") == 0) {
 			if (i + 1 < argc) dataDirectory = path_from_unix_string(argv[++ i]);
 		} else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--maxPopSize") == 0) {
 			if (i + 1 < argc) maxPopSize = atoi(argv[++ i]);
-		} else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--maxNDocuments") == 0) {
+		} else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--maxNWorlds") == 0) {
 			if (i + 1 < argc) maxNDocuments = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--maxRuntime") == 0) {
 			if (i + 1 < argc) maxRuntime = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--documentTimeout") == 0) {
 			if (i + 1 < argc) documentTimeout = atoi(argv[++ i]);
+		} else if (strcmp(argv[i], "-T") == 0 || strcmp(argv[i], "--maxTrials") == 0) {
+			if (i + 1 < argc) maxTrialsAtSameTime = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--jobExprHours") == 0) {
 			if (i + 1 < argc) jobRecExpirationHours = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "--version") == 0) {
@@ -238,6 +263,12 @@ int main(int argc, const char * argv[]) {
 printf("fileDir=%s\ndataDir=%s\n", fileDirectory.UTF8String, dataDirectory.UTF8String);
 #endif
 //
+	NSError *error;
+	if (![@(getpid()).stringValue writeToFile:
+		[dataDirectory stringByAppendingPathComponent:pidFilename]
+		atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+		os_log_error(OS_LOG_DEFAULT, "Couldn't write pid. %@", error.localizedDescription);
+		exit(1); }
 	NSData *infoData = [NSData dataWithContentsOfFile:
 		[dataDirectory stringByAppendingPathComponent:infoFilename]];
 	if (infoData != nil) infoDictionary = [NSPropertyListSerialization
@@ -255,6 +286,8 @@ printf("fileDir=%s\ndataDir=%s\n", fileDirectory.UTF8String, dataDirectory.UTF8S
 	indexNames = index_name_map();
 	distributionNames =
 		@[@"incubasionPeriod", @"recoveryPeriod", @"fatalPeriod", @"infects"];
+	indexNameToIndex = index_name_to_index();
+	testINameToIdx = test_index_name_to_index();
 //
 	signal(SIGTERM, catch_signal);
 // Open the server side socket to wait for connection request from a client.
@@ -271,7 +304,7 @@ printf("fileDir=%s\ndataDir=%s\n", fileDirectory.UTF8String, dataDirectory.UTF8S
 	app.delegate = AppDelegate.new;
 	defaultDocuments = NSMutableDictionary.new;
 	theDocuments = NSMutableDictionary.new;
-	os_log(OS_LOG_DEFAULT, "Started by %@.", NSProcessInfo.processInfo.userName);
+	os_log(OS_LOG_DEFAULT, "Launched by %@.", NSProcessInfo.processInfo.userName);
 	[app run];
 }
 	return 0;

@@ -90,8 +90,10 @@ static NSInteger index_in_pop(Agent *a, WorldParams *p) {
 }
 static void add_to_list(Agent *a, Agent **list) {
 #ifdef DEBUG
-for (Agent *b = *list; b != NULL; b = b->next) if (a == b)
-	{ printf("agent %ld is already in the list.\n", a->ID); my_exit(); }
+for (Agent *b = *list; b != NULL; b = b->next) if (a == b) {
+	printf("agent %ld is already in the list.\n", a->ID);
+	my_exit();
+}
 #endif
 	a->next = *list;
 	a->prev = NULL;

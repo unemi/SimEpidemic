@@ -18,6 +18,8 @@ extern NSInteger maxPopSize, maxNDocuments, maxRuntime,
 extern NSString *fileDirectory, *dataDirectory;
 extern NSDictionary *extToMime, *codeMeaning, *indexNames;
 extern NSArray *distributionNames;
+extern NSDictionary *indexNameToIndex, *testINameToIdx;
 extern NSDateFormatter *dateFormat;
 extern NSString *new_uniq_string(void);
+extern BOOL stillAlive;
 extern void connection_thread(void);

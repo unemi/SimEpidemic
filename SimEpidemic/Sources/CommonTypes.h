@@ -31,7 +31,7 @@ typedef enum {
 
 typedef enum {
 	LoopNone, LoopRunning, LoopFinished, LoopEndByUser,
-	LoopEndByCondition, LoopEndAsDaysPassed
+	LoopEndByCondition, LoopEndAsDaysPassed, LoopEndByTimeLimit
 } LoopMode;
 
 typedef struct {

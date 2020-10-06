@@ -48,7 +48,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "107"
             endingLineNumber = "107"
-            landmarkName = "add_agent(a, wp, Pop)"
+            landmarkName = "remove_from_list(a, list)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -64,7 +64,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "115"
             endingLineNumber = "115"
-            landmarkName = "remove_agent(a, wp, Pop)"
+            landmarkName = "add_agent(a, wp, Pop)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -96,14 +96,30 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "300"
             endingLineNumber = "300"
-            landmarkName = "-calcStatWithTestCount:infects:"
+            landmarkName = "StatInfo"
+            landmarkType = "3">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "A8B8DFE0-7E31-4F04-BB0D-53F0A4DC827C"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimEpidemicSV/BatchJob.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "114"
+            endingLineNumber = "114"
+            landmarkName = "-removeJobFromQueue:shouldLock:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "A09E5F7E-C913-4D5B-97CF-8584B1769825"
+            uuid = "D714B08D-DBD5-487E-AFDC-91FE160D8E5C"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
@@ -116,81 +132,113 @@
             landmarkType = "9">
             <Locations>
                <Location
-                  uuid = "A09E5F7E-C913-4D5B-97CF-8584B1769825 - 97eb6f0f78c1a1d8"
+                  uuid = "D714B08D-DBD5-487E-AFDC-91FE160D8E5C - 35e4d551f1858118"
                   shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "add_agent"
-                  moduleName = "SimEpidemic"
+                  moduleName = "simepidemic"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/unemi/Program/SimEpidemic/SimEpidemic/Sources/Agent.m"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "96"
-                  endingLineNumber = "96"
+                  startingLineNumber = "98"
+                  endingLineNumber = "98"
                   offsetFromSymbolStart = "25">
                </Location>
                <Location
-                  uuid = "A09E5F7E-C913-4D5B-97CF-8584B1769825 - a49fe75c59e5cf4c"
+                  uuid = "D714B08D-DBD5-487E-AFDC-91FE160D8E5C - 6905d02d0a1ef8c"
                   shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "step_agent"
-                  moduleName = "SimEpidemic"
+                  moduleName = "simepidemic"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/unemi/Program/SimEpidemic/SimEpidemic/Sources/Agent.m"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "96"
-                  endingLineNumber = "96"
-                  offsetFromSymbolStart = "1624">
+                  startingLineNumber = "98"
+                  endingLineNumber = "98"
+                  offsetFromSymbolStart = "1627">
                </Location>
                <Location
-                  uuid = "A09E5F7E-C913-4D5B-97CF-8584B1769825 - facc8635b509b0a6"
+                  uuid = "D714B08D-DBD5-487E-AFDC-91FE160D8E5C - 58c33c6b3c4d9066"
                   shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "warp_step"
-                  moduleName = "SimEpidemic"
+                  moduleName = "simepidemic"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/unemi/Program/SimEpidemic/SimEpidemic/Sources/Agent.m"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "96"
-                  endingLineNumber = "96"
+                  startingLineNumber = "98"
+                  endingLineNumber = "98"
                   offsetFromSymbolStart = "240">
                </Location>
                <Location
-                  uuid = "A09E5F7E-C913-4D5B-97CF-8584B1769825 - facc8635b509b0a6"
+                  uuid = "D714B08D-DBD5-487E-AFDC-91FE160D8E5C - 58c33c6b3c4d9066"
                   shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "warp_step"
-                  moduleName = "SimEpidemic"
+                  moduleName = "simepidemic"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/unemi/Program/SimEpidemic/SimEpidemic/Sources/Agent.m"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "96"
-                  endingLineNumber = "96"
+                  startingLineNumber = "98"
+                  endingLineNumber = "98"
                   offsetFromSymbolStart = "352">
                </Location>
                <Location
-                  uuid = "A09E5F7E-C913-4D5B-97CF-8584B1769825 - facc8635b509b0a6"
+                  uuid = "D714B08D-DBD5-487E-AFDC-91FE160D8E5C - 58c33c6b3c4d9066"
                   shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "warp_step"
-                  moduleName = "SimEpidemic"
+                  moduleName = "simepidemic"
                   usesParentBreakpointCondition = "Yes"
                   urlString = "file:///Users/unemi/Program/SimEpidemic/SimEpidemic/Sources/Agent.m"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "96"
-                  endingLineNumber = "96"
+                  startingLineNumber = "98"
+                  endingLineNumber = "98"
                   offsetFromSymbolStart = "400">
                </Location>
             </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "A1AF43B2-31F5-4262-935D-0E95A9A7ECE7"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimEpidemicSV/ProcContext.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "558"
+            endingLineNumber = "558"
+            landmarkName = "-periodicReport"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "5F8678DF-B4A2-4A35-B028-3C5F48B7A43D"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimEpidemicSV/ProcContext.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "507"
+            endingLineNumber = "507"
+            landmarkName = "dist_cnt_array(hist)"
+            landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

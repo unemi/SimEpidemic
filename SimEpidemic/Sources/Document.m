@@ -435,7 +435,21 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 #endif
 	return self;
 }
-#ifndef NOGUI
+#ifdef NOGUI
+- (void)discardMemory {	// called when this document got useless
+	[statInfo discardMemory];	// cut the recursive reference
+	for (NSInteger i = 0; i < nMesh * nMesh; i ++) {
+		for (Agent *a = _Pop[i]; a != NULL; a = a->next)
+			free_cinfo_mems(&a->contactInfoHead);
+		free_agent_mems(&_Pop[i]);
+	}
+	free_agent_mems(&_QList);
+	free_agent_mems(&_CList);
+	free_testEntry_mems(&testQueHead);
+	free(_Pop);
+	free(pop);
+}
+#else
 - (NSString *)windowNibName { return @"Document"; }
 - (void)windowControllerDidLoadNib:(NSWindowController *)windowController {
 	static NSString *lvNames[] = {
@@ -829,7 +843,18 @@ static NSInteger mCount = 0, mCount2 = 0;
 	}
 #endif
 }
-#ifndef NOGUI
+#ifdef NOGUI
+- (void)startTimeLimitTimer {
+	runtimeTimer = [NSTimer scheduledTimerWithTimeInterval:maxRuntime repeats:NO
+		block:^(NSTimer * _Nonnull timer) { [self stop:LoopEndByTimeLimit]; }];
+}
+- (void)stopTimeLimitTimer {
+	if (runtimeTimer != nil) {
+		if (runtimeTimer.valid) [runtimeTimer invalidate];
+		runtimeTimer = nil;
+	}
+}
+#else
 - (void)showAllAfterStep {
 	[self showCurrentStatistics];
 	daysNum.doubleValue = floor(runtimeParams.step / worldParams.stepsPerDay);
@@ -838,6 +863,9 @@ static NSInteger mCount = 0, mCount2 = 0;
 }
 #endif
 - (void)runningLoop {
+#ifdef NOGUI
+	in_main_thread(^{ [self startTimeLimitTimer]; });
+#endif
 	while (loopMode == LoopRunning) {
 		[self doOneStep];
 		if (loopMode == LoopEndByCondition && scenarioIndex < scenario.count) {
@@ -863,6 +891,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 		usleep(1);
 	}
 #ifdef NOGUI
+	in_main_thread(^{ [self stopTimeLimitTimer]; });
 	if (loopMode != LoopEndByUser) [self touch];
 	if (_stopCallBack != nil) _stopCallBack(loopMode);
 #else
@@ -887,30 +916,28 @@ static NSInteger mCount = 0, mCount2 = 0;
 	[_lastTLock unlock];
 	return result;
 }
-- (void)start:(NSInteger)stopAt {
-	if (loopMode == LoopRunning) return;
+- (LoopMode)start:(NSInteger)stopAt {
+	if (loopMode == LoopRunning) return LoopRunning;
 	if (stopAt > 0) stopAtNDays = stopAt;
+	LoopMode orgMode = loopMode;
 	[self goAhead];
 	loopMode = LoopRunning;
-	[NSThread detachNewThreadSelector:@selector(runningLoop) toTarget:self withObject:nil];
-	runtimeTimer = [NSTimer scheduledTimerWithTimeInterval:maxRuntime repeats:NO
-		block:^(NSTimer * _Nonnull timer) { [self stop]; }];
+	NSThread *thread = [NSThread.alloc initWithTarget:self
+		selector:@selector(runningLoop) object:nil];
+	thread.threadPriority = fmax(0., NSThread.mainThread.threadPriority - .1);
+	[thread start];
+	return orgMode;
 }
 - (void)step {
 	switch (loopMode) {
 		case LoopRunning: return;
 		case LoopFinished: case LoopEndByCondition: [self goAhead];
-		case LoopEndByUser: case LoopNone: case LoopEndAsDaysPassed:
-		[self doOneStep];
+		default: [self doOneStep];
 	}
 	loopMode = LoopEndByUser;
 }
-- (void)stop { // should run in the same thread with [self start]
-	if (loopMode == LoopRunning) loopMode = LoopEndByUser;
-	if (self->runtimeTimer != nil) {
-		if (self->runtimeTimer.valid) [self->runtimeTimer invalidate];
-		self->runtimeTimer = nil;
-	}
+- (void)stop:(LoopMode)mode {
+	if (loopMode == LoopRunning) loopMode = mode;
 }
 - (StatInfo *)statInfo { return statInfo; }
 #else
@@ -942,8 +969,7 @@ printf("\n");
 	switch (loopMode) {
 		case LoopRunning: return;
 		case LoopFinished: case LoopEndByCondition: [self goAhead];
-		case LoopEndByUser: case LoopNone: case LoopEndAsDaysPassed:
-		[self doOneStep];
+		default: [self doOneStep];
 	}
 	[self showAllAfterStep];
 	loopMode = LoopEndByUser;

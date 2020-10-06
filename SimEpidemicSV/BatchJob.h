@@ -19,7 +19,6 @@ extern void schedule_job_expiration_check(void);
 	NSMutableDictionary<NSNumber *, Document *> *runningTrials;
 	NSMutableArray<Document *> *availableWorlds;
 	NSInteger nextTrialNumber;
-	NSString *browserID;
 	NSArray<NSString *> *output_n, *output_d, *output_D;
 }
 @property (readonly) NSString *ID;

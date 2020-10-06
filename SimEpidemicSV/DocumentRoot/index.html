@@ -13,10 +13,14 @@ function setup() {
 		elm.value = browserID;
 		forms[i].appendChild(elm);
 	}
+	const subpgs = document.getElementsByClassName("subpage");
+	for (var i = 0; i < subpgs.length; i ++)
+		subpgs[i].href = subpgs[i].href + "?" + browserID;
 }
 </script>
 </head>
 <body onload="setup()">
+<a class="subpage" href="control.html">Interactive Control &amp; Monitoring</a>
 <a href="batch.html">Batch Job</a>
 <h2>getParams</h2>
 <table><tr><td style="vertical-align: top">

@@ -47,7 +47,9 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 @interface StatInfo : NSObject {
 	IBOutlet Document *doc;
 	NSUInteger maxCounts[NIntIndexes], maxTransit[NIntIndexes];
+#ifndef NOGUI
 	unsigned char *imgBm;
+#endif
 	NSInteger popSize, steps, skip, days, skipDays;
 	StatData statCumm, transDaily, transCumm;
 	NSUInteger testCumm[NIntTestTypes];
@@ -61,7 +63,6 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 @property (readonly) NSMutableArray<MyCounter *>
 	*IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
 - (Document *)doc;
-- (void)reviseColors;
 - (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec;
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info;
 - (void)phaseChangedTo:(NSInteger)lineNumber;
@@ -71,8 +72,10 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 - (NSInteger)skipSteps;
 - (NSInteger)skipDays;
 - (void)setDoc:(Document *)doc;
+- (void)discardMemory;
 #else
 @property (readonly) NSMutableArray<StatPanel *> *statPanels;
+- (void)reviseColors;
 - (void)openStatPanel:(NSWindow *)parentWindow;
 - (void)flushPanels;
 #endif
