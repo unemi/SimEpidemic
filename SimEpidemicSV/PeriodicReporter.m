@@ -56,56 +56,58 @@ static NSArray<NSString *> *valid_report_item_names(void) {
 	}
 	return validNames;
 }
-- (BOOL)setupWithQuery:(NSDictionary *)query {
+- (void)setupWithQuery:(NSDictionary *)query init:(BOOL)forInit {
 	NSString *report = query[@"report"], *intervalStr = query[@"interval"];
-	if (report == nil) @throw @"Report request must be attached.";
-	report = report.stringByRemovingPercentEncoding;
-	NSError *error;
-	NSArray<NSString *> *idxs = [NSJSONSerialization JSONObjectWithData:
-		[report dataUsingEncoding:NSUTF8StringEncoding]
-		options:0 error:&error];
-	if (idxs == nil) @throw error.localizedDescription;
-	if (![idxs isKindOfClass:NSArray.class]) @throw
-		@"Report information should be an array of index names.";
-	NSArray *validNames = valid_report_item_names();
-	NSMutableSet *ms = NSMutableSet.new, *trash = NSMutableSet.new;
-	for (NSString *name in idxs)
-		if ([validNames containsObject:name]) [ms addObject:name];
-	BOOL repPop = NO;
-	NSInteger n = ms.count, nn = 0, nd = 0, nD = 0, nE = 0;
-	NSString *an[n], *ad[n], *aD[n], *aE[n];
-	for (NSString *name in ms) {
-		if (indexNames[name] != nil) an[nn ++] = name;
-		else if ([name hasPrefix:@"daily"]) {
-			NSString *key = name.stringByRemovingFirstWord;
-			if (indexNames[key] != nil) ad[nd ++] = key;
-		} else if ([distributionNames containsObject:name]) aD[nD ++] = name;
-		else if ([extraIndexes containsObject:name]) aE[nE ++] = name;
-		else if ([name isEqualToString:keyPopulation]) repPop = YES;
-		else [trash addObject:name]; 
-	}
-	if (trash.count > 0) {
-		NSMutableString *mstr = NSMutableString.new;
-		NSString *pnc = @" ";
-		for (NSString *nm in trash)
-			{ [mstr appendFormat:@"%@%@", pnc, nm]; pnc = @", "; }
-		@throw [NSString stringWithFormat:
-			@"Unknown index names: %@.", mstr];
-	}
-	[configLock lock];
-	repPopulation = repPop;
-	repItemsIdx = [NSArray arrayWithObjects:an count:nn];
-	repItemsDly = [NSArray arrayWithObjects:ad count:nd];
-	repItemsDst = [NSArray arrayWithObjects:aD count:nD];
-	repItemsExt = [NSArray arrayWithObjects:aE count:nE];
-	repInterval = (intervalStr == nil)? 0. : intervalStr.doubleValue;
-	if (repInterval <= 0.) repInterval = 1.;
-	[configLock unlock];
+	if (report != nil) {
+		report = report.stringByRemovingPercentEncoding;
+		NSError *error;
+		NSArray<NSString *> *idxs = [NSJSONSerialization JSONObjectWithData:
+			[report dataUsingEncoding:NSUTF8StringEncoding]
+			options:0 error:&error];
+		if (idxs == nil) @throw error.localizedDescription;
+		if (![idxs isKindOfClass:NSArray.class]) @throw
+			@"Report information should be an array of index names.";
+		NSArray *validNames = valid_report_item_names();
+		NSMutableSet *ms = NSMutableSet.new, *trash = NSMutableSet.new;
+		for (NSString *name in idxs)
+			if ([validNames containsObject:name]) [ms addObject:name];
+		BOOL repPop = NO;
+		NSInteger n = ms.count, nn = 0, nd = 0, nD = 0, nE = 0;
+		NSString *an[n], *ad[n], *aD[n], *aE[n];
+		for (NSString *name in ms) {
+			if (indexNames[name] != nil) an[nn ++] = name;
+			else if ([name hasPrefix:@"daily"]) {
+				NSString *key = name.stringByRemovingFirstWord;
+				if (indexNames[key] != nil) ad[nd ++] = key;
+			} else if ([distributionNames containsObject:name]) aD[nD ++] = name;
+			else if ([extraIndexes containsObject:name]) aE[nE ++] = name;
+			else if ([name isEqualToString:keyPopulation]) repPop = YES;
+			else [trash addObject:name]; 
+		}
+		if (trash.count > 0) {
+			NSMutableString *mstr = NSMutableString.new;
+			NSString *pnc = @" ";
+			for (NSString *nm in trash)
+				{ [mstr appendFormat:@"%@%@", pnc, nm]; pnc = @", "; }
+			@throw [NSString stringWithFormat:
+				@"Unknown index names: %@.", mstr];
+		}
+		[configLock lock];
+		repPopulation = repPop;
+		repItemsIdx = [NSArray arrayWithObjects:an count:nn];
+		repItemsDly = [NSArray arrayWithObjects:ad count:nd];
+		repItemsDst = [NSArray arrayWithObjects:aD count:nD];
+		repItemsExt = [NSArray arrayWithObjects:aE count:nE];
+		[configLock unlock];
 #ifdef DEBUG
 NSLog(@"Idx:%ld, Dly:%ld, Dst:%ld, Ext:%ld, Intv=%.3f, Pop:%@",
 	nn, nd, nD, nE, repInterval, repPopulation? @"YES" : @"NO");
 #endif
-	return (nn + nd + nD + nE > 0) || repPopulation;
+	} else if (forInit) @throw @"Report request must be attached.";
+	if (intervalStr != nil) {
+		repInterval = intervalStr.doubleValue;
+		if (repInterval <= 0.) repInterval = 1.;
+	} else if (forInit) repInterval = 1.;
 }
 - (instancetype)initWithDocument:(Document *)doc desc:(int)dsc {
 	if (!(self = [super init])) return nil;
@@ -161,18 +163,20 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 	[document popLock];
 	NSInteger step = document.runtimeParamsP->step,
 		stepsPerDay = document.worldParamsP->stepsPerDay;
-	NSInteger n = step - prevRepStep;
+	StatInfo *statInfo = document.statInfo;
+	NSInteger skp = statInfo.skipSteps, n = step / skp - prevRepStep / skp;
 	if (n <= 0) { [document popUnlock]; return NO; }
 	NSMutableDictionary *md = NSMutableDictionary.new;
-	StatData *stat = document.statInfo.statistics;
+	StatData *stat = statInfo.statistics;
 	[configLock lock];
 	NSArray<NSString *> *Idx = repItemsIdx, *Dly = repItemsDly,
 		*Dst = repItemsDst, *Ext = repItemsExt;
 	BOOL pop = repPopulation;
 	[configLock unlock];
 	for (NSString *name in Idx) md[name] = index_array(stat, n, name);
-	stat = document.statInfo.transit;
-	n = step / stepsPerDay - prevRepStep / stepsPerDay;
+	stat = statInfo.transit;
+	skp = statInfo.skipDays;
+	n = step / stepsPerDay / skp - prevRepStep / stepsPerDay / skp;
 	if (n > 0) for (NSString *name in Dly) md[name] = index_array(stat, n, name);
 	NSDictionary<NSString *, NSArray<MyCounter *> *>
 		*nameMap = distribution_name_map(document);
@@ -260,7 +264,7 @@ NSLog(@"Repoter %@(%d) quits.", _ID, desc);
 - (void)periodicReport {
 	[self checkDocument];
 	PeriodicReporter *rep = [PeriodicReporter.alloc initWithDocument:document desc:desc];
-	[rep setupWithQuery:query];
+	[rep setupWithQuery:query init:YES];
 	Document *doc = document;
 	postProc = ^{
 		NSString *idInfo = [NSString stringWithFormat:
@@ -295,7 +299,7 @@ NSLog(@"Repoter %@(%d) quits.", _ID, desc);
 }
 - (void)changeReport {
 	PeriodicReporter *rep = [self reporterFromID:NULL];
-	[rep setupWithQuery:query];
+	[rep setupWithQuery:query init:NO];
 	code = 0;
 }
 @end

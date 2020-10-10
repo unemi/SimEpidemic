@@ -13,7 +13,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface PeriodicReporter : NSObject
 @property (readonly) NSString *ID;
-- (BOOL)setupWithQuery:(NSDictionary *)query;
 - (instancetype)initWithDocument:(Document *)doc desc:(int)dsc;
 - (BOOL)sendReport;
 - (void)sendReportPeriodic;
