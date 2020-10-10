@@ -10,6 +10,7 @@
 #import <os/log.h>
 #import "ProcContext.h"
 #import "noGUI.h"
+#import "PeriodicReporter.h"
 #import "Document.h"
 #import "StatPanel.h"
 #import "DataCompress.h"
@@ -88,7 +89,8 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		@"getWorldID", @"newWorld", @"closeWorld",
 		@"getParams", @"setParams",
 		@"start", @"step", @"stop", @"reset",
-		@"getIndexes", @"getDistribution", @"periodicReport", @"getPopulation",
+		@"getIndexes", @"getDistribution", @"getPopulation",
+		@"periodicReport", @"quitReport", @"changeReport",
 		@"getScenario", @"setScenario",
 		@"submitJob", @"getJobStatus", @"getJobQueueStatus",
 		@"stopJob", @"getJobResults"
@@ -124,7 +126,7 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 	}
 	return dataLength;
 }
-static void send_bytes(int desc, const char *bytes, NSInteger size) {
+void send_bytes(int desc, const char *bytes, NSInteger size) {
 	if (desc < 0) return;
 	ssize_t result = send(desc, bytes, size, 0);
 	if (result < 0) @throw @(errno);
@@ -150,6 +152,15 @@ static void send_large_data(int desc, const char *bytes, NSInteger size) {
 		send_bytes(desc, bytes, (sizeLeft < BUFFER_SIZE)? sizeLeft : BUFFER_SIZE);
 		bytes += BUFFER_SIZE;
 	}
+}
+NSString *make_header(int code, NSString *type, NSString *moreHeader, NSInteger fileSize) {
+	NSString *dateStr = [dateFormat stringFromDate:NSDate.date],
+		*meaning = codeMeaning[@(code)];
+	return [NSString stringWithFormat:headerFormat, code,
+		(meaning == nil)? @"" : meaning, dateStr,
+		(fileSize == 0)? @"" : [NSString stringWithFormat:@"Content-Length: %ld\n", fileSize],
+		(type == nil)? @"" : [NSString stringWithFormat:@"Content-Type: %@\n", type],
+		(moreHeader == nil)? @"" : moreHeader];
 }
 - (NSInteger)sendHeader {
 	NSString *dateStr = [dateFormat stringFromDate:NSDate.date],
@@ -346,14 +357,19 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 				} else query = nil;
 			}
 			[self performSelector:NSSelectorFromString(command)];
-			if (content == nil) [self setOKMessage];
+			if (code == 0) [self setOKMessage];
 		}
 	} @catch (NSString *info) { [self setErrorMessage:info];
 	} @catch (NSNumber *num) {}
 //
-	NSInteger length = [self sendData];
-	os_log(OS_LOG_DEFAULT, "Responded code=%d size=%ld to %@ IP=%{network:in_addr}d",
-		code, length, (browserID == nil)? @"-" : browserID, ip4addr);
+	if (content != nil) {
+		NSInteger length = [self sendData];
+		os_log(OS_LOG_DEFAULT, "Responded code=%d size=%ld to %@ IP=%{network:in_addr}d",
+			code, length, (browserID == nil)? @"-" : browserID, ip4addr);
+	} else if (postProc != nil) {
+		[self sendHeader];
+		postProc();
+	}
 }
 static NSString *ip4_string(uint32 ip4addr) {
 	uint32 a = EndianU32_BtoN(ip4addr);
@@ -377,6 +393,9 @@ static NSString *ip4_string(uint32 ip4addr) {
 		if (document == nil) @throw [NSString stringWithFormat:
 			@"500 World of ID %@ doesn't exist.", worldID];
 	}
+}
+- (void)connectionWillClose {
+	[document reporterConnectionWillClose:desc];
 }
 - (void)setJSONDataAsResponse:(NSObject *)object {
 	NSString *valueStr = query[@"format"];
@@ -460,27 +479,7 @@ printf("--- parameters\n%s\n", dict.description.UTF8String);
 It was adjusted to maxmimum value: %ld.", popSize, maxPopSize];
 }
 //
-static NSArray<NSString *> *extraIndexes = nil;
-static NSArray<NSString *> *valid_report_item_names(void) {
-	static NSArray<NSString *> *validNames = nil;
-	if (validNames == nil) {
-		extraIndexes = @[@"step", @"days", @"testPositiveRate"];
-		NSString *names[extraIndexes.count
-			+ indexNames.count * 2 + distributionNames.count];
-		NSInteger k;
-		for (k = 0; k < extraIndexes.count; k ++) names[k] = extraIndexes[k];
-		NSEnumerator *enm = indexNames.keyEnumerator;
-		for (NSInteger i = 0; i < indexNames.count; i ++) names[k ++] = enm.nextObject;
-		enm = indexNames.keyEnumerator;
-		for (NSInteger i = 0; i < indexNames.count; i ++)
-			names[k ++] = [(NSString *)enm.nextObject stringByAddingFirstWord:@"daily"];
-		for (NSInteger i = 0; i < distributionNames.count; i ++)
-			names[k ++] = distributionNames[i];
-		validNames = [NSArray arrayWithObjects:names count:k];
-	}
-	return validNames;
-}
-static NSArray *make_history(StatData *stat, NSInteger nItems,
+NSArray *make_history(StatData *stat, NSInteger nItems,
 	NSNumber *(^getter)(StatData *)) {
 	if (nItems == 1 && stat != NULL) return @[getter(stat)];
 	NSNumber *nums[nItems];
@@ -489,21 +488,7 @@ static NSArray *make_history(StatData *stat, NSInteger nItems,
 		nums[i] = getter(p);
 	return [NSArray arrayWithObjects:nums + i + 1 count:nItems - i - 1];
 }
-static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
-	NSNumber *num;
-	NSInteger idx;
-	if ((num = indexNameToIndex[name])) idx = num.integerValue;
-	else if ((num = testINameToIdx[name])) idx = num.integerValue + NStateIndexes;
-	else return @[];
-	return make_history(stat, nItems, ^(StatData *st){ return @(st->cnt[idx]); });
-}
-- (NSDictionary<NSString *, NSArray<MyCounter *> *> *)distributionNameMap {
-	StatInfo *statInfo = document.statInfo;
-	return [NSDictionary dictionaryWithObjects:
-			@[statInfo.IncubPHist, statInfo.RecovPHist,
-			statInfo.DeathPHist, statInfo.NInfectsHist] forKeys:distributionNames];
-}
-static NSArray *dist_cnt_array(NSArray<MyCounter *> *hist) {
+NSArray *dist_cnt_array(NSArray<MyCounter *> *hist) {
 	NSMutableArray *ma = NSMutableArray.new;
 	NSInteger st = -1, n = hist.count;
 	for (NSInteger i = 0; i < n; i ++) {
@@ -513,124 +498,11 @@ static NSArray *dist_cnt_array(NSArray<MyCounter *> *hist) {
 	}
 	return ma;
 }
-- (void)sendReport {
-	[document popLock];
-	NSInteger step = document.runtimeParamsP->step,
-		stepsPerDay = document.worldParamsP->stepsPerDay;
-	NSInteger n = step - prevRepStep;
-	if (n <= 0) {
-		[document popUnlock];
-		send_bytes(desc, ":\r\n\r\n", 5);
-		return;
-	}
-	NSMutableDictionary *md = NSMutableDictionary.new;
-	StatData *stat = document.statInfo.statistics;
-	for (NSString *name in repItemsIdx) md[name] = index_array(stat, n, name);
-	stat = document.statInfo.transit;
-	n = step / stepsPerDay - prevRepStep / stepsPerDay;
-	if (n > 0) for (NSString *name in repItemsDly) md[name] = index_array(stat, n, name);
-	NSDictionary<NSString *, NSArray<MyCounter *> *> *nameMap = self.distributionNameMap;
-	for (NSString *name in repItemsDst) {
-		NSArray<MyCounter *> *hist = nameMap[name];
-		if (hist != nil) md[name] = dist_cnt_array(hist);
-	}
-	for (NSString *name in repItemsExt) {
-		if ([name isEqualToString:@"step"]) md[name] = @(step);
-		else if ([name isEqualToString:@"days"]) md[name] = @(step / stepsPerDay);
-		else if ([name isEqualToString:@"testPositiveRate"])
-			md[name] = make_history(stat, n, ^(StatData *st) { return @(st->pRate); });
-	}
-	[document popUnlock];
-	prevRepStep = step;
-	NSError *error;
-	NSData *data = [NSJSONSerialization dataWithJSONObject:md options:0 error:&error];
-	NSMutableData *mData = [NSMutableData dataWithLength:data.length + 10];
-	char *bytes = mData.mutableBytes;
-	memcpy(bytes, "data: ", 6); bytes += 6;
-	memcpy(bytes, data.bytes, data.length); bytes += data.length;
-	memcpy(bytes, "\r\n\r\n", 4);
-	send_large_data(desc, mData.bytes, mData.length);
-}
-- (void)stopReport {	// must run in the main thread.
-	if (reportTimer == nil) { [reportTimer invalidate]; reportTimer = nil; }
-}
-- (void)periodicReport {
-	void (^timerBlock)(NSTimer * _Nonnull timer) = nil;
-	@try {
-	NSString *report = query[@"report"], *intervalStr = query[@"interval"];
-	if (report == nil) @throw @"Report request must be attached.";
-	report = report.stringByRemovingPercentEncoding;
-	NSError *error;
-	NSArray<NSString *> *idxs = [NSJSONSerialization JSONObjectWithData:
-		[NSData dataWithBytes:report.UTF8String length:report.length]
-		options:0 error:&error];
-	if (idxs == nil) @throw error.localizedDescription;
-	if (![idxs isKindOfClass:NSArray.class]) @throw
-		@"Report information should be an array of index names.";
-	NSArray *validNames = valid_report_item_names();
-	NSMutableSet *ms = NSMutableSet.new, *trash = NSMutableSet.new;
-	for (NSString *name in idxs)
-		if ([validNames containsObject:name]) [ms addObject:name];
-	NSInteger n = ms.count, nn = 0, nd = 0, nD = 0, nE = 0;
-	NSString *an[n], *ad[n], *aD[n], *aE[n];
-	for (NSString *name in ms) {
-		if (indexNames[name] != nil) an[nn ++] = name;
-		else if ([name hasPrefix:@"daily"]) {
-			NSString *key = name.stringByRemovingFirstWord;
-			if (indexNames[key] != nil) ad[nd ++] = key;
-		} else if ([distributionNames containsObject:name]) aD[nD ++] = name;
-		else if ([extraIndexes containsObject:name]) aE[nE ++] = name;
-		else [trash addObject:name]; 
-	}
-	if (trash.count > 0) {
-		NSMutableString *mstr = NSMutableString.new;
-		NSString *pnc = @" ";
-		for (NSString *nm in trash)
-			{ [mstr appendFormat:@"%@%@", pnc, nm]; pnc = @", "; }
-		@throw [NSString stringWithFormat:
-			@"Unknown index names: %@.", mstr];
-	}
-	repItemsIdx = [NSArray arrayWithObjects:an count:nn];
-	repItemsDly = [NSArray arrayWithObjects:ad count:nd];
-	repItemsDst = [NSArray arrayWithObjects:aD count:nD];
-	repItemsExt = [NSArray arrayWithObjects:aE count:nE];
-	if (nn + nd + nD + nE == 0) { in_main_thread(^{ [self stopReport]; }); return; }
-	CGFloat interval = (intervalStr == nil)? 0. : intervalStr.doubleValue;
-	if (interval <= 0.) interval = 1.;
-	repN = (interval > 4.)? (NSInteger)ceil(interval / 4.) : 1;
-	interval /= repN;
-	repCnt = 0;
-	timerBlock = ^(NSTimer * _Nonnull timer) {
-		[self sendReport];
-		self->reportTimer = [NSTimer scheduledTimerWithTimeInterval:interval
-			repeats:YES block:^(NSTimer * _Nonnull timer) {
-			if ((++ self->repCnt) >= self->repN)
-				{ self->repCnt = 0; [self sendReport]; }
-			else send_bytes(self->desc, ":\r\n\r\n", 5);	// comment to keep alive.
-		}]; };
-	content = @"";
-	} @catch (NSString *msg) {
-		timerBlock = ^(NSTimer * _Nonnull timer) {
-			const char *str = msg.UTF8String;
-			NSUInteger strLen = strlen(str);
-			char buf[strLen + 10], *p = buf;
-			memcpy(p, "data: ", 6); p += 6;
-			memcpy(p, str, strLen); p += strLen;
-			memcpy(p, "\r\n\r\n", 4);
-			send_bytes(self->desc, buf, strLen + 10);
-		};
-	}
-	in_main_thread(^{
-		[self stopReport];
-		if (timerBlock != nil)
-			[NSTimer scheduledTimerWithTimeInterval:.2 repeats:NO block:timerBlock];
-	});
-	type = @"text/event-stream";
-	code = 200;
-}
-- (void)connectionWillClose {
-	[self stopReport];
-	desc = -1;
+NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document *doc) {
+	StatInfo *statInfo = doc.statInfo;
+	return [NSDictionary dictionaryWithObjects:
+			@[statInfo.IncubPHist, statInfo.RecovPHist,
+			statInfo.DeathPHist, statInfo.NInfectsHist] forKeys:distributionNames];
 }
 //
 - (void)start {
@@ -638,17 +510,23 @@ static NSArray *dist_cnt_array(NSArray<MyCounter *> *hist) {
 	NSString *opStr = query[@"stopAt"];
 	NSInteger stopAt = (opStr == nil)? 0 : opStr.integerValue;
 	Document *doc = document;
-	in_main_thread(^{
-		if ([doc start:stopAt] == LoopFinished) self->prevRepStep = 0; });
-	if (query[@"report"] != nil) [self periodicReport];
+	in_main_thread(^{ [doc start:stopAt]; });
 }
-- (void)step { [self checkDocument]; [document step]; }
+- (void)step {
+	[self checkDocument];
+	Document *doc = document;
+	in_main_thread(^{ [doc step]; });
+}
 - (void)stop {
 	[self checkDocument];
 	Document *doc = document;
 	in_main_thread(^{ [doc stop:LoopEndByUser]; });
 }
-- (void)reset { [self checkDocument]; [document resetPop]; }
+- (void)reset {
+	[self checkDocument];
+	Document *doc = document;
+	in_main_thread(^{ [doc resetPop]; });
+}
 - (void)collectNamesInto:(NSMutableSet *)nameSet {
 	NSError *error;
 	NSString *arrStr = [query[@"names"] stringByRemovingPercentEncoding];
@@ -724,7 +602,8 @@ static NSArray *dist_cnt_array(NSArray<MyCounter *> *hist) {
 	}
 	if (distNames.count == 0) @throw @"417 Distribution name is not sepcified.";
 	NSMutableDictionary *md = NSMutableDictionary.new;
-	NSDictionary<NSString *, NSArray<MyCounter *> *> *nameMap = self.distributionNameMap;
+	NSDictionary<NSString *, NSArray<MyCounter *> *>
+		*nameMap = distribution_name_map(document);
 	[document popLock];
 	for (NSString *distName in distNames) {
 		NSArray<MyCounter *> *hist = nameMap[distName];
@@ -745,25 +624,20 @@ static int store_agent_xyh(Agent *a, uint8 *buf, NSInteger worldSize) {
 	return sprintf((char *)buf, "[%d,%d,%d],",
 		int_coord(a->x, worldSize), int_coord(a->y, worldSize), a->health);
 }
-- (void)getPopulation {
-	[self checkDocument];
-	[document popLock];
-	WorldParams *wp = document.worldParamsP;
-	Agent **pop = document.Pop;
-	NSInteger popSize = wp->initPop, nGrids = wp->mesh * wp->mesh,
-		bufSize = popSize * 14 + 4;
-	NSMutableData *srcData = [NSMutableData dataWithLength:bufSize];
-	uint8 *buf = srcData.mutableBytes, *p = buf + 1;
+NSData *JSON_pop(Document *doc) {
+	WorldParams *wp = doc.worldParamsP;
+	Agent **pop = doc.Pop;
+	uint8 *buf = malloc(wp->initPop * 16 + 4), *p = buf + 1;
 	buf[0] = '[';
 	uint32 nAgents = 0;
-	for (NSInteger i = 0; i < nGrids; i ++)
+	for (NSInteger i = 0; i < wp->mesh * wp->mesh; i ++)
 		for (Agent *a = pop[i]; a != NULL; a = a->next, nAgents ++)
 			p += store_agent_xyh(a, p, wp->worldSize);
-	for (Agent *a = document.QList; a != NULL; a = a->next, nAgents ++)
+	for (Agent *a = doc.QList; a != NULL; a = a->next, nAgents ++)
 		p += store_agent_xyh(a, p, wp->worldSize);
-	for (Agent *a = document.CList; a != NULL; a = a->next, nAgents ++)
+	for (Agent *a = doc.CList; a != NULL; a = a->next, nAgents ++)
 		p += store_agent_xyh(a, p, wp->worldSize);
-	for (WarpInfo *info in document.WarpList) {
+	for (WarpInfo *info in doc.WarpList) {
 		Agent *a = info.agent;
 		p += sprintf((char *)p, "[%d,%d,%d,%d,%d,%d],",
 			int_coord(a->x, wp->worldSize), int_coord(a->y, wp->worldSize), a->health,
@@ -771,15 +645,20 @@ static int store_agent_xyh(Agent *a, uint8 *buf, NSInteger worldSize) {
 			info.mode);
 		nAgents ++;
 	}
-	[document popUnlock];
 	NSInteger srcSize = p - buf;
 	if (nAgents > 0) p[-1] = ']';
 	else { buf[1] = ']'; srcSize = 2; }
-	srcData.length = srcSize;
+	return [NSData dataWithBytesNoCopy:buf length:srcSize freeWhenDone:YES];
+}
+- (void)getPopulation {
+	[self checkDocument];
+	[document popLock];
+	NSData *srcData = JSON_pop(document);
+	[document popUnlock];
 	@try {
 		NSData *dstData = [srcData zippedData];
 #ifdef DEBUG
-printf("%d agents -> %ld bytes\n", nAgents, dstData.length);
+printf("agents -> %ld bytes\n", dstData.length);
 #endif
 		content = dstData;
 		type = @"application/json";

@@ -35,6 +35,7 @@
 		2365DEC82506159A006C2A95 /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F32457D2C6005ADCCF /* Document.m */; };
 		2365DEC92506159A006C2A95 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
 		2365DECA2506159A006C2A95 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
+		23673364252EFA8E00284D91 /* PeriodicReporter.m in Sources */ = {isa = PBXBuildFile; fileRef = 23673363252EFA8E00284D91 /* PeriodicReporter.m */; };
 		2387B42524FCD2190039796A /* Preferences.m in Sources */ = {isa = PBXBuildFile; fileRef = 2387B42424FCD2190039796A /* Preferences.m */; };
 		238A8F2A246694D300604BF4 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
 		238C4527248B783B00FB5F89 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 238C4525248B783B00FB5F89 /* Preferences.xib */; };
@@ -106,6 +107,8 @@
 		2365DEC325061537006C2A95 /* noGUI.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = noGUI.m; sourceTree = "<group>"; };
 		2365DEC425061537006C2A95 /* noGUIInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = noGUIInfo.h; sourceTree = "<group>"; };
 		23666C63248C99BB00061274 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Preferences.strings; sourceTree = "<group>"; };
+		23673362252EFA8E00284D91 /* PeriodicReporter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PeriodicReporter.h; sourceTree = "<group>"; };
+		23673363252EFA8E00284D91 /* PeriodicReporter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PeriodicReporter.m; sourceTree = "<group>"; };
 		236BD9D2252ADD5300A1D21D /* control.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = control.html; sourceTree = "<group>"; };
 		2372797525203323000BC3C5 /* batch.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = batch.html; sourceTree = "<group>"; };
 		2378766825027AE500897003 /* simepidemic-model.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-model.md"; sourceTree = "<group>"; };
@@ -118,6 +121,7 @@
 		238C4526248B783B00FB5F89 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/Preferences.xib; sourceTree = "<group>"; };
 		239A1AF32513707B00B92DAD /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
 		239A1AF4251370AA00B92DAD /* favicon.ico */ = {isa = PBXFileReference; lastKnownFileType = image.ico; path = favicon.ico; sourceTree = "<group>"; };
+		23A14AFE25317FA500AC765F /* control.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = control.js; sourceTree = "<group>"; };
 		23AF0267250F98840074EF87 /* BatchJob.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BatchJob.h; sourceTree = "<group>"; };
 		23AF0268250F98840074EF87 /* BatchJob.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BatchJob.m; sourceTree = "<group>"; };
 		23D6E02B24D59DDD00A5D604 /* Parameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Parameters.h; sourceTree = "<group>"; };
@@ -239,6 +243,8 @@
 				235B7E7A2509F6800016090F /* DataCompress.m */,
 				23AF0267250F98840074EF87 /* BatchJob.h */,
 				23AF0268250F98840074EF87 /* BatchJob.m */,
+				23673362252EFA8E00284D91 /* PeriodicReporter.h */,
+				23673363252EFA8E00284D91 /* PeriodicReporter.m */,
 			);
 			path = SimEpidemicSV;
 			sourceTree = "<group>";
@@ -268,6 +274,7 @@
 				2372797525203323000BC3C5 /* batch.html */,
 				236BD9D2252ADD5300A1D21D /* control.html */,
 				239A1AF4251370AA00B92DAD /* favicon.ico */,
+				23A14AFE25317FA500AC765F /* control.js */,
 			);
 			path = DocumentRoot;
 			sourceTree = "<group>";
@@ -442,6 +449,7 @@
 				2365DEC525061537006C2A95 /* noGUI.m in Sources */,
 				235B7E782509D7AE0016090F /* ProcContext.m in Sources */,
 				235B7E7B2509F6800016090F /* DataCompress.m in Sources */,
+				23673364252EFA8E00284D91 /* PeriodicReporter.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

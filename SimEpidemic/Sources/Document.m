@@ -19,6 +19,7 @@
 #import "Gatherings.h"
 #ifdef NOGUI
 #import "noGUI.h"
+#import "PeriodicReporter.h"
 #endif
 #define ALLOC_UNIT 2048
 #define DYNAMIC_STRUCT(t,f,n,fm) static t *f = NULL;\
@@ -132,6 +133,8 @@ void my_exit(void) {
 	NSSize orgWindowSize, orgViewSize;
 #ifdef NOGUI
 	__weak NSTimer *runtimeTimer;
+	NSMutableArray<PeriodicReporter *> *reporters;
+	NSLock *reportersLock;
 #endif
 }
 @end
@@ -326,6 +329,13 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	qDSNum.integerValue = stat->cnt[QuarantineSymp];
 	[statInfo flushPanels];
 }
+#else
+- (void)forAllReporters:(void (^)(PeriodicReporter *))block {
+	if (reporters == nil) return;
+	[reportersLock lock];
+	for (PeriodicReporter *rep in reporters) block(rep);
+	[reportersLock unlock];
+}
 #endif
 - (void)resetPop {
 	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
@@ -401,7 +411,9 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	[popLock unlock];
 	scenarioIndex = 0;
 	[self execScenario];
-#ifndef NOGUI
+#ifdef NOGUI
+	[self forAllReporters:^(PeriodicReporter *rep) { [rep reset]; }];
+#else
 	daysNum.doubleValue = 0.;
 	[self showCurrentStatistics];
 #endif
@@ -437,6 +449,10 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 }
 #ifdef NOGUI
 - (void)discardMemory {	// called when this document got useless
+	if (reporters != nil) {
+		for (PeriodicReporter *rep in reporters) [rep quit];
+		reporters = nil;
+	}
 	[statInfo discardMemory];	// cut the recursive reference
 	for (NSInteger i = 0; i < nMesh * nMesh; i ++) {
 		for (Agent *a = _Pop[i]; a != NULL; a = a->next)
@@ -881,18 +897,23 @@ static NSInteger mCount = 0, mCount2 = 0;
 		if (timePassed < 1.)
 			stepsPerSec += (fmin(30., 1. / timePassed) - stepsPerSec) * 0.2;
 		prevTime = newTime;
-#ifndef NOGUI
+#ifdef NOGUI
+//		if (runtimeParams.step % 100 == 0) NSLog(@"%ld", runtimeParams.step);
+		[self forAllReporters:^(PeriodicReporter *rep) { [rep sendReportPeriodic]; }];
+		usleep(1);
+#else
 		if (runtimeParams.step % animeSteps == 0) {
 			in_main_thread(^{ [self showAllAfterStep]; });
 			NSInteger usToWait = (1./30. - timePassed) * 1e6;
-			usleep((unsigned int)((usToWait < 0)? 1 : usToWait));
-		} else
+			usleep((uint32)((usToWait < 0)? 1 : usToWait));
+		} else usleep(1);
 #endif
-		usleep(1);
 	}
 #ifdef NOGUI
+//NSLog(@"runningLoop will stop %d.", loopMode);
 	in_main_thread(^{ [self stopTimeLimitTimer]; });
 	if (loopMode != LoopEndByUser) [self touch];
+	[self forAllReporters:^(PeriodicReporter *rep) { [rep pause]; }];
 	if (_stopCallBack != nil) _stopCallBack(loopMode);
 #else
 	in_main_thread(^{
@@ -916,17 +937,15 @@ static NSInteger mCount = 0, mCount2 = 0;
 	[_lastTLock unlock];
 	return result;
 }
-- (LoopMode)start:(NSInteger)stopAt {
-	if (loopMode == LoopRunning) return LoopRunning;
+- (void)start:(NSInteger)stopAt {
+	if (loopMode == LoopRunning) return;
 	if (stopAt > 0) stopAtNDays = stopAt;
-	LoopMode orgMode = loopMode;
 	[self goAhead];
 	loopMode = LoopRunning;
 	NSThread *thread = [NSThread.alloc initWithTarget:self
 		selector:@selector(runningLoop) object:nil];
 	thread.threadPriority = fmax(0., NSThread.mainThread.threadPriority - .1);
 	[thread start];
-	return orgMode;
 }
 - (void)step {
 	switch (loopMode) {
@@ -935,11 +954,33 @@ static NSInteger mCount = 0, mCount2 = 0;
 		default: [self doOneStep];
 	}
 	loopMode = LoopEndByUser;
+	for (PeriodicReporter *rep in reporters) [rep sendReport];
 }
 - (void)stop:(LoopMode)mode {
 	if (loopMode == LoopRunning) loopMode = mode;
 }
 - (StatInfo *)statInfo { return statInfo; }
+- (void)addReporter:(PeriodicReporter *)rep {
+	if (reportersLock == nil) reportersLock = NSLock.new;
+	[reportersLock lock];
+	if (reporters == nil) {
+		reporters = [NSMutableArray arrayWithObject:rep];
+	} else [reporters addObject:rep];
+	[reportersLock unlock];
+}
+- (void)removeReporter:(PeriodicReporter *)rep {
+	[reportersLock lock];
+	for (NSInteger i = reporters.count - 1; i >= 0; i --)
+		if (reporters[i] == rep) { [reporters removeObjectAtIndex:i]; break; }
+	[reportersLock unlock];
+}
+- (void)reporterConnectionWillClose:(int)desc {
+	[reportersLock lock];
+	for (NSInteger i = reporters.count - 1; i >= 0; i --)
+		if ([reporters[i] connectionWillClose:desc])
+			{ [reporters removeObjectAtIndex:i]; break; }
+	[reportersLock unlock];
+}
 #else
 - (IBAction)startStop:(id)sender {
 	if (loopMode != LoopRunning) {

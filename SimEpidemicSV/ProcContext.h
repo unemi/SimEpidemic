@@ -7,13 +7,20 @@
 //
 
 #import <AppKit/AppKit.h>
+#import "CommonTypes.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 typedef enum { IdxTypeIndex, IdxTypeTestI, IdxTypeTestF, IdxTypeUnknown } IndexType;
 
-@class Document, MyCounter;
+@class Document, MyCounter, DeflaterStream;
 extern Document *make_new_world(NSString *type, NSString * _Nullable browserID);
+extern void send_bytes(int desc, const char *bytes, NSInteger size);
+extern NSArray *make_history(StatData *stat, NSInteger nItems,
+	NSNumber *(^getter)(StatData *));
+extern NSArray *dist_cnt_array(NSArray<MyCounter *> *hist);
+extern NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document *doc);
+extern NSData *JSON_pop(Document *doc);
 
 @interface NSString (IndexNameExtension)
 - (NSString *)stringByRemovingFirstWord;
@@ -25,17 +32,13 @@ extern Document *make_new_world(NSString *type, NSString * _Nullable browserID);
 	uint32 ip4addr;
 	NSString *browserID;
 	Document *document;
-	NSLock *lock;
 	NSMutableData *bufData;	// buffer to receive
 	long dataLength;
 	NSDictionary<NSString *, NSString *> *query;
 	NSString *method, *type, *moreHeader;
 	NSObject *content;
 	NSInteger fileSize;
-
-	NSTimer *reportTimer;
-	NSInteger repN, repCnt, prevRepStep;
-	NSArray<NSString *> *repItemsIdx, *repItemsDly, *repItemsDst, *repItemsExt;
+	void (^postProc)(void);
 }
 - (instancetype)initWithSocket:(int)desc ip:(uint32)ipaddr;
 - (long)receiveData:(NSInteger)length;
@@ -43,6 +46,7 @@ extern Document *make_new_world(NSString *type, NSString * _Nullable browserID);
 - (void)notImplementedYet;
 - (void)makeResponse;
 - (void)setJSONDataAsResponse:(NSObject *)object;
+- (void)checkDocument;
 - (void)connectionWillClose;
 @end
 

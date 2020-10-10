@@ -2,34 +2,7 @@
 <head>
 <meta charset="utf-8"/>
 <title>SimEpidemic noGUITest: Control</title>
-<script type="text/javascript">
-var browserID;
-function setup() {
-	browserID = location.search.substring(1);
-	const forms = document.forms;
-	for (var i = 0; i < forms.length; i ++) {
-		const elm = document.createElement('input');
-		elm.type = 'hidden';
-		elm.name = 'me';
-		elm.value = browserID;
-		forms[i].appendChild(elm);
-	}
-}
-function startAndMonitor() {
-	let request = "start?report=";
-	const cboxes = document.getElementById("cboxes1").children;
-	for (var i = 0; i < cboxes.length; i ++)
-		if (cboxes[i].checked)
-			request += ((i == 0)? "[" : ",") + '"' + cboxes[i].name + '"';
-	request += "]&interval=" + document.getElementById("interval").value
-		+ "&me=" + browserID;
-	console.log(request);
-	const evntSrc = new EventSource(request);
-	evntSrc.onmessage = function (e) {
-		document.getElementById("monitorText").innerHTML = e.data;
-	}
-}
-</script>
+<script type="text/javascript" src="control.js"></script>
 </head>
 <body onload="setup()">
 <h1>Interactive Control &amp; Monitoring</h1>
@@ -40,18 +13,24 @@ function startAndMonitor() {
 	<input type="submit" value="一時停止" formaction="stop">
 	<input type="submit" value="初期化" formaction="reset">
 	</form>
-	応答: <iframe name="controlResult" height=20></iframe><br/>
-	<button onclick="startAndMonitor()">監視付きで開始</button>
-	時間間隔:<input id="interval" type="number" value="0.2" step="0.1">秒
+	応答: <iframe id="controlResult" name="controlResult" height=20></iframe><br/>
+	<button id="startMonitor" onclick="startMonitor()">監視開始</button>
+	時間間隔:<input id="interval" type="number" value="0.1" step="0.1" style="width:10ex">秒
+	<button id="stopMonitor" disabled=1 onclick="stopMonitor()">中止</button>
+	<button id="changeMonitor" disabled=1 onclick="changeMonitor()">変更</button>
 	<div id="cboxes1">監視指標:
 		<input type="checkbox" name="days" checked>日&nbsp;
 		<input type="checkbox" name="asymptomatic" checked>未発症&nbsp;
 		<input type="checkbox" name="symptomatic" checked>発症&nbsp;
 		<input type="checkbox" name="recovered" checked>快復&nbsp;
-		<input type="checkbox" name="died" checked>死亡
+		<input type="checkbox" name="died" checked>死亡&nbsp;&nbsp;
+		<input type="checkbox" name="population">個体群の表示
 	</div>
+	Process ID: <span id="procID">---</span>
 	<div id="monitorText" width="95%" style="overflow-wrap:anywhere">
 	Received data will be shown here.</div>
 <hr/>
+<canvas id="world" width="600" height="500"
+	style="position:absolute;left:20;bottom:20"></canvas>
 </body>
 </html>

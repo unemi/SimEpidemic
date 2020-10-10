@@ -24,6 +24,9 @@ extern void my_exit(void);
 @end
 
 @class MyView, LegendView, StatInfo, MyCounter;
+#ifdef NOGUI
+@class PeriodicReporter;
+#endif
 
 #ifndef NOGUI
 @interface Document : NSDocument <NSWindowDelegate> {
@@ -66,10 +69,13 @@ extern void my_exit(void);
 @property NSString *docKey;
 @property void (^stopCallBack)(LoopMode);
 - (BOOL)touch;
-- (LoopMode)start:(NSInteger)stopAt;
+- (void)start:(NSInteger)stopAt;
 - (void)step;
 - (void)stop:(LoopMode)mode;
 - (void)resetPop;
+- (void)addReporter:(PeriodicReporter *)rep;
+- (void)removeReporter:(PeriodicReporter *)rep;
+- (void)reporterConnectionWillClose:(int)desc;
 - (void)discardMemory;
 - (StatInfo *)statInfo;
 - (NSArray *)scenarioPList;

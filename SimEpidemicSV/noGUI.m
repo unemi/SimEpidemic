@@ -188,7 +188,7 @@ static void interaction_thread(int desc, uint32 ipaddr) {
 }}
 BOOL stillAlive = YES;
 void connection_thread(void) {
-	unsigned int addrlen;
+	uint32 addrlen;
 	int desc = -1;
 	os_log_debug(OS_LOG_DEFAULT, "Connection thread started.");
 	NSThread.currentThread.name = @"Network connection";

@@ -8,7 +8,7 @@
 
 #import "DataCompress.h"
 #import <zlib.h>
-#define CHUNK 256*1024
+//#define CHUNK 256*1024
 
 @implementation NSData (CompressExtension)
 - (NSData *)zippedData {
@@ -16,6 +16,7 @@
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
+    strm.data_type = Z_TEXT;
     int ret = deflateInit(&strm, Z_BEST_COMPRESSION);
     if (ret != Z_OK) @throw @(ret);
 	uInt dataLen = (uInt)self.length;
