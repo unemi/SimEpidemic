@@ -41,12 +41,13 @@ NSDictionary *indexNameToIndex = nil, *testINameToIdx = nil;
 NSDateFormatter *dateFormat = nil;
 static NSString *pidFilename = @"pid", *infoFilename = @"simeipInfo.plist",
 	*keyUniqIDCounter = @"uniqIDCounter", *keyUniqIDChars = @"uniqIDChars";
-static BOOL infoChanged = NO;
-
+static NSLock *uniqStrLock = nil;
 #define N_UNIQ_CHARS 61
 NSString *new_uniq_string(void) {
 	static char chars[N_UNIQ_CHARS + 1];
 	static NSUInteger counter = 0;
+	if (uniqStrLock == nil) uniqStrLock = NSLock.new;
+	[uniqStrLock lock];
 	NSNumber *num; NSString *str;
 	if ((num = infoDictionary[keyUniqIDCounter])) counter = num.integerValue;
 	if ((str = infoDictionary[keyUniqIDChars]) == nil || str.length != N_UNIQ_CHARS) {
@@ -66,7 +67,12 @@ NSString *new_uniq_string(void) {
 		h >>= 1, l <<= 1) if (j & l) k |= h;
 	for (n = 0; k != 0 && n < 31; n ++, k /= 61) buf[n] = chars[k % 61];
 	infoDictionary[keyUniqIDCounter] = @(counter);
-	infoChanged = YES;
+	NSData *infoData = [NSPropertyListSerialization
+		dataWithPropertyList:infoDictionary
+		format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL];
+	if (infoData) [infoData writeToFile:
+		[dataDirectory stringByAppendingPathComponent:infoFilename] atomically:YES];
+	[uniqStrLock unlock];
 	buf[n] = '\0';
 	return [NSString stringWithUTF8String:buf];
 }
@@ -213,13 +219,6 @@ void catch_signal(int sig) {
 #ifdef DEBUG
 	fprintf(stderr, "I caught a signal %d.\n", sig);
 #endif
-	if (infoChanged) {
-		NSData *infoData = [NSPropertyListSerialization
-			dataWithPropertyList:infoDictionary
-			format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL];
-		if (infoData) [infoData writeToFile:
-			[dataDirectory stringByAppendingPathComponent:infoFilename] atomically:YES];
-	}
 // better to wait for all of the sending processes completed.
 //		shutdown(soc, SHUT_RDWR);
 	os_log(OS_LOG_DEFAULT, "Quit.");
@@ -300,7 +299,7 @@ printf("fileDir=%s\ndataDir=%s\n", fileDirectory.UTF8String, dataDirectory.UTF8S
 
 // Prepare and start the Runloop to use Cocoa framework.
 	NSApplication *app = NSApplication.sharedApplication;
-	app.activationPolicy = NSApplicationActivationPolicyRegular;
+	app.activationPolicy = NSApplicationActivationPolicyProhibited;
 	app.delegate = AppDelegate.new;
 	defaultDocuments = NSMutableDictionary.new;
 	theDocuments = NSMutableDictionary.new;

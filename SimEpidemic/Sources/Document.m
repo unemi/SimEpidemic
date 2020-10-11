@@ -37,7 +37,6 @@ static void fm(t **ap) {\
 		if (p->next == NULL) { p->next = f; break; }\
 	f = *ap; *ap = NULL;\
 }
-DYNAMIC_STRUCT(Agent, freePop, new_agent, free_agent_mems)
 DYNAMIC_STRUCT(TestEntry, freeTestEntries, new_testEntry, free_testEntry_mems)
 DYNAMIC_STRUCT(ContactInfo, freeCInfo, new_cinfo, free_cinfo_mems)
 static NSLock *cInfoLock = nil;
@@ -115,7 +114,7 @@ void my_exit(void) {
 	DataPanel *dataPanel;
 	LoopMode loopMode;
 	NSInteger nPop, nMesh;
-	Agent **pop;
+	Agent **pop, *agents;
 	NSRange *pRange;
 	CGFloat prevTime, stepsPerSec;
 	NSMutableArray<NSLock *> *cellLocks;
@@ -350,11 +349,14 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	}
 	gatherings = NSMutableArray.new;
 	[popLock lock];
-	for (NSInteger i = 0; i < nMesh * nMesh; i ++)
-		for (Agent *a = _Pop[i]; a != NULL; a = a->next) {
-			free_cinfo_mems(&a->contactInfoHead);
-			a->contactInfoTail = NULL;
-		}
+	[cInfoLock lock];
+	for (NSInteger i = 0; i < nPop; i ++)
+		if (agents[i].contactInfoHead != NULL) {
+			agents[i].contactInfoTail->next = freeCInfo;
+			freeCInfo = agents[i].contactInfoHead;
+			agents[i].contactInfoHead = agents[i].contactInfoTail = NULL;
+	}
+	[cInfoLock unlock];
 	if (nMesh != worldParams.mesh) {
 		NSInteger nCOrg = nMesh * nMesh, nCNew = worldParams.mesh * worldParams.mesh;
 		if (nCOrg < nCNew) {
@@ -363,19 +365,15 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 				[cellLocks addObject:NSLock.new];
 		} else [cellLocks removeObjectsInRange:(NSRange){nCNew, nCOrg - nCNew}];
 		nMesh = worldParams.mesh;
-		NSInteger popMemSz = sizeof(void *) * nCNew;
-		_Pop = realloc(_Pop, popMemSz);
+		_Pop = realloc(_Pop, sizeof(void *) * nCNew);
 		pRange = realloc(pRange, sizeof(NSRange) * nCNew);
-		memset(_Pop, 0, popMemSz);
 		gatheringsMap = NSMutableDictionary.new;
-	} else {
-		for (NSInteger i = 0; i < nMesh * nMesh; i ++)
-			free_agent_mems(_Pop + i);
-		[gatheringsMap removeAllObjects];
-	}
+	} else [gatheringsMap removeAllObjects];
+	memset(_Pop, 0, sizeof(void *) * nMesh * nMesh);
 	if (nPop != worldParams.initPop) {
 		nPop = worldParams.initPop;
 		pop = realloc(pop, sizeof(void *) * nPop);
+		agents = realloc(agents, sizeof(Agent) * nPop);
 	}
 	NSInteger nDist = runtimeParams.dstOB / 100. * nPop;
 	NSInteger iIdx = 0, infecIdxs[worldParams.nInitInfec];
@@ -391,9 +389,9 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	});
 // for (NSInteger i = 0; i < params.nInitInfec; i ++) printf("%ld,", infecIdxs[i]); printf("\n");
 	for (NSInteger i = 0; i < nPop; i ++) {
-		Agent *a = new_agent();
-		a->ID = i;
+		Agent *a = &agents[i];
 		reset_agent(a, &runtimeParams, &worldParams);
+		a->ID = i;
 		if (i < nDist) a->distancing = YES;
 		if (iIdx < worldParams.nInitInfec && i == infecIdxs[iIdx]) {
 			a->health = Asymptomatic; iIdx ++;
@@ -401,8 +399,7 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		}
 		add_agent(a, &worldParams, _Pop);
 	}
-	free_agent_mems(&_QList);
-	free_agent_mems(&_CList);
+	_QList = _CList = NULL;
 	_WarpList = NSMutableArray.new;
 	free_testEntry_mems(&testQueHead);
 	testQueTail = NULL;
@@ -454,16 +451,16 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		reporters = nil;
 	}
 	[statInfo discardMemory];	// cut the recursive reference
-	for (NSInteger i = 0; i < nMesh * nMesh; i ++) {
-		for (Agent *a = _Pop[i]; a != NULL; a = a->next)
-			free_cinfo_mems(&a->contactInfoHead);
-		free_agent_mems(&_Pop[i]);
+	[cInfoLock lock];
+	for (NSInteger i = 0; i < nPop; i ++) if (agents[i].contactInfoHead != NULL) {
+		agents[i].contactInfoTail->next = freeCInfo;
+		freeCInfo = agents[i].contactInfoHead;
 	}
-	free_agent_mems(&_QList);
-	free_agent_mems(&_CList);
+	[cInfoLock unlock];
 	free_testEntry_mems(&testQueHead);
 	free(_Pop);
 	free(pop);
+	free(agents);
 }
 #else
 - (NSString *)windowNibName { return @"Document"; }
@@ -598,13 +595,14 @@ static NSLock *testEntriesLock = nil;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason {
 	if (runtimeParams.step - agent->lastTested <
 		runtimeParams.tstInterval * worldParams.stepsPerDay ||
-		agent->isOutOfField) return;
+		agent->isOutOfField || agent->inTestQueue) return;
 	[testeesLock lock];
-	testees[@((NSUInteger)agent)] = @(reason);
+	testees[@(agent->ID)] = @(reason);
 	[testeesLock unlock];
 }
 - (void)deliverTestResults:(NSUInteger *)testCount {
 	// check the results of tests
+	if (testEntriesLock == nil) testEntriesLock = NSLock.new;
 	NSInteger cTm = runtimeParams.step - runtimeParams.tstProc * worldParams.stepsPerDay;
 	for (TestEntry *entry = testQueHead; entry != NULL; entry = testQueHead) {
 		if (entry->timeStamp > cTm) break;
@@ -617,28 +615,34 @@ static NSLock *testEntriesLock = nil;
 				(random() * .458 / 0x7fffffff + .501) * worldParams.worldSize};
 			[self addNewWarp:[WarpInfo.alloc initWithAgent:a
 				goal:newPt mode:WarpToHospital]];
-			for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
-				[self testInfectionOfAgent:c->agent reason:TestAsContact];
-			[cInfoLock lock];
-			free_cinfo_mems(&a->contactInfoHead);
-			[cInfoLock unlock];
-			a->contactInfoTail = NULL;
+			if (a->contactInfoHead != NULL) {
+				for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
+					[self testInfectionOfAgent:c->agent reason:TestAsContact];
+				[cInfoLock lock];
+				a->contactInfoTail->next = freeCInfo;
+				freeCInfo = a->contactInfoHead;
+				[cInfoLock unlock];
+				a->contactInfoHead = a->contactInfoTail = NULL;
+			}
 		} else testCount[TestNegative] ++;
+		entry->agent->inTestQueue = NO;
 		testQueHead = entry->next;
 		if (entry->next) entry->next->prev = NULL;
 		else testQueTail = NULL;
+		[testEntriesLock lock];
 		entry->next = freeTestEntries;
 		freeTestEntries = entry;
+		[testEntriesLock unlock];
 	}
 
 	// enqueue new tests
-	if (testEntriesLock == nil) testEntriesLock = NSLock.new;
-	[testEntriesLock lock];
 	[testeesLock lock];
 	for (NSNumber *num in testees) {
 		testCount[testees[num].integerValue] ++;
-		Agent *agent = (Agent *)num.integerValue;
+		Agent *agent = &agents[num.integerValue];
+		[testEntriesLock lock];
 		TestEntry *entry = new_testEntry();
+		[testEntriesLock unlock];
 		entry->isPositive = is_infected(agent)?
 			(random() < 0x7fffffff * runtimeParams.tstSens / 100.) :
 			(random() > 0x7fffffff * runtimeParams.tstSpec / 100.);
@@ -648,9 +652,9 @@ static NSLock *testEntriesLock = nil;
 		else testQueHead = entry;
 		entry->next = NULL;
 		testQueTail = entry;
+		agent->inTestQueue = YES;
 	}
 	[testeesLock unlock];
-	[testEntriesLock unlock];
 	[testees removeAllObjects];
 	for (NSInteger i = TestAsSymptom; i < TestPositive; i ++)
 		testCount[TestTotal] += testCount[i];
@@ -663,7 +667,7 @@ static NSLock *testEntriesLock = nil;
 }
 - (void)addNewWarp:(WarpInfo *)info {
 	[newWarpLock lock];
-	newWarpF[@((NSUInteger)info.agent)] = info;
+	newWarpF[@(info.agent->ID)] = info;
 	[newWarpLock unlock];
 }
 //#define MEASURE_TIME

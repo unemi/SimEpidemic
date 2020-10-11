@@ -52,13 +52,13 @@ BOOL is_infected(Agent *a) {
 	return a->health == Asymptomatic || a->health == Symptomatic;
 }
 static void reset_days(Agent *a, RuntimeParams *p) {
-	a->daysInfected = a->daysDiseased = 0;
 	a->daysToRecover = my_random(&p->recov);
 	a->daysToOnset = my_random(&p->incub);
 	a->daysToDie = my_random(&p->fatal) + a->daysToOnset;
 	a->imExpr = my_random(&p->immun);
 }
 void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
+	memset(a, 0, sizeof(Agent));
 	a->app = random() / (CGFloat)0x7fffffff;
 	a->prf = random() / (CGFloat)0x7fffffff;
 	a->x = random() / (CGFloat)0x7fffffff * (wp->worldSize - 6.) + 3.;
@@ -68,11 +68,8 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->vy = sin(th);
 	a->health = Susceptible;
 	a->nInfects = -1;
-	a->newNInfects = 0;
-	a->distancing = a->isWarping = NO;
 	a->isOutOfField = YES;
 	reset_days(a, rp);
-	a->contactInfoHead = a->contactInfoTail = NULL;
 	a->lastTested = -999999;
 }
 void reset_for_step(Agent *a) {

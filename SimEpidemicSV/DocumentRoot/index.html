@@ -24,11 +24,11 @@ function setup() {
 <a href="batch.html">Batch Job</a>
 <h2>getParams</h2>
 <table><tr><td style="vertical-align: top">
-	<form method="get" action="getParams" target="currentParams">
+	<form method="get" action="/getParams" target="currentParams">
 	<input type="hidden" name="format" value=3>
 	<input type="submit" value="取得">
 	</form>
-	<form method="get" action="getParams" target="currentParams">
+	<form method="get" action="/getParams" target="currentParams">
 	<input type="hidden" name="format" value=0>
 	<input type="text" name="save" value="myParams">
 	<input type="submit" value="保存">
@@ -37,14 +37,14 @@ function setup() {
 <td><iframe name="currentParams"></iframe></td></tr></table>
 <hr/>
 <h2>setParams</h2>
-	<form method="post" action="setParams"
+	<form method="post" action="/setParams"
 		enctype="multipart/form-data" target="loadParamResult">
 	<input type="file" name="default" accept="application/json">
 	<input type="submit" value="読み込む">
 	</form>
 	応答: <iframe name="loadParamResult" height=20></iframe>
 <hr/>
-	<form method="post" action="setParams" target="setParamResult">
+	<form method="post" action="/setParams" target="setParamResult">
 	<table>
 	<tr><td align="right">人口</td>
 		<td><input type="number" name="populationSize" style="width:12ex"></td></tr>
@@ -79,13 +79,13 @@ function setup() {
 	<iframe name="distribution"></iframe>
 <hr/>
 <h2>getPopulation</h2>
-	<form method="get" action="getPopulation" target="populationData">
+	<form method="get" action="/getPopulation" target="populationData">
 	<input type="submit" value="フィールド個体情報">
 	</form>
 	<iframe name="populationData"></iframe>
 <hr/>
 <h2>setScenario</h2>
-	<form method="post" action="setScenario"
+	<form method="post" action="/setScenario"
 		 enctype="multipart/form-data" target="loadScenario">
 	<input type="file" name="upload" accept="application/json">
 	<input type="submit" value="読み込む">

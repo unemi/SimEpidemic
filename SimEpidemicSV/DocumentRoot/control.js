@@ -17,7 +17,7 @@ function setup() {
 	chngBtn = document.getElementById("changeMonitor");
 }
 function configRequest(com) {
-	let request = com + '?report=["step"';
+	let request = "/" + com + '?report=["step"';
 	const cboxes = document.getElementById("cboxes1").children;
 	for (var i = 0; i < cboxes.length; i ++)
 		if (cboxes[i].checked) request += ',"' + cboxes[i].name + '"';
@@ -38,7 +38,7 @@ function startMonitor() {
 	quitBtn.disabled = chngBtn.disabled = 0;
 }
 function stopMonitor() {
-	document.getElementById("controlResult").src = "quitReport?process=" + processID;
+	document.getElementById("controlResult").src = "/quitReport?process=" + processID;
 	setupBtn.disabled = 0;
 	quitBtn.disabled = chngBtn.disabled = 1;
 	evntSrc.close();

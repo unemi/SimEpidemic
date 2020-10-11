@@ -256,6 +256,8 @@ static NSNumberFormatter *distDgtFmt = nil;
 		else {
 			RuntimeParams tmpRP;
 			WorldParams tmpWP;
+			memcpy(&tmpRP, &defaultRuntimeParams, sizeof(RuntimeParams));
+			memcpy(&tmpWP, &defaultWorldParams, sizeof(WorldParams));
 			set_params_from_dict(&tmpRP, &tmpWP, dict);
 			[self setParamsOfRuntime:&tmpRP world:&tmpWP];
 		}

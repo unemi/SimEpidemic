@@ -94,7 +94,8 @@ typedef struct AgentRec {
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
 	HealthType health, newHealth;
 	int nInfects, newNInfects;
-	BOOL distancing, isOutOfField, isWarping, gotAtHospital;
+	BOOL distancing, isOutOfField, isWarping, gotAtHospital,
+		inTestQueue;
 	NSInteger lastTested;
 	struct AgentRec *best;
 	CGFloat bestDist;

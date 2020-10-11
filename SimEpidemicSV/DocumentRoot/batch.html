@@ -16,7 +16,7 @@ function getJobID(ifrm) {
 <body>
 <h1>BatchJob</h1>
 <h2>Submission</h2>
-<form method="post" action="submitJob" target="submission">
+<form method="post" action="/submitJob" target="submission">
 	<textarea name="job" rows="10" cols="60">
 {"stopAt":100,"n":3,
 "params":{"stepsPerDay":4},
@@ -32,19 +32,19 @@ function getJobID(ifrm) {
 <h2>Job Status / Stop</h2>
 <form method="get" target="jobStatus">
 	Job ID: <input class="JobID" type="text" name="job">
-	<input type="submit" value="状態" formaction="getJobStatus">
-	<input type="submit" value="実行中止" formaction="stopJob">
+	<input type="submit" value="状態" formaction="/getJobStatus">
+	<input type="submit" value="実行中止" formaction="/stopJob">
 </form>
 <iframe name="jobStatus" height=24 width=400></iframe>
 <hr/>
 <h2>Job Results</h2>
-<form method="get" action="getJobResults" target="jobResults">
+<form method="get" action="/getJobResults" target="jobResults">
 	Job ID: <input class="JobID" type="text" name="job">
 	<input type="submit" value="結果">
 </form>
 <iframe name="jobResults" width=400></iframe>
 <hr/>
-<form method="get" action="getJobResults" target="jobResultSave">
+<form method="get" action="/getJobResults" target="jobResultSave">
 	Job ID: <input class="JobID" type="text" name="job">
 	File to save: <input type="text" name="save" value="MyResult">
 	<input type="submit" value="保存">

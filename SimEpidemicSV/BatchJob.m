@@ -175,6 +175,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 }
 
 @implementation BatchJob
+#ifdef DEBUG
 - (void)monitorProgress {
 	if (runningTrials.count == 0) return;
 	char buf[128];
@@ -186,6 +187,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 	}
 	os_log(OS_LOG_DEFAULT, "%s", buf);
 }
+#endif
 - (instancetype)initWithInfo:(NSDictionary *)info {
 	if (!(self = [super init])) return nil;
 	_ID = new_uniq_string();
@@ -213,10 +215,11 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 	lock = NSLock.new;
 	runningTrials = NSMutableDictionary.new;
 	availableWorlds = NSMutableArray.new;
-
+#ifdef DEBUG
 	in_main_thread(^{
-		[NSTimer scheduledTimerWithTimeInterval:.5 repeats:YES block:
+		[NSTimer scheduledTimerWithTimeInterval:1. repeats:YES block:
 			^(NSTimer * _Nonnull timer) { [self monitorProgress]; }]; });
+#endif
 	return self;
 }
 - (void)makeDataFileWith:(NSNumber *)number type:(NSString *)type
@@ -287,8 +290,8 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 	} else {
 		doc = [availableWorlds lastObject];
 		[availableWorlds removeLastObject];
-		[doc resetPop];
 	}
+	[doc resetPop];
 	NSNumber *trialNumb = @(++ nextTrialNumber);
 	runningTrials[trialNumb] = doc;
 	if (nextTrialNumber >= _nIteration)
@@ -302,9 +305,15 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 		trialNumb, _nIteration, _ID, doc.ID);
 }
 - (NSDictionary *)jobStatus {
+	[lock lock];
 	NSInteger nowProcessed = runningTrials.count;
+	NSNumber *steps[nowProcessed];
+	NSInteger n = 0;
+	for (Document *doc in runningTrials.objectEnumerator)
+		steps[n ++] = @(doc.runtimeParamsP->step);
+	[lock unlock];
 	return @{@"notYet":@(_nIteration - nextTrialNumber),
-		@"nowProcessed":@(nowProcessed),
+		@"nowProcessed":[NSArray arrayWithObjects:steps count:n],
 		@"finished":@(nextTrialNumber - nowProcessed) };
 }
 - (void)stop {
