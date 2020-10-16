@@ -34,4 +34,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setIntegerValue:(NSInteger)value;
 @end
 
+@interface FillView : NSView
+@end
+
 NS_ASSUME_NONNULL_END

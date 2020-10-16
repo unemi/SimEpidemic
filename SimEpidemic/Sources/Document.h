@@ -33,7 +33,8 @@ extern void my_exit(void);
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
 		*scenarioText, *animeStepsTxt, *stopAtNDaysDgt;
-	IBOutlet NSButton *startBtn, *stepBtn, *stopAtNDaysCBox, *showGatheringsCBox;
+	IBOutlet NSButton *startBtn, *stepBtn, *scnBtn, *prmBtn, *sttBtn, *datBtn,
+		*stopAtNDaysCBox, *showGatheringsCBox;
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;
@@ -69,7 +70,7 @@ extern void my_exit(void);
 @property NSString *docKey;
 @property void (^stopCallBack)(LoopMode);
 - (BOOL)touch;
-- (void)start:(NSInteger)stopAt;
+- (void)start:(NSInteger)stopAt priority:(CGFloat)prio;
 - (void)step;
 - (void)stop:(LoopMode)mode;
 - (void)resetPop;

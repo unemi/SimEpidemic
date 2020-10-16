@@ -143,14 +143,13 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 			for (NSString *path in dirEnum) {
 				NSDictionary *attr = dirEnum.fileAttributes;
 				if (attr == nil) {
-					os_log_error(OS_LOG_DEFAULT,
-						"Job record %@ failed to get attributes", path);
+					MY_LOG("Job record %@ failed to get attributes", path);
 					continue;
 				}
 				if (![attr[NSFileType] isEqualTo:NSFileTypeDirectory]) continue;
 				NSDate *modDate = attr[NSFileModificationDate];
-				if (modDate == nil) os_log_error(OS_LOG_DEFAULT,
-					"Job record %@ failed to get the content modification date.", path);
+				if (modDate == nil) MY_LOG(
+					"Job record %@ failed to get the content modification date.", path)
 				else if ([pastDate compare:modDate] == NSOrderedDescending)
 					[dirsTobeRemoved addObject:path];
 				[dirEnum skipDescendents];
@@ -160,16 +159,16 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 				NSString *pnc = @"";
 				for (NSString *name in dirsTobeRemoved)
 					{ [ms appendFormat:@"%@%@", pnc, name]; pnc = @", "; }
-				os_log(OS_LOG_DEFAULT, "Job records %@ are going to be removed.", ms);
+				MY_LOG("Job records %@ are going to be removed.", ms);
 			}
 			NSError *error;
 			for (NSString *path in dirsTobeRemoved)
 				if (![fm removeItemAtPath:
 					[dirPath stringByAppendingPathComponent:path] error:&error])
-					os_log_error(OS_LOG_DEFAULT, "Job record %@ couldn't be removed. %@",
+					MY_LOG("Job record %@ couldn't be removed. %@",
 						path, error.localizedDescription);
 		} @catch (NSException *excp) {
-			os_log_error(OS_LOG_DEFAULT, "Job record expiration check: %@", excp.reason);
+			MY_LOG("Job record expiration check: %@", excp.reason);
 		}
 	}];
 }
@@ -185,7 +184,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 			runningTrials[num].runtimeParamsP->step);
 		if (k >= 127) break;
 	}
-	os_log(OS_LOG_DEFAULT, "%s", buf);
+	MY_LOG("%s", buf);
 }
 #endif
 - (instancetype)initWithInfo:(NSDictionary *)info {
@@ -238,7 +237,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 }
 - (void)trialDidFinish:(NSNumber *)number mode:(LoopMode)mode {
 // output the results
-	os_log(OS_LOG_DEFAULT, "Trial %@/%ld of job %@ finished as %@.",
+	MY_LOG("Trial %@/%ld of job %@ finished as %@.",
 		number, _nIteration, _ID,
 		(mode == LoopFinished)? @"no more infected individuals" :
 		(mode == LoopEndByCondition)? @"condition in scenario" :
@@ -264,9 +263,9 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 			makeObj:^(StatInfo *stInfo, NSArray *names)
 				{ return [stInfo objectOfHistgramTableWithNames:names]; }];
 	} @catch (NSString *msg) {
-		os_log_error(OS_LOG_DEFAULT, "Data strage %@ %@.", dataDirectory, msg);
+		MY_LOG("Data strage %@ %@.", dataDirectory, msg);
 	} @catch (NSError *error) {
-		os_log_error(OS_LOG_DEFAULT, "%@", error.localizedDescription);
+		MY_LOG("%@", error.localizedDescription);
 	}
 // check next trial
 	[lock lock];
@@ -299,9 +298,9 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 	doc.stopCallBack = ^(LoopMode mode){
 		[self trialDidFinish:trialNumb mode:mode];
 	};
-	[doc start:_stopAt];
+	[doc start:_stopAt priority:-.2];
 	[lock unlock];
-	os_log(OS_LOG_DEFAULT, "Trial %@/%ld of job %@ started on world %@.",
+	MY_LOG("Trial %@/%ld of job %@ started on world %@.",
 		trialNumb, _nIteration, _ID, doc.ID);
 }
 - (NSDictionary *)jobStatus {
@@ -343,8 +342,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 	BatchJob *job = [BatchJob.alloc initWithInfo:jobInfo];
 	if (job == nil) @throw @"500 Couldn't make a batch job.";
 	if (theJobController == nil) theJobController = JobController.new;
-	os_log(OS_LOG_DEFAULT, "Job %@ was submitted from %{network:in_addr}d.",
-		job.ID, ip4addr);
+	MY_LOG("%@ Job %@ was submitted.", ip4_string(ip4addr), job.ID);
 	[theJobController submitJob:job];
 	content = job.ID;
 	type = @"text/plain";
@@ -429,7 +427,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 		if (![NSFileManager.defaultManager createDirectoryAtPath:myTmpDir
 			withIntermediateDirectories:YES
 			attributes:@{NSFilePosixPermissions:@(0755)} error:&error]) {
-			os_log_error(OS_LOG_DEFAULT, "Couldn't create directory %@.", myTmpDir);
+			MY_LOG("Couldn't create directory %@.", myTmpDir);
 			@throw @"500 Couldn't create a temporary directory.";
 		}
 		NSString *sepKey = query[@"sep"], *nlKey = query[@"nl"];
@@ -467,7 +465,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 		content = [NSData dataWithContentsOfFile:
 			[myTmpDir stringByAppendingPathExtension:@"zip"]];
 		if (![NSFileManager.defaultManager removeItemAtPath:tmpDir error:&error])
-			os_log_error(OS_LOG_DEFAULT, "%@", error.localizedDescription);
+			MY_LOG("%@", error.localizedDescription);
 		moreHeader = [NSString stringWithFormat:
 			@"Content-Disposition: attachment; filename=\"%@.zip\"\n", save];
 		type = @"application/zip";

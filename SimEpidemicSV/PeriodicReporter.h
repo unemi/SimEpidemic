@@ -13,10 +13,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface PeriodicReporter : NSObject
 @property (readonly) NSString *ID;
-- (instancetype)initWithDocument:(Document *)doc desc:(int)dsc;
+- (instancetype)initWithDocument:(Document *)doc addr:(uint32)addr desc:(int)dsc;
 - (BOOL)sendReport;
 - (void)sendReportPeriodic;
 - (void)reset;
+- (void)start;
 - (void)pause;
 - (void)quit;
 - (BOOL)connectionWillClose:(int)dsc;

@@ -10,15 +10,18 @@
             <connections>
                 <outlet property="animeStepper" destination="XKh-Mv-6xc" id="CI7-1Y-t3h"/>
                 <outlet property="animeStepsTxt" destination="E7P-hB-gL3" id="VUF-sf-yHW"/>
+                <outlet property="datBtn" destination="uEY-Nh-cys" id="v4U-cx-mvz"/>
                 <outlet property="daysNum" destination="eHC-1A-Ovl" id="eVN-UA-O2S"/>
                 <outlet property="lvAsy" destination="78G-0k-MHr" id="1T4-WK-0hC"/>
                 <outlet property="lvDea" destination="Hcw-5G-Xy9" id="uJL-E8-Ucv"/>
                 <outlet property="lvRec" destination="v9P-jT-Kc5" id="oqt-MB-auq"/>
                 <outlet property="lvSuc" destination="9Fp-4R-Hnw" id="LmC-Ac-6x2"/>
                 <outlet property="lvSym" destination="Ixf-mQ-Aeb" id="X9u-Vw-NSn"/>
+                <outlet property="prmBtn" destination="8oB-6Q-T7R" id="M7t-24-LAU"/>
                 <outlet property="qDSNum" destination="cdS-6l-yC3" id="QvI-2x-h4e"/>
                 <outlet property="qNSNum" destination="Tgb-tI-PQH" id="f23-il-ajI"/>
                 <outlet property="scenarioText" destination="Awo-S3-2Qp" id="FkL-Sa-7tC"/>
+                <outlet property="scnBtn" destination="bUt-Py-ffz" id="YyT-PF-GKh"/>
                 <outlet property="showGatheringsCBox" destination="IFU-W9-eTe" id="ugJ-zr-fPC"/>
                 <outlet property="spsNum" destination="AJg-mE-B4N" id="fVh-6g-Eue"/>
                 <outlet property="startBtn" destination="670-an-uJr" id="BhI-ME-hEo"/>
@@ -26,6 +29,7 @@
                 <outlet property="stepBtn" destination="cgf-38-s44" id="TsO-JK-0lv"/>
                 <outlet property="stopAtNDaysCBox" destination="Z3d-He-dRF" id="bvY-pQ-Cda"/>
                 <outlet property="stopAtNDaysDgt" destination="qVE-iD-MXA" id="zRO-sz-Zsa"/>
+                <outlet property="sttBtn" destination="qhG-he-V7Q" id="bFh-48-fhq"/>
                 <outlet property="view" destination="qim-G4-87y" id="PQX-ho-i7h"/>
                 <outlet property="window" destination="xOd-HO-29H" id="JIz-fz-R2o"/>
             </connections>
@@ -236,7 +240,7 @@
                     </button>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="5pq-0a-hcg">
                         <rect key="frame" x="545" y="519" width="33" height="19"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="roundRect" bezelStyle="roundedRect" image="loupePlus" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Mkc-t0-PeF">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" metaFont="cellTitle"/>
@@ -247,7 +251,7 @@
                     </button>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="6be-Mi-PFr">
                         <rect key="frame" x="586" y="519" width="33" height="19"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="roundRect" bezelStyle="roundedRect" image="loupeMinus" imagePosition="only" alignment="center" enabled="NO" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="ChY-9Y-KZ0">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" metaFont="cellTitle"/>
@@ -295,7 +299,7 @@
                     </textField>
                     <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="XKh-Mv-6xc">
                         <rect key="frame" x="523" y="518" width="15" height="22"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <stepperCell key="cell" controlSize="small" continuous="YES" alignment="left" maxValue="6" id="laV-fR-r2p"/>
                         <connections>
                             <action selector="changeAnimeSteps:" target="-2" id="EXH-Rr-ntY"/>
@@ -303,7 +307,7 @@
                     </stepper>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="E7P-hB-gL3">
                         <rect key="frame" x="394" y="523" width="125" height="14"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" alignment="right" title="Draw in each 64 steps." id="Ish-oU-6UJ">
                             <font key="font" metaFont="smallSystem"/>
                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -348,7 +352,7 @@
                     </textField>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="IFU-W9-eTe">
                         <rect key="frame" x="280" y="521" width="110" height="18"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="check" title="Show gatherings" bezelStyle="regularSquare" imagePosition="left" controlSize="small" inset="2" id="tBP-Qv-dNi">
                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                             <font key="font" metaFont="smallSystem"/>

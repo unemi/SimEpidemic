@@ -10,7 +10,6 @@
 #import "Document.h"
 #ifdef NOGUI
 #import "../../SimEpidemicSV/noGUI.h"
-#import "../../SimEpidemicSV/BatchJob.h"
 #else
 #import "Preferences.h"
 #endif
@@ -33,7 +32,7 @@ void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
 		[NSString stringWithFormat:@"%@ (%@)", obj.description, obj.className];
 #ifdef NOGUI
 	fprintf(stderr, "%s\n", message.UTF8String);
-	if (critical) [NSApp terminate:nil];
+	if (critical) terminateApp(-1);
 #else
 	NSAlert *alt = NSAlert.new;
 	alt.alertStyle = critical? NSAlertStyleCritical : NSAlertStyleWarning;
@@ -218,10 +217,12 @@ void setup_colors(void) {
 	}
 }
 #ifdef NOGUI
-static NSCondition *checkAlive = nil;
+void
+#else
+struct SetupInfo { NSInteger nF, nD, nI, nn; };
+static struct SetupInfo
 #endif
-@implementation AppDelegate
-- (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
+	applicationSetups(void) {
 	nCores = NSProcessInfo.processInfo.processorCount;
 	NSInteger nF = 0, nFS = 0, nD = 0, nI = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
@@ -256,18 +257,18 @@ static NSCondition *checkAlive = nil;
 	memcpy(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams));
 	memcpy(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
 	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
-#ifdef NOGUI
-	NSCondition *cond = checkAlive = NSCondition.new;
-	[NSThread detachNewThreadWithBlock:^{
-		connection_thread();
-		[cond signal];
-	}];
-	schedule_job_expiration_check(); // defined in BatchJob.m
-#else
-	NSNumberFormatter *formatters[nF + nI], *fmt;
-	for (NSInteger i = 0; i < nn; i ++) {
+#ifndef NOGUI
+	return (struct SetupInfo){nF, nD, nI, nn};
+#endif
+}
+
+#ifndef NOGUI
+@implementation AppDelegate
+- (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
+	struct SetupInfo info = applicationSetups();
+	NSNumberFormatter *formatters[info.nF + info.nI], *fmt;
+	for (NSInteger i = 0; i < info.nn; i ++) {
 		ParamInfo *p = paramInfo + i;
-		keys[i] = p->key;
 		switch (p->type) {
 			case ParamTypeFloat: case ParamTypeFloatS:
 			fmt = NSNumberFormatter.new;
@@ -285,11 +286,11 @@ static NSCondition *checkAlive = nil;
 			fmt.maximum = @(p->v.i.maxValue);
 			fmt.usesGroupingSeparator = YES;
 			fmt.groupingSize = 3;
-			formatters[i - nD] = fmt;
+			formatters[i - info.nD] = fmt;
 			default: break;
 		}
 	}
-	paramFormatters = [NSArray arrayWithObjects:formatters count:nF + nI];
+	paramFormatters = [NSArray arrayWithObjects:formatters count:info.nF + info.nI];
 	NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;
 
 	NSNumber *num;
@@ -297,29 +298,22 @@ static NSCondition *checkAlive = nil;
 	if ((num = [ud objectForKey:keyAnimeSteps])) defaultAnimeSteps = num.integerValue;
 	for (NSInteger i = 0; i < N_COLORS; i ++)
 		if ((num = [ud objectForKey:colKeys[i]])) stateRGB[i] = num.integerValue;
-	for (NSInteger i = 0; i < nF; i ++)
+	for (NSInteger i = 0; i < info.nF; i ++)
 		if ((num = [ud objectForKey:paramInfo[i].key]))
 			(&userDefaultRuntimeParams.PARAM_F1)[i] = num.doubleValue;
-	for (NSInteger i = 0; i < nD; i ++)
-		if ((arr = [ud objectForKey:paramInfo[i + nF].key]))
+	for (NSInteger i = 0; i < info.nD; i ++)
+		if ((arr = [ud objectForKey:paramInfo[i + info.nF].key]))
 			(&userDefaultRuntimeParams.PARAM_D1)[i] = (DistInfo){
 				arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
-	for (NSInteger i = 0; i < nI; i ++)
-		if ((num = [ud objectForKey:paramInfo[i + nF + nD].key]))
+	for (NSInteger i = 0; i < info.nI; i ++)
+		if ((num = [ud objectForKey:paramInfo[i + info.nF + info.nD].key]))
 			(&userDefaultWorldParams.PARAM_I1)[i] = num.integerValue;
 	if ((num = [ud objectForKey:keyWarpOpacity])) warpOpacity = num.doubleValue;
 	if ((num = [ud objectForKey:keyPanelsAlpha])) panelsAlpha = num.doubleValue;
 	if ((num = [ud objectForKey:keyChildWindow])) makePanelChildWindow = num.boolValue;
 	setup_colors();
 	NSBezierPath.defaultLineJoinStyle = NSLineJoinStyleBevel;
-#endif
 }
-#ifdef NOGUI
-- (void)applicationWillTerminate:(NSNotification *)notification {
-	stillAlive = NO;
-	[checkAlive wait];
-}
-#else
 - (void)application:(NSApplication *)application openURLs:(NSArray<NSURL *> *)urls {
 	NSArray<Document *> *docs = NSDocumentController.sharedDocumentController.documents;
 	if (docs.count == 0) return;
@@ -356,5 +350,5 @@ static NSCondition *checkAlive = nil;
 	if (pref == nil) pref = Preferences.new;
 	[pref showWindow:sender];
 }
-#endif
 @end
+#endif

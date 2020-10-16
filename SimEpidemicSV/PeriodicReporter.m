@@ -15,15 +15,17 @@
 #import <os/log.h>
 #import <zlib.h>
 #define BUF_SIZE 8192
-#define COMMENT_INTERVAL 4.
+#define COMMENT_INTERVAL 10.
 
 static NSMutableDictionary<NSString *, PeriodicReporter *> *theReporters = nil;
 
 @interface PeriodicReporter () {
 	Document * __weak document;
 	int desc;
+	uint32 ip4addr;
 	z_stream strm;
-	NSInteger prevRepStep;
+	NSInteger prevRepStep, byteCount, workingTime;
+	NSDate *workBegin;
 	NSArray<NSString *> *repItemsIdx, *repItemsDly, *repItemsDst, *repItemsExt;
 	BOOL repPopulation;
 	unsigned long lastReportTime, lastCommentTime;
@@ -109,7 +111,7 @@ NSLog(@"Idx:%ld, Dly:%ld, Dst:%ld, Ext:%ld, Intv=%.3f, Pop:%@",
 		if (repInterval <= 0.) repInterval = 1.;
 	} else if (forInit) repInterval = 1.;
 }
-- (instancetype)initWithDocument:(Document *)doc desc:(int)dsc {
+- (instancetype)initWithDocument:(Document *)doc addr:(uint32)addr desc:(int)dsc {
 	if (!(self = [super init])) return nil;
 	strm.data_type = Z_TEXT;
 	int ret = deflateInit(&strm, Z_BEST_COMPRESSION);
@@ -119,6 +121,7 @@ NSLog(@"Idx:%ld, Dly:%ld, Dst:%ld, Ext:%ld, Intv=%.3f, Pop:%@",
 		exit(3);	// this is a fatal error!
 	}
 	document = doc;
+	ip4addr = addr;
     desc = dsc;
     _ID = new_uniq_string();
     configLock = NSLock.new;
@@ -142,7 +145,9 @@ NSLog(@"Repoter %@(%d) was created for world %@.", _ID, desc, doc.ID);
 //NSLog(@"deflate returned %d", ret);
 		if (ret != Z_OK && ret != Z_BUF_ERROR) { free(outBuf); @throw @(ret); }
 //NSLog(@"Will send %d compressed bytes.", BUF_SIZE - strm.avail_out);
-		send_bytes(desc, (const char *)outBuf, BUF_SIZE - strm.avail_out);
+		NSInteger nBytes = BUF_SIZE - strm.avail_out;
+		send_bytes(desc, (const char *)outBuf, nBytes);
+		byteCount += nBytes;
 		strm.avail_out = BUF_SIZE;
 		strm.next_out = outBuf;
 	}
@@ -232,23 +237,37 @@ NSLog(@"idx data:%ld bytes, pop data:%ld bytes", data.length, popData.length);
 	prevRepStep = -1;
 	[self sendReport];
 }
+- (void)start {
+	if (idlingTimer != nil) { [idlingTimer invalidate]; idlingTimer = nil; }
+	workBegin = NSDate.date;
+}
+- (void)cumulateWorkTime {
+	if (workBegin == nil) return;
+	CGFloat interval = [NSDate.date timeIntervalSinceDate:workBegin];
+	workingTime += interval * 1000;
+	workBegin = nil;
+}
 - (void)pause {
 	if (desc < 0) return;
 	[self sendReport];
 	in_main_thread(^{
 	self->idlingTimer = [NSTimer scheduledTimerWithTimeInterval:COMMENT_INTERVAL repeats:YES
 		block:^(NSTimer * _Nonnull timer) {
-			if (self->desc < 0 || self->document.running) {
+			if (self->desc < 0) {
 				[timer invalidate]; self->idlingTimer = nil;
 			} else [self sendComment:current_time_us()];
 		}];
 	});
+	[self cumulateWorkTime];
 }
 - (void)quit {
+	if (desc < 0) return;
 	(void)deflateEnd(&strm);
-#ifdef DEBUG
-NSLog(@"Repoter %@(%d) quits.", _ID, desc);
-#endif
+	[self cumulateWorkTime];
+	NSNumberFormatter *numFmt = NSNumberFormatter.new;
+	numFmt.numberStyle = NSNumberFormatterDecimalStyle;
+	MY_LOG("%@ Repoter %@(%d) quits. %.3f sec. %@ bytes.", ip4_string(ip4addr),
+		_ID, desc, workingTime / 1000., [numFmt stringFromNumber:@(byteCount)]);
 	desc = -1;
 }
 - (BOOL)connectionWillClose:(int)dsc {
@@ -263,7 +282,8 @@ NSLog(@"Repoter %@(%d) quits.", _ID, desc);
 @implementation ProcContext (PeriodicReportExtension)
 - (void)periodicReport {
 	[self checkDocument];
-	PeriodicReporter *rep = [PeriodicReporter.alloc initWithDocument:document desc:desc];
+	PeriodicReporter *rep = [PeriodicReporter.alloc
+		initWithDocument:document addr:ip4addr desc:desc];
 	[rep setupWithQuery:query init:YES];
 	Document *doc = document;
 	postProc = ^{

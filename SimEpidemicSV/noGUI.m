@@ -16,6 +16,7 @@
 #import "StatPanel.h"
 #import "noGUIInfo.h"
 #import "ProcContext.h"
+#import "BatchJob.h"
 #define SERVER_PORT 8000U
 
 static int soc = -1; // TCP stream socket
@@ -23,7 +24,7 @@ static struct sockaddr_in nameTemplate = {
 	sizeof(struct sockaddr_in), AF_INET, EndianU16_NtoB(SERVER_PORT), {INADDR_ANY}
 };
 static void unix_error_msg(NSString *msg, int code) {
-	os_log_error(OS_LOG_DEFAULT, "%@ %d: %{errno}d.\n", msg, code, errno);
+	MY_LOG("%@ %d: %s.", msg, code, strerror(errno));
 	if (code > 0) exit(code);
 }
 
@@ -34,13 +35,14 @@ NSUInteger JSONOptions = 0;
 NSInteger maxPopSize = 1000000, maxNDocuments = 128, maxRuntime = 48*3600,
 	documentTimeout = 20*60, maxJobsInQueue = 64, maxTrialsAtSameTime = 4,
 	jobRecExpirationHours = 24*7;
-NSString *fileDirectory = nil, *dataDirectory = nil;
+NSString *fileDirectory = nil, *dataDirectory = nil, *logFilePath = nil;
 NSDictionary *extToMime, *codeMeaning, *indexNames;
 NSArray *distributionNames;
 NSDictionary *indexNameToIndex = nil, *testINameToIdx = nil;
 NSDateFormatter *dateFormat = nil;
 static NSString *pidFilename = @"pid", *infoFilename = @"simeipInfo.plist",
-	*keyUniqIDCounter = @"uniqIDCounter", *keyUniqIDChars = @"uniqIDChars";
+	*keyUniqIDCounter = @"uniqIDCounter", *keyUniqIDChars = @"uniqIDChars",
+	*logFilename = @"log";
 static NSLock *uniqStrLock = nil;
 #define N_UNIQ_CHARS 61
 NSString *new_uniq_string(void) {
@@ -75,6 +77,11 @@ NSString *new_uniq_string(void) {
 	[uniqStrLock unlock];
 	buf[n] = '\0';
 	return [NSString stringWithUTF8String:buf];
+}
+NSString *ip4_string(uint32 ip4addr) {
+	uint32 a = EndianU32_BtoN(ip4addr);
+	return [NSString stringWithFormat:@"%d.%d.%d.%d",
+		a >> 24, (a >> 16) & 0xff, (a >> 8) & 0xff, a & 0xff];
 }
 static NSDictionary *code_meaning_map(void) {
 	return @{ //@(100):@"Continue", @(101):@"Switching Protocols",
@@ -178,8 +185,7 @@ static NSString *adjust_dir_path(NSString *path) {
 static void interaction_thread(int desc, uint32 ipaddr) {
 @autoreleasepool {
 	NSThread.currentThread.name = @"Network interaction";
-	os_log_debug(OS_LOG_DEFAULT,
-		"Receiving thread started %{network:in_addr}d (%d).", ipaddr, desc);
+	MY_LOG_DEBUG("Receiving thread started %@ (%d).", ip4_string(ipaddr), desc);
 	ProcContext *context = [ProcContext.alloc initWithSocket:desc ip:ipaddr];
 	BOOL isConnected = YES;
 	while (isConnected) @autoreleasepool { @try {
@@ -190,15 +196,16 @@ static void interaction_thread(int desc, uint32 ipaddr) {
 		[context connectionWillClose];
 		close(desc);
 	});
-	os_log_debug(OS_LOG_DEFAULT, "Receiving thread ended (%d).", desc);
+	MY_LOG_DEBUG( "Receiving thread ended (%d).", desc);
 }}
-BOOL stillAlive = YES;
+NSThread *connectionThread = nil;
 void connection_thread(void) {
+	connectionThread = NSThread.currentThread;
 	uint32 addrlen;
 	int desc = -1;
-	os_log_debug(OS_LOG_DEFAULT, "Connection thread started.");
+	MY_LOG_DEBUG("Connection thread started.");
 	NSThread.currentThread.name = @"Network connection";
-	while (stillAlive) @autoreleasepool {
+	for (;;) @autoreleasepool {
 		struct sockaddr_in name;
 		for (;;) {
 			name = nameTemplate;
@@ -210,19 +217,65 @@ void connection_thread(void) {
 		[NSThread detachNewThreadWithBlock:
 			^{ interaction_thread(desc, name.sin_addr.s_addr); }];
 	}
-	close(soc); soc = -1;
-#ifdef DEBUG
-	NSLog(@"Connection thread ended.");
-#endif
+}
+static NSConditionLock *loggingLock = nil;
+static NSMutableString *loggingString = nil;
+static void logging_thread(void) {
+	if (loggingLock == nil) loggingLock = NSConditionLock.new;
+	for (int cnt = 0; cnt < 18;) {
+		[loggingLock lockWhenCondition:1];
+		FILE *logFile = fopen(logFilePath.UTF8String, "a");
+		NSInteger cond = 0;
+		if (logFile != NULL) {
+			fputs(loggingString.UTF8String, logFile);
+			fclose(logFile);
+			[loggingString deleteCharactersInRange:(NSRange){0, loggingString.length}];
+		} else cond = 1;
+		[loggingLock unlockWithCondition:cond];
+		if (cond == 1) { sleep(10); cnt ++; }
+		else cnt = 0;
+	}
+	loggingLock = nil;
+	os_log(OS_LOG_DEFAULT, "Gave up logging.");
+}
+void my_log(const char *fmt, ...) {
+	if (loggingLock == nil) return;	// logging thread isn't running.
+	static NSDateFormatter *dtFmt = nil;
+	if (dtFmt == nil) {
+		dtFmt = NSDateFormatter.new;
+		dtFmt.dateFormat = @"yyyy/MM/dd HH:mm:ss";
+	}
+	va_list valist;
+	va_start(valist, fmt);
+	NSString *dtStr = [dtFmt stringFromDate:NSDate.date];
+	CFStringRef fmtStr = CFStringCreateWithCString(NULL, fmt, kCFStringEncodingUTF8),
+		msg = CFStringCreateWithFormatAndArguments(NULL, NULL, fmtStr, valist);
+	[loggingLock lock];
+	if (loggingString == nil) loggingString = NSMutableString.new;
+	[loggingString appendFormat:@"%@ %@\n", dtStr, (__bridge NSString *)msg];
+	[loggingLock unlockWithCondition:1];
+	CFRelease(fmtStr);
+	CFRelease(msg);
+	va_end(valist);
+}
+BOOL shouldKeepRunning = YES;
+int resultCode = 0;
+void terminateApp(int code) {
+	BOOL isMain = NSThread.isMainThread;
+	MY_LOG_DEBUG("terminateApp called in %s thread.", isMain? "main" : "sub");
+	if (isMain) exit(code);
+	else {
+		resultCode = code;
+		shouldKeepRunning = NO;
+		[NSThread exit];
+	}
 }
 void catch_signal(int sig) {
-#ifdef DEBUG
-	fprintf(stderr, "I caught a signal %d.\n", sig);
-#endif
+	MY_LOG_DEBUG("I caught a signal %d.\n", sig);
 // better to wait for all of the sending processes completed.
 //		shutdown(soc, SHUT_RDWR);
-	os_log(OS_LOG_DEFAULT, "Quit.");
-	[NSApp terminate:nil];
+	MY_LOG("Quit.");
+	terminateApp(0);
 }
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
@@ -258,16 +311,12 @@ int main(int argc, const char * argv[]) {
 	}
 	fileDirectory = adjust_dir_path(fileDirectory);
 	dataDirectory = adjust_dir_path(dataDirectory);
-#ifdef DEBUG
-printf("fileDir=%s\ndataDir=%s\n", fileDirectory.UTF8String, dataDirectory.UTF8String);
-#endif
+	logFilePath = [dataDirectory stringByAppendingPathComponent:
+		[NSString stringWithFormat:@"%@_%04d.txt", logFilename, port]];
+	[NSThread detachNewThreadWithBlock:^{ logging_thread(); }];
+	MY_LOG_DEBUG("fileDir=%s\ndataDir=%s\n",
+		fileDirectory.UTF8String, dataDirectory.UTF8String);
 //
-	NSError *error;
-	if (![@(getpid()).stringValue writeToFile:
-		[dataDirectory stringByAppendingPathComponent:pidFilename]
-		atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
-		os_log_error(OS_LOG_DEFAULT, "Couldn't write pid. %@", error.localizedDescription);
-		exit(1); }
 	NSData *infoData = [NSData dataWithContentsOfFile:
 		[dataDirectory stringByAppendingPathComponent:infoFilename]];
 	if (infoData != nil) infoDictionary = [NSPropertyListSerialization
@@ -295,16 +344,29 @@ printf("fileDir=%s\ndataDir=%s\n", fileDirectory.UTF8String, dataDirectory.UTF8S
 	if (soc < 0) unix_error_msg(@"TCP socket", 1);
 	if ((err = bind(soc, (struct sockaddr *)&nameTemplate, sizeof(nameTemplate))))
 		unix_error_msg(@"TCP bind", 2);
-	if ((err = listen(soc, 1))) unix_error_msg(@"listen", 3);
-
-// Prepare and start the Runloop to use Cocoa framework.
-	NSApplication *app = NSApplication.sharedApplication;
-	app.activationPolicy = NSApplicationActivationPolicyProhibited;
-	app.delegate = AppDelegate.new;
+	if ((err = listen(soc, 1))) unix_error_msg(@"TCP listen", 3);
+//
+	NSError *error;
+	NSString *pidPath = [dataDirectory stringByAppendingPathComponent:
+		[NSString stringWithFormat:@"%@_%04d", pidFilename, port]];
+	if (![@(getpid()).stringValue writeToFile:pidPath
+		atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+		MY_LOG("Couldn't write pid. %@", error.localizedDescription);
+		exit(4); }
+//
 	defaultDocuments = NSMutableDictionary.new;
 	theDocuments = NSMutableDictionary.new;
-	os_log(OS_LOG_DEFAULT, "Launched by %@.", NSProcessInfo.processInfo.userName);
-	[app run];
+	applicationSetups();	// defined in AppDelegate.m
+	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
+// for debugging, (lldb) process handle -s0 -p1 SIGTERM
+	schedule_job_expiration_check(); // defined in BatchJob.m
+	MY_LOG("Launched by %@.", NSProcessInfo.processInfo.userName);
+//	[NSRunLoop.currentRunLoop run];
+	NSRunLoop *theRL = NSRunLoop.currentRunLoop;
+	while (shouldKeepRunning)
+		if (![theRL runMode:NSDefaultRunLoopMode beforeDate:
+			[NSDate dateWithTimeIntervalSinceNow:10.]])
+			{ resultCode = -4; break; }
 }
-	return 0;
+	return resultCode;
 }

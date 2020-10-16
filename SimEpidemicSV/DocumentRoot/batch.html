@@ -35,14 +35,14 @@ function getJobID(ifrm) {
 	<input type="submit" value="状態" formaction="/getJobStatus">
 	<input type="submit" value="実行中止" formaction="/stopJob">
 </form>
-<iframe name="jobStatus" height=24 width=400></iframe>
+<iframe name="jobStatus" height=52 width=500></iframe>
 <hr/>
 <h2>Job Results</h2>
 <form method="get" action="/getJobResults" target="jobResults">
 	Job ID: <input class="JobID" type="text" name="job">
 	<input type="submit" value="結果">
 </form>
-<iframe name="jobResults" width=400></iframe>
+<iframe name="jobResults" width=500></iframe>
 <hr/>
 <form method="get" action="/getJobResults" target="jobResultSave">
 	Job ID: <input class="JobID" type="text" name="job">

@@ -57,7 +57,7 @@ static NSString *headerFormat = @"HTTP/1.1 %03d %@\nDate: %@\nServer: simepidemi
 	if (nextCheck > 0.) [NSTimer scheduledTimerWithTimeInterval:nextCheck target:self
 		selector:@selector(expirationCheck:) userInfo:nil repeats:NO];
 	else {
-		os_log(OS_LOG_DEFAULT, "World %@ closed by timeout.", self.ID);
+		MY_LOG("World %@ closed by timeout.", self.ID);
 		[theDocuments removeObjectForKey:self.ID];
 		if (self.docKey != nil) [defaultDocuments removeObjectForKey:self.docKey];
 	}
@@ -76,7 +76,7 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		os_log(OS_LOG_DEFAULT,
 			"%@ world %@ was created for %@. %ld world(s) in total.",
 			type, doc.ID, browserID, theDocuments.count);
-	} else os_log(OS_LOG_DEFAULT, "%@ world %@ was created.", type, doc.ID);
+	} else MY_LOG("%@ world %@ was created.", type, doc.ID);
 	return doc;
 }
 @implementation ProcContext
@@ -107,9 +107,7 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		dataLength += len;
 	} while (dataLength < length);
 	buf[dataLength] = '\0';
-#ifdef DEBUG
-	printf("(%d)-> %ld bytes.\n%s", desc, dataLength, buf);
-#endif
+	MY_LOG_DEBUG("(%d)-> %ld bytes.\n%s", desc, dataLength, buf);
 	if (dataLength > 0) {
 		if (length < 0) {
 			char b[128];
@@ -120,9 +118,8 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 				else if (b[i] < ' ') b[i] = ' ';
 			}
 			if (i == 120) memcpy(b + 119, "...", 4);
-			os_log(OS_LOG_DEFAULT, "Received %s from IP=%{network:in_addr}d", b, ip4addr); 
-		} else os_log(OS_LOG_DEFAULT, "Received %ld bytes from IP=%{network:in_addr}d",
-			dataLength, ip4addr);
+			MY_LOG("%@ %s", ip4_string(ip4addr), b); 
+		} else MY_LOG("%@ Payload %ld bytes", ip4_string(ip4addr), dataLength);
 	}
 	return dataLength;
 }
@@ -132,7 +129,7 @@ void send_bytes(int desc, const char *bytes, NSInteger size) {
 	if (result < 0) @throw @(errno);
 	else if (result < size) @throw @"send answer";
 #ifdef DEBUG
-	printf("(%d)<- %ld bytes.\n", desc, size);
+	MY_LOG_DEBUG("(%d)<- %ld bytes.\n", desc, size);
 	if (size < 512) {
 		char buf[size + 1];
 		memcpy(buf, bytes, size);
@@ -364,17 +361,12 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 //
 	if (content != nil) {
 		NSInteger length = [self sendData];
-		os_log(OS_LOG_DEFAULT, "Responded code=%d size=%ld to %@ IP=%{network:in_addr}d",
-			code, length, (browserID == nil)? @"-" : browserID, ip4addr);
+		MY_LOG("%@ %d %ld bytes to %@", ip4_string(ip4addr),
+			code, length, (browserID == nil)? @"-" : browserID);
 	} else if (postProc != nil) {
 		[self sendHeader];
 		postProc();
 	}
-}
-static NSString *ip4_string(uint32 ip4addr) {
-	uint32 a = EndianU32_BtoN(ip4addr);
-	return [NSString stringWithFormat:@"%d.%d.%d.%d",
-		a >> 24, (a >> 16) & 0xff, (a >> 8) & 0xff, a & 0xff];
 }
 - (void)checkDocument {
 	NSString *brwsID = query[@"me"], *worldID = query[@"world"];
@@ -463,9 +455,7 @@ static NSString *ip4_string(uint32 ip4addr) {
 		if (![dict isKindOfClass:NSDictionary.class])
 			@throw @"417 JSON data doesn't represent a dictionary.";
 	} else dict = query;
-#ifdef DEBUG
-printf("--- parameters\n%s\n", dict.description.UTF8String);
-#endif
+	MY_LOG_DEBUG("--- parameters\n%s\n", dict.description.UTF8String);
 	[document popLock];
 	RuntimeParams *rp = document.runtimeParamsP;
 	WorldParams *wp = (rp->step == 0)?
@@ -510,7 +500,7 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document
 	NSString *opStr = query[@"stopAt"];
 	NSInteger stopAt = (opStr == nil)? 0 : opStr.integerValue;
 	Document *doc = document;
-	in_main_thread(^{ [doc start:stopAt]; });
+	in_main_thread(^{ [doc start:stopAt  priority:-.1]; });
 }
 - (void)step {
 	[self checkDocument];
@@ -657,9 +647,7 @@ NSData *JSON_pop(Document *doc) {
 	[document popUnlock];
 	@try {
 		NSData *dstData = [srcData zippedData];
-#ifdef DEBUG
-printf("agents -> %ld bytes\n", dstData.length);
-#endif
+		MY_LOG_DEBUG("agents -> %ld bytes\n", dstData.length);
 		content = dstData;
 		type = @"application/json";
 		moreHeader = @"Content-Encoding: deflate\n";

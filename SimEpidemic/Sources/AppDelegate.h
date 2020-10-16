@@ -57,5 +57,9 @@ extern CGFloat panelsAlpha;
 extern BOOL makePanelChildWindow;
 extern NSString *keyWarpOpacity, *keyPanelsAlpha, *keyChildWindow;
 
+#ifdef NOGUI
+extern void applicationSetups(void);
+#else
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @end
+#endif

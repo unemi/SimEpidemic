@@ -624,6 +624,7 @@ static void show_period_hist(NSArray<MyCounter *> *hist,
 	if (idxSelectionSheet.isVisible) [idxSelectionSheet close];
 	else [idxSelectionSheet makeKeyAndOrderFront:sender];
 }
+- (NSView *)view { return view; }
 @end
 
 @implementation StatView

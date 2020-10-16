@@ -22,7 +22,7 @@
 #import "PeriodicReporter.h"
 #endif
 #define ALLOC_UNIT 2048
-#define DYNAMIC_STRUCT(t,f,n,fm) static t *f = NULL;\
+#define DYNAMIC_STRUCT(t,f,n) static t *f = NULL;\
 static t *n(void) {\
 	if (f == NULL) {\
 		f = malloc(sizeof(t) * ALLOC_UNIT);\
@@ -30,15 +30,9 @@ static t *n(void) {\
 		f[ALLOC_UNIT - 1].next = NULL;\
 	}\
 	t *a = f; f = f->next; a->next = NULL; return a;\
-}\
-static void fm(t **ap) {\
-	if (*ap == NULL) return;\
-	for (t *p = *ap; ; p = p->next)\
-		if (p->next == NULL) { p->next = f; break; }\
-	f = *ap; *ap = NULL;\
 }
-DYNAMIC_STRUCT(TestEntry, freeTestEntries, new_testEntry, free_testEntry_mems)
-DYNAMIC_STRUCT(ContactInfo, freeCInfo, new_cinfo, free_cinfo_mems)
+DYNAMIC_STRUCT(TestEntry, freeTestEntries, new_testEntry)
+DYNAMIC_STRUCT(ContactInfo, freeCInfo, new_cinfo)
 static NSLock *cInfoLock = nil;
 void add_new_cinfo(Agent *a, Agent *b, NSInteger tm) {
 	[cInfoLock lock];
@@ -83,7 +77,11 @@ void in_main_thread(dispatch_block_t block) {
 }
 #ifdef DEBUG
 void my_exit(void) {
+#ifdef NOGUI
+	in_main_thread(^{ terminateApp(-2); });
+#else
 	in_main_thread(^{ [NSApp terminate:nil]; });
+#endif
 }
 #endif
 
@@ -134,6 +132,9 @@ void my_exit(void) {
 	__weak NSTimer *runtimeTimer;
 	NSMutableArray<PeriodicReporter *> *reporters;
 	NSLock *reportersLock;
+#else
+	NSMutableDictionary *orgViewInfo;
+	FillView *fillView;
 #endif
 }
 @end
@@ -401,8 +402,13 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	}
 	_QList = _CList = NULL;
 	_WarpList = NSMutableArray.new;
-	free_testEntry_mems(&testQueHead);
-	testQueTail = NULL;
+	if (testQueTail != nil) {
+		[testEntriesLock lock];
+		testQueTail->next = freeTestEntries;
+		freeTestEntries = testQueHead;
+		[testEntriesLock unlock];
+		testQueTail = testQueHead = NULL;
+	}
 	runtimeParams.step = 0;
 	[statInfo reset:nPop infected:worldParams.nInitInfec];
 	[popLock unlock];
@@ -457,7 +463,12 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		freeCInfo = agents[i].contactInfoHead;
 	}
 	[cInfoLock unlock];
-	free_testEntry_mems(&testQueHead);
+	if (testQueTail != nil) {
+		[testEntriesLock lock];
+		testQueTail->next = freeTestEntries;
+		freeTestEntries = testQueHead;
+		[testEntriesLock unlock];
+	}
 	free(_Pop);
 	free(pop);
 	free(agents);
@@ -493,14 +504,49 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		for (NSInteger i = statInfo.statPanels.count - 1; i >= 0; i --)
 			[statInfo.statPanels[i] close];
 }
-- (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)fSize {
-	NSSize aSize = { fSize.width - orgWindowSize.width + orgViewSize.width,
-		fSize.height - orgWindowSize.height + orgViewSize.height };
-	if (aSize.width * orgViewSize.height > aSize.height * orgViewSize.width)
-		aSize.width = aSize.height * orgViewSize.width / orgViewSize.height;
-	else aSize.height = aSize.width * orgViewSize.height / orgViewSize.width;
-	return (NSSize){ aSize.width + orgWindowSize.width - orgViewSize.width,
-		aSize.height + orgWindowSize.height - orgViewSize.height };
+- (void)windowWillEnterFullScreen:(NSNotification *)notification {
+	orgViewInfo = NSMutableDictionary.new;
+	orgViewInfo[@"windowFrame"] = [NSValue valueWithRect:view.window.frame];
+	orgViewInfo[@"viewFrame"] = [NSValue valueWithRect:view.frame];
+}
+- (void)windowDidEnterFullScreen:(NSNotification *)notification {
+	NSView *contentView = view.superview;
+	NSSize contentSize = contentView.frame.size;
+	NSRect newViewFrame = {0, 0, contentSize.height * 1.2, contentSize.height};
+	newViewFrame.origin.x = contentSize.width - newViewFrame.size.width;
+	NSRect panelRect = {0, stopAtNDaysDgt.frame.origin.y - 10., newViewFrame.origin.x,};
+	[view setFrame:newViewFrame];
+	panelRect.origin.y -= (panelRect.size.height = panelRect.size.width / 4.);
+	if (statInfo.statPanels != nil) {
+		NSMutableArray *ma = NSMutableArray.new;
+		for (StatPanel *sp in statInfo.statPanels) {
+			NSView *statView = sp.view;
+			[ma addObject:@[statView, statView.superview,
+				[NSValue valueWithRect:statView.frame]]];
+			[contentView addSubview:statView];
+			[statView setFrame:panelRect];
+			if ((panelRect.origin.y -= panelRect.size.height) < 0.) break;
+		}
+		orgViewInfo[@"statViews"] = ma;
+	}
+	fillView = [FillView.alloc initWithFrame:(NSRect)
+		{0, 0, panelRect.size.width, NSMaxY(panelRect)}];
+	[contentView addSubview:fillView];
+	for (NSButton *btn in @[scnBtn, prmBtn, sttBtn, datBtn]) btn.enabled = NO;
+}
+- (void)windowDidExitFullScreen:(NSNotification *)notification {
+	[view.window setFrame:
+		[(NSValue *)orgViewInfo[@"windowFrame"] rectValue] display:YES];
+	[view setFrame:[(NSValue *)orgViewInfo[@"viewFrame"] rectValue]];
+	NSArray *statViews = orgViewInfo[@"statViews"];
+	if (statViews != nil) for (NSArray *info in statViews) {
+		[(NSView *)info[1] addSubview:info[0]];
+		[(NSView *)info[0] setFrame:[(NSValue *)info[2] rectValue]];
+	}
+	[fillView removeFromSuperview];
+	fillView = nil;
+	orgViewInfo = nil;
+	for (NSButton *btn in @[scnBtn, prmBtn, sttBtn, datBtn]) btn.enabled = YES;
 }
 #endif
 NSString *keyParameters = @"parameters", *keyScenario = @"scenario";
@@ -885,6 +931,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 - (void)runningLoop {
 #ifdef NOGUI
 	in_main_thread(^{ [self startTimeLimitTimer]; });
+	[self forAllReporters:^(PeriodicReporter *rep) { [rep start]; }];
 #endif
 	while (loopMode == LoopRunning) {
 		[self doOneStep];
@@ -941,14 +988,14 @@ static NSInteger mCount = 0, mCount2 = 0;
 	[_lastTLock unlock];
 	return result;
 }
-- (void)start:(NSInteger)stopAt {
+- (void)start:(NSInteger)stopAt priority:(CGFloat)prio {
 	if (loopMode == LoopRunning) return;
 	if (stopAt > 0) stopAtNDays = stopAt;
 	[self goAhead];
 	loopMode = LoopRunning;
 	NSThread *thread = [NSThread.alloc initWithTarget:self
 		selector:@selector(runningLoop) object:nil];
-	thread.threadPriority = fmax(0., NSThread.mainThread.threadPriority - .1);
+	thread.threadPriority = fmax(0., NSThread.mainThread.threadPriority + prio);
 	[thread start];
 }
 - (void)step {
@@ -958,7 +1005,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 		default: [self doOneStep];
 	}
 	loopMode = LoopEndByUser;
-	for (PeriodicReporter *rep in reporters) [rep sendReport];
+	[self forAllReporters:^(PeriodicReporter *rep) { [rep sendReport]; }];
 }
 - (void)stop:(LoopMode)mode {
 	if (loopMode == LoopRunning) loopMode = mode;

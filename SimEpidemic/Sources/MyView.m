@@ -150,11 +150,11 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 		mySz.height, 0., mySz.width - mySz.height - dgtSz.width, mySz.height}];
 	digits = [NSTextField.alloc initWithFrame:(NSRect){
 		mySz.width - dgtSz.width, 0., dgtSz}];
-	label.bordered = NO;
+	label.bordered = label.editable = label.selectable = NO;
 	label.drawsBackground = NO;
 	label.font = [NSFont userFontOfSize:LV_FONT_SIZE];
 	digits.drawsBackground = NO;
-	digits.bordered = NO;
+	digits.bordered = digits.editable = NO;
 	digits.font = dgtFont;
 	[self addSubview:label];
 	[self addSubview:digits];
@@ -177,5 +177,12 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 	rect.size.width = rect.size.height;
 	[color setFill];
 	[[NSBezierPath bezierPathWithOvalInRect:NSInsetRect(rect, 1., 1.)] fill];
+}
+@end
+
+@implementation FillView
+- (void)drawRect:(NSRect)rect {
+	[stateColors[ColBackground] setFill];
+	[NSBezierPath fillRect:rect];
 }
 @end

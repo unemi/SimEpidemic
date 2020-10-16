@@ -123,6 +123,7 @@ typedef enum {
 }
 - (instancetype)initWithInfo:(StatInfo *)info;
 - (IBAction)flushView:(id)sender;
+- (NSView *)view;
 @end
 #endif
 NS_ASSUME_NONNULL_END
