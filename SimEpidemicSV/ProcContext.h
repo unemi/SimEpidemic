@@ -44,7 +44,7 @@ extern NSData *JSON_pop(Document *doc);
 - (long)receiveData:(NSInteger)length;
 - (void)setOKMessage;
 - (void)notImplementedYet;
-- (void)makeResponse;
+- (int)makeResponse;
 - (void)setJSONDataAsResponse:(NSObject *)object;
 - (void)checkDocument;
 - (void)connectionWillClose;

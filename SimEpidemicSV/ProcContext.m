@@ -73,8 +73,7 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		theDocuments[doc.ID] = doc;
 		[NSTimer scheduledTimerWithTimeInterval:documentTimeout target:doc
 			selector:@selector(expirationCheck:) userInfo:nil repeats:NO];
-		os_log(OS_LOG_DEFAULT,
-			"%@ world %@ was created for %@. %ld world(s) in total.",
+		MY_LOG("%@ world %@ was created for %@. %ld world(s) in total.",
 			type, doc.ID, browserID, theDocuments.count);
 	} else MY_LOG("%@ world %@ was created.", type, doc.ID);
 	return doc;
@@ -93,7 +92,8 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		@"periodicReport", @"quitReport", @"changeReport",
 		@"getScenario", @"setScenario",
 		@"submitJob", @"getJobStatus", @"getJobQueueStatus",
-		@"stopJob", @"getJobResults"
+		@"stopJob", @"getJobResults",
+		@"version"
 	];
 	return self;
 }
@@ -248,7 +248,7 @@ static NSString *bad_request_message(NSString *req) {
 		code = 200;
 	} @catch (NSError *error) {
 		@throw [NSString stringWithFormat:
-			@"404 File access denied: \"%@\" %@", exPath, error.localizedDescription];
+			@"404 File access denied: %@", error.localizedDescription];
 	} @catch (NSString *msg) { @throw msg; }
 }
 static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerStr) {
@@ -261,7 +261,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	}
 	return headers;
 }
-- (void)makeResponse {
+- (int)makeResponse {
 	content = moreHeader = nil;
 	NSString *req = [NSString stringWithUTF8String:bufData.bytes];
 	NSScanner *scan = [NSScanner scannerWithString:req];
@@ -367,6 +367,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 		[self sendHeader];
 		postProc();
 	}
+	return code;
 }
 - (void)checkDocument {
 	NSString *brwsID = query[@"me"], *worldID = query[@"world"];
@@ -681,5 +682,12 @@ NSData *JSON_pop(Document *doc) {
 		@throw @"417 JSON data doesn't represent an array form.";
 	@try { [document setScenarioWithPList:plist]; }
 	@catch (NSString *msg) { @throw [@"500 " stringByAppendingString:msg]; }
+}
+// utility command
+#import "noGUIInfo.h"
+- (void)version {
+	code = 200;
+	type = @"text/plain";
+	content = [NSString stringWithUTF8String:version];
 }
 @end

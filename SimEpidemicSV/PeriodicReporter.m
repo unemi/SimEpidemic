@@ -101,10 +101,8 @@ static NSArray<NSString *> *valid_report_item_names(void) {
 		repItemsDst = [NSArray arrayWithObjects:aD count:nD];
 		repItemsExt = [NSArray arrayWithObjects:aE count:nE];
 		[configLock unlock];
-#ifdef DEBUG
-NSLog(@"Idx:%ld, Dly:%ld, Dst:%ld, Ext:%ld, Intv=%.3f, Pop:%@",
-	nn, nd, nD, nE, repInterval, repPopulation? @"YES" : @"NO");
-#endif
+	MY_LOG_DEBUG("Idx:%ld, Dly:%ld, Dst:%ld, Ext:%ld, Intv=%.3f, Pop:%@",
+		nn, nd, nD, nE, repInterval, repPopulation? @"YES" : @"NO");
 	} else if (forInit) @throw @"Report request must be attached.";
 	if (intervalStr != nil) {
 		repInterval = intervalStr.doubleValue;
@@ -116,8 +114,7 @@ NSLog(@"Idx:%ld, Dly:%ld, Dst:%ld, Ext:%ld, Intv=%.3f, Pop:%@",
 	strm.data_type = Z_TEXT;
 	int ret = deflateInit(&strm, Z_BEST_COMPRESSION);
 	if (ret != Z_OK) {
-		os_log_error(OS_LOG_DEFAULT,
-			"Couldn't initialize a data compresser (%d).", ret);
+		MY_LOG("Couldn't initialize a data compresser (%d).", ret);
 		exit(3);	// this is a fatal error!
 	}
 	document = doc;
@@ -128,9 +125,7 @@ NSLog(@"Idx:%ld, Dly:%ld, Dst:%ld, Ext:%ld, Intv=%.3f, Pop:%@",
     if (theReporters == nil) theReporters = NSMutableDictionary.new;
     theReporters[_ID] = self;
     prevRepStep = -1;
-#ifdef DEBUG
-NSLog(@"Repoter %@(%d) was created for world %@.", _ID, desc, doc.ID);
-#endif
+	MY_LOG_DEBUG("Repoter %@(%d) was created for world %@.", _ID, desc, doc.ID);
  	return self;
 }
 - (void)sendBytes:(const void *)bytes length:(uint32)dataLen {
@@ -138,21 +133,27 @@ NSLog(@"Repoter %@(%d) was created for world %@.", _ID, desc, doc.ID);
 	unsigned char *outBuf = malloc(BUF_SIZE);
 	strm.next_in = (z_const Bytef *)bytes;
 	strm.avail_in = dataLen;
-	strm.avail_out = BUF_SIZE;
-	strm.next_out = outBuf;
-	while (strm.avail_in > 0) {
+	for (;;) {
+		strm.avail_out = BUF_SIZE;
+		strm.next_out = outBuf;
+//NSLog(@"deflate %d of %d bytes.", strm.avail_in, dataLen);
 		int ret = deflate(&strm, Z_SYNC_FLUSH);
 //NSLog(@"deflate returned %d", ret);
 		if (ret != Z_OK && ret != Z_BUF_ERROR) { free(outBuf); @throw @(ret); }
-//NSLog(@"Will send %d compressed bytes.", BUF_SIZE - strm.avail_out);
 		NSInteger nBytes = BUF_SIZE - strm.avail_out;
+//NSLog(@"Will send %ld compressed bytes.", nBytes);
 		send_bytes(desc, (const char *)outBuf, nBytes);
 		byteCount += nBytes;
-		strm.avail_out = BUF_SIZE;
-		strm.next_out = outBuf;
+		if (strm.avail_in <= 0) {
+			unsigned rBytes; int rBits;
+			int ret = deflatePending(&strm, &rBytes, &rBits);
+			if (ret != Z_OK) { free(outBuf); @throw @(ret); }
+			if (rBytes + rBits == 0) break;
+//NSLog(@"%d bytes %d bits are remaining in output buffer.", rBytes, rBits);
+		}
 	}
 	free(outBuf);
-//NSLog(@"Did end 'sendBytes'.");
+//NSLog(@"Did end send %d Bytes.", dataLen);
 }
 //
 static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
@@ -200,9 +201,7 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 	prevRepStep = step;
 	NSError *error;
 	NSData *data = [NSJSONSerialization dataWithJSONObject:md options:0 error:&error];
-#ifdef DEBUG
-NSLog(@"idx data:%ld bytes, pop data:%ld bytes", data.length, popData.length);
-#endif
+	MY_LOG_DEBUG("idx data:%ld bytes, pop data:%ld bytes", data.length, popData.length);
 	NSInteger bufLen = data.length + 10 + ((popData == nil)? 0 : popData.length + 29);
 	char *bytes = malloc(bufLen), *p = bytes;
 	memcpy(p, "data: ", 6); p += 6;

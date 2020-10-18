@@ -7,9 +7,9 @@
 //
 
 #import <sys/socket.h>
+#import <sys/stat.h>
 #import <arpa/inet.h>
 #import <signal.h>
-#import <os/log.h>
 #import "noGUI.h"
 #import "AppDelegate.h"
 #import "Document.h"
@@ -17,6 +17,7 @@
 #import "noGUIInfo.h"
 #import "ProcContext.h"
 #import "BatchJob.h"
+#import "BlockingInfo.h"
 #define SERVER_PORT 8000U
 
 static int soc = -1; // TCP stream socket
@@ -129,7 +130,7 @@ static NSDictionary *ext_mime_map(void) {
 			[scan scanUpToCharactersFromSet:NSCharacterSet.whitespaceCharacterSet
 				intoString:&mimeType];
 			NSString *category = [mimeType componentsSeparatedByString:@"/"][0];
-			if ([@[@"application", @"image", @"text"] indexOfObject:category] != NSNotFound)
+			if ([@[@"application", @"image", @"text"] containsObject:category])
 			while (!scan.atEnd) {
 				[scan scanUpToCharactersFromSet:NSCharacterSet.alphanumericCharacterSet
 					intoString:NULL];
@@ -189,8 +190,14 @@ static void interaction_thread(int desc, uint32 ipaddr) {
 	ProcContext *context = [ProcContext.alloc initWithSocket:desc ip:ipaddr];
 	BOOL isConnected = YES;
 	while (isConnected) @autoreleasepool { @try {
-		if ([context receiveData:-1] > 0) [context makeResponse];
-		else @throw @0;
+		if ([context receiveData:-1] > 0) {
+			int code = [context makeResponse];
+			if (code > 399 && code < 500)
+				if (check_blocking(code, ipaddr)) {
+					MY_LOG("%@ Blocked.", ip4_string(ipaddr));
+					@throw @1;
+				}
+		} else @throw @0;
 	} @catch (id _) { isConnected = NO; } }
 	in_main_thread(^{
 		[context connectionWillClose];
@@ -212,6 +219,7 @@ void connection_thread(void) {
 			addrlen = sizeof(name);
 			desc = accept(soc, (struct sockaddr *)&name, &addrlen);
 			if (desc < 0) unix_error_msg(@"accept", desc);
+			else if (should_block_it(name.sin_addr.s_addr)) close(desc);
 			else break;
 		}
 		[NSThread detachNewThreadWithBlock:
@@ -221,9 +229,31 @@ void connection_thread(void) {
 static NSConditionLock *loggingLock = nil;
 static NSMutableString *loggingString = nil;
 static void logging_thread(void) {
+	static NSDateFormatter *dateForm = nil;
 	if (loggingLock == nil) loggingLock = NSConditionLock.new;
 	for (int cnt = 0; cnt < 18;) {
 		[loggingLock lockWhenCondition:1];
+		@autoreleasepool { @try {
+			NSError *error;
+			NSFileManager *fmn = NSFileManager.defaultManager;
+			NSDictionary *fInfo = [fmn attributesOfItemAtPath:logFilePath error:&error];
+			if (fInfo == nil) @throw error;
+			if ([fInfo[NSFileSize] integerValue] > (1L<<20)) {
+				if (dateForm == nil) {
+					dateForm = NSDateFormatter.new;
+					dateForm.dateFormat = @"yyyyMMddHHmmss";
+				}
+				NSString *newPath = [NSString stringWithFormat:@"%@_%@.txt",
+					logFilePath.stringByDeletingPathExtension,
+					[dateForm stringFromDate:NSDate.date]];
+				if (![fmn moveItemAtPath:logFilePath toPath:newPath error:&error])
+					@throw error;
+			}
+		} @catch (NSError *err) {
+			os_log(OS_LOG_DEFAULT, "Logfile, %@", err.localizedDescription);
+		} @catch (NSException *excp) {
+			os_log(OS_LOG_DEFAULT, "Logfile, %@", excp.reason);
+		}}
 		FILE *logFile = fopen(logFilePath.UTF8String, "a");
 		NSInteger cond = 0;
 		if (logFile != NULL) {

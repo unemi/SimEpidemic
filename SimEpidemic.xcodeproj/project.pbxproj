@@ -27,6 +27,7 @@
 		233D9E0B2486B14A00498A77 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 233D9E0D2486B14A00498A77 /* InfoPlist.strings */; };
 		235639CD247111A200F941A6 /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 235639CB247111A200F941A6 /* Scenario.m */; };
 		23576D3F24D80FCC00120D3F /* SimEpidemic.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 23576D3E24D80FCC00120D3F /* SimEpidemic.sdef */; };
+		2359E8E9253B092B004041D9 /* BlockingInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 2359E8E8253B092B004041D9 /* BlockingInfo.m */; };
 		235B7E782509D7AE0016090F /* ProcContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 235B7E772509D7AE0016090F /* ProcContext.m */; };
 		235B7E7B2509F6800016090F /* DataCompress.m in Sources */ = {isa = PBXBuildFile; fileRef = 235B7E7A2509F6800016090F /* DataCompress.m */; };
 		235D657B2462564600487784 /* ParamPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 235D65792462564600487784 /* ParamPanel.m */; };
@@ -96,6 +97,8 @@
 		235639CA247111A200F941A6 /* Scenario.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scenario.h; sourceTree = "<group>"; };
 		235639CB247111A200F941A6 /* Scenario.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Scenario.m; sourceTree = "<group>"; };
 		23576D3E24D80FCC00120D3F /* SimEpidemic.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = SimEpidemic.sdef; sourceTree = "<group>"; };
+		2359E8E7253B092B004041D9 /* BlockingInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BlockingInfo.h; sourceTree = "<group>"; };
+		2359E8E8253B092B004041D9 /* BlockingInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BlockingInfo.m; sourceTree = "<group>"; };
 		235B7E762509D7AE0016090F /* ProcContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProcContext.h; sourceTree = "<group>"; };
 		235B7E772509D7AE0016090F /* ProcContext.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ProcContext.m; sourceTree = "<group>"; };
 		235B7E792509F6800016090F /* DataCompress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DataCompress.h; sourceTree = "<group>"; };
@@ -245,6 +248,8 @@
 				23AF0268250F98840074EF87 /* BatchJob.m */,
 				23673362252EFA8E00284D91 /* PeriodicReporter.h */,
 				23673363252EFA8E00284D91 /* PeriodicReporter.m */,
+				2359E8E7253B092B004041D9 /* BlockingInfo.h */,
+				2359E8E8253B092B004041D9 /* BlockingInfo.m */,
 			);
 			path = SimEpidemicSV;
 			sourceTree = "<group>";
@@ -448,6 +453,7 @@
 				2365DECA2506159A006C2A95 /* StatPanel.m in Sources */,
 				2365DEC525061537006C2A95 /* noGUI.m in Sources */,
 				235B7E782509D7AE0016090F /* ProcContext.m in Sources */,
+				2359E8E9253B092B004041D9 /* BlockingInfo.m in Sources */,
 				235B7E7B2509F6800016090F /* DataCompress.m in Sources */,
 				23673364252EFA8E00284D91 /* PeriodicReporter.m in Sources */,
 			);

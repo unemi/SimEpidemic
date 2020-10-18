@@ -7,6 +7,7 @@
 //
 
 #import <AppKit/AppKit.h>
+#import <os/log.h>
 
 #define MY_LOG(...) { os_log(OS_LOG_DEFAULT, __VA_ARGS__);\
 	my_log(__VA_ARGS__);}
