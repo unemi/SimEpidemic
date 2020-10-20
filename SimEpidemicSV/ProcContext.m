@@ -356,6 +356,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 					query = [NSDictionary dictionaryWithObjects:objs forKeys:keys count:m];
 				} else query = nil;
 			}
+			code = 0;
 			[self performSelector:NSSelectorFromString(command)];
 			if (code == 0) [self setOKMessage];
 		}
