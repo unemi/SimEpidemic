@@ -32,7 +32,7 @@ void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
 		[NSString stringWithFormat:@"%@ (%@)", obj.description, obj.className];
 #ifdef NOGUI
 	fprintf(stderr, "%s\n", message.UTF8String);
-	if (critical) terminateApp(-1);
+	if (critical) terminateApp(EXIT_FATAL_ERROR);
 #else
 	NSAlert *alt = NSAlert.new;
 	alt.alertStyle = critical? NSAlertStyleCritical : NSAlertStyleWarning;

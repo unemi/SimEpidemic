@@ -88,7 +88,7 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		@"getWorldID", @"newWorld", @"closeWorld",
 		@"getParams", @"setParams",
 		@"start", @"step", @"stop", @"reset",
-		@"getIndexes", @"getDistribution", @"getPopulation",
+		@"getIndexes", @"getDistribution", @"getPopulation", @"getPopulation2",
 		@"periodicReport", @"quitReport", @"changeReport",
 		@"getScenario", @"setScenario",
 		@"submitJob", @"getJobStatus", @"getJobQueueStatus",
@@ -265,8 +265,11 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	content = moreHeader = nil;
 	NSString *req = [NSString stringWithUTF8String:bufData.bytes];
 	NSScanner *scan = [NSScanner scannerWithString:req];
-	NSString *request, *command, *optionStr, *JSONStr = nil;
+	NSString *firstLine, *request, *command, *optionStr, *JSONStr = nil;
 	@try {
+		[scan scanUpToString:@"\r" intoString:&firstLine];
+		_requestString = firstLine;
+		scan.scanLocation = 0;
 		NSString *methodName;
 		if (![scan scanUpToString:@" " intoString:&methodName])
 			@throw bad_request_message(req);
@@ -374,9 +377,9 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	if (brwsID != nil) browserID = brwsID;
 	if (worldID == nil) worldID = query[@"name"];
 	if (worldID == nil || [worldID isEqualToString:@"default"]) {
+		if (browserID == nil) browserID = ip4_string(ip4addr);
 		document = defaultDocuments[browserID];
 		if (document == nil || ![document touch]) {
-			if (browserID == nil) browserID = ip4_string(ip4addr);
 			document = make_new_world(@"Default", browserID);
 			defaultDocuments[browserID] = document;
 			document.docKey = browserID;
@@ -498,10 +501,11 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document
 //
 - (void)start {
 	[self checkDocument];
-	NSString *opStr = query[@"stopAt"];
+	NSString *opStr = query[@"stopAt"], *maxSPSStr = query[@"maxSPS"];
 	NSInteger stopAt = (opStr == nil)? 0 : opStr.integerValue;
+	CGFloat maxSps = (maxSPSStr == nil)? 0 : maxSPSStr.doubleValue;
 	Document *doc = document;
-	in_main_thread(^{ [doc start:stopAt  priority:-.1]; });
+	in_main_thread(^{ [doc start:stopAt maxSPS:maxSps priority:-.1]; });
 }
 - (void)step {
 	[self checkDocument];
@@ -641,10 +645,10 @@ NSData *JSON_pop(Document *doc) {
 	else { buf[1] = ']'; srcSize = 2; }
 	return [NSData dataWithBytesNoCopy:buf length:srcSize freeWhenDone:YES];
 }
-- (void)getPopulation {
+- (void)getPop:(NSData *(Document *))dataFunc {
 	[self checkDocument];
 	[document popLock];
-	NSData *srcData = JSON_pop(document);
+	NSData *srcData = dataFunc(document);
 	[document popUnlock];
 	@try {
 		NSData *dstData = [srcData zippedData];
@@ -658,6 +662,36 @@ NSData *JSON_pop(Document *doc) {
 			@"500 Compression error (%d).", errNum.intValue];
 	}
 }
+- (void)getPopulation { [self getPop:JSON_pop]; }
+
+static NSArray *agent_cood(Agent *a, WorldParams *wp) {
+	return @[@(int_coord(a->x, wp->worldSize)), @(int_coord(a->y, wp->worldSize))];
+}
+NSData *JSON_pop2(Document *doc) {
+	WorldParams *wp = doc.worldParamsP;
+	Agent **pop = doc.Pop;
+	NSMutableArray *posts[NHealthTypes];
+	for (NSInteger i = 0; i < NHealthTypes; i ++) posts[i] = NSMutableArray.new;
+	for (NSInteger i = 0; i < wp->mesh * wp->mesh; i ++)
+		for (Agent *a = pop[i]; a != NULL; a = a->next)
+			[posts[a->health] addObject:agent_cood(a, wp)];
+	for (Agent *a = doc.QList; a != NULL; a = a->next)
+		[posts[a->health] addObject:agent_cood(a, wp)];
+	for (Agent *a = doc.CList; a != NULL; a = a->next)
+		[posts[a->health] addObject:agent_cood(a, wp)];
+	for (WarpInfo *info in doc.WarpList) {
+		Agent *a = info.agent;
+		[posts[a->health] addObject:@[
+			@(int_coord(a->x, wp->worldSize)), @(int_coord(a->y, wp->worldSize)),
+			@(int_coord(info.goal.x, wp->worldSize)),
+			@(int_coord(info.goal.y, wp->worldSize)), @(info.mode)]];
+	}
+	return [NSJSONSerialization dataWithJSONObject:
+		[NSArray arrayWithObjects:posts count:NHealthTypes]
+		options:0 error:NULL];
+}
+- (void)getPopulation2 { [self getPop:JSON_pop2]; }
+
 - (void)getScenario {
 	[self checkDocument];
 	[document popLock];

@@ -21,6 +21,7 @@ extern NSArray *make_history(StatData *stat, NSInteger nItems,
 extern NSArray *dist_cnt_array(NSArray<MyCounter *> *hist);
 extern NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document *doc);
 extern NSData *JSON_pop(Document *doc);
+extern NSData *JSON_pop2(Document *doc);
 
 @interface NSString (IndexNameExtension)
 - (NSString *)stringByRemovingFirstWord;
@@ -40,6 +41,7 @@ extern NSData *JSON_pop(Document *doc);
 	NSInteger fileSize;
 	void (^postProc)(void);
 }
+@property (readonly) NSString *requestString;
 - (instancetype)initWithSocket:(int)desc ip:(uint32)ipaddr;
 - (long)receiveData:(NSInteger)length;
 - (void)setOKMessage;

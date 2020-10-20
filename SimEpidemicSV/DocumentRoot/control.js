@@ -26,7 +26,7 @@ function configRequest(com) {
 }
 function startMonitor() {
 	if (evntSrc != null) evntSrc.close();
-	evntSrc = new EventSource(configRequest("periodicReport") + "&me=" + browserID);
+	evntSrc = new EventSource(configRequest("periodicReport") + "&me=" + browserID + "&popFormat=2");
 	evntSrc.addEventListener("process", function(e) {
 		processID = e.data;
 		document.getElementById("procID").innerHTML = processID;
@@ -72,9 +72,8 @@ function drawWorld(e) {
 	for (let i = 0; i < 5; i ++) {
 		ctx.fillStyle = colors[i];
 		ctx.beginPath();
-		data.forEach(function (v) {
-			if (v[2] == i) ctx.rect(v[0], v[1], 20, 20);
-		});
+		data[i].forEach(function (v)
+			{ ctx.rect(v[0], v[1], 20, 20); });
 		ctx.fill();
 	}
 	ctx.restore();

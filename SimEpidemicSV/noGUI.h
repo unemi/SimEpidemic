@@ -17,6 +17,12 @@
 #define MY_LOG_DEBUG(...)
 #endif
 
+enum {
+	EXIT_NORMAL,
+	EXIT_SOCKET, EXIT_BIND, EXIT_LISTEN, EXIT_PID_FILE,
+	EXIT_FATAL_ERROR, EXIT_FAILED_REGEXP, EXIT_FAILED_DEFLATER,
+	EXIT_FAILED_IDCNT
+};
 @class Document;
 extern NSMutableDictionary<NSString *, Document *> *defaultDocuments;
 extern NSMutableDictionary<NSString *, Document *> *theDocuments;

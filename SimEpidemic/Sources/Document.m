@@ -132,6 +132,7 @@ void my_exit(void) {
 	__weak NSTimer *runtimeTimer;
 	NSMutableArray<PeriodicReporter *> *reporters;
 	NSLock *reportersLock;
+	CGFloat maxSPS;
 #else
 	NSMutableDictionary *orgViewInfo;
 	FillView *fillView;
@@ -951,14 +952,15 @@ static NSInteger mCount = 0, mCount2 = 0;
 #ifdef NOGUI
 //		if (runtimeParams.step % 100 == 0) NSLog(@"%ld", runtimeParams.step);
 		[self forAllReporters:^(PeriodicReporter *rep) { [rep sendReportPeriodic]; }];
-		usleep(1);
+		if (maxSPS > 0) {
+			NSInteger usToWait = (1./maxSPS - timePassed) * 1e6;
 #else
 		if (runtimeParams.step % animeSteps == 0) {
 			in_main_thread(^{ [self showAllAfterStep]; });
 			NSInteger usToWait = (1./30. - timePassed) * 1e6;
+#endif
 			usleep((uint32)((usToWait < 0)? 1 : usToWait));
 		} else usleep(1);
-#endif
 	}
 #ifdef NOGUI
 //NSLog(@"runningLoop will stop %d.", loopMode);
@@ -988,9 +990,10 @@ static NSInteger mCount = 0, mCount2 = 0;
 	[_lastTLock unlock];
 	return result;
 }
-- (void)start:(NSInteger)stopAt priority:(CGFloat)prio {
+- (void)start:(NSInteger)stopAt maxSPS:(CGFloat)maxSps priority:(CGFloat)prio {
 	if (loopMode == LoopRunning) return;
 	if (stopAt > 0) stopAtNDays = stopAt;
+	maxSPS = maxSps;
 	[self goAhead];
 	loopMode = LoopRunning;
 	NSThread *thread = [NSThread.alloc initWithTarget:self

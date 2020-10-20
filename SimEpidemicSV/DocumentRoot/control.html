@@ -12,6 +12,8 @@
 	<input type="submit" value="一歩" formaction="/step">
 	<input type="submit" value="一時停止" formaction="/stop">
 	<input type="submit" value="初期化" formaction="/reset">
+	&nbsp; 速度制限: <input type="number" name="maxSPS"
+		step="0.1" value="0" style="width:10ex"> ステップ/秒
 	</form>
 	応答: <iframe id="controlResult" name="controlResult" height=20></iframe><br/>
 	<button id="startMonitor" onclick="startMonitor()">監視開始</button>

@@ -41,40 +41,63 @@ NSDictionary *extToMime, *codeMeaning, *indexNames;
 NSArray *distributionNames;
 NSDictionary *indexNameToIndex = nil, *testINameToIdx = nil;
 NSDateFormatter *dateFormat = nil;
-static NSString *pidFilename = @"pid", *infoFilename = @"simeipInfo.plist",
+static NSString *pidFilename = @"pid", *IDCntFilename = @"IDCount",
+	*infoFilename = @"simeipInfo.plist",
 	*keyUniqIDCounter = @"uniqIDCounter", *keyUniqIDChars = @"uniqIDChars",
+	*keyBlockList = @"blockList",
 	*logFilename = @"log";
-static NSLock *uniqStrLock = nil;
-#define N_UNIQ_CHARS 61
-NSString *new_uniq_string(void) {
-	static char chars[N_UNIQ_CHARS + 1];
-	static NSUInteger counter = 0;
-	if (uniqStrLock == nil) uniqStrLock = NSLock.new;
-	[uniqStrLock lock];
-	NSNumber *num; NSString *str;
-	if ((num = infoDictionary[keyUniqIDCounter])) counter = num.integerValue;
-	if ((str = infoDictionary[keyUniqIDChars]) == nil || str.length != N_UNIQ_CHARS) {
-		for (int i = 0; i < N_UNIQ_CHARS+1; i ++) chars[i] =
-			(i < 10)? '0' + i : (i < 36)? 'A' - 10 + i : 'a' - 36 + i;
-		for (int i = 0; i < N_UNIQ_CHARS; i ++) {
-			int k = (random() % (N_UNIQ_CHARS+1 - i)) + i;
-			char c = chars[i]; chars[i] = chars[k]; chars[k] = c;
-		}
-		chars[N_UNIQ_CHARS] = '\0';
-		infoDictionary[keyUniqIDChars] = [NSString stringWithUTF8String:chars];
-	} else memcpy(chars, str.UTF8String, str.length);
-	char buf[32];
-	NSUInteger j = (++ counter), k = 0x8000000000000000UL, n;
-	if (j >= k) j = counter = 0;	// almost impossible but for safety.
-	for (NSUInteger h = 0x4000000000000000UL, l = 1; h > l;
-		h >>= 1, l <<= 1) if (j & l) k |= h;
-	for (n = 0; k != 0 && n < 31; n ++, k /= 61) buf[n] = chars[k % 61];
-	infoDictionary[keyUniqIDCounter] = @(counter);
+
+static void save_info_dict(void) {
 	NSData *infoData = [NSPropertyListSerialization
 		dataWithPropertyList:infoDictionary
 		format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL];
 	if (infoData) [infoData writeToFile:
 		[dataDirectory stringByAppendingPathComponent:infoFilename] atomically:YES];
+}
+static NSLock *uniqStrLock = nil;
+#define N_UNIQ_CHARS 61
+NSString *new_uniq_string(void) {
+	static NSString *IDCntPath = nil;
+	static char chars[N_UNIQ_CHARS + 1];
+	static NSUInteger counter = 0;
+	if (uniqStrLock == nil) uniqStrLock = NSLock.new;
+	[uniqStrLock lock];
+	if (IDCntPath == nil) {
+		IDCntPath = [dataDirectory stringByAppendingPathComponent:IDCntFilename];
+		NSString *str = [NSString stringWithContentsOfFile:IDCntPath
+			encoding:NSUTF8StringEncoding error:NULL];
+		if (str != nil) counter = str.integerValue;
+		else {	// for version transition
+			NSNumber *num = infoDictionary[keyUniqIDCounter];
+			if (num != nil) {
+				counter = num.integerValue;
+				[infoDictionary removeObjectForKey:keyUniqIDCounter];
+			}
+		}
+		counter ++;
+		if ((str = infoDictionary[keyUniqIDChars]) == nil || str.length != N_UNIQ_CHARS) {
+			for (int i = 0; i < N_UNIQ_CHARS+1; i ++) chars[i] =
+				(i < 10)? '0' + i : (i < 36)? 'A' - 10 + i : 'a' - 36 + i;
+			for (int i = 0; i < N_UNIQ_CHARS; i ++) {
+				int k = (random() % (N_UNIQ_CHARS+1 - i)) + i;
+				char c = chars[i]; chars[i] = chars[k]; chars[k] = c;
+			}
+			chars[N_UNIQ_CHARS] = '\0';
+			infoDictionary[keyUniqIDChars] = [NSString stringWithUTF8String:chars];
+			save_info_dict();
+		} else memcpy(chars, str.UTF8String, str.length);
+	} else counter ++;
+	NSError *error;
+	if (![@(counter).stringValue writeToFile:IDCntPath atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+		MY_LOG("Could not write ID Counter: %@.", error.localizedDescription);
+		terminateApp(EXIT_FAILED_IDCNT);  
+	}
+	char buf[32];
+	NSUInteger j = counter, k = 0x8000000000000000UL, n;
+	if (j >= k) j = counter = 0;	// almost impossible but for safety.
+	for (NSUInteger h = 0x4000000000000000UL; j > 0 && h > 0;
+		h >>= 1, j >>= 1) if (j & 1) k |= h;
+	for (n = 0; k > 0 && n < 31; n ++, k /= 61) buf[n] = chars[(k + n) % 61];
 	[uniqStrLock unlock];
 	buf[n] = '\0';
 	return [NSString stringWithUTF8String:buf];
@@ -193,7 +216,7 @@ static void interaction_thread(int desc, uint32 ipaddr) {
 		if ([context receiveData:-1] > 0) {
 			int code = [context makeResponse];
 			if (code > 399 && code < 500)
-				if (check_blocking(code, ipaddr)) {
+				if (check_blocking(code, ipaddr, context.requestString)) {
 					MY_LOG("%@ Blocked.", ip4_string(ipaddr));
 					@throw @1;
 				}
@@ -293,6 +316,11 @@ int resultCode = 0;
 void terminateApp(int code) {
 	BOOL isMain = NSThread.isMainThread;
 	MY_LOG_DEBUG("terminateApp called in %s thread.", isMain? "main" : "sub");
+	infoDictionary[keyBlockList] = block_list();
+	save_info_dict();
+	[loggingLock lockWhenCondition:0];
+	[loggingLock unlock];
+	shutdown(soc, SHUT_RDWR);
 	if (isMain) exit(code);
 	else {
 		resultCode = code;
@@ -303,9 +331,8 @@ void terminateApp(int code) {
 void catch_signal(int sig) {
 	MY_LOG_DEBUG("I caught a signal %d.\n", sig);
 // better to wait for all of the sending processes completed.
-//		shutdown(soc, SHUT_RDWR);
 	MY_LOG("Quit.");
-	terminateApp(0);
+	terminateApp(EXIT_NORMAL);
 }
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
@@ -334,9 +361,9 @@ int main(int argc, const char * argv[]) {
 		} else if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--jobExprHours") == 0) {
 			if (i + 1 < argc) jobRecExpirationHours = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "--version") == 0) {
-			printf("%s\n", version); exit(0);
+			printf("%s\n", version); exit(EXIT_NORMAL);
 		} else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-			printf("\n"); exit(0);
+			printf("\n"); exit(EXIT_NORMAL);
 		}
 	}
 	fileDirectory = adjust_dir_path(fileDirectory);
@@ -353,6 +380,8 @@ int main(int argc, const char * argv[]) {
 		propertyListWithData:infoData options:NSPropertyListMutableContainers
 		format:NULL error:NULL];
 	if (infoDictionary == nil) infoDictionary = NSMutableDictionary.new;
+	NSArray *blockList = infoDictionary[keyBlockList];
+	if (blockList != nil) block_list_from_plist(blockList);
 // Date formatter for "Date" item in the header	
 	dateFormat = NSDateFormatter.new;
 	dateFormat.locale = [NSLocale.alloc initWithLocaleIdentifier:@"en_GB"];
@@ -371,10 +400,10 @@ int main(int argc, const char * argv[]) {
 // Open the server side socket to wait for connection request from a client.
 	nameTemplate.sin_port = EndianU16_NtoB((unsigned short)port);
 	soc = socket(PF_INET, SOCK_STREAM, 0);
-	if (soc < 0) unix_error_msg(@"TCP socket", 1);
+	if (soc < 0) unix_error_msg(@"TCP socket", EXIT_SOCKET);
 	if ((err = bind(soc, (struct sockaddr *)&nameTemplate, sizeof(nameTemplate))))
-		unix_error_msg(@"TCP bind", 2);
-	if ((err = listen(soc, 1))) unix_error_msg(@"TCP listen", 3);
+		unix_error_msg(@"TCP bind", EXIT_BIND);
+	if ((err = listen(soc, 1))) unix_error_msg(@"TCP listen", EXIT_LISTEN);
 //
 	NSError *error;
 	NSString *pidPath = [dataDirectory stringByAppendingPathComponent:
@@ -382,15 +411,16 @@ int main(int argc, const char * argv[]) {
 	if (![@(getpid()).stringValue writeToFile:pidPath
 		atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
 		MY_LOG("Couldn't write pid. %@", error.localizedDescription);
-		exit(4); }
+		terminateApp(EXIT_PID_FILE); }
 //
 	defaultDocuments = NSMutableDictionary.new;
 	theDocuments = NSMutableDictionary.new;
 	applicationSetups();	// defined in AppDelegate.m
 	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
 // for debugging, (lldb) process handle -s0 -p1 SIGTERM
+	schedule_clean_up_blocking_info(); // defined in BlockingInfo.m
 	schedule_job_expiration_check(); // defined in BatchJob.m
-	MY_LOG("Launched by %@.", NSProcessInfo.processInfo.userName);
+	MY_LOG("%s launched by %@.", version, NSProcessInfo.processInfo.userName);
 //	[NSRunLoop.currentRunLoop run];
 	NSRunLoop *theRL = NSRunLoop.currentRunLoop;
 	while (shouldKeepRunning)

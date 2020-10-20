@@ -125,7 +125,7 @@ static NSString *batch_job_dir(void) {
 		[dataDirectory stringByAppendingPathComponent:@"BatchJob"];
 	return batchJobDir;
 }
-void schedule_job_expiration_check(void) { // called from AppDelegate
+void schedule_job_expiration_check(void) { // called from noGUI.m
 #ifdef DEBUG
 	CGFloat interval = 1.; BOOL repeats = NO;
 #else
@@ -298,7 +298,7 @@ void schedule_job_expiration_check(void) { // called from AppDelegate
 	doc.stopCallBack = ^(LoopMode mode){
 		[self trialDidFinish:trialNumb mode:mode];
 	};
-	[doc start:_stopAt priority:-.2];
+	[doc start:_stopAt maxSPS:0 priority:-.2];
 	[lock unlock];
 	MY_LOG("Trial %@/%ld of job %@ started on world %@.",
 		trialNumb, _nIteration, _ID, doc.ID);

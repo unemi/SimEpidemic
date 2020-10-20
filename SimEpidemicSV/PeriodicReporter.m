@@ -28,6 +28,7 @@ static NSMutableDictionary<NSString *, PeriodicReporter *> *theReporters = nil;
 	NSDate *workBegin;
 	NSArray<NSString *> *repItemsIdx, *repItemsDly, *repItemsDst, *repItemsExt;
 	BOOL repPopulation;
+	NSData *(*dataOfPopInfo)(Document *);
 	unsigned long lastReportTime, lastCommentTime;
 	CGFloat repInterval;
 	NSTimer *idlingTimer;
@@ -59,7 +60,8 @@ static NSArray<NSString *> *valid_report_item_names(void) {
 	return validNames;
 }
 - (void)setupWithQuery:(NSDictionary *)query init:(BOOL)forInit {
-	NSString *report = query[@"report"], *intervalStr = query[@"interval"];
+	NSString *report = query[@"report"], *intervalStr = query[@"interval"],
+		*fmtStr = query[@"popFormat"];
 	if (report != nil) {
 		report = report.stringByRemovingPercentEncoding;
 		NSError *error;
@@ -104,10 +106,14 @@ static NSArray<NSString *> *valid_report_item_names(void) {
 	MY_LOG_DEBUG("Idx:%ld, Dly:%ld, Dst:%ld, Ext:%ld, Intv=%.3f, Pop:%@",
 		nn, nd, nD, nE, repInterval, repPopulation? @"YES" : @"NO");
 	} else if (forInit) @throw @"Report request must be attached.";
+	[configLock lock];
 	if (intervalStr != nil) {
 		repInterval = intervalStr.doubleValue;
 		if (repInterval <= 0.) repInterval = 1.;
 	} else if (forInit) repInterval = 1.;
+	if (fmtStr != nil) dataOfPopInfo =
+		(fmtStr.integerValue != 2)? JSON_pop : JSON_pop2;
+	[configLock unlock];
 }
 - (instancetype)initWithDocument:(Document *)doc addr:(uint32)addr desc:(int)dsc {
 	if (!(self = [super init])) return nil;
@@ -115,7 +121,7 @@ static NSArray<NSString *> *valid_report_item_names(void) {
 	int ret = deflateInit(&strm, Z_BEST_COMPRESSION);
 	if (ret != Z_OK) {
 		MY_LOG("Couldn't initialize a data compresser (%d).", ret);
-		exit(3);	// this is a fatal error!
+		exit(EXIT_FAILED_DEFLATER);	// this is a fatal error!
 	}
 	document = doc;
 	ip4addr = addr;
@@ -125,6 +131,7 @@ static NSArray<NSString *> *valid_report_item_names(void) {
     if (theReporters == nil) theReporters = NSMutableDictionary.new;
     theReporters[_ID] = self;
     prevRepStep = -1;
+    dataOfPopInfo = JSON_pop;	// default format
 	MY_LOG_DEBUG("Repoter %@(%d) was created for world %@.", _ID, desc, doc.ID);
  	return self;
 }
@@ -177,7 +184,8 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 	[configLock lock];
 	NSArray<NSString *> *Idx = repItemsIdx, *Dly = repItemsDly,
 		*Dst = repItemsDst, *Ext = repItemsExt;
-	BOOL pop = repPopulation;
+	BOOL repPop = repPopulation;
+	NSData *(*popProc)(Document *) = dataOfPopInfo;
 	[configLock unlock];
 	for (NSString *name in Idx) md[name] = index_array(stat, n, name);
 	stat = statInfo.transit;
@@ -196,7 +204,7 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 		else if ([name isEqualToString:@"testPositiveRate"])
 			md[name] = make_history(stat, n, ^(StatData *st) { return @(st->pRate); });
 	}
-	NSData *popData = pop? JSON_pop(document) : nil;
+	NSData *popData = repPop? popProc(document) : nil;
 	[document popUnlock];
 	prevRepStep = step;
 	NSError *error;

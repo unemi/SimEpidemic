@@ -70,7 +70,7 @@ extern void my_exit(void);
 @property NSString *docKey;
 @property void (^stopCallBack)(LoopMode);
 - (BOOL)touch;
-- (void)start:(NSInteger)stopAt priority:(CGFloat)prio;
+- (void)start:(NSInteger)stopAt maxSPS:(CGFloat)maxSps priority:(CGFloat)prio;
 - (void)step;
 - (void)stop:(LoopMode)mode;
 - (void)resetPop;

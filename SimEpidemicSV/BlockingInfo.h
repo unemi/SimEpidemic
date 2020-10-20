@@ -13,7 +13,10 @@ NS_ASSUME_NONNULL_BEGIN
 @interface BlockingInfo : NSObject
 @end
 
-extern BOOL check_blocking(int code, uint32 ipaddr);
+extern BOOL check_blocking(int code, uint32 ipaddr, NSString *request);
 extern BOOL should_block_it(uint32 ipaddr);
+extern void schedule_clean_up_blocking_info(void);
+extern void block_list_from_plist(NSArray *plist);
+extern NSArray *block_list(void);
 
 NS_ASSUME_NONNULL_END
