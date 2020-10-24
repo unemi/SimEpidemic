@@ -476,8 +476,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	MY_LOG_DEBUG("--- parameters\n%s\n", dict.description.UTF8String);
 	[document popLock];
 	RuntimeParams *rp = document.runtimeParamsP;
-	WorldParams *wp = (rp->step == 0)?
-		document.worldParamsP : document.tmpWorldParamsP;
+	WorldParams *wp = document.tmpWorldParamsP;
 	set_params_from_dict(rp, wp, dict);
 	NSInteger popSize = wp->initPop;
 	if (popSize > maxPopSize) wp->initPop = maxPopSize;
@@ -485,6 +484,10 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	if (popSize > maxPopSize) @throw [NSString stringWithFormat:
 		@"200 The specified population size %ld is too large.\
 It was adjusted to maxmimum value: %ld.", popSize, maxPopSize];
+	if (rp->step == 0 && memcmp(document.worldParamsP, wp, sizeof(WorldParams))) {
+		memcpy(document.worldParamsP, wp, sizeof(WorldParams));
+		[document resetPop];
+	}
 }
 //
 NSArray *make_history(StatData *stat, NSInteger nItems,
