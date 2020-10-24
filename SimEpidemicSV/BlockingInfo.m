@@ -10,12 +10,12 @@
 #import "noGUI.h"
 
 static CGFloat penalty[] = {
-	1.,	// 400 Bad Request
+	2.,	// 400 Bad Request
 	1., // 401
 	1., // 402 Payment Required
 	1., // 403 Forbidden
 	.3,	// 404 Not Found
-	1., // 405 Method Not Allowed
+	2., // 405 Method Not Allowed
 	1., // 406 Not Acceptable
 	.2, // 408 Request Timeout
 	1., // 409 Conflict
@@ -54,23 +54,18 @@ static CGFloat request_penalty(NSString *request) {
 	if (acceptable == nil) {
 		acceptable = regexp_array(@[@"\\AGET /apple-touch-icon\\.png ",
 			@"\\AGET /apple-touch-icon-precomposed\\.png "]);
-		prohibited = regexp_array(
-			@[@"\\.php[ \\?]", @"\\.cgi[ \\?]", @"\\AGET /[\\.\\?]"]);
+		prohibited = regexp_array(@[@"\\A\\s",
+			@"\\.php[ \\?]", @"\\.cgi[ \\?]", @"\\AGET /[\\.\\?]"]);
 	}
 	NSRange srcRng = {0, request.length};
+	if (srcRng.length <= 4) return BLOCK_TH;
 	for (NSRegularExpression *reg in acceptable) {
 		NSRange rng = [reg rangeOfFirstMatchInString:request options:0 range:srcRng];
-		if (rng.location != NSNotFound) {
-			MY_LOG_DEBUG("%@ accepted.", request);
-			return 0.;
-		}
+		if (rng.location != NSNotFound) return 0.;
 	}
 	for (NSRegularExpression *reg in prohibited) {
 		NSRange rng = [reg rangeOfFirstMatchInString:request options:0 range:srcRng];
-		if (rng.location != NSNotFound) {
-			MY_LOG_DEBUG("%@ rejected.", request);
-			return BLOCK_TH;
-		}
+		if (rng.location != NSNotFound) return BLOCK_TH;
 	}
 	return -1.;
 }
@@ -110,10 +105,10 @@ static CGFloat request_penalty(NSString *request) {
 static NSMutableDictionary<NSNumber *, BlockingInfo *> *blockDict = nil;
 static NSLock *blockDictLock = nil;
 BOOL check_blocking(int code, uint32 ipaddr, NSString *request) {
-	if (blockDict == nil) blockDict = NSMutableDictionary.new;
 	if (blockDictLock == nil) blockDictLock = NSLock.new;
 	NSNumber *key = @(ipaddr);
 	[blockDictLock lock];
+	if (blockDict == nil) blockDict = NSMutableDictionary.new;
 	BlockingInfo *info = blockDict[key];
 	if (info == nil) blockDict[key] = info = BlockingInfo.new;
 	[info checkInWithCode:code request:request];
@@ -122,9 +117,9 @@ BOOL check_blocking(int code, uint32 ipaddr, NSString *request) {
 	return shouldBlock;
 }
 BOOL should_block_it(uint32 ipaddr) {
+	BOOL result = NO;
 	[blockDictLock lock];
 	BlockingInfo *info = blockDict[@(ipaddr)];
-	BOOL result = NO;
 	if (info != nil) {
 		[info revisePoint:NSDate.date];
 		result = [info shouldBlock];
@@ -136,17 +131,20 @@ void schedule_clean_up_blocking_info(void) {
 	[NSTimer scheduledTimerWithTimeInterval:3600*24 repeats:YES block:
 	^(NSTimer * _Nonnull timer) {
 		if (blockDict == nil) return;
+	@autoreleasepool {
 		NSDate *now = NSDate.date;
 		NSMutableArray<NSNumber *> *removeKeys = NSMutableArray.new;
 		[blockDictLock lock];
-		for (NSNumber *key in blockDict)
-			if ([now timeIntervalSinceDate:blockDict[key].date] > BLOCK_EXPIRE)
+		[blockDict enumerateKeysAndObjectsUsingBlock:^(NSNumber * _Nonnull key,
+			BlockingInfo * _Nonnull obj, BOOL * _Nonnull stop) {
+			if ([now timeIntervalSinceDate:obj.date] > BLOCK_EXPIRE)
 				[removeKeys addObject:key];
+		}];
 		for (NSNumber *key in removeKeys) [blockDict removeObjectForKey:key];
 		[blockDictLock unlock];
 		if (removeKeys.count > 0)
 			MY_LOG("Blocking Info: %ld entries were removed.", removeKeys.count);
-	}];
+	}}];
 }
 void block_list_from_plist(NSArray *plist) {
 	NSInteger n = plist.count;

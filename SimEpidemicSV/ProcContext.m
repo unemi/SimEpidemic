@@ -97,16 +97,16 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 	];
 	return self;
 }
-- (long)receiveData:(NSInteger)length {
+- (long)receiveData:(NSInteger)length offset:(NSInteger)offset {
 	unsigned char *buf = bufData.mutableBytes;
-	dataLength = 0;
-	do {
-		long len = recv(desc, buf + dataLength, BUFFER_SIZE - 1 - dataLength, 0);
+	dataLength = offset;
+	if (length < 0 || offset < length) do {
+		long len = recv(desc, buf + offset, BUFFER_SIZE - 1 - offset, 0);
 		if (len < 0) @throw @"recv command";
 		else if (len == 0) break;
-		dataLength += len;
-	} while (dataLength < length);
-	buf[dataLength] = '\0';
+		offset += len;
+	} while (offset < length);
+	buf[(dataLength = offset)] = '\0';
 	MY_LOG_DEBUG("(%d)-> %ld bytes.\n%s", desc, dataLength, buf);
 	if (dataLength > 0) {
 		if (length < 0) {
@@ -263,10 +263,16 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 }
 - (int)makeResponse {
 	content = moreHeader = nil;
-	NSString *req = [NSString stringWithUTF8String:bufData.bytes];
-	NSScanner *scan = [NSScanner scannerWithString:req];
-	NSString *firstLine, *request, *command, *optionStr, *JSONStr = nil;
+	code = 0;
 	@try {
+		if (bufData.length <= 4) {
+			_requestString = @" ";
+			@throw @"400 Lack of method name.";
+		}
+		NSString *req = [NSString stringWithUTF8String:bufData.bytes];
+		NSScanner *scan = [NSScanner scannerWithString:req];
+		scan.charactersToBeSkipped = nil;
+		NSString *firstLine, *request, *command, *optionStr, *JSONStr = nil;
 		[scan scanUpToString:@"\r" intoString:&firstLine];
 		_requestString = firstLine;
 		scan.scanLocation = 0;
@@ -276,22 +282,22 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 		[scan scanCharactersFromSet:NSCharacterSet.whitespaceCharacterSet intoString:NULL];
 		if (![scan scanUpToString:@" " intoString:&request])
 			@throw bad_request_message(req);
+		if (![request hasPrefix:@"/"]) @throw bad_request_message(req);
 		method = methodName;
 		if ([method isEqualToString:@"GET"] || [method isEqualToString:@"HEAD"]) {
-			if ([request isEqualToString:@"/"])
-				{ [self respondFile:@"index.html"]; @throw @0; }
+			NSString *path;
 			scan = [NSScanner scannerWithString:request];
-			[scan scanCharactersFromSet:
-				[NSCharacterSet characterSetWithCharactersInString:@"/"] intoString:NULL];
-			if (![scan scanUpToString:@"?" intoString:&command])
+			if (![scan scanUpToString:@"?" intoString:&path])
 				@throw bad_request_message(req);
-			if (command.pathExtension.length > 0)
-				{ [self respondFile:command]; @throw @0; }
-			else optionStr = scan.atEnd? nil :
+			if ([path hasSuffix:@"/"])
+				path = [path stringByAppendingPathComponent:@"index.html"];
+			if (path.pathExtension.length > 0)
+				{ [self respondFile:[path substringFromIndex:1]]; @throw @0; }
+			optionStr = scan.atEnd? nil :
 				[request substringFromIndex:scan.scanLocation + 1];
+			command = [path substringFromIndex:1];
 		} else if ([method isEqualToString:@"POST"]) {
-			command = [request hasPrefix:@"/"]?
-				[request substringFromIndex:1] : request;
+			command = [request substringFromIndex:1];
 			[scan scanUpToString:@"\r\n" intoString:NULL];
 			NSString *headerStr;
 			if (![scan scanUpToString:@"\r\n\r\n" intoString:&headerStr])
@@ -303,7 +309,13 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 			if (numStr == nil) @throw @"411 No content length indicated.";
 			NSInteger contentLength = numStr.integerValue;
 			if (contentLength > BUFFER_SIZE - 1) @throw @"413 Payload is too large.";
-			[self receiveData:contentLength];
+			[scan scanString:@"\r\n\r\n" intoString:NULL];
+			if (!scan.atEnd) {
+				NSString *restPart = [req substringFromIndex:scan.scanLocation];
+				[restPart getCString:bufData.mutableBytes maxLength:BUFFER_SIZE-1
+					encoding:NSUTF8StringEncoding];
+				[self receiveData:contentLength offset:restPart.length];
+			} else [self receiveData:contentLength offset:0];
 			if ([contentType isEqualToString:@"application/x-www-form-urlencoded"])
 				optionStr = [NSString stringWithUTF8String:bufData.bytes];
 			else if ([contentType hasPrefix:@"multipart/form-data"]) {
@@ -356,12 +368,13 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 					query = [NSDictionary dictionaryWithObjects:objs forKeys:keys count:m];
 				} else query = nil;
 			}
-			code = 0;
 			[self performSelector:NSSelectorFromString(command)];
 			if (code == 0) [self setOKMessage];
 		}
 	} @catch (NSString *info) { [self setErrorMessage:info];
-	} @catch (NSNumber *num) {}
+	} @catch (NSException *excp) { [self setErrorMessage:[@"500 "
+		stringByAppendingString:excp.reason]];
+	} @catch (NSNumber *num) { }
 //
 	if (content != nil) {
 		NSInteger length = [self sendData];

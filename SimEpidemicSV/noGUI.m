@@ -213,7 +213,7 @@ static void interaction_thread(int desc, uint32 ipaddr) {
 	ProcContext *context = [ProcContext.alloc initWithSocket:desc ip:ipaddr];
 	BOOL isConnected = YES;
 	while (isConnected) @autoreleasepool { @try {
-		if ([context receiveData:-1] > 0) {
+		if ([context receiveData:-1 offset:0] > 0) {
 			int code = [context makeResponse];
 			if (code > 399 && code < 500)
 				if (check_blocking(code, ipaddr, context.requestString)) {

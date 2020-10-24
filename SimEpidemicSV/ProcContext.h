@@ -43,7 +43,7 @@ extern NSData *JSON_pop2(Document *doc);
 }
 @property (readonly) NSString *requestString;
 - (instancetype)initWithSocket:(int)desc ip:(uint32)ipaddr;
-- (long)receiveData:(NSInteger)length;
+- (long)receiveData:(NSInteger)length offset:(NSInteger)offset;
 - (void)setOKMessage;
 - (void)notImplementedYet;
 - (int)makeResponse;
