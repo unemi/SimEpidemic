@@ -28,10 +28,11 @@ static CGFloat penalty[] = {
 	1., // 416
 	1., // 417 Expectation Failed
 };
-#define BLOCK_EXPIRE (3600*24*3)
+#define BLOCK_EXPIRE (3600*24*2)
 #define CODE_MAX 417
-#define DECAY_BY_SEC .98
+#define DECAY_BY_SEC .99999
 #define BLOCK_TH 3.
+#define IMMEDIATE_BLOCK 6.
 
 static NSArray<NSRegularExpression *> *regexp_array(NSArray<NSString *> *strArr) {
 	NSInteger n = strArr.count;
@@ -54,18 +55,20 @@ static CGFloat request_penalty(NSString *request) {
 	if (acceptable == nil) {
 		acceptable = regexp_array(@[@"\\AGET /apple-touch-icon\\.png ",
 			@"\\AGET /apple-touch-icon-precomposed\\.png "]);
-		prohibited = regexp_array(@[@"\\A\\s",
+		prohibited = regexp_array(@[@"\\A\\P{Lu}", @"\\A\\p{Lu}\\P{Lu}",
+			@"\\AGET /wp-content/", @"\\APOST /api/", @"\\AGET /boaform/", @"\\AGET /php",
 			@"\\.php[ \\?]", @"\\.cgi[ \\?]", @"\\AGET /[\\.\\?]"]);
 	}
 	NSRange srcRng = {0, request.length};
-	if (srcRng.length <= 4) return BLOCK_TH;
+	if (srcRng.length <= 4) return IMMEDIATE_BLOCK;
 	for (NSRegularExpression *reg in acceptable) {
 		NSRange rng = [reg rangeOfFirstMatchInString:request options:0 range:srcRng];
 		if (rng.location != NSNotFound) return 0.;
 	}
 	for (NSRegularExpression *reg in prohibited) {
 		NSRange rng = [reg rangeOfFirstMatchInString:request options:0 range:srcRng];
-		if (rng.location != NSNotFound) return BLOCK_TH;
+		if (rng.location != NSNotFound) return IMMEDIATE_BLOCK;
+		//{ NSLog(@"prohibited.");break; }
 	}
 	return -1.;
 }

@@ -46,10 +46,8 @@ void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
 	}
 #endif
 }
+#ifndef NOGUI
 void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void)) {
-#ifdef NOGUI
-	proc();
-#else
 	NSAlert *alt = NSAlert.new;
 	alt.alertStyle = NSAlertStyleWarning;
 	alt.messageText = NSLocalizedString(@"This operation cannot be undone.", nil);
@@ -59,13 +57,13 @@ void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void)) {
 	[alt beginSheetModalForWindow:window completionHandler:^(NSModalResponse returnCode) {
 		if (returnCode == NSAlertFirstButtonReturn) proc();
 	}];
-#endif
 }
 void show_anime_steps(NSTextField *txtField, NSInteger steps) {
 	txtField.stringValue = (steps == 1)?
 		NSLocalizedString(@"Draw in each step.", nil) :
 		[NSString stringWithFormat:NSLocalizedString(@"AnimeStepsFormat", nil), steps];
 }
+#endif
 NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window) {
 	NSError *error;
 	NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
@@ -185,6 +183,7 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 		}} else if (ip != NULL) ip[index - IDX_I] = [dict[key] integerValue];
 	}
 }
+#ifndef NOGUI
 #define RGB3(r,g,b) ((r<<16)|(g<<8)|b)
 NSInteger defaultStateRGB[N_COLORS] = {
 	RGB3(39,85,154), RGB3(246,214,0), RGB3(250,48,46), RGB3(32,120,100), RGB3(182,182,182),
@@ -216,6 +215,8 @@ void setup_colors(void) {
 		}
 	}
 }
+#endif
+
 #ifdef NOGUI
 void
 #else
@@ -256,8 +257,8 @@ static struct SetupInfo
 	paramIndexFromKey = [NSDictionary dictionaryWithObjects:indexes forKeys:keys count:nn];
 	memcpy(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams));
 	memcpy(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
-	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 #ifndef NOGUI
+	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 	return (struct SetupInfo){nF, nD, nI, nn};
 #endif
 }

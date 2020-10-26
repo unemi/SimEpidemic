@@ -32,13 +32,10 @@ typedef struct {
 extern NSInteger nCores;
 extern unsigned long current_time_us(void);
 extern void error_msg(NSObject *obj, NSWindow *window, BOOL critical);
-extern void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void));
-extern void show_anime_steps(NSTextField *txtField, NSInteger steps);
 extern NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window);
 extern void load_property_data(NSArray<NSString *> *fileTypes, NSWindow *window,
 	Class class, void (^block)(NSURL *url, NSObject *));
 extern void save_property_data(NSString *fileType, NSWindow *window, NSObject *object);
-extern void setup_colors(void);
 extern NSString *keyAnimeSteps;
 extern NSInteger defaultAnimeSteps;
 extern RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
@@ -49,6 +46,12 @@ extern NSDictionary<NSString *, NSString *> *paramKeyFromName;
 extern NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
 extern NSDictionary *param_dict(RuntimeParams *rp, WorldParams *wp);
 extern void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *d);
+#ifdef NOGUI
+extern void applicationSetups(void);
+#else
+extern void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void));
+extern void show_anime_steps(NSTextField *txtField, NSInteger steps);
+extern void setup_colors(void);
 extern NSInteger defaultStateRGB[N_COLORS], stateRGB[N_COLORS];
 extern NSColor *stateColors[N_COLORS], *warpColors[NHealthTypes];
 extern NSString *colKeys[];
@@ -57,9 +60,6 @@ extern CGFloat panelsAlpha;
 extern BOOL makePanelChildWindow;
 extern NSString *keyWarpOpacity, *keyPanelsAlpha, *keyChildWindow;
 
-#ifdef NOGUI
-extern void applicationSetups(void);
-#else
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @end
 #endif

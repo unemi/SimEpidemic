@@ -150,15 +150,6 @@ static void send_large_data(int desc, const char *bytes, NSInteger size) {
 		bytes += BUFFER_SIZE;
 	}
 }
-NSString *make_header(int code, NSString *type, NSString *moreHeader, NSInteger fileSize) {
-	NSString *dateStr = [dateFormat stringFromDate:NSDate.date],
-		*meaning = codeMeaning[@(code)];
-	return [NSString stringWithFormat:headerFormat, code,
-		(meaning == nil)? @"" : meaning, dateStr,
-		(fileSize == 0)? @"" : [NSString stringWithFormat:@"Content-Length: %ld\n", fileSize],
-		(type == nil)? @"" : [NSString stringWithFormat:@"Content-Type: %@\n", type],
-		(moreHeader == nil)? @"" : moreHeader];
-}
 - (NSInteger)sendHeader {
 	NSString *dateStr = [dateFormat stringFromDate:NSDate.date],
 		*meaning = codeMeaning[@(code)];
@@ -248,7 +239,7 @@ static NSString *bad_request_message(NSString *req) {
 		code = 200;
 	} @catch (NSError *error) {
 		@throw [NSString stringWithFormat:
-			@"404 File access denied: %@", error.localizedDescription];
+			@"404 File access: %@", error.localizedDescription];
 	} @catch (NSString *msg) { @throw msg; }
 }
 static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerStr) {

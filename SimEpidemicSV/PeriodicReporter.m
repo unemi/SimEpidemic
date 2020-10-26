@@ -247,6 +247,7 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 - (void)start {
 	if (idlingTimer != nil) { [idlingTimer invalidate]; idlingTimer = nil; }
 	workBegin = NSDate.date;
+	MY_LOG("%@ Repoter %@(%d) started.", ip4_string(ip4addr), _ID, desc);
 }
 - (void)cumulateWorkTime {
 	if (workBegin == nil) return;

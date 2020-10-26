@@ -273,7 +273,11 @@ static void logging_thread(void) {
 					@throw error;
 			}
 		} @catch (NSError *err) {
-			os_log(OS_LOG_DEFAULT, "Logfile, %@", err.localizedDescription);
+			if ([err.domain isEqualToString:NSCocoaErrorDomain]
+			  && err.code == NSFileReadNoSuchFileError)
+			os_log(OS_LOG_DEFAULT, "Logfile, %@ will be newly created.",
+				logFilePath.lastPathComponent);
+			else os_log(OS_LOG_DEFAULT, "Logfile, %@", err.localizedDescription);
 		} @catch (NSException *excp) {
 			os_log(OS_LOG_DEFAULT, "Logfile, %@", excp.reason);
 		}}
