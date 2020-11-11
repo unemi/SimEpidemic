@@ -114,7 +114,7 @@ void my_exit(void) {
 	NSInteger nPop, nMesh;
 	Agent **pop, *agents;
 	NSRange *pRange;
-	CGFloat prevTime, stepsPerSec;
+	CGFloat stepsPerSec;
 	NSMutableArray<NSLock *> *cellLocks;
 	NSMutableDictionary<NSNumber *, WarpInfo *> *newWarpF;
 	NSMutableDictionary<NSNumber *, NSNumber *> *testees;
@@ -925,7 +925,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 - (void)showAllAfterStep {
 	[self showCurrentStatistics];
 	daysNum.doubleValue = floor(runtimeParams.step / worldParams.stepsPerDay);
-	spsNum.doubleValue = self->stepsPerSec;
+	spsNum.doubleValue = stepsPerSec;
 	view.needsDisplay = YES;
 }
 #endif
@@ -935,7 +935,11 @@ static NSInteger mCount = 0, mCount2 = 0;
 	[self forAllReporters:^(PeriodicReporter *rep) { [rep start]; }];
 #endif
 	while (loopMode == LoopRunning) {
+		CGFloat startTime = get_uptime();
 		[self doOneStep];
+		CGFloat timePassed = get_uptime() - startTime;
+		if (timePassed < 1.)
+			stepsPerSec += (1. / timePassed - stepsPerSec) * 0.2;
 		if (loopMode == LoopEndByCondition && scenarioIndex < scenario.count) {
 			[self execScenario];
 			loopMode = LoopRunning;
@@ -945,10 +949,6 @@ static NSInteger mCount = 0, mCount2 = 0;
 			loopMode = LoopEndAsDaysPassed;
 			break;
 		}
-		CGFloat newTime = get_uptime(), timePassed = newTime - prevTime;
-		if (timePassed < 1.)
-			stepsPerSec += (fmin(30., 1. / timePassed) - stepsPerSec) * 0.2;
-		prevTime = newTime;
 #ifdef NOGUI
 //		if (runtimeParams.step % 100 == 0) NSLog(@"%ld", runtimeParams.step);
 		[self forAllReporters:^(PeriodicReporter *rep) { [rep sendReportPeriodic]; }];
@@ -983,6 +983,10 @@ static NSInteger mCount = 0, mCount2 = 0;
 		[self execScenario];
 }
 #ifdef NOGUI
+- (CGFloat)howMuchBusy {
+	return (loopMode != LoopRunning)? 0. :
+		(stepsPerSec < 1e-6)? 1e6 : 1. / stepsPerSec;
+}
 - (BOOL)touch {
 	BOOL result;
 	[_lastTLock lock];

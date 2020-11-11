@@ -11,7 +11,7 @@
 #import <arpa/inet.h>
 #import <signal.h>
 #import "noGUI.h"
-#import "AppDelegate.h"
+#import "../SimEpidemic/Sources/AppDelegate.h"
 #import "Document.h"
 #import "StatPanel.h"
 #import "noGUIInfo.h"
@@ -24,7 +24,7 @@ static int soc = -1; // TCP stream socket
 static struct sockaddr_in nameTemplate = {
 	sizeof(struct sockaddr_in), AF_INET, EndianU16_NtoB(SERVER_PORT), {INADDR_ANY}
 };
-static void unix_error_msg(NSString *msg, int code) {
+void unix_error_msg(NSString *msg, int code) {
 	MY_LOG("%@ %d: %s.", msg, code, strerror(errno));
 	if (code > 0) exit(code);
 }
@@ -33,6 +33,7 @@ NSMutableDictionary<NSString *, id> *infoDictionary = nil;
 NSMutableDictionary<NSString *, Document *> *defaultDocuments = nil;
 NSMutableDictionary<NSString *, Document *> *theDocuments = nil;
 NSUInteger JSONOptions = 0;
+uint32 BCA4Contract = INADDR_BROADCAST;
 NSInteger maxPopSize = 1000000, maxNDocuments = 128, maxRuntime = 48*3600,
 	documentTimeout = 20*60, maxJobsInQueue = 64, maxTrialsAtSameTime = 4,
 	jobRecExpirationHours = 24*7;
@@ -228,9 +229,7 @@ static void interaction_thread(int desc, uint32 ipaddr) {
 	});
 	MY_LOG_DEBUG( "Receiving thread ended (%d).", desc);
 }}
-NSThread *connectionThread = nil;
 void connection_thread(void) {
-	connectionThread = NSThread.currentThread;
 	uint32 addrlen;
 	int desc = -1;
 	MY_LOG_DEBUG("Connection thread started.");
@@ -340,12 +339,13 @@ void catch_signal(int sig) {
 }
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
-	int port = SERVER_PORT;
+	BOOL contractMode = NO;
 	short err;
+	uint16 port = SERVER_PORT;
 // Check command options
 	for (NSInteger i = 1; i < argc; i ++) if (argv[i][0] == '-') {
 		if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--port") == 0) {
-			if (i + 1 < argc) port = atoi(argv[++ i]);
+			if (i + 1 < argc) port = (uint16)atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
 			if (i + 1 < argc) JSONOptions = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--documentRoot") == 0) {
@@ -364,12 +364,23 @@ int main(int argc, const char * argv[]) {
 			if (i + 1 < argc) maxTrialsAtSameTime = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--jobExprHours") == 0) {
 			if (i + 1 < argc) jobRecExpirationHours = atoi(argv[++ i]);
+		} else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--contract") == 0) {
+			if (i + 1 < argc) BCA4Contract = inet_addr(argv[++ i]);
 		} else if (strcmp(argv[i], "--version") == 0) {
 			printf("%s\n", version); exit(EXIT_NORMAL);
 		} else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
 			printf("\n"); exit(EXIT_NORMAL);
 		}
 	}
+	if (BCA4Contract != 0 && contractMode) {
+		fprintf(stderr, "Cannot be both consigner and consignee.\n");
+		exit(EXIT_INVALID_ARGS);
+	}
+//#define TEST
+#ifdef TEST
+	find_contractor();
+	return 0;
+#else
 	fileDirectory = adjust_dir_path(fileDirectory);
 	dataDirectory = adjust_dir_path(dataDirectory);
 	logFilePath = [dataDirectory stringByAppendingPathComponent:
@@ -402,8 +413,8 @@ int main(int argc, const char * argv[]) {
 //
 	signal(SIGTERM, catch_signal);
 // Open the server side socket to wait for connection request from a client.
-	nameTemplate.sin_port = EndianU16_NtoB((unsigned short)port);
-	soc = socket(PF_INET, SOCK_STREAM, 0);
+	nameTemplate.sin_port = EndianU16_NtoB(port);
+	soc = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (soc < 0) unix_error_msg(@"TCP socket", EXIT_SOCKET);
 	if ((err = bind(soc, (struct sockaddr *)&nameTemplate, sizeof(nameTemplate))))
 		unix_error_msg(@"TCP bind", EXIT_BIND);
@@ -431,6 +442,7 @@ int main(int argc, const char * argv[]) {
 		if (![theRL runMode:NSDefaultRunLoopMode beforeDate:
 			[NSDate dateWithTimeIntervalSinceNow:10.]])
 			{ resultCode = -4; break; }
+	#endif
 }
 	return resultCode;
 }

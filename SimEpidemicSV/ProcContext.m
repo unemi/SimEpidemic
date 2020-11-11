@@ -11,13 +11,13 @@
 #import "ProcContext.h"
 #import "noGUI.h"
 #import "PeriodicReporter.h"
+#import "BatchJob.h"
 #import "Document.h"
 #import "StatPanel.h"
 #import "DataCompress.h"
-#define BUFFER_SIZE 8192
 #define MAX_INT32 0x7fffffff
 
-static NSArray<NSString *> *commandList = nil;
+static NSDictionary<NSString *, void (^)(ProcContext *)> *commandDict = nil;
 static NSString *headerFormat = @"HTTP/1.1 %03d %@\nDate: %@\nServer: simepidemic\n\
 %@Connection: keep-alive\n%@%@\n";
 
@@ -78,23 +78,24 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 	} else MY_LOG("%@ world %@ was created.", type, doc.ID);
 	return doc;
 }
+#define COM(c)	@#c:^(ProcContext *ctx){[ctx c];}
 @implementation ProcContext
 - (instancetype)initWithSocket:(int)dsc ip:(uint32)ipaddr {
 	if (!(self = [super init])) return nil;
 	desc = dsc;
 	bufData = [NSMutableData dataWithLength:BUFFER_SIZE];
 	ip4addr = ipaddr;
-	if (commandList == nil) commandList = @[
-		@"getWorldID", @"newWorld", @"closeWorld",
-		@"getParams", @"setParams",
-		@"start", @"step", @"stop", @"reset",
-		@"getIndexes", @"getDistribution", @"getPopulation", @"getPopulation2",
-		@"periodicReport", @"quitReport", @"changeReport",
-		@"getScenario", @"setScenario",
-		@"submitJob", @"getJobStatus", @"getJobQueueStatus",
-		@"stopJob", @"getJobResults",
-		@"version"
-	];
+	if (commandDict == nil) commandDict = @{
+		COM(getWorldID), COM(closeWorld),
+		COM(getParams), COM(setParams),
+		COM(start), COM(step), COM(stop), COM(reset),
+		COM(getIndexes), COM(getDistribution),
+		COM(getPopulation), COM(getPopulation2),
+		COM(periodicReport), COM(quitReport), COM(changeReport),
+		COM(getScenario), COM(setScenario),
+		COM(submitJob), COM(getJobStatus), COM(getJobQueueStatus),
+		COM(stopJob), COM(getJobResults),
+		COM(version) };
 	return self;
 }
 - (long)receiveData:(NSInteger)length offset:(NSInteger)offset {
@@ -162,7 +163,7 @@ static void send_large_data(int desc, const char *bytes, NSInteger size) {
 	return header.length;
 }
 - (NSInteger)sendData {
-	if ([method isEqualToString:@"HEAD"]) return [self sendHeader];
+	if (method == MethodHEAD) return [self sendHeader];
 	else if ([content isKindOfClass:NSInputStream.class]) {
 		NSInteger length = [self sendHeader];
 		NSInputStream *stream = (NSInputStream *)content;
@@ -228,7 +229,7 @@ static NSString *bad_request_message(NSString *req) {
 		NSDate *modDate = attr[NSFileModificationDate];
 		if (modDate != nil) moreHeader = [NSString stringWithFormat:
 			@"Last-Modified: %@\n", [dateFormat stringFromDate:modDate]];
-		if ([method isEqualToString:@"HEAD"]) content = nil;
+		if (method == MethodHEAD) content = nil;
 		else if (fileSize < BUFFER_SIZE) {
 			content = [NSData dataWithContentsOfFile:exPath options:0 error:&error];
 			if (content == nil) @throw error;
@@ -252,6 +253,10 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	}
 	return headers;
 }
+- (void)checkCommand:(NSString *)command {
+	proc = commandDict[command];
+	if (proc == nil) @throw [@"404 Unknown command: " stringByAppendingString:command];
+}
 - (int)makeResponse {
 	content = moreHeader = nil;
 	code = 0;
@@ -263,86 +268,86 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 		NSString *req = [NSString stringWithUTF8String:bufData.bytes];
 		NSScanner *scan = [NSScanner scannerWithString:req];
 		scan.charactersToBeSkipped = nil;
-		NSString *firstLine, *request, *command, *optionStr, *JSONStr = nil;
-		[scan scanUpToString:@"\r" intoString:&firstLine];
-		_requestString = firstLine;
+		NSString *workStr, *path, *command, *optionStr, *JSONStr = nil;
+		[scan scanUpToString:@"\r" intoString:&workStr];
+		_requestString = workStr;
 		scan.scanLocation = 0;
 		NSString *methodName;
 		if (![scan scanUpToString:@" " intoString:&methodName])
 			@throw bad_request_message(req);
 		[scan scanCharactersFromSet:NSCharacterSet.whitespaceCharacterSet intoString:NULL];
-		if (![scan scanUpToString:@" " intoString:&request])
+		if (![scan scanUpToString:@" " intoString:&path])
 			@throw bad_request_message(req);
-		if (![request hasPrefix:@"/"]) @throw bad_request_message(req);
-		method = methodName;
-		if ([method isEqualToString:@"GET"] || [method isEqualToString:@"HEAD"]) {
-			NSString *path;
-			scan = [NSScanner scannerWithString:request];
-			if (![scan scanUpToString:@"?" intoString:&path])
-				@throw bad_request_message(req);
-			if ([path hasSuffix:@"/"])
-				path = [path stringByAppendingPathComponent:@"index.html"];
-			if (path.pathExtension.length > 0)
-				{ [self respondFile:[path substringFromIndex:1]]; @throw @0; }
-			optionStr = scan.atEnd? nil :
-				[request substringFromIndex:scan.scanLocation + 1];
-			command = [path substringFromIndex:1];
-		} else if ([method isEqualToString:@"POST"]) {
-			command = [request substringFromIndex:1];
-			[scan scanUpToString:@"\r\n" intoString:NULL];
-			NSString *headerStr;
-			if (![scan scanUpToString:@"\r\n\r\n" intoString:&headerStr])
-				@throw bad_request_message(req);
-			NSDictionary<NSString *, NSString *> *headers = header_dictionary(headerStr);
-			NSString *contentType = headers[@"Content-Type"];
-			if (contentType == nil) @throw @"411 No content type indicated.";
-			NSString *numStr = headers[@"Content-Length"];
-			if (numStr == nil) @throw @"411 No content length indicated.";
-			NSInteger contentLength = numStr.integerValue;
-			if (contentLength > BUFFER_SIZE - 1) @throw @"413 Payload is too large.";
-			[scan scanString:@"\r\n\r\n" intoString:NULL];
-			if (!scan.atEnd) {
-				NSString *restPart = [req substringFromIndex:scan.scanLocation];
-				[restPart getCString:bufData.mutableBytes maxLength:BUFFER_SIZE-1
-					encoding:NSUTF8StringEncoding];
-				[self receiveData:contentLength offset:restPart.length];
-			} else [self receiveData:contentLength offset:0];
-			if ([contentType isEqualToString:@"application/x-www-form-urlencoded"])
-				optionStr = [NSString stringWithUTF8String:bufData.bytes];
-			else if ([contentType hasPrefix:@"multipart/form-data"]) {
-				scan = [NSScanner scannerWithString:contentType];
-				[scan scanUpToString:@"boundary=" intoString:NULL];
-				if (scan.atEnd) @throw @"417 No boundary string specified.";
-				NSString *boundary =
-					[contentType substringFromIndex:scan.scanLocation + 9];
-				scan = [NSScanner scannerWithString:
-					[NSString stringWithUTF8String:bufData.bytes]];
-				[scan scanUpToString:@"Content-Disposition: " intoString:NULL];
-				[scan scanUpToString:@"name=" intoString:NULL];
-				if (scan.atEnd) @throw @"417 No name specified.";
-				NSString *nameOptionStr, *fileOptionStr;
-				[scan scanUpToString:@";" intoString:&nameOptionStr];
-				[scan scanUpToString:@"filename=" intoString:NULL];
-				if (scan.atEnd) @throw @"417 No filename specified.";
-				[scan scanUpToString:@"\r\n" intoString:&fileOptionStr];
-				optionStr = [[NSString stringWithFormat:@"%@&%@",
-					nameOptionStr, fileOptionStr]
-					stringByReplacingOccurrencesOfString:@"\"" withString:@""];
-				[scan scanUpToString:@"Content-Type: application/json" intoString:NULL];
-				if (scan.atEnd) @throw @"417 No JSON data received.";
-				[scan scanUpToString:@"\r\n\r\n" intoString:NULL];
-				if (scan.atEnd) @throw @"417 No JSON data provided.";
-				if (![scan scanUpToString:boundary intoString:&JSONStr])
-					@throw @"417 JSON data is empty.";
-				if ([JSONStr hasSuffix:@"--"])
-					JSONStr = [JSONStr substringToIndex:JSONStr.length - 2];
-			} else @throw [NSString stringWithFormat:
-				@"415 Unexpected content-type: %@", contentType];
-		} else @throw
-			[NSString stringWithFormat:@"405 \"%@\" method is not allowed.", method];
-		if (![commandList containsObject:command]) {
-			@throw [@"404 Unknown command: " stringByAppendingString:command];
-		} else if ([method isEqualToString:@"HEAD"]) [self setOKMessage];
+		if (![path hasPrefix:@"/"]) @throw bad_request_message(req);
+		method = [@[@"HEAD", @"GET", @"POST"] indexOfObject:methodName];
+		switch (method) {
+			case MethodGET: case MethodHEAD: {
+				scan = [NSScanner scannerWithString:(workStr = path)];
+				if (![scan scanUpToString:@"?" intoString:&path])
+					@throw bad_request_message(req);
+				if ([path hasSuffix:@"/"])
+					path = [workStr stringByAppendingPathComponent:@"index.html"];
+				if (path.pathExtension.length > 0)
+					{ [self respondFile:[path substringFromIndex:1]]; @throw @0; }
+				[self checkCommand:(command = [path substringFromIndex:1])];
+				optionStr = scan.atEnd? nil :
+					[workStr substringFromIndex:scan.scanLocation + 1];
+			} break;
+			case MethodPOST: {
+				[self checkCommand:(command = [path substringFromIndex:1])];
+				[scan scanUpToString:@"\r\n" intoString:NULL];
+				if (![scan scanUpToString:@"\r\n\r\n" intoString:&workStr])
+					@throw bad_request_message(req);
+				NSDictionary<NSString *, NSString *> *headers = header_dictionary(workStr);
+				NSString *contentType = headers[@"Content-Type"];
+				if (contentType == nil) @throw @"411 No content type.";
+				NSString *numStr = headers[@"Content-Length"];
+				if (numStr == nil) @throw @"411 No content length.";
+				NSInteger contentLength = numStr.integerValue;
+				if (contentLength > BUFFER_SIZE - 1) @throw @"413 Payload is too large.";
+				[scan scanString:@"\r\n\r\n" intoString:NULL];
+				if (!scan.atEnd) {
+					NSString *restPart = [req substringFromIndex:scan.scanLocation];
+					[restPart getCString:bufData.mutableBytes maxLength:BUFFER_SIZE-1
+						encoding:NSUTF8StringEncoding];
+					[self receiveData:contentLength offset:restPart.length];
+				} else [self receiveData:contentLength offset:0];
+				if ([contentType isEqualToString:@"application/x-www-form-urlencoded"])
+					optionStr = [NSString stringWithUTF8String:bufData.bytes];
+				else if ([contentType hasPrefix:@"multipart/form-data"]) {
+					scan = [NSScanner scannerWithString:contentType];
+					[scan scanUpToString:@"boundary=" intoString:NULL];
+					if (scan.atEnd) @throw @"417 No boundary string specified.";
+					NSString *boundary =
+						[contentType substringFromIndex:scan.scanLocation + 9];
+					scan = [NSScanner scannerWithString:
+						[NSString stringWithUTF8String:bufData.bytes]];
+					[scan scanUpToString:@"Content-Disposition: " intoString:NULL];
+					[scan scanUpToString:@"name=" intoString:NULL];
+					if (scan.atEnd) @throw @"417 No name specified.";
+					NSString *nameOptionStr, *fileOptionStr;
+					[scan scanUpToString:@";" intoString:&nameOptionStr];
+					[scan scanUpToString:@"filename=" intoString:NULL];
+					if (scan.atEnd) @throw @"417 No filename specified.";
+					[scan scanUpToString:@"\r\n" intoString:&fileOptionStr];
+					optionStr = [[NSString stringWithFormat:@"%@&%@",
+						nameOptionStr, fileOptionStr]
+						stringByReplacingOccurrencesOfString:@"\"" withString:@""];
+					[scan scanUpToString:@"Content-Type: application/json" intoString:NULL];
+					if (scan.atEnd) @throw @"417 No JSON data received.";
+					[scan scanUpToString:@"\r\n\r\n" intoString:NULL];
+					if (scan.atEnd) @throw @"417 No JSON data provided.";
+					if (![scan scanUpToString:boundary intoString:&JSONStr])
+						@throw @"417 JSON data is empty.";
+					if ([JSONStr hasSuffix:@"--"])
+						JSONStr = [JSONStr substringToIndex:JSONStr.length - 2];
+				} else @throw [NSString stringWithFormat:
+					@"415 Unexpected content-type: %@", contentType];
+			} break;
+			case MethodNone: @throw
+				[NSString stringWithFormat:@"405 \"%@\" method is not allowed.", methodName];
+		}
+		if (method == MethodHEAD) [self setOKMessage];
 		else {
 			if (optionStr == nil) query = nil;
 			else {
@@ -359,7 +364,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 					query = [NSDictionary dictionaryWithObjects:objs forKeys:keys count:m];
 				} else query = nil;
 			}
-			[self performSelector:NSSelectorFromString(command)];
+			proc(self);
 			if (code == 0) [self setOKMessage];
 		}
 	} @catch (NSString *info) { [self setErrorMessage:info];

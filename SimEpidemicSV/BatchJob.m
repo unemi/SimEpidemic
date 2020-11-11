@@ -8,7 +8,6 @@
 
 #import "BatchJob.h"
 #import "noGUI.h"
-#import "ProcContext.h"
 #import "Document.h"
 #import "StatPanel.h"
 #import <os/log.h>
@@ -69,7 +68,8 @@
 	[head insertObject:@"" atIndex:0];
 	NSMutableArray *rows = [NSMutableArray arrayWithObject:head];
 	NSInteger nRest = cols.count, n[nRest];
-	for (NSInteger i = 0; i < nRest; i ++) n[i] = cols[i].count;
+	for (NSInteger i = 0; i < cols.count; i ++)
+		if ((n[i] = cols[i].count) == 0) nRest --;
 	for (NSInteger i = 0; nRest > 0; i ++) {
 		NSMutableArray *row = [NSMutableArray arrayWithObject:@(i)];
 		for (NSInteger j = 0; j < cols.count; j ++) {
@@ -117,6 +117,13 @@ static JobController *theJobController = nil;
 - (NSInteger)nRunningTrials { return nRunningTrials; }
 - (NSInteger)indexOfJobInQueue:(BatchJob *)job {
 	return [jobQueue indexOfObject:job];
+}
+- (void)forAllLiveDocuments:(void (^)(Document *))block {
+	[lock lock];
+	NSArray *jobs = theJobs.allValues;
+	[lock unlock];
+	for (BatchJob *job in jobs)
+		[job forAllLiveDocuments:block];
 }
 @end
 static NSString *batch_job_dir(void) {
@@ -171,6 +178,10 @@ void schedule_job_expiration_check(void) { // called from noGUI.m
 			MY_LOG("Job record expiration check: %@", excp.reason);
 		}
 	}];
+}
+// to check how much this machine is busy now. called from Contract.m
+void for_all_bacth_job_documents(void (^block)(Document *)) {
+	[theJobController forAllLiveDocuments:block];
 }
 
 @implementation BatchJob
@@ -323,6 +334,12 @@ void schedule_job_expiration_check(void) { // called from noGUI.m
 		[theJobController removeJobFromQueue:self shouldLock:YES];
 	[lock unlock];
 }
+- (void)forAllLiveDocuments:(void (^)(Document *))block {
+	[lock lock];
+	NSArray *docs = runningTrials.allValues;
+	[lock unlock];
+	for (Document *doc in docs) block(doc);
+}
 @end
 
 @implementation ProcContext (BatchJobExtension)
@@ -350,10 +367,10 @@ void schedule_job_expiration_check(void) { // called from noGUI.m
 }
 - (BatchJob *)targetJob {
 	NSString *jobID = query[@"job"];
-	if (jobID == nil) @throw @"500 Job ID is requied.";
+	if (jobID == nil) @throw @"500 Job ID is missing.";
 	BatchJob *job = [theJobController jobFromID:jobID];
 	if (job == nil) @throw [NSString stringWithFormat:
-		@"500 Job with ID:%@ doesn't exist.", jobID];
+		@"500 Job %@ doesn't exist.", jobID];
 	return job;
 }
 - (void)getJobStatus {
@@ -399,7 +416,7 @@ void schedule_job_expiration_check(void) { // called from noGUI.m
 - (void)getJobResults { // [self notImplementedYet];
 	static char nonFnameChars[] = "/:;<>?[\\]^{|}~";
 	NSString *jobID = query[@"job"];
-	if (jobID == nil) @throw @"500 Job ID is requied.";
+	if (jobID == nil) @throw @"500 Job ID is missing.";
 	NSString *save = query[@"save"];
 //	replace inappriate characters for a filename to under score.
 	if (save != nil) {

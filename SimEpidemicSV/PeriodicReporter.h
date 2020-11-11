@@ -7,6 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "ProcContext.h"
 
 NS_ASSUME_NONNULL_BEGIN
 @class Document;
@@ -22,4 +23,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)quit;
 - (BOOL)connectionWillClose:(int)dsc;
 @end
+
+@interface ProcContext (PeriodicReportExtension)
+- (void)periodicReport;
+- (void)quitReport;
+- (void)changeReport;
+@end
+
 NS_ASSUME_NONNULL_END

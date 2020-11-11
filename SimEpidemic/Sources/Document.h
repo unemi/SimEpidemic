@@ -69,6 +69,7 @@ extern void my_exit(void);
 @property NSDate *lastTouch;
 @property NSString *docKey;
 @property void (^stopCallBack)(LoopMode);
+- (CGFloat)howMuchBusy;
 - (BOOL)touch;
 - (void)start:(NSInteger)stopAt maxSPS:(CGFloat)maxSps priority:(CGFloat)prio;
 - (void)step;

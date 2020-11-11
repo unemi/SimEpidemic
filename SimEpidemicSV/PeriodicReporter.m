@@ -7,7 +7,6 @@
 //
 
 #import "PeriodicReporter.h"
-#import "ProcContext.h"
 #import "noGUI.h"
 #import "Document.h"
 #import "StatPanel.h"
@@ -310,7 +309,7 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 }
 - (PeriodicReporter *)reporterFromID:(NSString *__nullable *)IDreturn {
 	NSString *repID = query[@"process"];
-	if (repID == nil) @throw @"417 ID of streamin process is missing.";
+	if (repID == nil) @throw @"417 Report process ID is missing.";
 	PeriodicReporter *rep = theReporters[repID];
 	if (rep == nil) @throw [NSString stringWithFormat:
 		@"500 Periodic report process %@ does not exist.", repID];

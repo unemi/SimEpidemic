@@ -41,13 +41,39 @@
 		238A8F2A246694D300604BF4 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
 		238C4527248B783B00FB5F89 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 238C4525248B783B00FB5F89 /* Preferences.xib */; };
 		23AF0269250F98840074EF87 /* BatchJob.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AF0268250F98840074EF87 /* BatchJob.m */; };
+		23B89E4F255BD61000A95360 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B89E4E255BD61000A95360 /* main.m */; };
+		23B89E53255BD66500A95360 /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F32457D2C6005ADCCF /* Document.m */; };
+		23B89E54255BD6DB00A95360 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F02457D2C6005ADCCF /* AppDelegate.m */; };
+		23B89E55255BD6DB00A95360 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
+		23B89E56255BD6DB00A95360 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
+		23B89E57255BD70A00A95360 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
+		23C3FFE32557FB3F004906AE /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 23C3FFE22557FB3F004906AE /* main.m */; };
 		23D6E02D24D59DDD00A5D604 /* Parameters.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6E02C24D59DDD00A5D604 /* Parameters.m */; };
 		23DAF068251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
 		23DAF069251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
+		23F2613C255ABFC1009131AA /* World.m in Sources */ = {isa = PBXBuildFile; fileRef = 23F2613B255ABFC1009131AA /* World.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		2365DEB42506145A006C2A95 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		23B89E4A255BD61000A95360 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		23C3FFDE2557FB3F004906AE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -127,10 +153,17 @@
 		23A14AFE25317FA500AC765F /* control.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = control.js; sourceTree = "<group>"; };
 		23AF0267250F98840074EF87 /* BatchJob.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BatchJob.h; sourceTree = "<group>"; };
 		23AF0268250F98840074EF87 /* BatchJob.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BatchJob.m; sourceTree = "<group>"; };
+		23B89E4C255BD61000A95360 /* simepiWorld */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiWorld; sourceTree = BUILT_PRODUCTS_DIR; };
+		23B89E4E255BD61000A95360 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		23BE9B3E25592A440005D1FF /* backend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = backend.h; sourceTree = "<group>"; };
+		23C3FFE02557FB3F004906AE /* simepiBackend */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiBackend; sourceTree = BUILT_PRODUCTS_DIR; };
+		23C3FFE22557FB3F004906AE /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		23D6E02B24D59DDD00A5D604 /* Parameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Parameters.h; sourceTree = "<group>"; };
 		23D6E02C24D59DDD00A5D604 /* Parameters.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Parameters.m; sourceTree = "<group>"; };
 		23DAF066251737FB00C41E76 /* Gatherings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Gatherings.h; sourceTree = "<group>"; };
 		23DAF067251737FB00C41E76 /* Gatherings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Gatherings.m; sourceTree = "<group>"; };
+		23F2613A255ABFC1009131AA /* World.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = World.h; sourceTree = "<group>"; };
+		23F2613B255ABFC1009131AA /* World.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = World.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,6 +181,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		23B89E49255BD61000A95360 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		23C3FFDD2557FB3F004906AE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -156,6 +203,8 @@
 			children = (
 				232055EE2457D2C5005ADCCF /* SimEpidemic */,
 				2365DEB72506145A006C2A95 /* SimEpidemicSV */,
+				23C3FFE12557FB3F004906AE /* simepiBackend */,
+				23B89E4D255BD61000A95360 /* simepiWorld */,
 				232055ED2457D2C5005ADCCF /* Products */,
 				2378766625027AE500897003 /* Documents */,
 			);
@@ -166,6 +215,8 @@
 			children = (
 				232055EC2457D2C5005ADCCF /* SimEpidemic.app */,
 				2365DEB62506145A006C2A95 /* simepidemic */,
+				23C3FFE02557FB3F004906AE /* simepiBackend */,
+				23B89E4C255BD61000A95360 /* simepiWorld */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -284,6 +335,25 @@
 			path = DocumentRoot;
 			sourceTree = "<group>";
 		};
+		23B89E4D255BD61000A95360 /* simepiWorld */ = {
+			isa = PBXGroup;
+			children = (
+				23B89E4E255BD61000A95360 /* main.m */,
+			);
+			path = simepiWorld;
+			sourceTree = "<group>";
+		};
+		23C3FFE12557FB3F004906AE /* simepiBackend */ = {
+			isa = PBXGroup;
+			children = (
+				23C3FFE22557FB3F004906AE /* main.m */,
+				23BE9B3E25592A440005D1FF /* backend.h */,
+				23F2613A255ABFC1009131AA /* World.h */,
+				23F2613B255ABFC1009131AA /* World.m */,
+			);
+			path = simepiBackend;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -323,6 +393,40 @@
 			productReference = 2365DEB62506145A006C2A95 /* simepidemic */;
 			productType = "com.apple.product-type.tool";
 		};
+		23B89E4B255BD61000A95360 /* simepiWorld */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 23B89E52255BD61000A95360 /* Build configuration list for PBXNativeTarget "simepiWorld" */;
+			buildPhases = (
+				23B89E48255BD61000A95360 /* Sources */,
+				23B89E49255BD61000A95360 /* Frameworks */,
+				23B89E4A255BD61000A95360 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = simepiWorld;
+			productName = simepiWorld;
+			productReference = 23B89E4C255BD61000A95360 /* simepiWorld */;
+			productType = "com.apple.product-type.tool";
+		};
+		23C3FFDF2557FB3F004906AE /* simepiBackend */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 23C3FFE62557FB3F004906AE /* Build configuration list for PBXNativeTarget "simepiBackend" */;
+			buildPhases = (
+				23C3FFDC2557FB3F004906AE /* Sources */,
+				23C3FFDD2557FB3F004906AE /* Frameworks */,
+				23C3FFDE2557FB3F004906AE /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = simepiBackend;
+			productName = simepiBackend;
+			productReference = 23C3FFE02557FB3F004906AE /* simepiBackend */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -336,6 +440,12 @@
 						CreatedOnToolsVersion = 11.3.1;
 					};
 					2365DEB52506145A006C2A95 = {
+						CreatedOnToolsVersion = 11.3.1;
+					};
+					23B89E4B255BD61000A95360 = {
+						CreatedOnToolsVersion = 11.3.1;
+					};
+					23C3FFDF2557FB3F004906AE = {
 						CreatedOnToolsVersion = 11.3.1;
 					};
 				};
@@ -356,6 +466,8 @@
 			targets = (
 				232055EB2457D2C5005ADCCF /* SimEpidemic */,
 				2365DEB52506145A006C2A95 /* SimEpidemicSV */,
+				23C3FFDF2557FB3F004906AE /* simepiBackend */,
+				23B89E4B255BD61000A95360 /* simepiWorld */,
 			);
 		};
 /* End PBXProject section */
@@ -456,6 +568,28 @@
 				2359E8E9253B092B004041D9 /* BlockingInfo.m in Sources */,
 				235B7E7B2509F6800016090F /* DataCompress.m in Sources */,
 				23673364252EFA8E00284D91 /* PeriodicReporter.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		23B89E48255BD61000A95360 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23B89E57255BD70A00A95360 /* Agent.m in Sources */,
+				23B89E54255BD6DB00A95360 /* AppDelegate.m in Sources */,
+				23B89E55255BD6DB00A95360 /* StatPanel.m in Sources */,
+				23B89E56255BD6DB00A95360 /* Gatherings.m in Sources */,
+				23B89E53255BD66500A95360 /* Document.m in Sources */,
+				23B89E4F255BD61000A95360 /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		23C3FFDC2557FB3F004906AE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23F2613C255ABFC1009131AA /* World.m in Sources */,
+				23C3FFE32557FB3F004906AE /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -741,6 +875,54 @@
 			};
 			name = Release;
 		};
+		23B89E50255BD61000A95360 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 726X5Z9867;
+				ENABLE_HARDENED_RUNTIME = YES;
+				OTHER_CFLAGS = (
+					"-DNOGUI",
+					"-mavx",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		23B89E51255BD61000A95360 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 726X5Z9867;
+				ENABLE_HARDENED_RUNTIME = YES;
+				OTHER_CFLAGS = (
+					"-DNOGUI",
+					"-mavx",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		23C3FFE42557FB3F004906AE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 726X5Z9867;
+				ENABLE_HARDENED_RUNTIME = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		23C3FFE52557FB3F004906AE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 726X5Z9867;
+				ENABLE_HARDENED_RUNTIME = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -767,6 +949,24 @@
 			buildConfigurations = (
 				2365DEBB2506145A006C2A95 /* Debug */,
 				2365DEBC2506145A006C2A95 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		23B89E52255BD61000A95360 /* Build configuration list for PBXNativeTarget "simepiWorld" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				23B89E50255BD61000A95360 /* Debug */,
+				23B89E51255BD61000A95360 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		23C3FFE62557FB3F004906AE /* Build configuration list for PBXNativeTarget "simepiBackend" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				23C3FFE42557FB3F004906AE /* Debug */,
+				23C3FFE52557FB3F004906AE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

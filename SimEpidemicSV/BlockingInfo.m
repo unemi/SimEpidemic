@@ -6,6 +6,7 @@
 //  Copyright © 2020 Tatsuo Unemi. All rights reserved.
 //
 
+#import <arpa/inet.h>
 #import "BlockingInfo.h"
 #import "noGUI.h"
 
@@ -56,8 +57,8 @@ static CGFloat request_penalty(NSString *request) {
 		acceptable = regexp_array(@[@"\\AGET /apple-touch-icon\\.png ",
 			@"\\AGET /apple-touch-icon-precomposed\\.png "]);
 		prohibited = regexp_array(@[@"\\A\\P{Lu}", @"\\A\\p{Lu}\\P{Lu}",
-			@"\\AGET /wp-content/", @"\\APOST /api/", @"\\AGET /boaform/", @"\\AGET /php",
-			@"\\.php[ \\?]", @"\\.cgi[ \\?]", @"\\AGET /[\\.\\?]"]);
+			@"\\AGET /wp-content/", @"\\APOST /api/", @"\\A\\p{Lu}+ /boaform/",
+			@"\\AGET /php", @"\\.php[ \\?]", @"\\.cgi[ \\?]", @"\\AGET /[\\.\\?]"]);
 	}
 	NSRange srcRng = {0, request.length};
 	if (srcRng.length <= 4) return IMMEDIATE_BLOCK;
@@ -120,6 +121,7 @@ BOOL check_blocking(int code, uint32 ipaddr, NSString *request) {
 	return shouldBlock;
 }
 BOOL should_block_it(uint32 ipaddr) {
+	if (ipaddr == inet_addr("193.27.229.26")) return YES;
 	BOOL result = NO;
 	[blockDictLock lock];
 	BlockingInfo *info = blockDict[@(ipaddr)];
@@ -138,15 +140,17 @@ void schedule_clean_up_blocking_info(void) {
 		NSDate *now = NSDate.date;
 		NSMutableArray<NSNumber *> *removeKeys = NSMutableArray.new;
 		[blockDictLock lock];
-		[blockDict enumerateKeysAndObjectsUsingBlock:^(NSNumber * _Nonnull key,
-			BlockingInfo * _Nonnull obj, BOOL * _Nonnull stop) {
+		[blockDict enumerateKeysAndObjectsUsingBlock:
+			^(NSNumber *key, BlockingInfo *obj, BOOL *stop) {
 			if ([now timeIntervalSinceDate:obj.date] > BLOCK_EXPIRE)
 				[removeKeys addObject:key];
 		}];
 		for (NSNumber *key in removeKeys) [blockDict removeObjectForKey:key];
+		NSInteger remaining = blockDict.count;
 		[blockDictLock unlock];
 		if (removeKeys.count > 0)
-			MY_LOG("Blocking Info: %ld entries were removed.", removeKeys.count);
+			MY_LOG("Blocking Info: %ld entries were removed. %ld are remaining.",
+				removeKeys.count, remaining);
 	}}];
 }
 void block_list_from_plist(NSArray *plist) {

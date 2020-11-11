@@ -8,11 +8,12 @@
 
 #import <AppKit/AppKit.h>
 #import "CommonTypes.h"
+#define BUFFER_SIZE 8192
 
 NS_ASSUME_NONNULL_BEGIN
 
 typedef enum { IdxTypeIndex, IdxTypeTestI, IdxTypeTestF, IdxTypeUnknown } IndexType;
-
+typedef enum { MethodHEAD, MethodGET, MethodPOST, MethodNone = NSNotFound } MethodType;
 @class Document, MyCounter, DeflaterStream;
 extern Document *make_new_world(NSString *type, NSString * _Nullable browserID);
 extern void send_bytes(int desc, const char *bytes, NSInteger size);
@@ -35,10 +36,12 @@ extern NSData *JSON_pop2(Document *doc);
 	Document *document;
 	NSMutableData *bufData;	// buffer to receive
 	long dataLength;
+	MethodType method;
 	NSDictionary<NSString *, NSString *> *query;
-	NSString *method, *type, *moreHeader;
+	NSString *type, *moreHeader;
 	NSObject *content;
 	NSInteger fileSize;
+	void (^proc)(ProcContext *);
 	void (^postProc)(void);
 }
 @property (readonly) NSString *requestString;
