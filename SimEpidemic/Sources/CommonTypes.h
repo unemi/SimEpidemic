@@ -39,7 +39,7 @@ typedef struct {
 } DistInfo;
 
 typedef struct {
-	CGFloat mass, friction, avoidance;
+	CGFloat friction, avoidance, maxSpeed;
 	CGFloat contagDelay, contagPeak; // contagion delay and peak;
 	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat dstST, dstOB; // Distancing strength and obedience
@@ -48,7 +48,7 @@ typedef struct {
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
-	DistInfo mobDist; // and distance
+	DistInfo mass, mobDist; // mass and warp distance
 	DistInfo incub, fatal, recov, immun; // contagiousness, incubation, fatality, recovery, immunity
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
 	NSInteger step;
@@ -57,9 +57,9 @@ typedef struct {
 	NSInteger initPop, worldSize, mesh, nInitInfec, stepsPerDay;
 } WorldParams;
 
-#define PARAM_F1 mass
+#define PARAM_F1 friction
 #define PARAM_FS1 infec
-#define PARAM_D1 mobDist
+#define PARAM_D1 mass
 #define PARAM_I1 initPop
 
 typedef struct StatDataRec {
@@ -91,6 +91,7 @@ typedef struct AgentRec {
 	CGFloat app, prf, x, y, vx, vy, fx, fy;
 	CGPoint orgPt;
 	CGFloat daysInfected, daysDiseased;
+	CGFloat mass;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
 	HealthType health, newHealth;
 	int nInfects, newNInfects;

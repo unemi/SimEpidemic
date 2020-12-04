@@ -330,8 +330,10 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	[lock lock];
 	for (Document *doc in runningTrials.objectEnumerator)
 		[doc stop:LoopEndByUser];
-	if (nextTrialNumber < _nIteration)
+	if (nextTrialNumber < _nIteration) {
 		[theJobController removeJobFromQueue:self shouldLock:YES];
+		_nIteration = nextTrialNumber;
+	}
 	[lock unlock];
 }
 - (void)forAllLiveDocuments:(void (^)(Document *))block {

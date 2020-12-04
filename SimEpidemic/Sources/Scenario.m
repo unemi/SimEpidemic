@@ -137,17 +137,17 @@ static NSTextField *label_field(NSString *message) {
 @end
 @interface CondCellView : NSTableCellView
 @property (readonly) NSPopUpButton *typePopUp, *destPopUp;
-@property (readonly) NSTextField *sufixTxt;
+@property (readonly) NSTextField *labelTxt, *sufixTxt;
 @end
 static NSPoint CCTxtOrg1 = {0,0}, CCTxtOrg2;
 @implementation CondCellView
 - (void)adjustViews:(NSInteger)index {
 	switch (index) {
-		case 0: _destPopUp.hidden = YES;
+		case 0: _destPopUp.hidden = YES; _labelTxt.hidden = NO;
 		_sufixTxt.stringValue = NSLocalizedString(@"satisfied", nil);
 		[_sufixTxt setFrameOrigin:CCTxtOrg1];
 		break;
-		case 1: _destPopUp.hidden = NO;
+		case 1: _destPopUp.hidden = NO; _labelTxt.hidden = YES;
 		_sufixTxt.stringValue = NSLocalizedString(@"when satisfied", nil);
 		[_sufixTxt setFrameOrigin:CCTxtOrg2];
 	}
@@ -170,6 +170,14 @@ static NSPoint CCTxtOrg1 = {0,0}, CCTxtOrg2;
 		CCTxtOrg1 = _destPopUp.frame.origin;
 		CCTxtOrg2 = _sufixTxt.frame.origin;
 	}
+	_labelTxt = NSTextField.new;
+	_labelTxt.selectable = _labelTxt.editable =
+	_labelTxt.drawsBackground = _labelTxt.bordered = YES;
+	_labelTxt.stringValue = @"This is a label for condition";
+	set_subview(_labelTxt, self, YES);
+	_labelTxt.stringValue = @"";
+	[_labelTxt setFrameOrigin:
+		(NSPoint){ _destPopUp.frame.origin.x, _labelTxt.frame.origin.y }];
 	[self adjustViews:0];
 	return self;
 }
@@ -384,7 +392,7 @@ static void check_images(void) {
 	maxValue = scen.intFormatter.maximum.integerValue;
 	ratioValue = .5;
 	v.digits.integerValue = days = 180;
-	v.digits.delegate = (NSObject<NSTextFieldDelegate> *)self;
+	v.digits.delegate = self;
 	v.varPopUp.target = v.opePopUp.target = v.unitPopUp.target = self;
 	v.varPopUp.action = @selector(chooseVariable:);
 	v.opePopUp.action = @selector(chooseOperation:);
@@ -644,10 +652,28 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	v.typePopUp.target = v.destPopUp.target = self;
 	v.typePopUp.action = @selector(chooseType:);
 	v.destPopUp.action = @selector(chooseDestination:);
+	v.labelTxt.delegate = self;
 	adjust_num_menu(v.destPopUp, scen.numberOfItems);
+	orgLabel = @"";
 	return self;
 }
 - (NSInteger)condType { return condType; }
+- (NSString *)label { return ((CondCellView *)(self.view)).labelTxt.stringValue; }
+- (void)setLabel:(NSString *)label {
+	((CondCellView *)(self.view)).labelTxt.stringValue = label;
+}
+- (void)setLabelUndoable:(NSString *)newLabel {
+	[scenario.undoManager registerUndoWithTarget:self
+		selector:@selector(setLabelUndoable:) object:self.label];
+	self.label = newLabel;
+}
+- (void)controlTextDidBeginEditing:(NSNotification *)obj {
+	orgLabel = self.label;
+}
+- (void)controlTextDidEndEditing:(NSNotification *)obj {
+	[scenario.undoManager registerUndoWithTarget:self
+		selector:@selector(setLabelUndoable:) object:orgLabel];
+}
 - (NSInteger)destination { return destination; }
 - (void)setDestination:(NSInteger)ln {
 	destination = ln;
@@ -731,8 +757,14 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		[self setNewElement:new_item_by_button(button, scenario, self)];
 }
 - (NSObject *)representation:(NSObject *)element {
-	return (condType == CondTypeRunUntil)? element :
-		(element != nil)? @[@(destination), element] : @[@(destination)];
+	switch (condType) {
+		case CondTypeRunUntil: {
+			NSString *label = self.label;
+			return (label.length == 0)? element : @[label, element];
+		}
+		case CondTypeMoveWhen:
+		return (element != nil)? @[@(destination), element] : @[@(destination)];
+	}
 }
 - (NSObject *)scenarioElement { return [self representation:_element.predicate]; }
 - (NSObject *)propertyObject {
@@ -938,14 +970,26 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	cView.digits.doubleValue = num.doubleValue;
 	return item;
 }
+- (CondItem *)condItemFromObject:(NSObject *)elm label:(NSString *)label {
+	CondItem *item;
+	if ([elm isKindOfClass:NSString.class]) {
+		item = [CondItem.alloc initWithScenario:self];
+		item.element = [self itemWithPredicate:
+			[NSPredicate predicateWithFormat:(NSString *)elm] parent:item];
+	} else if ([elm isKindOfClass:NSPredicate.class]) {
+		item = [CondItem.alloc initWithScenario:self];
+		item.element = [self itemWithPredicate:(NSPredicate *)elm parent:item];
+	} else return nil;
+	if (label != nil) item.label = label;
+	return item;
+}
 - (void)setScenarioWithArray:(NSArray *)array {
 	NSMutableArray<ScenarioItem *> *ma = NSMutableArray.new;
 	for (NSObject *elm in array) {
 		ScenarioItem *item = nil;
 		if ([elm isKindOfClass:NSArray.class]) {
-			if ([((NSArray *)elm)[0] isKindOfClass:NSString.class])
-				item = [self paramItemWithKey:((NSArray *)elm)[0] value:((NSArray *)elm)[1]];
-			else if ([((NSArray *)elm)[0] isKindOfClass:NSNumber.class]) {
+			if (((NSArray *)elm).count == 0) continue;
+			else if ([((NSArray *)elm)[0] isKindOfClass:NSNumber.class]) {	// goto N when ...
 				item = [CondItem.alloc initWithScenario:self];
 				if (((NSArray *)elm).count > 1) ((CondItem *)item).element =
 					[self itemWithPredicate:
@@ -956,24 +1000,21 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 				((CondItem *)item).destination = [((NSArray *)elm)[0] integerValue];
 				[((CondCellView *)item.view).typePopUp selectItemAtIndex:CondTypeMoveWhen];
 				[(CondCellView *)item.view adjustViews:CondTypeMoveWhen];
-			}
+			} else if (((NSArray *)elm).count != 2) continue;
+			else if (![((NSArray *)elm)[0] isKindOfClass:NSString.class]) continue;
+			else if ([((NSArray *)elm)[1] isKindOfClass:NSNumber.class])
+				item = [self paramItemWithKey:((NSArray *)elm)[0] value:((NSArray *)elm)[1]];
+			else item = [self condItemFromObject:((NSArray *)elm)[1] label:((NSArray *)elm)[0]];
 		} else if ([elm isKindOfClass:NSDictionary.class]) { // for upper compatibility
 			for (NSString *key in ((NSDictionary *)elm).keyEnumerator) {
 				item = [self paramItemWithKey:key value:((NSDictionary *)elm)[key]];
 				[ma addObject:item];
 			}
 			item = nil;
-		} else if ([elm isKindOfClass:NSString.class]) {
-			item = [CondItem.alloc initWithScenario:self];
-			((CondItem *)item).element = [self itemWithPredicate:
-				[NSPredicate predicateWithFormat:(NSString *)elm] parent:item];
-		} else if ([elm isKindOfClass:NSPredicate.class]) {
-			item = [CondItem.alloc initWithScenario:self];
-			((CondItem *)item).element = [self itemWithPredicate:(NSPredicate *)elm parent:item];
 		} else if ([elm isKindOfClass:NSNumber.class]) {
 			item = [InfecItem.alloc initWithScenario:self];
 			((InfecCellView *)(item.view)).digits.integerValue = ((NSNumber *)elm).integerValue;
-		}
+		} else item = [self condItemFromObject:elm label:nil];
 		if (item != nil) [ma addObject:item];
 	}
 	for (NSInteger i = 0; i < ma.count; i ++) {

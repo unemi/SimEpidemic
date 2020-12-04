@@ -18,6 +18,7 @@
 		232055FF2457D2C7005ADCCF /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055FE2457D2C7005ADCCF /* main.m */; };
 		232790BA24587B670017AEC2 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
 		233420D22468156200C93F8E /* DataPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 233420D02468156200C93F8E /* DataPanel.m */; };
+		2337CD7A256D0AFE0020DB19 /* Statistics.m in Sources */ = {isa = PBXBuildFile; fileRef = 2337CD79256D0AFE0020DB19 /* Statistics.m */; };
 		233D9DE724869F7300498A77 /* Scenario.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DE924869F7300498A77 /* Scenario.xib */; };
 		233D9DEA24869F7D00498A77 /* DataPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DEC24869F7D00498A77 /* DataPanel.xib */; };
 		233D9DED24869F8400498A77 /* StatPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233D9DEF24869F8400498A77 /* StatPanel.xib */; };
@@ -51,7 +52,7 @@
 		23D6E02D24D59DDD00A5D604 /* Parameters.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6E02C24D59DDD00A5D604 /* Parameters.m */; };
 		23DAF068251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
 		23DAF069251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
-		23F2613C255ABFC1009131AA /* World.m in Sources */ = {isa = PBXBuildFile; fileRef = 23F2613B255ABFC1009131AA /* World.m */; };
+		23F2613C255ABFC1009131AA /* WorldB.m in Sources */ = {isa = PBXBuildFile; fileRef = 23F2613B255ABFC1009131AA /* WorldB.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -105,6 +106,9 @@
 		232790B924587B670017AEC2 /* Agent.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Agent.m; sourceTree = "<group>"; };
 		233420CF2468156200C93F8E /* DataPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DataPanel.h; sourceTree = "<group>"; };
 		233420D02468156200C93F8E /* DataPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DataPanel.m; sourceTree = "<group>"; };
+		2337CD78256D0AFE0020DB19 /* Statistics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Statistics.h; sourceTree = "<group>"; };
+		2337CD79256D0AFE0020DB19 /* Statistics.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Statistics.m; sourceTree = "<group>"; };
+		2337CD7B256D0BA90020DB19 /* main.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
 		233D9DE824869F7300498A77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/Scenario.xib; sourceTree = "<group>"; };
 		233D9DEB24869F7D00498A77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/DataPanel.xib; sourceTree = "<group>"; };
 		233D9DEE24869F8400498A77 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/StatPanel.xib; sourceTree = "<group>"; };
@@ -162,8 +166,8 @@
 		23D6E02C24D59DDD00A5D604 /* Parameters.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Parameters.m; sourceTree = "<group>"; };
 		23DAF066251737FB00C41E76 /* Gatherings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Gatherings.h; sourceTree = "<group>"; };
 		23DAF067251737FB00C41E76 /* Gatherings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Gatherings.m; sourceTree = "<group>"; };
-		23F2613A255ABFC1009131AA /* World.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = World.h; sourceTree = "<group>"; };
-		23F2613B255ABFC1009131AA /* World.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = World.m; sourceTree = "<group>"; };
+		23F2613A255ABFC1009131AA /* WorldB.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WorldB.h; sourceTree = "<group>"; };
+		23F2613B255ABFC1009131AA /* WorldB.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WorldB.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -339,6 +343,9 @@
 			isa = PBXGroup;
 			children = (
 				23B89E4E255BD61000A95360 /* main.m */,
+				2337CD7B256D0BA90020DB19 /* main.h */,
+				2337CD78256D0AFE0020DB19 /* Statistics.h */,
+				2337CD79256D0AFE0020DB19 /* Statistics.m */,
 			);
 			path = simepiWorld;
 			sourceTree = "<group>";
@@ -348,8 +355,8 @@
 			children = (
 				23C3FFE22557FB3F004906AE /* main.m */,
 				23BE9B3E25592A440005D1FF /* backend.h */,
-				23F2613A255ABFC1009131AA /* World.h */,
-				23F2613B255ABFC1009131AA /* World.m */,
+				23F2613A255ABFC1009131AA /* WorldB.h */,
+				23F2613B255ABFC1009131AA /* WorldB.m */,
 			);
 			path = simepiBackend;
 			sourceTree = "<group>";
@@ -576,6 +583,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				23B89E57255BD70A00A95360 /* Agent.m in Sources */,
+				2337CD7A256D0AFE0020DB19 /* Statistics.m in Sources */,
 				23B89E54255BD6DB00A95360 /* AppDelegate.m in Sources */,
 				23B89E55255BD6DB00A95360 /* StatPanel.m in Sources */,
 				23B89E56255BD6DB00A95360 /* Gatherings.m in Sources */,
@@ -588,7 +596,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				23F2613C255ABFC1009131AA /* World.m in Sources */,
+				23F2613C255ABFC1009131AA /* WorldB.m in Sources */,
 				23C3FFE32557FB3F004906AE /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -788,6 +796,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -817,7 +826,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.7.1;
+				MARKETING_VERSION = 1.7.2;
+				OTHER_CFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -837,7 +847,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.7.1;
+				MARKETING_VERSION = 1.7.2;
+				OTHER_CFLAGS = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

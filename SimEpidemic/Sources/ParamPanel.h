@@ -16,10 +16,11 @@ NS_ASSUME_NONNULL_BEGIN
 	<NSWindowDelegate, NSTabViewDelegate> {
 	IBOutlet NSView *worldPView, *movePView, *pathoPView, *measPView, *testPView;
 	IBOutlet NSTabView *tabView;
-	IBOutlet NSTextField *massDgt, *fricDgt, *avoidDgt;
-	IBOutlet NSSlider *massSld, *fricSld, *avoidSld;
+	IBOutlet NSTextField *fricDgt, *avoidDgt, *maxSpdDgt;
+	IBOutlet NSSlider *fricSld, *avoidSld, *maxSpdSld;
 	IBOutlet NSTextField *infecDgt, *infecDstDgt, *contagDDgt, *contagPDgt;
 	IBOutlet NSTextField
+		*massMinDgt, *massMaxDgt, *massModeDgt,
 		*mobDistMinDgt, *mobDistMaxDgt, *mobDistModeDgt,
 		*incubMinDgt, *incubMaxDgt, *incubModeDgt,
 		*fatalMinDgt, *fatalMaxDgt, *fatalModeDgt,

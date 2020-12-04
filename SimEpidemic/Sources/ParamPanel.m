@@ -17,8 +17,7 @@
 @end
 @implementation DistDigits
 static NSNumberFormatter *distDgtFmt = nil;
-- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits
-	index:(NSInteger)index var:(DistInfo *)var {
+- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits {
 	if (!(self = [super init])) return nil;
 	if (distDgtFmt == nil) {
 		distDgtFmt = NSNumberFormatter.new;
@@ -29,13 +28,15 @@ static NSNumberFormatter *distDgtFmt = nil;
 	minDgt = digits[0];
 	maxDgt = digits[1];
 	modDgt = digits[2];
-	minDgt.tag = maxDgt.tag = modDgt.tag = index;
 	minDgt.target = maxDgt.target = modDgt.target = self;
 	minDgt.action = maxDgt.action = modDgt.action = @selector(dValueChanged:);
 	minDgt.formatter = maxDgt.formatter = modDgt.formatter = distDgtFmt;
-	distInfo = var;
 	return self;
 }
+- (void)setIndex:(NSInteger)index {
+	minDgt.tag = maxDgt.tag = modDgt.tag = index;
+}
+- (void)setDistInfo:(DistInfo *)dInfo { distInfo = dInfo; }
 - (void)adjustDigitsToCurrentValue {
 	minDgt.doubleValue = distInfo->min;
 	maxDgt.doubleValue = distInfo->max;
@@ -124,8 +125,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		memcmp(doc.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams));
 	makeInitBtn.enabled = memcmp(doc.runtimeParamsP, doc.initParamsP, sizeof(RuntimeParams));
 }
-#define DDGT(d1,d2,d3,i) [DistDigits.alloc initWithDigits:@[d1,d2,d3]\
- index:i var:&doc.runtimeParamsP->PARAM_D1 + i]
+#define DDGT(d1,d2,d3) [DistDigits.alloc initWithDigits:@[d1,d2,d3]]
 - (void)windowDidLoad {
     [super windowDidLoad];
     self.window.alphaValue = panelsAlpha;
@@ -139,25 +139,26 @@ static NSNumberFormatter *distDgtFmt = nil;
 	CGFloat dh = viewSize[0].height - tabs[0].view.frame.size.height;
 	wFrame.size.height += dh; wFrame.origin.y -= dh;
 	[self.window setFrame:wFrame display:NO];
-    fDigits = @[massDgt, fricDgt, avoidDgt,
-		infecDgt, infecDstDgt, contagDDgt, contagPDgt,
+    fDigits = @[fricDgt, avoidDgt, maxSpdDgt,
+		contagDDgt, contagPDgt, infecDgt, infecDstDgt,
 		dstSTDgt, dstOBDgt, mobFrDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt];
-	fSliders = @[massSld, fricSld, avoidSld,
-		infecSld, infecDstSld, contagDSld, contagPSld,
+	fSliders = @[fricSld, avoidSld, maxSpdSld,
+		contagDSld, contagPSld, infecSld, infecDstSld,
 		dstSTSld, dstOBSld, mobFrSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld];
 	dDigits = @[
-		DDGT(mobDistMinDgt, mobDistMaxDgt, mobDistModeDgt, 0),
-		DDGT(incubMinDgt, incubMaxDgt, incubModeDgt, 1),
-		DDGT(fatalMinDgt, fatalMaxDgt, fatalModeDgt, 2),
-		DDGT(recovMinDgt, recovMaxDgt, recovModeDgt, 3),
-		DDGT(immunMinDgt, immunMaxDgt, immunModeDgt, 4),
-		DDGT(gatSZMinDgt, gatSZMaxDgt, gatSZModeDgt, 5),
-		DDGT(gatDRMinDgt, gatDRMaxDgt, gatDRModeDgt, 6),
-		DDGT(gatSTMinDgt, gatSTMaxDgt, gatSTModeDgt, 7) ];
+		DDGT(massMinDgt, massMaxDgt, massModeDgt),
+		DDGT(mobDistMinDgt, mobDistMaxDgt, mobDistModeDgt),
+		DDGT(incubMinDgt, incubMaxDgt, incubModeDgt),
+		DDGT(fatalMinDgt, fatalMaxDgt, fatalModeDgt),
+		DDGT(recovMinDgt, recovMaxDgt, recovModeDgt),
+		DDGT(immunMinDgt, immunMaxDgt, immunModeDgt),
+		DDGT(gatSZMinDgt, gatSZMaxDgt, gatSZModeDgt),
+		DDGT(gatDRMinDgt, gatDRMaxDgt, gatDRModeDgt),
+		DDGT(gatSTMinDgt, gatSTMaxDgt, gatSTModeDgt) ];
 	iDigits = @[initPopDgt, worldSizeDgt, meshDgt, nInfecDgt];
 	iSteppers = @[initPopStp, worldSizeStp, meshStp, nInfecStp];
     for (NSInteger idx = 0; idx < fDigits.count; idx ++) {
@@ -170,6 +171,10 @@ static NSNumberFormatter *distDgtFmt = nil;
 		d.formatter = fmt;
 		s.minValue = fmt.minimum.doubleValue;
 		s.maxValue = fmt.maximum.doubleValue;
+	}
+	for (NSInteger i = 0; i < dDigits.count; i ++) {
+		dDigits[i].index = i;
+		dDigits[i].distInfo = &doc.runtimeParamsP->PARAM_D1 + i;
 	}
     for (NSInteger idx = 0; idx < iDigits.count; idx ++) {
 		NSTextField *d = iDigits[idx];
@@ -241,6 +246,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 }
 - (IBAction)makeItInitialParameters:(id)sender {
 	doc.initialParameters = [NSData dataWithBytes:doc.runtimeParamsP length:sizeof(RuntimeParams)];
+	[self checkUpdate];
 }
 - (IBAction)saveDocument:(id)sender {
 	save_property_data(@"sEpP", self.window, param_dict(doc.runtimeParamsP, doc.tmpWorldParamsP));
@@ -300,11 +306,13 @@ static NSNumberFormatter *distDgtFmt = nil;
 	orgFrame = tabView.selectedTabViewItem.view.frame;
 }
 - (void)tabView:(NSTabView *)tabView didSelectTabViewItem:(NSTabViewItem *)tabViewItem {
-	NSSize newSz = viewSize[[tabView indexOfTabViewItem:tabViewItem]];
+	NSInteger index = [tabView indexOfTabViewItem:tabViewItem];
+	NSSize newSz = viewSize[index];
 	NSRect wFrame = self.window.frame;
 	wFrame.size.height += newSz.height - orgFrame.size.height;
 	if ((wFrame.origin.y -= newSz.height - orgFrame.size.height) < 0)
 		wFrame.origin.y = 0.;
 	[self.window setFrame:wFrame display:YES animate:YES];
+	makeInitBtn.hidden = index == 0;
 }
 @end

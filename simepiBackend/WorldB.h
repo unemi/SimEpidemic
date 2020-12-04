@@ -11,7 +11,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface World : NSObject {
+@interface WorldB : NSObject {
 	pid_t pid;
 	int pipeWrite, pipeRead;
 }
@@ -20,9 +20,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSData *)recvDataResponse;
 @end
 
-extern void add_world(World *world);
-extern void remove_world(World *world);
-extern World *get_world(uint32 ID);
-extern BackEndResponse *make_new_world(World *_Nonnull* _Nullable wp);
+extern void init_world_env(void);
+extern void add_world(WorldB *world);
+extern void remove_world(WorldB *world);
+extern WorldB *get_world(uint32 ID);
+extern BackEndResponse *make_new_world(WorldB *_Nonnull* _Nullable wp);
 
 NS_ASSUME_NONNULL_END

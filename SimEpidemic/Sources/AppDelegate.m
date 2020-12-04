@@ -69,8 +69,8 @@ NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window) {
 	NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
 	if (data == nil) { error_msg(error, window, NO); return nil; }
 	NSObject *object = [url.pathExtension isEqualToString:@"json"]?
-	[NSJSONSerialization JSONObjectWithData:data options:0 error:&error] :
-	[NSPropertyListSerialization propertyListWithData:data
+		[NSJSONSerialization JSONObjectWithData:data options:0 error:&error] :
+		[NSPropertyListSerialization propertyListWithData:data
 		options:NSPropertyListImmutable format:NULL error:&error];
 	if (object == nil) { error_msg(error, window, NO); return nil; }
 	if (class != NULL && ![object isKindOfClass:class])
@@ -94,8 +94,9 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 		if (result != NSModalResponseOK) return;
 		NSError *error;
 		NSData *data = [sp.URL.pathExtension isEqualToString:@"json"]?
-		[NSJSONSerialization dataWithJSONObject:object options:0 error:&error] :
-		[NSPropertyListSerialization dataWithPropertyList:object
+			[NSJSONSerialization dataWithJSONObject:object
+				options:NSJSONWritingSortedKeys error:&error] :
+			[NSPropertyListSerialization dataWithPropertyList:object
 			format:NSPropertyListXMLFormat_v1_0 options:0 error:&error];
 		if (data == nil) { error_msg(error, window, NO); return; }
 		if (![data writeToURL:sp.URL options:0 error:&error])
@@ -104,9 +105,9 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 }
 NSString *keyAnimeSteps = @"animeSteps";
 static ParamInfo paramInfo[] = {
-	{ ParamTypeFloat, @"mass", {.f = { 50., 10., 100.}}},
 	{ ParamTypeFloat, @"friction", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"avoidance", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"maxSpeed", {.f = { 50., 10., 100.}}},
 	{ ParamTypeFloat, @"contagionDelay", {.f = { .5, 0., 10.}}},
 	{ ParamTypeFloat, @"contagionPeak", {.f = { 3., 1., 10.}}},
 
@@ -125,6 +126,7 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloatS, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
 	{ ParamTypeFloatS, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
 
+	{ ParamTypeDist, @"mass", {.d = { 10., 20., 100.}}},
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
 	{ ParamTypeDist, @"fatality", {.d = { 4., 16., 20.}}},
@@ -148,7 +150,7 @@ NSArray<NSString *> *paramKeys, *paramNames;
 NSArray<NSNumberFormatter *> *paramFormatters;
 NSDictionary<NSString *, NSString *> *paramKeyFromName;
 NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
-NSDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
+NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	CGFloat *fp = (rp != NULL)? &rp->PARAM_F1 : NULL;
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
@@ -163,7 +165,7 @@ NSDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 		case ParamTypeInteger: if (ip != NULL) md[p->key] = @(*(ip ++));
 		default: break;
 	}
-	return [NSDictionary dictionaryWithDictionary:md];
+	return md;
 }
 #define IDX_D 1000
 #define IDX_I 2000
@@ -178,8 +180,13 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 		if (index < IDX_D) { if (fp != NULL) fp[index] = [dict[key] doubleValue]; }
 		else if (index < IDX_I) { if (dp != NULL) {
 			NSArray<NSNumber *> *arr = dict[key];
-			dp[index - IDX_D] = (DistInfo){
-				arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
+			if ([arr isKindOfClass:NSArray.class] && arr.count >= 3)
+				dp[index - IDX_D] = (DistInfo){
+					arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
+			else if ([arr isKindOfClass:NSNumber.class]) {	// for compatibility
+				CGFloat value = ((NSNumber *)arr).doubleValue;
+				dp[index - IDX_D] = (DistInfo){value, value, value};
+			}
 		}} else if (ip != NULL) ip[index - IDX_I] = [dict[key] integerValue];
 	}
 }

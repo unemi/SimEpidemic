@@ -11,7 +11,7 @@
 #import <arpa/inet.h>
 #import <net/if.h>
 #import "backend.h"
-#import "World.h"
+#import "WorldB.h"
 #define UDP_BUFSIZE 64
 #define MAX_COM_LEN 0x7FFFU
 #define MAX_N_WORLDS 512
@@ -32,7 +32,7 @@ static void contract_pause(int s) { acceptancePaused = YES; }
 static void contract_resume(int s) { acceptancePaused = NO; }
 static double how_much_busy(void) { return 0.; }
 static void respond_udp(void) {
-		char recvBuf[UDP_BUFSIZE];
+	char recvBuf[UDP_BUFSIZE];
 	struct sockaddr clientAddr;
 	socklen_t addrLen = sizeof(struct sockaddr);
 	for (;;) {
@@ -52,9 +52,6 @@ static BackEndResponse *response_from_string(ResponseType type, char *str) {
 	res->type = type;
 	return (BackEndResponse *)res;
 }
-static BackEndResponse *response_OK(void) {
-	return response_from_string(RspnsOK, "OK");
-}
 static BackEndResponse *response_error(char *format, ...) {
 	va_list ap;
 	va_start(ap, format);
@@ -63,45 +60,28 @@ static BackEndResponse *response_error(char *format, ...) {
 	va_end(ap);
 	return response_from_string(RspnsError, buf);
 }
-static BackEndResponse *response_no_world(void) {
-	return response_error("Current world does not exist.");
+static BackEndResponse *response_no_world(BackEndCommand *c) {
+	return response_error("World %u does not exist.", c->withWorld.worldID);
 }
-#define CHECK_WORLD if (world == nil) return response_no_world()
-static BackEndResponse *make_response(BackEndCommand *c, World **wp) {
-	World *world = *wp;
+#define CHECK_WORLD if ((world = get_world(c->withWorld.worldID)) == nil)\
+	return response_no_world(c);
+static BackEndResponse *make_response(BackEndCommand *c, WorldB **wp) {
+	WorldB *world;
 	switch (c->any.command) {
 		case CmndMakeWorld: return make_new_world(wp);
-		case CmndBindWorld:
-			if ((world = get_world(c->bindWorld.worldID)) != nil) {
-				*wp = world; response_OK();
-			} else return
-				response_error("World %u does not exist.", c->bindWorld.worldID);
-		case CmndCloseWorld: CHECK_WORLD;
-			*wp = nil;
+		case CmndCloseWorld: CHECK_WORLD
 			remove_world(world);
-			[world sendCommand:c];
-			return response_OK();
-		case CmndGetParams: case CmndGetScenario:
-		case CmndGetIndexes: case CmndGetDistribution: case CmndGetPopulation:
-			CHECK_WORLD;
-			[world sendCommand:c];
-			return (BackEndResponse *)[world recvDataResponse].bytes;
-		case CmndSetParams: case CmndSetScenario:
-		case CmndStart: case CmndStep: case CmndStop: case CmndReset:
-			CHECK_WORLD;
-			[world sendCommand:c];
-			return response_OK();
-/*	, , ,
-CmndSetReporter, CmndStopReporter,
-*/
-		default: return response_OK();
+			break;
+		default: CHECK_WORLD
 	}
+	[world sendCommand:c];
+	return (BackEndResponse *)[world recvDataResponse].bytes;
 }
 static void interaction_tcp(int desc, uint32 addr) {
 	size_t sz, cSz = 0;
 	ComAny com;
 	BackEndCommand *c = NULL;
-	World *world = nil;
+	WorldB *world = nil;
 	while ((sz = recv(desc, &com, sizeof(com), 0)) > 0) {
 		if (com.length > MAX_COM_LEN) {
 			fprintf(stderr, "Command length %u is too large.", com.length);
@@ -155,6 +135,7 @@ int main(int argc, const char *argv[]) {
 		if (sockTCP > 0) close(sockTCP);
 		return errNum.intValue;
 	}
+	init_world_env();
 	signal(SIGTERM, terminate_me);
 	signal(SIGUSR1, contract_pause);
 	signal(SIGUSR2, contract_resume);

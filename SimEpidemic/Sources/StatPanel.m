@@ -78,9 +78,9 @@ static void free_stat_mem(StatData **memp) {
 	_RecovPHist = NSMutableArray.new;
 	_DeathPHist = NSMutableArray.new;
 	_NInfectsHist = NSMutableArray.new;
-	scenarioPhases = NSMutableArray.new;
 #ifndef NOGUI
 	imgBm = malloc(IMG_WIDTH * IMG_HEIGHT * 4);
+	scenarioPhases = NSMutableArray.new;
 #endif
 	return self;
 }
@@ -91,8 +91,10 @@ static void free_stat_mem(StatData **memp) {
 - (void)setDoc:(Document *)docu { doc = docu; }
 - (void)discardMemory {
 	doc = nil;
+	[statLock lock];
 	free_stat_mem(&_statistics);
 	free_stat_mem(&_transit);
+	[statLock unlock];
 }
 #else
 - (void)fillImageForOneStep:(StatData *)stat atX:(NSInteger)ix {
@@ -145,18 +147,29 @@ static void free_stat_mem(StatData **memp) {
 	[_NInfectsHist removeAllObjects];
 	[_NInfectsHist addObject:MyCounter.new];
 	_NInfectsHist[0].cnt = nInitInfec;
-	[scenarioPhases removeAllObjects];
 #ifndef NOGUI
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
+	[scenarioPhases removeAllObjects];
 	[self fillImageForOneStep:_statistics atX:0];
 #endif
 }
+#ifndef NOGUI
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info {
 	phaseInfo = info;
 #ifdef DEBUG
 if (phaseInfo.count > 0) {
 	char *s = "PI:";
 	for (NSNumber *num in phaseInfo) { printf("%s%ld", s, num.integerValue); s = ", "; }
+	printf("\n");
+}
+#endif
+}
+- (void)setLabelInfo:(NSArray<NSString *> *)info {
+	labelInfo = info;
+#ifdef DEBUG
+if (labelInfo.count > 0) {
+	char *s = "LI:";
+	for (NSString *str in labelInfo) { printf("%s%s", s, str.UTF8String); s = ", "; }
 	printf("\n");
 }
 #endif
@@ -176,6 +189,7 @@ if (scenarioPhases.count > 0) {
 }
 #endif
 }
+#endif
 static void count_health(Agent *a, StatData *stat, StatData *tran) {
 	if (a->health != a->newHealth) {
 		a->health = a->newHealth;
@@ -329,9 +343,9 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 - (void)flushPanels {
 	for (StatPanel *panel in _statPanels) [panel flushView:self];
 }
-- (void)fillPhaseBackground:(NSSize)size {
+- (NSArray *)fillPhaseBackground:(NSSize)size {
 	NSInteger n = scenarioPhases.count;
-	if (n < 2) return;
+	if (n < 2) return nil;
 	NSMutableSet<NSNumber *> *ms = NSMutableSet.new;
 	for (NSInteger i = 1; i < n; i += 2) [ms addObject:scenarioPhases[i]];
 	NSInteger nPhases = ms.count, idx = 0;
@@ -340,6 +354,7 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 	NSArray<NSNumber *> *phases = [NSArray arrayWithObjects:phs count:nPhases];
 	NSRect rect = {0., 0.,
 		scenarioPhases[0].integerValue * size.width / steps, size.height};
+	NSMutableArray *labels = NSMutableArray.new;
 	for (NSInteger i = 1; i < n; i += 2) {
 		NSInteger phase = [phases indexOfObject:scenarioPhases[i]],
 			step = (i < n - 1)? scenarioPhases[i + 1].integerValue : steps;
@@ -348,14 +363,23 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 		[[NSColor colorWithHue:((CGFloat)phase) / nPhases
 			saturation:1. brightness:1. alpha:.2] setFill];
 		[NSBezierPath fillRect:rect];
+		if (i == n - 1) break;
+		NSInteger lblIdx = scenarioPhases[i].integerValue;
+		NSString *label = (lblIdx <= 0 || lblIdx > labelInfo.count)?
+			@"" : labelInfo[lblIdx - 1];
+		if (label.length > 0) {
+			[labels addObject:label];
+			[labels addObject:@(NSMaxX(rect))];
+		}
 	}
+	return labels;
 }
 static NSRect drawing_area(NSRect area) {
 	CGFloat ticsHeight = NSFont.systemFontSize * 1.4;
 	return (NSRect){area.origin.x, area.origin.y + ticsHeight,
 		area.size.width, area.size.height - ticsHeight};
 }
-static NSMutableDictionary *textAttributes = nil;
+static NSMutableDictionary *textAttributes = nil, *labelTxtAttr;
 static void draw_tics(NSRect area, CGFloat xMax) {
 	CGFloat exp = pow(10., floor(log10(xMax))), mts = xMax / exp;
 	NSInteger intvl = ((mts < 2.)? .2 : (mts < 5.)? .5 : 1.) * exp;
@@ -446,21 +470,40 @@ static void show_period_hist(NSArray<MyCounter *> *hist,
 	NSRect area = {size.width * idx / 3., 0., size.width / 3., size.height};
 	show_histogram(hist, area, stateColors[colIdx[idx]], title);
 }
+- (void)drawLabels:(NSArray *)labels y:(CGFloat)y {
+	if (labels == nil) return;
+	NSGraphicsContext *ctx = NSGraphicsContext.currentContext;
+	[ctx saveGraphicsState];
+	NSAffineTransform *mtrx = NSAffineTransform.transform;
+	[mtrx rotateByDegrees:90];
+	[mtrx concat];
+	for (NSInteger i = 0; i < labels.count; i += 2) {
+		NSString *label = labels[i];
+		NSSize sz = [label sizeWithAttributes:labelTxtAttr];
+		[label drawAtPoint:(NSPoint){y - sz.width - 6.,
+			-((NSNumber *)labels[i + 1]).doubleValue} withAttributes:labelTxtAttr];
+	}
+	[ctx restoreGraphicsState];
+}
 - (void)drawWithType:(StatType)type info:(TimeEvoInfo *)info bounds:(NSRect)bounds {
 	static NSNumberFormatter *decFormat = nil;
 	if (textAttributes == nil) {
 		textAttributes = NSMutableDictionary.new;
 		textAttributes[NSFontAttributeName] = [NSFont userFontOfSize:NSFont.systemFontSize];
+		labelTxtAttr = [NSMutableDictionary dictionaryWithDictionary:textAttributes];
 		decFormat = NSNumberFormatter.new;
 		decFormat.numberStyle = NSNumberFormatterDecimalStyle;
 	}
 	textAttributes[NSForegroundColorAttributeName] = stateColors[ColText];
+	labelTxtAttr[NSForegroundColorAttributeName] =
+		[stateColors[ColText] colorWithAlphaComponent:0.667];
 	[stateColors[ColBackground] setFill];
 	[NSBezierPath fillRect:bounds];
 	switch (type) {
 		case StatWhole: {
 		NSRect dRect = drawing_area(bounds);
-		[self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y}];
+		NSArray *labels =
+			[self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y}];
 		NSBitmapImageRep *imgRep = [NSBitmapImageRep.alloc
 			initWithBitmapDataPlanes:(unsigned char *[]){imgBm}
 			pixelsWide:IMG_WIDTH pixelsHigh:IMG_HEIGHT bitsPerSample:8 samplesPerPixel:3
@@ -469,10 +512,11 @@ static void show_period_hist(NSArray<MyCounter *> *hist,
 		[imgRep drawInRect:dRect
 			fromRect:(NSRect){0, 0, ((steps == 0)? 1 : steps) / skip, IMG_HEIGHT}
 			operation:NSCompositingOperationCopy fraction:1. respectFlipped:NO hints:nil];
+		[self drawLabels:labels y:NSMaxY(bounds)];
 		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
 		} break;
 		case StatTimeEvo: {
-		[self fillPhaseBackground:bounds.size];
+		[self drawLabels:[self fillPhaseBackground:bounds.size] y:NSMaxY(bounds)];
 		NSRect dRect = drawing_area(bounds);
 		TimeEvoMax teMax = ((info->idxBits & MskTransit) != 0)?
 			show_time_evo(_transit, info, maxTransit, days, skipDays, maxDailyPRate, dRect) :

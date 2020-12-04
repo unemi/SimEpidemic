@@ -28,7 +28,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 @interface CondElmItem : ScenarioItem
 @property (weak) ScenarioItem *parent;
 @end
-@interface ComparisonItem : CondElmItem {
+@interface ComparisonItem : CondElmItem <NSTextFieldDelegate> {
 	NSInteger varIndex, opeIndex;
 	NSInteger maxValue;
 	CGFloat ratioValue;
@@ -39,8 +39,9 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 @property NSMutableArray<CondElmItem *> *children;
 - (void)replaceChildAtIndex:(NSInteger)index withItem:(CondElmItem *)newChild;
 @end
-@interface CondItem : ScenarioItem {
+@interface CondItem : ScenarioItem <NSTextFieldDelegate> {
 	CondType condType;
+	NSString *orgLabel;
 	NSInteger destination;
 }
 @property CondElmItem *element;

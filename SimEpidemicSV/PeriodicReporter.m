@@ -292,6 +292,7 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 	PeriodicReporter *rep = [PeriodicReporter.alloc
 		initWithDocument:document addr:ip4addr desc:desc];
 	[rep setupWithQuery:query init:YES];
+	nReporters ++;
 	Document *doc = document;
 	postProc = ^{
 		NSString *idInfo = [NSString stringWithFormat:
@@ -322,6 +323,7 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 	[theReporters removeObjectForKey:repID];
 	[rep removeFromDoc];
 	[rep quit];
+	nReporters --;
 	code = 0;
 }
 - (void)changeReport {

@@ -49,14 +49,15 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 	NSUInteger maxCounts[NIntIndexes], maxTransit[NIntIndexes];
 #ifndef NOGUI
 	unsigned char *imgBm;
+	NSArray<NSNumber *> *phaseInfo;	// line numbers of condition to run util ...
+	NSArray<NSString *> *labelInfo; // label of condition to run until ...
+	NSMutableArray<NSNumber *> *scenarioPhases;	// step, p, s, ... p
 #endif
 	NSInteger popSize, steps, skip, days, skipDays;
 	StatData statCumm, transDaily, transCumm;
 	NSUInteger testCumm[NIntTestTypes];
 	TestResultCount testResultsW[7];
 	CGFloat maxStepPRate, maxDailyPRate, pRateCumm;	// Rate of positive
-	NSArray<NSNumber *> *phaseInfo;	// line numbers of condition to run util ...
-	NSMutableArray<NSNumber *> *scenarioPhases;	// step, p, s, ... p
 }
 @property (readonly) StatData *statistics, *transit;
 @property (readonly) TestResultCount testResultCnt;	// weekly total
@@ -64,8 +65,6 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 	*IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
 - (Document *)doc;
 - (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec;
-- (void)setPhaseInfo:(NSArray<NSNumber *> *)info;
-- (void)phaseChangedTo:(NSInteger)lineNumber;
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects;
 #ifdef NOGUI
@@ -75,6 +74,9 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 - (void)discardMemory;
 #else
 @property (readonly) NSMutableArray<StatPanel *> *statPanels;
+- (void)setPhaseInfo:(NSArray<NSNumber *> *)info;
+- (void)setLabelInfo:(NSArray<NSString *> *)info;
+- (void)phaseChangedTo:(NSInteger)lineNumber;
 - (void)reviseColors;
 - (void)openStatPanel:(NSWindow *)parentWindow;
 - (void)flushPanels;

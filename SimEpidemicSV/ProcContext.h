@@ -7,7 +7,7 @@
 //
 
 #import <AppKit/AppKit.h>
-#import "CommonTypes.h"
+#import "../SimEpidemic/Sources/CommonTypes.h"
 #define BUFFER_SIZE 8192
 
 NS_ASSUME_NONNULL_BEGIN
@@ -43,6 +43,7 @@ extern NSData *JSON_pop2(Document *doc);
 	NSInteger fileSize;
 	void (^proc)(ProcContext *);
 	void (^postProc)(void);
+	NSInteger nReporters;
 }
 @property (readonly) NSString *requestString;
 - (instancetype)initWithSocket:(int)desc ip:(uint32)ipaddr;

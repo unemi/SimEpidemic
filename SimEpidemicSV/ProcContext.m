@@ -98,14 +98,28 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		COM(version) };
 	return self;
 }
+#define RECV_WAIT 200000
+#define RECV_TIMEOUT (60*1000000/RECV_WAIT)
 - (long)receiveData:(NSInteger)length offset:(NSInteger)offset {
 	unsigned char *buf = bufData.mutableBytes;
 	dataLength = offset;
 	if (length < 0 || offset < length) do {
-		long len = recv(desc, buf + offset, BUFFER_SIZE - 1 - offset, 0);
-		if (len < 0) @throw @"recv command";
-		else if (len == 0) break;
-		offset += len;
+		long len = 0;
+		for (int waitCount = 0; waitCount < RECV_TIMEOUT; ) {
+			if (waitCount > 0) usleep(RECV_WAIT);	// wait 0.2 second
+			len = recv(desc, buf + offset, BUFFER_SIZE - 1 - offset, 0);
+			if (len >= 0) break;
+			else if (len != -1 || errno != EAGAIN) @throw @"recv command";
+			if (nReporters > 0) waitCount = 0;
+			else waitCount ++;
+		}
+#ifdef DEBUG
+		if (len == 0) break;
+		else if (len < 0) MY_LOG_DEBUG("(%d) Timeout", desc)
+#else
+		if (len <= 0) break;
+#endif
+		else offset += len;
 	} while (offset < length);
 	buf[(dataLength = offset)] = '\0';
 	MY_LOG_DEBUG("(%d)-> %ld bytes.\n%s", desc, dataLength, buf);

@@ -244,7 +244,9 @@ void connection_thread(void) {
 			else if (should_block_it(name.sin_addr.s_addr)) close(desc);
 			else break;
 		}
-		[NSThread detachNewThreadWithBlock:
+		if (fcntl(desc, F_SETFL, O_NONBLOCK) < 0) {
+			MY_LOG("Couldn't set Non-blocking socket for interaction.");
+		} else [NSThread detachNewThreadWithBlock:
 			^{ interaction_thread(desc, name.sin_addr.s_addr); }];
 	}
 }

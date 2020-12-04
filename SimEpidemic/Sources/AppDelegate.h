@@ -44,7 +44,7 @@ extern NSArray<NSString *> *paramKeys, *paramNames;
 extern NSArray<NSNumberFormatter *> *paramFormatters;
 extern NSDictionary<NSString *, NSString *> *paramKeyFromName;
 extern NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
-extern NSDictionary *param_dict(RuntimeParams *rp, WorldParams *wp);
+extern NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp);
 extern void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *d);
 #ifdef NOGUI
 extern void applicationSetups(void);

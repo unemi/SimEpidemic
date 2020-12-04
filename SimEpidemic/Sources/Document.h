@@ -15,6 +15,7 @@ extern void in_main_thread(dispatch_block_t block);
 #ifdef DEBUG
 extern void my_exit(void);
 #endif
+extern NSInteger nQueues;
 
 @interface WarpInfo : NSObject
 @property Agent *agent;

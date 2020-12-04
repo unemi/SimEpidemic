@@ -6,23 +6,23 @@
 //  Copyright © 2020 Tatsuo Unemi. All rights reserved.
 //
 
-#import "World.h"
+#import "WorldB.h"
 
 static uint32 NextID = 0;
-static NSMutableDictionary<NSNumber *, World *> *theWorldList = nil;
+static NSMutableDictionary<NSNumber *, WorldB *> *theWorldList = nil;
 static NSLock *worldListLock;
 
-@implementation World
+void init_world_env(void) {
+	worldListLock = NSLock.new;
+	theWorldList = NSMutableDictionary.new;
+}
+@implementation WorldB
 - (instancetype)initWithPID:(pid_t)p write:(int)w read:(int)r {
 	if (!(self = [super init])) return nil;
 	_ID = NextID ++;
 	pid = p;
 	pipeWrite = w;
 	pipeRead = r;
-	if (theWorldList == nil) {
-		worldListLock = NSLock.new;
-		theWorldList = NSMutableDictionary.new;
-	}
 	return self;
 }
 - (void)sendCommand:(BackEndCommand *)command {
@@ -33,26 +33,30 @@ static NSLock *worldListLock;
 	ssize_t sz = read(pipeRead, &length, sizeof(length));
 	if (sz < sizeof(length)) return nil;
 	NSMutableData *md = [NSMutableData dataWithLength:length];
-	char *p = (char *)md.mutableBytes + sizeof(length);
-	while ((length -= sz) > 0)
+	char *p = (char *)md.mutableBytes;
+	*(uint32 *)p = length;
+	p += sizeof(length);
+	while ((length -= sz) > 0) {
 		sz = read(pipeRead, p, length);
+		p += sz;
+	}
 	return md;
 }
 @end
 
-void add_world(World *world) {
+void add_world(WorldB *world) {
 	[worldListLock lock];
 	theWorldList[@(world.ID)] = world;
 	[worldListLock unlock];
 }
-void remove_world(World *world) {
+void remove_world(WorldB *world) {
 	[worldListLock lock];
 	theWorldList[@(world.ID)] = nil;
 	[worldListLock unlock];
 }
-World *get_world(uint32 ID) {
+WorldB *get_world(uint32 ID) {
 	[worldListLock lock];
-	World *world = theWorldList[@(ID)];
+	WorldB *world = theWorldList[@(ID)];
 	[worldListLock unlock];
 	return world;
 }
@@ -65,7 +69,7 @@ static BackEndResponse *response_for_unix_error(void) {
 	res->type = RspnsError;
 	return (BackEndResponse *)res;
 }
-BackEndResponse *make_new_world(World *_Nonnull* _Nullable wp) {
+BackEndResponse *make_new_world(WorldB *_Nonnull* _Nullable wp) {
 	extern char **environ;
 	int pipeP2C[2], pipeC2P[2];
 	pid_t pidChild;
@@ -80,17 +84,17 @@ BackEndResponse *make_new_world(World *_Nonnull* _Nullable wp) {
 	} else if (pidChild == 0) {
 		close(pipeP2C[1]); close(pipeC2P[0]);
 		dup2(pipeP2C[0], 0); dup2(pipeC2P[1], 1);
-		execve("", (char *const[]){"", NULL}, environ);
+		execve("simepiWorld", (char *const[]){"simepiWorld", NULL}, environ);
 		printf("ERROR: %s", strerror(errno));
 		exit(1);
 	} else {
 		close(pipeP2C[0]); close(pipeC2P[1]);
-		World *world = [World.alloc initWithPID:pidChild
+		WorldB *world = [WorldB.alloc initWithPID:pidChild
 			write:pipeP2C[1] read:pipeC2P[0]];
 		add_world(world);
-		char *buf = malloc(sizeof(ResponseWorldID));
-		ResponseWorldID *res = (ResponseWorldID *)buf;
-		*res = (ResponseWorldID){sizeof(res), RspnsWorldID, world.ID};
+		char *buf = malloc(sizeof(ResponseID));
+		ResponseID *res = (ResponseID *)buf;
+		*res = (ResponseID){sizeof(res), RspnsID, world.ID};
 		*wp = world;
 		return (BackEndResponse *)res;
 	}

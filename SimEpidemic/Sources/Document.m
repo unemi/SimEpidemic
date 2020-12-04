@@ -6,9 +6,15 @@
 //  Copyright © 2020 Tatsuo Unemi. All rights reserved.
 //
 
+//#define MY_DOC_THREADS
+//#define GCD_CONCURRENT_QUEUE
+
 #import <sys/sysctl.h>
 #import <sys/resource.h>
 #import "Document.h"
+#ifdef MY_DOC_THREADS
+#import "DocThread.h"
+#endif
 #import "Agent.h"
 #import "MyView.h"
 #import "Scenario.h"
@@ -18,8 +24,8 @@
 #import "Parameters.h"
 #import "Gatherings.h"
 #ifdef NOGUI
-#import "noGUI.h"
-#import "PeriodicReporter.h"
+#import "../../SimEpidemicSV/noGUI.h"
+#import "../../SimEpidemicSV/PeriodicReporter.h"
 #endif
 #define ALLOC_UNIT 2048
 #define DYNAMIC_STRUCT(t,f,n) static t *f = NULL;\
@@ -105,11 +111,14 @@ void my_exit(void) {
 @end
 #endif
 
+#ifdef MY_DOC_THREADS
+#elif defined GCD_CONCURRENT_QUEUE
+#else
+NSInteger nQueues = 10;
+#endif
+
 @interface Document () {
 	NSInteger scenarioIndex;
-	Scenario *scenarioPanel;
-	ParamPanel *paramPanel;
-	DataPanel *dataPanel;
 	LoopMode loopMode;
 	NSInteger nPop, nMesh;
 	Agent **pop, *agents;
@@ -125,8 +134,16 @@ void my_exit(void) {
 	TestEntry *testQueHead, *testQueTail;
 	GatheringMap *gatheringsMap;
 	NSMutableArray<Gathering *> *gatherings;
-	dispatch_queue_t dispatchQueue;
+#ifdef MY_DOC_THREADS
+#else
 	dispatch_group_t dispatchGroup;
+#ifdef GCD_CONCURRENT_QUEUE
+	dispatch_queue_t dispatchQueue;
+#else
+	NSArray<dispatch_queue_t> *dispatchQueue;
+	NSInteger queueIdx;
+#endif
+#endif
 	NSSize orgWindowSize, orgViewSize;
 #ifdef NOGUI
 	__weak NSTimer *runtimeTimer;
@@ -134,6 +151,9 @@ void my_exit(void) {
 	NSLock *reportersLock;
 	CGFloat maxSPS;
 #else
+	Scenario *scenarioPanel;
+	ParamPanel *paramPanel;
+	DataPanel *dataPanel;
 	NSMutableDictionary *orgViewInfo;
 	FillView *fillView;
 #endif
@@ -161,10 +181,21 @@ void my_exit(void) {
 - (NSMutableArray<MyCounter *> *)IncubPHist { return statInfo.IncubPHist; }
 - (NSMutableArray<MyCounter *> *)DeathPHist { return statInfo.DeathPHist; }
 - (void)addOperation:(void (^)(void))block {
+#ifdef MY_DOC_THREADS
+	add_doc_task(block);
+#elif defined GCD_CONCURRENT_QUEUE
 	dispatch_group_async(dispatchGroup, dispatchQueue, block);
+#else
+	queueIdx = (queueIdx + 1) % nQueues;
+	dispatch_group_async(dispatchGroup, dispatchQueue[queueIdx], block);
+#endif
 }
 - (void)waitAllOperations {
+#ifdef MY_DOC_THREADS
+	wait_all_doc_tasks();
+#else
 	dispatch_group_wait(dispatchGroup, DISPATCH_TIME_FOREVER);
+#endif
 }
 #ifndef NOGUI
 - (void)setPanelTitle:(NSWindow *)panel {
@@ -252,6 +283,7 @@ void my_exit(void) {
 	memset(visitFlags, 0, scenario.count);
 	predicateToStop = nil;
 	if (scenario == nil) return;
+	BOOL hasStopCond = NO;
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	while (scenarioIndex < scenario.count) {
 		if (visitFlags[scenarioIndex] == YES) {
@@ -274,6 +306,10 @@ void my_exit(void) {
 				if (((NSArray *)item).count == 1) scenarioIndex = destIdx;
 				else if ([(NSPredicate *)((NSArray *)item)[1] evaluateWithObject:statInfo])
 					scenarioIndex = destIdx;
+			} else if ([((NSArray *)item)[1] isKindOfClass:NSPredicate.class]) {
+				predicateToStop = (NSPredicate *)((NSArray *)item)[1];
+				hasStopCond = YES;
+				break;
 			} else md[((NSArray *)item)[0]] = ((NSArray *)item)[1];	// paramter assignment
 		} else if ([item isKindOfClass:NSDictionary.class]) {	// for upper compatibility
 			[md addEntriesFromDictionary:(NSDictionary *)item];
@@ -281,34 +317,54 @@ void my_exit(void) {
 			[self addInfected:((NSNumber *)item).integerValue];
 		} else if ([item isKindOfClass:NSPredicate.class]) {	// predicate to stop
 			predicateToStop = (NSPredicate *)item;
-#ifndef NOGUI
-			in_main_thread( ^{ [self adjustScenarioText]; });
-#endif
+			hasStopCond = YES;
 			break;
 		}
 	}
+#ifndef NOGUI
+	if (hasStopCond) in_main_thread( ^{ [self adjustScenarioText]; });
+#endif
 	if (md.count > 0) {
 		set_params_from_dict(&runtimeParams, &worldParams, md);
+#ifndef NOGUI
 		in_main_thread( ^{ [self->paramPanel adjustControls]; });
+#endif
 	}
 	if (predicateToStop == nil && scenarioIndex == scenario.count) scenarioIndex ++;
+#ifndef NOGUI
 	[statInfo phaseChangedTo:scenarioIndex];
+#endif
 }
 - (NSArray *)scenario { return scenario; }
-static NSArray<NSNumber *> *phase_info(NSArray *scen) {
-	if (scen.count == 0) return scen;
-	NSMutableArray<NSNumber *> *ma = NSMutableArray.new;
-	for (NSInteger i = 0; i < scen.count; i ++)
-		if ([scen[i] isKindOfClass:NSPredicate.class])
-			[ma addObject:@(i + 1)];
+#ifndef NOGUI
+- (void)setupPhaseInfo {
+	if (scenario.count == 0) {
+		statInfo.phaseInfo = @[];
+		statInfo.labelInfo = @[];
+		return;
+	}
+	NSMutableArray<NSNumber *> *maPhase = NSMutableArray.new;
+	NSMutableArray<NSString *> *maLabel = NSMutableArray.new;
+	for (NSInteger i = 0; i < scenario.count; i ++) {
+		NSObject *elm = scenario[i];
+		if ([elm isKindOfClass:NSPredicate.class]) {
+			[maPhase addObject:@(i + 1)];
+			[maLabel addObject:@""];
+		} else if (![elm isKindOfClass:NSArray.class]) continue;
+		else if (((NSArray *)elm).count != 2) continue;
+		else if ([((NSArray *)elm)[1] isKindOfClass:NSPredicate.class]) {
+			[maPhase addObject:@(i + 1)];
+			[maLabel addObject:((NSArray *)elm)[0]];
+		}
+	}
 	// if the final item is not an unconditional jump then add finale phase.
-	NSArray *item = scen.lastObject;
+	NSArray *item = scenario.lastObject;
 	if (![item isKindOfClass:NSArray.class] || item.count != 1 ||
 		![item[0] isKindOfClass:NSNumber.class])
-		[ma addObject:@(scen.count + 1)];
-	return ma;
+		[maPhase addObject:@(scenario.count + 1)];
+	statInfo.phaseInfo = maPhase;
+	statInfo.labelInfo = maLabel;
 }
-#ifndef NOGUI
 - (void)setScenario:(NSArray *)newScen {
 	if (self.running) return;
 	NSArray *orgScen = scenario;
@@ -316,7 +372,7 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		^(Document *target) { target.scenario = orgScen; }];
 	scenario = newScen;
 	scenarioIndex = 0;
-	statInfo.phaseInfo = phase_info(scenario);
+	[self setupPhaseInfo];
 	[self adjustScenarioText];
 	if (runtimeParams.step == 0) [self execScenario];
 	[scenarioPanel adjustControls:
@@ -347,8 +403,11 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 	}
 	if (scenario != nil) {
 		memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
+#ifndef NOGUI
 		[paramPanel adjustControls];
+#endif
 	}
+	gatheringsMap = NSMutableDictionary.new;
 	gatherings = NSMutableArray.new;
 	[popLock lock];
 	[cInfoLock lock];
@@ -369,8 +428,7 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		nMesh = worldParams.mesh;
 		_Pop = realloc(_Pop, sizeof(void *) * nCNew);
 		pRange = realloc(pRange, sizeof(NSRange) * nCNew);
-		gatheringsMap = NSMutableDictionary.new;
-	} else [gatheringsMap removeAllObjects];
+	}
 	memset(_Pop, 0, sizeof(void *) * nMesh * nMesh);
 	if (nPop != worldParams.initPop) {
 		nPop = worldParams.initPop;
@@ -426,9 +484,21 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 - (instancetype)init {
 	if ((self = [super init]) == nil) return nil;
 	if (cInfoLock == nil) cInfoLock = NSLock.new;
+#ifdef MY_DOC_THREADS
+	init_doc_threads(nCores/2);
+#else
 	dispatchGroup = dispatch_group_create();
+#ifdef GCD_CONCURRENT_QUEUE
 	dispatchQueue = dispatch_queue_create(
 		"jp.ac.soka.unemi.SimEpidemic.queue", DISPATCH_QUEUE_CONCURRENT);
+#else
+	dispatch_queue_t ques[nQueues];
+	for (NSInteger i = 0; i < nQueues; i ++)
+		ques[i] = dispatch_queue_create(
+		"jp.ac.soka.unemi.SimEpidemic.queue", DISPATCH_QUEUE_SERIAL);
+	dispatchQueue = [NSArray arrayWithObjects:ques count:nQueues];
+#endif
+#endif
 	popLock = NSLock.new;
 	newWarpF = NSMutableDictionary.new;
 	newWarpLock = NSLock.new;
@@ -487,8 +557,9 @@ static NSArray<NSNumber *> *phase_info(NSArray *scen) {
 		lvViews[i].integerValue = 0;
 	}
 	windowController.window.delegate = self;
-	if (scenario != nil) statInfo.phaseInfo = phase_info(scenario);
+	if (scenario != nil) [self setupPhaseInfo];
 	[self resetPop];
+	animeStepper.integerValue = log2(animeSteps);
 	show_anime_steps(animeStepsTxt, animeSteps);
 	stopAtNDaysDgt.integerValue = (stopAtNDays > 0)? stopAtNDays : - stopAtNDays;
 	stopAtNDaysCBox.state = stopAtNDays > 0;
@@ -554,18 +625,27 @@ NSString *keyParameters = @"parameters", *keyScenario = @"scenario";
 static NSObject *property_from_element(NSObject *elm) {
 	if ([elm isKindOfClass:NSPredicate.class]) return ((NSPredicate *)elm).predicateFormat;
 	else if (![elm isKindOfClass:NSArray.class]) return elm;
-	else if (![((NSArray *)elm)[0] isKindOfClass:NSNumber.class]) return elm;
-	else if (((NSArray *)elm).count == 1) return elm;
-	else return @[((NSArray *)elm)[0], ((NSPredicate *)((NSArray *)elm)[1]).predicateFormat];
+	NSInteger n = ((NSArray *)elm).count;
+	NSObject *elms[n];
+	BOOL hasPredicate = NO;
+	for (NSInteger i = 0; i < n; i ++) {
+		NSObject *obj = ((NSArray *)elm)[i];
+		if ([obj isKindOfClass:NSPredicate.class]) {
+			elms[i] = ((NSPredicate *)obj).predicateFormat;
+			hasPredicate = YES;
+		} else elms[i] = obj;
+	}
+	return hasPredicate? [NSArray arrayWithObjects:elms count:n] : elm;
 }
 static NSObject *element_from_property(NSObject *prop) {
 	if ([prop isKindOfClass:NSString.class])
 		return [NSPredicate predicateWithFormat:(NSString *)prop];
 	else if (![prop isKindOfClass:NSArray.class]) return prop;
-	else if (![((NSArray *)prop)[0] isKindOfClass:NSNumber.class]) return prop;
-	else if (((NSArray *)prop).count == 1) return prop;
-	else return @[((NSArray *)prop)[0],
-		[NSPredicate predicateWithFormat:(NSString *)((NSArray *)prop)[1]]];
+	else if (((NSArray *)prop).count != 2) return prop;
+	else if (![((NSArray *)prop)[1] isKindOfClass:NSString.class]) return prop;
+	NSPredicate *pred =
+		[NSPredicate predicateWithFormat:(NSString *)((NSArray *)prop)[1]];
+	return (pred != nil)? @[((NSArray *)prop)[0], pred] : prop;
 }
 - (NSArray *)scenarioPList {
 	if (scenario == nil || scenario.count == 0) return @[];
@@ -592,7 +672,9 @@ static NSObject *element_from_property(NSObject *prop) {
 	scenario = newScen;
 	scenarioIndex = 0;
 	if (statInfo != nil) {
-		statInfo.phaseInfo = phase_info(scenario);
+#ifndef NOGUI
+		[self setupPhaseInfo];
+#endif
 		[self execScenario];
 	}
 #ifndef NOGUI
@@ -600,16 +682,22 @@ static NSObject *element_from_property(NSObject *prop) {
 #endif
 		memcpy(&initParams, &runtimeParams, sizeof(RuntimeParams));
 }
-- (NSDictionary *)documentDictionary {
+#ifndef NOGUI
+- (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyAnimeSteps] = @(animeSteps);
 	if (scenario != nil) {
 		dict[keyParameters] = param_dict(&initParams, &worldParams);
 		dict[keyScenario] = [self scenarioPList];
 	} else dict[keyParameters] = param_dict(&runtimeParams, &worldParams);
-	return dict;
+	return [NSPropertyListSerialization dataWithPropertyList:dict
+		format:NSPropertyListXMLFormat_v1_0 options:0 error:outError];
 }
-- (BOOL)readFromDictionary:(NSDictionary *)dict {
+- (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError {
+	NSDictionary *dict = [NSPropertyListSerialization
+		propertyListWithData:data options:NSPropertyListImmutable
+		format:NULL error:outError];
+	if (dict == nil) return NO;
 	NSNumber *num = dict[keyAnimeSteps];
 	if (num != nil) animeSteps = num.integerValue;
 	NSDictionary *pDict = dict[keyParameters];
@@ -623,19 +711,6 @@ static NSObject *element_from_property(NSObject *prop) {
 		@catch (NSString *msg) { error_msg(msg, nil, NO); }
 	}
 	return YES;
-}
-#ifndef NOGUI
-- (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
-	NSDictionary *dict = [self documentDictionary];
-	return [NSPropertyListSerialization dataWithPropertyList:dict
-		format:NSPropertyListXMLFormat_v1_0 options:0 error:outError];
-}
-- (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError {
-	NSDictionary *dict = [NSPropertyListSerialization
-		propertyListWithData:data options:NSPropertyListImmutable
-		format:NULL error:outError];
-	if (dict == nil) return NO;
-	return [self readFromDictionary:dict];
 }
 #endif
 static NSLock *testEntriesLock = nil;
@@ -681,7 +756,6 @@ static NSLock *testEntriesLock = nil;
 		freeTestEntries = entry;
 		[testEntriesLock unlock];
 	}
-
 	// enqueue new tests
 	[testeesLock lock];
 	for (NSNumber *num in testees) {
@@ -709,8 +783,7 @@ static NSLock *testEntriesLock = nil;
 - (void)gridToGridA:(NSInteger)iA B:(NSInteger)iB {
 	Agent **apA = pop + pRange[iA].location, **apB = pop + pRange[iB].location;
 	for (NSInteger j = 0; j < pRange[iA].length; j ++)
-	for (NSInteger k = 0; k < pRange[iB].length; k ++)
-		interacts(apA[j], apB[k], &runtimeParams, &worldParams);
+	interacts(apA[j], apB, pRange[iB].length, &runtimeParams, &worldParams);
 }
 - (void)addNewWarp:(WarpInfo *)info {
 	[newWarpLock lock];
@@ -719,8 +792,8 @@ static NSLock *testEntriesLock = nil;
 }
 //#define MEASURE_TIME
 #ifdef MEASURE_TIME
-#define N_MTIME 6
-static unsigned long mtime[N_MTIME] = {0,0,0,0,0,0};
+#define N_MTIME 7
+static unsigned long mtime[N_MTIME] = {0,0,0,0,0,0,0};
 static NSInteger mCount = 0, mCount2 = 0;
 #endif
 - (void)doOneStep {
@@ -730,20 +803,19 @@ static NSInteger mCount = 0, mCount2 = 0;
 	NSInteger tmIdx = 0;
 	mCount ++;
 #endif
+    NSInteger unitJ = 4;
 	NSInteger nCells = worldParams.mesh * worldParams.mesh;
 	memset(pRange, 0, sizeof(NSRange) * nCells);
 	NSInteger nInField = 0;
 	for (NSInteger i = 0; i < nCells; i ++) {
-		if (i > 0) pRange[i - 1].length = nInField - pRange[i - 1].location;
 		pRange[i].location = nInField;
 		for (Agent *p = _Pop[i]; p; p = p->next) pop[nInField ++] = p;
+		pRange[i].length = nInField - pRange[i].location;
 	}
-	pRange[nCells - 1].length = nInField - pRange[nCells - 1].location;
 	NSInteger oldTimeStamp = runtimeParams.step - worldParams.stepsPerDay * 14;	// two weeks
 	Agent **popL = pop;
-	for (NSInteger j = 0; j < nCores; j ++) {
-		NSInteger start = j * nInField / nCores;
-		NSInteger end = (j < nCores - 1)? (j + 1) * nInField / nCores : nInField;
+	for (NSInteger j = 0; j < unitJ; j ++) {
+		NSInteger start = j * nInField / unitJ, end = (j + 1) * nInField / unitJ;
 		[self addOperation:^{
 			for (NSInteger i = start; i < end; i ++) {
 				reset_for_step(popL[i]);
@@ -756,29 +828,38 @@ static NSInteger mCount = 0, mCount2 = 0;
 	[self waitAllOperations];
 //
 	Agent **popMap = _Pop;
-	[gatheringsMap enumerateKeysAndObjectsUsingBlock:^(NSNumber * _Nonnull key,
-		NSMutableArray<Gathering *> * _Nonnull obj, BOOL * _Nonnull stop) {
+	__weak NSArray<NSNumber *> *keys = gatheringsMap.allKeys;
+	__weak GatheringMap *gMap = gatheringsMap;
+	for (NSInteger j = 0; j < unitJ; j ++) {
+		NSInteger start = j * keys.count / unitJ, end = (j + 1) * keys.count / unitJ;
 		[self addOperation:^{
-			for (Agent *a = popMap[key.integerValue]; a != NULL; a = a->next) {
-				if (!is_infected(a)) for (Gathering *gat in obj) [gat affectToAgent:a];
-		}}];
-	}];
+		for (NSInteger i = start; i < end; i ++) {
+			NSNumber *key = keys[i];
+			NSMutableArray<Gathering *> *obj = gMap[key];
+			for (Agent *a = popMap[key.integerValue]; a != NULL; a = a->next)
+				if (a->health != Symptomatic)
+					for (Gathering *gat in obj) [gat affectToAgent:a];
+		}}]; }
 	[self waitAllOperations];
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
+	unitJ = nCells / 4;
 	__weak typeof(self) weakSelf = self;
-	for (NSInteger i = 0; i < nCells; i ++) {
-		Agent **ap = popL + pRange[i].location;
-		NSRange rng = pRange[i];
-		[self addOperation:^{
-			for (NSInteger j = 0; j < rng.length; j ++)
-			for (NSInteger k = j + 1; k < rng.length; k ++)
-				interacts(ap[j], ap[k], rp, wp);
-		}];
-	}
+    NSRange *pRng = pRange;
+    for (NSInteger j = 0; j < nCells; j += unitJ) {
+    if (nCells - j < unitJ) unitJ = nCells - j;
+    [self addOperation:^{
+		for (NSInteger k = 0; k < unitJ; k ++) {
+			NSInteger i = j + k;
+			Agent **ap = popL + pRng[i].location;
+			NSRange rng = pRng[i];
+			for (NSInteger j = 1; j < rng.length; j ++)
+			interacts(ap[j], ap, j, rp, wp);
+		}
+    }];}
 	[self waitAllOperations];
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
@@ -786,36 +867,36 @@ static NSInteger mCount = 0, mCount2 = 0;
 	tm1 = tm2;
 #endif
 	NSInteger mesh = worldParams.mesh;
-	for (NSInteger x = 1; x < mesh; x += 2)
-		for (NSInteger y = 0; y < mesh; y ++) [self addOperation:^{
+    for (NSInteger x = 1; x < mesh; x += 2) [self addOperation:^{
+		for (NSInteger y = 0; y < mesh; y ++)
 			[weakSelf gridToGridA:y * mesh + x B:y * mesh + x - 1]; }];
 	[self waitAllOperations];
-	for (NSInteger x = 2; x < mesh; x += 2)
-		for (NSInteger y = 0; y < mesh; y ++) [self addOperation:^{
+    for (NSInteger x = 2; x < mesh; x += 2) [self addOperation:^{
+		for (NSInteger y = 0; y < mesh; y ++)
 			[weakSelf gridToGridA:y * mesh + x B:y * mesh + x - 1]; }];
 	[self waitAllOperations];
-	for (NSInteger y = 1; y < mesh; y += 2)
-		for (NSInteger x = 0; x < mesh; x ++) [self addOperation:^{
+    for (NSInteger y = 1; y < mesh; y += 2) [self addOperation:^{
+		for (NSInteger x = 0; x < mesh; x ++)
 			[weakSelf gridToGridA:y * mesh + x B:(y - 1) * mesh + x]; }];
 	[self waitAllOperations];
-	for (NSInteger y = 2; y < mesh; y += 2)
-		for (NSInteger x = 0; x < mesh; x ++) [self addOperation:^{
+    for (NSInteger y = 2; y < mesh; y += 2) [self addOperation:^{
+		for (NSInteger x = 0; x < mesh; x ++)
 			[weakSelf gridToGridA:y * mesh + x B:(y - 1) * mesh + x]; }];
 	[self waitAllOperations];
-	for (NSInteger y = 1; y < mesh; y += 2)
-		for (NSInteger x = 1; x < mesh; x ++) [self addOperation:^{
+    for (NSInteger y = 1; y < mesh; y += 2) [self addOperation:^{
+		for (NSInteger x = 1; x < mesh; x ++)
 			[weakSelf gridToGridA:y * mesh + x B:(y - 1) * mesh + x - 1]; }];
 	[self waitAllOperations];
-	for (NSInteger y = 2; y < mesh; y += 2)
-		for (NSInteger x = 1; x < mesh; x ++) [self addOperation:^{
+    for (NSInteger y = 2; y < mesh; y += 2) [self addOperation:^{
+		for (NSInteger x = 1; x < mesh; x ++)
 			[weakSelf gridToGridA:y * mesh + x B:(y - 1) * mesh + x - 1]; }];
 	[self waitAllOperations];
-	for (NSInteger y = 1; y < mesh; y += 2)
-		for (NSInteger x = 1; x < mesh; x ++) [self addOperation:^{
+    for (NSInteger y = 1; y < mesh; y += 2) [self addOperation:^{
+		for (NSInteger x = 1; x < mesh; x ++)
 			[weakSelf gridToGridA:y * mesh + x - 1 B:(y - 1) * mesh + x]; }];
 	[self waitAllOperations];
-	for (NSInteger y = 2; y < mesh; y += 2)
-		for (NSInteger x = 1; x < mesh; x ++) [self addOperation:^{
+    for (NSInteger y = 2; y < mesh; y += 2) [self addOperation:^{
+		for (NSInteger x = 1; x < mesh; x ++)
 			[weakSelf gridToGridA:y * mesh + x - 1 B:(y - 1) * mesh + x]; }];
 	[self waitAllOperations];
 #ifdef MEASURE_TIME
@@ -824,13 +905,14 @@ static NSInteger mCount = 0, mCount2 = 0;
 	tm1 = tm2;
 #endif
 // Step
-	NSMutableArray<NSValue *> *infectors[nCores];
-	NSUInteger transitCnt[NHealthTypes][nCores];
+    unitJ = 2;
+	NSMutableArray<NSValue *> *infectors[unitJ];
+	NSUInteger transitCnt[NHealthTypes][unitJ];
 	memset(transitCnt, 0, sizeof(transitCnt));
 	NSMutableArray<NSLock *> *locks = cellLocks;
-	for (NSInteger j = 0; j < nCores; j ++) {
-		NSInteger start = j * nInField / nCores;
-		NSInteger end = (j < nCores - 1)? (j + 1) * nInField / nCores : nInField;
+	for (NSInteger j = 0; j < unitJ; j ++) {
+		NSInteger start = j * nInField / unitJ;
+		NSInteger end = (j < unitJ - 1)? (j + 1) * nInField / unitJ : nInField;
 		NSMutableArray<NSValue *> *infec = infectors[j] = NSMutableArray.new;
 		[self addOperation:^{
 			for (NSInteger i = start; i < end; i ++) {
@@ -886,7 +968,7 @@ static NSInteger mCount = 0, mCount2 = 0;
 //		qlist:_QList clist:_CList warp:_WarpList
 //		testCount:testCount stepsPerDay:worldParams.stepsPerDay];
 	BOOL finished = [statInfo calcStatWithTestCount:testCount infects:
-		[NSArray arrayWithObjects:infectors count:nCores]];
+		[NSArray arrayWithObjects:infectors count:unitJ]];
 	[popLock unlock];
 	runtimeParams.step ++;
 	if (loopMode == LoopRunning) {
@@ -904,9 +986,13 @@ static NSInteger mCount = 0, mCount2 = 0;
 			printf("%.3f%c", (double)mtime[i] / mCount, (i < tmIdx)? '\t' : '\n');
 			mtime[i] = 0;
 		}
+#ifdef NOGUI
+		mCount = 0;
+#else
 		if (mCount2 >= 10) {
 			if (self.running) in_main_thread(^{ [self startStop:nil]; });
 		} else mCount = 0;
+#endif
 	}
 #endif
 }

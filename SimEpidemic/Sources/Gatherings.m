@@ -10,7 +10,7 @@
 #import "Document.h"
 #import "Agent.h"
 #define SURROUND 5
-#define GATHERING_FORCE 5.
+#define GATHERING_FORCE .5
 
 @implementation Gathering
 static void record_gat(Gathering *gat, GatheringMap *map,
@@ -22,6 +22,10 @@ static void record_gat(Gathering *gat, GatheringMap *map,
 		else [map[num] addObject:gat];
 		[cellIdxs addObject:num];
 	}
+}
+static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat grid) {
+	NSInteger right = ceil(fmin(wSize, x) / grid);
+	return (right <= mesh)? right : mesh;
 }
 - (instancetype)initWithMap:(GatheringMap *)map
 	world:(WorldParams *)wp runtime:(RuntimeParams *)rp {
@@ -43,14 +47,14 @@ static void record_gat(Gathering *gat, GatheringMap *map,
 		CGFloat dy = p.y - (iy + 1) * grid, dx = sqrt(r * r - dy * dy);
 		record_gat(self, map, cellIdxs, iy * wp->mesh,
 			floor(fmax(0., p.x - dx) / grid),
-			ceil(fmin(wp->worldSize, p.x + dx) / grid));
+			ix_right(wp->worldSize, wp->mesh, p.x + dx, grid));
 	}
 	for (NSInteger iy = top; iy >= center; iy --) {
 		CGFloat dy = p.y - iy * grid,
 			dx = sqrt(r * r - dy * dy);
 		record_gat(self, map, cellIdxs, iy * wp->mesh,
 			floor(fmax(0., p.x - dx) / grid),
-			ceil(fmin(wp->worldSize, p.x + dx) / grid));
+			ix_right(wp->worldSize, wp->mesh, p.x + dx, grid));
 	}
 	return self;
 }
@@ -104,7 +108,7 @@ void manage_gatherings(
 			[gatherings[i] removeFromMap:gatMap];
 			[gatherings removeObjectAtIndex:i];
 		}
-//	caliculate the numner of gathering circles
+//	calculate the number of gathering circles
 //	using random number in exponetial distribution.
 	NSInteger nNewGat = round(rp->gatFr / wp->stepsPerDay
 		* wp->worldSize * wp->worldSize / 1e5 *

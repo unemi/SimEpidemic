@@ -18,6 +18,7 @@ static CGFloat penalty[] = {
 	.3,	// 404 Not Found
 	2., // 405 Method Not Allowed
 	1., // 406 Not Acceptable
+	1.,	// 407
 	.2, // 408 Request Timeout
 	1., // 409 Conflict
 	1., // 410 Gone
@@ -58,7 +59,8 @@ static CGFloat request_penalty(NSString *request) {
 			@"\\AGET /apple-touch-icon-precomposed\\.png "]);
 		prohibited = regexp_array(@[@"\\A\\P{Lu}", @"\\A\\p{Lu}\\P{Lu}",
 			@"\\AGET /wp-content/", @"\\APOST /api/", @"\\A\\p{Lu}+ /boaform/",
-			@"\\AGET /php", @"\\.php[ \\?]", @"\\.cgi[ \\?]", @"\\AGET /[\\.\\?]"]);
+			@"\\AGET /php", @"\\AGET /currentsetting.htm",
+			@"\\.php[ \\?]", @"\\.cgi[ \\?]", @"\\AGET /[\\.\\?]"]);
 	}
 	NSRange srcRng = {0, request.length};
 	if (srcRng.length <= 4) return IMMEDIATE_BLOCK;

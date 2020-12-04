@@ -69,6 +69,7 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->health = Susceptible;
 	a->nInfects = -1;
 	a->isOutOfField = YES;
+	a->mass = my_random(&rp->mass);
 	reset_days(a, rp);
 	a->lastTested = -999999;
 }
@@ -125,37 +126,76 @@ static void attracted(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CG
 		a->bestDist = x;
 		a->best = b;
 	}
-	// check contact and infection
-	if (d < rp->infecDst) {
-		if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
-		if (a->health == Susceptible && is_infected(b) &&
-			b->daysInfected > rp->contagDelay) {
-			CGFloat timeFactor = fmin(1., (b->daysInfected - rp->contagDelay) /
-				(b->daysInfected - fmin(rp->contagPeak, b->daysToOnset)));
-			CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
-			if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor)) {
-				a->newHealth = Asymptomatic;
-				if (a->nInfects < 0) a->newNInfects = 1;
-				b->newNInfects ++;
-	}}}
 }
-void interacts(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp) {
-	CGFloat dx = b->x - a->x;
-	CGFloat dy = b->y - a->y;
-	CGFloat d2 = fmax(1e-4, dx * dx + dy * dy);
-	CGFloat d = sqrt(d2);
+static void infects(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFloat d) {
+	// b infects a
+	CGFloat timeFactor = fmin(1., (b->daysInfected - rp->contagDelay) /
+		(b->daysInfected - fmin(rp->contagPeak, b->daysToOnset)));
+	CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
+	if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor)) {
+		a->newHealth = Asymptomatic;
+		if (a->nInfects < 0) a->newNInfects = 1;
+		b->newNInfects ++;
+	}
+}
+static void check_infection(Agent *a, Agent *b,
+	RuntimeParams *rp, WorldParams *wp, CGFloat d) {
+	if (d >= rp->infecDst) return;
+	if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
+	if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(b, a, rp->step);
+	if (a->health == Susceptible) {
+		if (is_infected(b) && b->daysInfected > rp->contagDelay)
+			infects(a, b, rp, wp, d);
+	} else if (b->health == Susceptible &&
+		is_infected(a) && a->daysInfected > rp->contagDelay)
+		infects(b, a, rp, wp, d);
+}
+//void interacts(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp) {
+//	CGFloat dx = b->x - a->x;
+//	CGFloat dy = b->y - a->y;
+//	CGFloat d2 = fmax(1e-4, dx * dx + dy * dy);
+//	CGFloat d = sqrt(d2);
+//	CGFloat viewRange = wp->worldSize / wp->mesh;
+//	if (d >= viewRange) { return; }
+//	CGFloat dd = ((d < viewRange * 0.8)? 1.0 : (1 - d / viewRange) / 0.2) / d / d2
+//		 * AVOIDANCE * rp->avoidance / 50.;
+//	CGFloat ax = dx * dd;
+//	CGFloat ay = dy * dd;
+//	a->fx -= ax;
+//	a->fy -= ay;
+//	b->fx += ax;
+//	b->fy += ay;
+//	attracted(a, b, rp, wp, d);
+//	attracted(b, a, rp, wp, d);
+//	check_infection(a, b, rp, wp, d[i]);
+//}
+void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp) {
+	CGFloat dx[n], dy[n], d2[n], d[n];
+	Agent *bb[n];
+	for (NSInteger i = 0; i < n; i ++) {
+		dx[i] = b[i]->x - a->x; dy[i] = b[i]->y - a->y;
+		d[i] = sqrt((d2[i] = fmax(1e-4, dx[i] * dx[i] + dy[i] * dy[i])));
+	}
 	CGFloat viewRange = wp->worldSize / wp->mesh;
-	if (d >= viewRange) { return; }
-	CGFloat dd = ((d < viewRange * 0.8)? 1.0 : (1 - d / viewRange) / 0.2) / d / d2
-		 * AVOIDANCE * rp->avoidance / 50.;
-	CGFloat ax = dx * dd;
-	CGFloat ay = dy * dd;
-	a->fx -= ax;
-	a->fy -= ay;
-	b->fx += ax;
-	b->fy += ay;
-	attracted(a, b, rp, wp, d);
-	attracted(b, a, rp, wp, d);
+	NSInteger j = 0;
+	for (NSInteger i = 0; i < n; i ++) if (d[i] < viewRange) {
+		if (i > j) { dx[j] = dx[i]; dy[j] = dy[i]; d2[j] = d2[i]; d[j] = d[i]; }
+		bb[j] = b[i];
+		j ++;
+	}
+	if (j <= 0) return;
+	CGFloat dd[j], ax[j], ay[j];
+	for (NSInteger i = 0; i < j; i ++) dd[i] = ((d[i] < viewRange * 0.8)? 1.0 :
+		(1 - d[i] / viewRange) / 0.2) / d[i] / d2[i] * AVOIDANCE * rp->avoidance / 50.;
+	for (NSInteger i = 0; i < j; i ++)
+		{ ax[i] = dx[i] * dd[i]; ay[i] = dy[i] * dd[i]; }
+	for (NSInteger i = 0; i < j; i ++) {
+		a->fx -= ax[i]; a->fy -= ay[i];
+		bb[i]->fx += ax[i]; bb[i]->fy += ay[i];
+		attracted(a, bb[i], rp, wp, d[i]);
+		attracted(bb[i], a, rp, wp, d[i]);
+		check_infection(a, bb[i], rp, wp, d[i]);
+	}
 }
 static void starts_warping(Agent *a, WarpType mode, CGPoint newPt, Document *doc) {
 	[doc addNewWarp:[WarpInfo.alloc initWithAgent:a goal:newPt mode:mode]];
@@ -239,7 +279,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 		}
 		a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 		a->fy += wall(a->y) - wall(wp->worldSize - a->y);
-		CGFloat mass = ((a->health == Symptomatic)? 200. : 10.) * rp->mass / 100.;
+		CGFloat mass = ((a->health == Symptomatic)? 200. : 10.) * a->mass / 100.;
 		if (a->best != NULL && !a->distancing) {
 			CGFloat dx = a->best->x - a->x;
 			CGFloat dy = a->best->y - a->y;
@@ -247,11 +287,11 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 			a->fx += dx / d;
 			a->fy += dy / d;
 		}
-		CGFloat fric = pow(1. - .5 * rp->friction / 100., 1. / wp->stepsPerDay);
+		CGFloat fric = pow(1. - .8 * rp->friction / 100., 1. / wp->stepsPerDay);
 		a->vx = a->vx * fric + a->fx / mass / wp->stepsPerDay;
 		a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
 		CGFloat v = hypot(a->vx, a->vy);
-		CGFloat maxV = 80.0 / wp->stepsPerDay;
+		CGFloat maxV = rp->maxSpeed * 20. / wp->stepsPerDay;
 		if (v > maxV) { 
 			a->vx *= maxV / v; 
 			a->vy *= maxV / v;
