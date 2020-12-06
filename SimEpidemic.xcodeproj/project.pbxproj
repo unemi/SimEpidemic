@@ -826,7 +826,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.7.2;
+				MARKETING_VERSION = 1.7.3;
 				OTHER_CFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -847,8 +847,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.7.2;
-				OTHER_CFLAGS = "-mavx";
+				MARKETING_VERSION = 1.7.3;
+				OTHER_CFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

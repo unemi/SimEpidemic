@@ -10,14 +10,21 @@
 #import "AppDelegate.h"
 #import "Document.h"
 
+static void reveal_me_in_tabview(NSControl *me, NSTabView *tabView) {
+	NSView *parent = me.superview;
+	if (parent.superview != nil) return;
+	for (NSTabViewItem *item in tabView.tabViewItems) if (item.view == parent)
+		{ [tabView selectTabViewItem:item]; break; }
+}
 @interface DistDigits : NSObject {
 	DistInfo *distInfo;
 	NSTextField __weak *minDgt, *maxDgt, *modDgt;
 }
+@property (readonly,weak) NSTabView *tabView;
 @end
 @implementation DistDigits
 static NSNumberFormatter *distDgtFmt = nil;
-- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits {
+- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits tabView:(NSTabView *)tabV {
 	if (!(self = [super init])) return nil;
 	if (distDgtFmt == nil) {
 		distDgtFmt = NSNumberFormatter.new;
@@ -31,6 +38,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	minDgt.target = maxDgt.target = modDgt.target = self;
 	minDgt.action = maxDgt.action = modDgt.action = @selector(dValueChanged:);
 	minDgt.formatter = maxDgt.formatter = modDgt.formatter = distDgtFmt;
+	_tabView = tabV;
 	return self;
 }
 - (void)setIndex:(NSInteger)index {
@@ -46,11 +54,13 @@ static NSNumberFormatter *distDgtFmt = nil;
 	NSWindow *window = minDgt.window;
 	return [(ParamPanel *)window.delegate windowWillReturnUndoManager:window];
 }
+- (NSTextField *)minDgt { return minDgt; }
 - (void)changeDistInfo:(DistInfo)newInfo {
 	DistInfo orgInfo = *distInfo;
 	*distInfo = newInfo;
 	[self adjustDigitsToCurrentValue];
 	[self.undoManager registerUndoWithTarget:self handler:^(DistDigits *dd) {
+		reveal_me_in_tabview(dd.minDgt, dd.tabView);
 		[dd changeDistInfo:orgInfo];
 	}];
 	[(ParamPanel *)minDgt.window.delegate checkUpdate];
@@ -113,6 +123,13 @@ static NSNumberFormatter *distDgtFmt = nil;
 	stepsPerDayStp.integerValue = round(log2(wp->stepsPerDay));
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 }
+- (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
+	RuntimeParams *rp = doc.runtimeParamsP;
+	for (NSString *key in paramNames) {
+		NSInteger i = paramIndexFromKey[key].integerValue;
+		fDigits[i].doubleValue = fSliders[i].doubleValue = (&rp->PARAM_F1)[i];
+	}
+}
 - (void)checkUpdate {
 	revertUDBtn.enabled = hasUserDefaults &&
 		(memcmp(doc.runtimeParamsP, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
@@ -125,7 +142,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		memcmp(doc.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams));
 	makeInitBtn.enabled = memcmp(doc.runtimeParamsP, doc.initParamsP, sizeof(RuntimeParams));
 }
-#define DDGT(d1,d2,d3) [DistDigits.alloc initWithDigits:@[d1,d2,d3]]
+#define DDGT(d1,d2,d3) [DistDigits.alloc initWithDigits:@[d1,d2,d3] tabView:tabView]
 - (void)windowDidLoad {
     [super windowDidLoad];
     self.window.alphaValue = panelsAlpha;
@@ -139,18 +156,17 @@ static NSNumberFormatter *distDgtFmt = nil;
 	CGFloat dh = viewSize[0].height - tabs[0].view.frame.size.height;
 	wFrame.size.height += dh; wFrame.origin.y -= dh;
 	[self.window setFrame:wFrame display:NO];
-    fDigits = @[fricDgt, avoidDgt, maxSpdDgt,
+    fDigits = @[massDgt, fricDgt, avoidDgt, maxSpdDgt,
 		contagDDgt, contagPDgt, infecDgt, infecDstDgt,
 		dstSTDgt, dstOBDgt, mobFrDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt];
-	fSliders = @[fricSld, avoidSld, maxSpdSld,
+	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
 		contagDSld, contagPSld, infecSld, infecDstSld,
 		dstSTSld, dstOBSld, mobFrSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld];
 	dDigits = @[
-		DDGT(massMinDgt, massMaxDgt, massModeDgt),
 		DDGT(mobDistMinDgt, mobDistMaxDgt, mobDistModeDgt),
 		DDGT(incubMinDgt, incubMaxDgt, incubModeDgt),
 		DDGT(fatalMinDgt, fatalMaxDgt, fatalModeDgt),
@@ -198,7 +214,9 @@ static NSNumberFormatter *distDgtFmt = nil;
 - (IBAction)changeStepsPerDay:(id)sender {
 	WorldParams *wp = doc.tmpWorldParamsP;
 	NSInteger orgExp = round(log2(wp->stepsPerDay));
+	NSTabView *tabV = tabView;
 	[undoManager registerUndoWithTarget:stepsPerDayStp handler:^(NSStepper *target) {
+		reveal_me_in_tabview(target, tabV);
 		target.integerValue = orgExp;
 		[target sendAction:target.action to:target.target];
 	}];
@@ -269,20 +287,27 @@ static NSNumberFormatter *distDgtFmt = nil;
 		}
 	});
 }
+- (IBAction)copyAsJSON:(id)sender {
+	copy_plist_as_JSON_text(
+		param_dict(doc.runtimeParamsP, doc.tmpWorldParamsP),
+		self.window);
+}
 - (void)fValueChanged:(NSControl *)sender {
 	RuntimeParams *p = doc.runtimeParamsP;
 	NSControl *d = fDigits[sender.tag], *s = fSliders[sender.tag];
 	CGFloat orgValue = (&p->PARAM_F1)[sender.tag];
 	CGFloat newValue = sender.doubleValue;
 	if (orgValue == newValue) return;
+	NSTabView *tabV = tabView;
 	[undoManager registerUndoWithTarget:sender handler:^(NSControl *target) {
+		reveal_me_in_tabview(target, tabV);
 		target.doubleValue = orgValue;
 		[target sendAction:target.action to:target.target]; }];
 	if (sender != d) d.doubleValue = newValue;
 	if (sender != s) s.doubleValue = newValue;
 	(&p->PARAM_F1)[sender.tag] = newValue;
-	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :\
-		undoManager.isRedoing? NSChangeRedone : NSChangeDone];\
+	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :
+		undoManager.isRedoing? NSChangeRedone : NSChangeDone];
 	[self checkUpdate];
 }
 - (void)iValueChanged:(NSControl *)sender {
@@ -291,14 +316,16 @@ static NSNumberFormatter *distDgtFmt = nil;
 	NSInteger orgValue = (&p->PARAM_I1)[sender.tag];
 	NSInteger newValue = sender.integerValue;
 	if (orgValue == newValue) return;
+	NSTabView *tabV = tabView;
 	[undoManager registerUndoWithTarget:sender handler:^(NSControl *target) {
+		reveal_me_in_tabview(target, tabV);
 		target.integerValue = orgValue;
 		[target sendAction:target.action to:target.target]; }];
 	if (sender != d) d.integerValue = newValue;
 	if (sender != s) s.integerValue = newValue;
 	(&p->PARAM_I1)[sender.tag] = newValue;
-	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :\
-		undoManager.isRedoing? NSChangeRedone : NSChangeDone];\
+	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :
+		undoManager.isRedoing? NSChangeRedone : NSChangeDone];
 	[self checkUpdate];
 }
 // tabview delegate

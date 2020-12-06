@@ -58,7 +58,9 @@ extern NSString *colKeys[];
 extern CGFloat warpOpacity;
 extern CGFloat panelsAlpha;
 extern BOOL makePanelChildWindow;
-extern NSString *keyWarpOpacity, *keyPanelsAlpha, *keyChildWindow;
+extern NSJSONWritingOptions JSONFormat;
+extern NSString *keyWarpOpacity, *keyPanelsAlpha, *keyChildWindow, *keyJSONFormat;
+#define DEFAULT_JSON_FORM (NSJSONWritingPrettyPrinted|NSJSONWritingSortedKeys)
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @end

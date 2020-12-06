@@ -57,6 +57,13 @@ static void reset_days(Agent *a, RuntimeParams *p) {
 	a->daysToDie = my_random(&p->fatal) + a->daysToOnset;
 	a->imExpr = my_random(&p->immun);
 }
+#define ALT_RATE .1
+static void alter_days(Agent *a, RuntimeParams *p) {
+	a->daysToRecover += (my_random(&p->recov) - a->daysToRecover) * ALT_RATE;
+	a->daysToOnset += (my_random(&p->incub) - a->daysToOnset) * ALT_RATE;
+	a->daysToDie += (my_random(&p->fatal) + a->daysToOnset - a->daysToDie) * ALT_RATE;
+	a->imExpr += (my_random(&p->immun) - a->imExpr) * ALT_RATE;
+}
 void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	memset(a, 0, sizeof(Agent));
 	a->app = random() / (CGFloat)0x7fffffff;
@@ -69,14 +76,13 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->health = Susceptible;
 	a->nInfects = -1;
 	a->isOutOfField = YES;
-	a->mass = my_random(&rp->mass);
 	reset_days(a, rp);
 	a->lastTested = -999999;
 }
 void reset_for_step(Agent *a) {
 	a->fx = a->fy = 0.;
 	a->best = NULL;
-	a->bestDist = BIG_NUM;
+	a->bestDist = a->gatDist = BIG_NUM;
 	a->newHealth = a->health;
 }
 static NSInteger index_in_pop(Agent *a, WorldParams *p) {
@@ -254,7 +260,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 		if (a->daysInfected > a->imExpr) {
 			a->newHealth = Susceptible;
 			a->daysInfected = a->daysDiseased = 0;
-			reset_days(a, rp);
+			alter_days(a, rp);
 		} break;
 		default: break;
 	}
@@ -279,7 +285,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 		}
 		a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 		a->fy += wall(a->y) - wall(wp->worldSize - a->y);
-		CGFloat mass = ((a->health == Symptomatic)? 200. : 10.) * a->mass / 100.;
+		CGFloat mass = ((a->health == Symptomatic)? 200. : 10.) * rp->mass / 100.;
 		if (a->best != NULL && !a->distancing) {
 			CGFloat dx = a->best->x - a->x;
 			CGFloat dy = a->best->y - a->y;
@@ -288,6 +294,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 			a->fy += dy / d;
 		}
 		CGFloat fric = pow(1. - .8 * rp->friction / 100., 1. / wp->stepsPerDay);
+		if (a->gatDist < 1.) fric *= a->gatDist * .5 + .5;
 		a->vx = a->vx * fric + a->fx / mass / wp->stepsPerDay;
 		a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
 		CGFloat v = hypot(a->vx, a->vy);

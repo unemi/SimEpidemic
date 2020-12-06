@@ -18,9 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 	IBOutlet NSTabView *tabView;
 	IBOutlet NSTextField *fricDgt, *avoidDgt, *maxSpdDgt;
 	IBOutlet NSSlider *fricSld, *avoidSld, *maxSpdSld;
-	IBOutlet NSTextField *infecDgt, *infecDstDgt, *contagDDgt, *contagPDgt;
+	IBOutlet NSTextField *massDgt, *infecDgt, *infecDstDgt, *contagDDgt, *contagPDgt;
 	IBOutlet NSTextField
-		*massMinDgt, *massMaxDgt, *massModeDgt,
 		*mobDistMinDgt, *mobDistMaxDgt, *mobDistModeDgt,
 		*incubMinDgt, *incubMaxDgt, *incubModeDgt,
 		*fatalMinDgt, *fatalMaxDgt, *fatalModeDgt,
@@ -29,7 +28,7 @@ NS_ASSUME_NONNULL_BEGIN
 		*gatSZMinDgt, *gatSZMaxDgt, *gatSZModeDgt,
 		*gatDRMinDgt, *gatDRMaxDgt, *gatDRModeDgt,
 		*gatSTMinDgt, *gatSTMaxDgt, *gatSTModeDgt;
-	IBOutlet NSSlider *infecSld, *infecDstSld, *contagDSld, *contagPSld;
+	IBOutlet NSSlider *massSld, *infecSld, *infecDstSld, *contagDSld, *contagPSld;
 	IBOutlet NSTextField *initPopDgt, *worldSizeDgt, *stepsPerDayDgt, *meshDgt, *nInfecDgt;
 	IBOutlet NSStepper *initPopStp, *worldSizeStp, *stepsPerDayStp, *meshStp, *nInfecStp;
 	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *mobFrDgt, *gatFrDgt, *cntctTrcDgt;
@@ -43,6 +42,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 - (instancetype)initWithDoc:(Document *)dc;
 - (void)adjustControls;
+- (void)adjustParamControls:(NSArray<NSString *> *)paramNames;
 - (void)checkUpdate;
 - (IBAction)changeStepsPerDay:(id)sender;
 - (void)setParamsOfRuntime:(const RuntimeParams *)rp world:(const WorldParams *)wp;

@@ -131,6 +131,11 @@ static NSTextField *label_field(NSString *message) {
 	_digits = NSTextField.new;
 	_digits.doubleValue = 999.9;
 	set_subview(_digits, self, YES);
+	set_subview(label_field(NSLocalizedString(@"ParamTransitionPre", nil)), self, YES);
+	_days = NSTextField.new;
+	_days.doubleValue = 99.9;
+	set_subview(_days, self, YES);
+	set_subview(label_field(NSLocalizedString(@"days", nil)), self, YES);
 	[_namePopUp selectItemAtIndex:0];
 	return self;
 }
@@ -331,12 +336,15 @@ static void check_images(void) {
 	NSPopUpButton *namePopUp = ((ParameterCellView *)self.view).namePopUp;
 	namePopUp.target = self;
 	namePopUp.action = @selector(chooseParameter:);
-	NSTextField *digits = ((ParameterCellView *)self.view).digits;
+	NSTextField *digits = ((ParameterCellView *)self.view).digits,
+		*days = ((ParameterCellView *)self.view).days;
 	digits.doubleValue = scen.doc.runtimeParamsP->PARAM_FS1;
-	digits.delegate = scen;
+	days.doubleValue = 0.;
+	days.delegate = digits.delegate = scen;
 	return self;
 }
 - (CGFloat)value { return ((ParameterCellView *)self.view).digits.doubleValue; }
+- (CGFloat)days { return ((ParameterCellView *)self.view).days.doubleValue; }
 - (void)setParamUndoable:(NSInteger)newIndex value:(CGFloat)newValue {
 	NSInteger orgIndex = _index;
 	CGFloat orgValue = self.value;
@@ -354,7 +362,9 @@ static void check_images(void) {
 }
 - (NSObject *)scenarioElement {
 	NSString *name = ((ParameterCellView *)self.view).namePopUp.titleOfSelectedItem;
-	return @[paramKeyFromName[name], @(self.value)];
+	CGFloat days = self.days;
+	return (days == 0.)? @[paramKeyFromName[name], @(self.value)] :
+		@[paramKeyFromName[name], @(self.value), @(days)];
 }
 @end
 
@@ -959,7 +969,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		return item;
 	} else return nil;
 }
-- (ParamItem *)paramItemWithKey:(NSString *)key value:(NSNumber *)num {
+- (ParamItem *)paramItemWithKey:(NSString *)key value:(NSNumber *)num days:(NSNumber *)days {
 	ParamItem *item = [ParamItem.alloc initWithScenario:self];
 	ParameterCellView *cView = (ParameterCellView *)item.view;
 	NSPopUpButton *prmPopUp = cView.namePopUp;
@@ -968,6 +978,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	item.index = idx;
 	[prmPopUp selectItemAtIndex:idx];
 	cView.digits.doubleValue = num.doubleValue;
+	cView.days.doubleValue = (days == nil)? 0. : days.doubleValue;
 	return item;
 }
 - (CondItem *)condItemFromObject:(NSObject *)elm label:(NSString *)label {
@@ -1000,14 +1011,15 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 				((CondItem *)item).destination = [((NSArray *)elm)[0] integerValue];
 				[((CondCellView *)item.view).typePopUp selectItemAtIndex:CondTypeMoveWhen];
 				[(CondCellView *)item.view adjustViews:CondTypeMoveWhen];
-			} else if (((NSArray *)elm).count != 2) continue;
+			} else if (((NSArray *)elm).count < 2) continue;
 			else if (![((NSArray *)elm)[0] isKindOfClass:NSString.class]) continue;
 			else if ([((NSArray *)elm)[1] isKindOfClass:NSNumber.class])
-				item = [self paramItemWithKey:((NSArray *)elm)[0] value:((NSArray *)elm)[1]];
+				item = [self paramItemWithKey:((NSArray *)elm)[0] value:((NSArray *)elm)[1]
+					days:(((NSArray *)elm).count > 2)? ((NSArray *)elm)[2] : nil];
 			else item = [self condItemFromObject:((NSArray *)elm)[1] label:((NSArray *)elm)[0]];
 		} else if ([elm isKindOfClass:NSDictionary.class]) { // for upper compatibility
 			for (NSString *key in ((NSDictionary *)elm).keyEnumerator) {
-				item = [self paramItemWithKey:key value:((NSDictionary *)elm)[key]];
+				item = [self paramItemWithKey:key value:((NSDictionary *)elm)[key] days:nil];
 				[ma addObject:item];
 			}
 			item = nil;
@@ -1015,7 +1027,11 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 			item = [InfecItem.alloc initWithScenario:self];
 			((InfecCellView *)(item.view)).digits.integerValue = ((NSNumber *)elm).integerValue;
 		} else item = [self condItemFromObject:elm label:nil];
-		if (item != nil) [ma addObject:item];
+		if (item == nil) continue;
+		if ([item isKindOfClass:CondItem.class] && ((CondItem *)item).element != nil)
+			for (NSButton *btn in item.btnsView.buttons)
+				if (btn.title.length == 2) btn.enabled = NO;
+		[ma addObject:item];
 	}
 	for (NSInteger i = 0; i < ma.count; i ++) {
 		[ma[i] setupLineNumberView:i + 1];
@@ -1045,17 +1061,24 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		self->savedPList = (NSArray *)object;
 	});
 }
-- (IBAction)saveDocument:(id)sender {
+static NSArray *plist_of_all_items(NSArray *itemList) {
 	NSMutableArray *ma = NSMutableArray.new;
 	for (ScenarioItem *item in itemList) {
 		NSObject *elm = item.propertyObject;
-		if (elm != nil) [ma addObject:item.propertyObject];
+		if (elm != nil) [ma addObject:elm];
 	}
+	return ma;
+}
+- (IBAction)saveDocument:(id)sender {
+	NSArray *ma = plist_of_all_items(itemList);
 	save_property_data(@"sEpS", self.window, ma);
 	savedPList = [NSArray arrayWithArray:ma];
 }
 - (IBAction)revertToSaved:(id)sender {
 	if (savedPList != nil) [self setScenarioWithArray:savedPList];
+}
+- (IBAction)copyAsJSON:(id)sender {
+	copy_plist_as_JSON_text(plist_of_all_items(itemList), self.window);
 }
 - (IBAction)remove:(id)sender {
 	_doc.scenario = @[];

@@ -75,6 +75,7 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 		 (size > SURROUND)? d - size + SURROUND : d * SURROUND / size);
 	a->fx += dx / d * f;
 	a->fy += dy / d * f;
+	if (d < size && a->gatDist > d / size) a->gatDist = d / size;
 }
 #ifndef NOGUI
 - (void)drawItWithRGB:(CGFloat *)rgb rect:(NSRect)dRect {

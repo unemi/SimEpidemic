@@ -12,8 +12,8 @@
 #import "noGUI.h"
 #import "PeriodicReporter.h"
 #import "BatchJob.h"
-#import "Document.h"
-#import "StatPanel.h"
+#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/StatPanel.h"
 #import "DataCompress.h"
 #define MAX_INT32 0x7fffffff
 
@@ -369,13 +369,18 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 				NSInteger n = opArray.count, m = n + ((JSONStr != nil)? 1 : 0);
 				if (m > 0) {
 					NSString *keys[m], *objs[m];
+					NSInteger k = 0;
 					for (NSInteger i = 0; i < n; i ++) {
-						NSArray *opPair = [opArray[i] componentsSeparatedByString:@"="];
-						keys[i] = opPair[0];
-						objs[i] = (opPair.count > 1)? opPair[1] : @"";
+						NSScanner *scan = [NSScanner scannerWithString:opArray[i]];
+						NSString *key;
+						if ([scan scanUpToString:@"=" intoString:&key]) {
+							keys[k] = key;
+							objs[k ++] = scan.atEnd? @"" :
+								[opArray[i] substringFromIndex:scan.scanLocation + 1];
+						}
 					}
 					if (JSONStr != nil) { keys[n] = @"JSON"; objs[n] = JSONStr; }
-					query = [NSDictionary dictionaryWithObjects:objs forKeys:keys count:m];
+					query = [NSDictionary dictionaryWithObjects:objs forKeys:keys count:k];
 				} else query = nil;
 			}
 			proc(self);

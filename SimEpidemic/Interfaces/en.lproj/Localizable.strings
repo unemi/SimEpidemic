@@ -22,3 +22,5 @@
 "PreConditionWord" = "";
 "AnimeStepsFormat" = "Draw in each %ld steps.";
 "HistogramFormat" = "%@\nSamples %ld\nMin %ld, Max %ld\nMedian %ld\nAverage %.2f";
+
+"ParamTransitionPre" = "in";

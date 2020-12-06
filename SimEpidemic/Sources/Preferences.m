@@ -26,6 +26,10 @@ static __weak NSColorWell *colWells[N_COLORS];
 	warpOpacitySld.doubleValue = warpOpacityDgt.doubleValue = warpOpacity;
 	panelsAlphaSld.doubleValue = panelsAlphaDgt.doubleValue = panelsAlpha;
 	childWinCBox.state = makePanelChildWindow;
+	jsonPPCBox.state = (JSONFormat & NSJSONWritingPrettyPrinted) != 0;
+	jsonSKCBox.state = (JSONFormat & NSJSONWritingSortedKeys) != 0;
+	jsonPPCBox.tag = NSJSONWritingPrettyPrinted;
+	jsonSKCBox.tag = NSJSONWritingSortedKeys;
 }
 - (IBAction)changeAnimeSteps:(id)sender {
 	defaultAnimeSteps = 1 << animeStepper.integerValue;
@@ -94,5 +98,13 @@ static __weak NSColorWell *colWells[N_COLORS];
 		for (NSString *key in paramKeys)
 			[ud removeObjectForKey:key];
 	});
+}
+- (IBAction)checkJSONform:(NSButton *)btn {
+	NSInteger flag = btn.tag;
+	NSJSONWritingOptions orgValue = JSONFormat;
+	if (btn.state) JSONFormat |= flag;
+	else JSONFormat &= ~flag;
+	if (JSONFormat != orgValue)
+		[NSUserDefaults.standardUserDefaults setInteger:JSONFormat forKey:keyJSONFormat];
 }
 @end

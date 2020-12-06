@@ -131,6 +131,7 @@ NSInteger nQueues = 10;
 	NSInteger animeSteps, stopAtNDays;
 	NSArray *scenario;
 	NSPredicate *predicateToStop;
+	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
 	TestEntry *testQueHead, *testQueTail;
 	GatheringMap *gatheringsMap;
 	NSMutableArray<Gathering *> *gatherings;
@@ -279,12 +280,12 @@ NSInteger nQueues = 10;
 }
 #endif
 - (void)execScenario {
-	char visitFlags[scenario.count];
-	memset(visitFlags, 0, scenario.count);
 	predicateToStop = nil;
 	if (scenario == nil) return;
+	char visitFlags[scenario.count];
+	memset(visitFlags, 0, scenario.count);
 	BOOL hasStopCond = NO;
-	NSMutableDictionary *md = NSMutableDictionary.new;
+	NSMutableDictionary<NSString *, NSNumber *> *md = NSMutableDictionary.new;
 	while (scenarioIndex < scenario.count) {
 		if (visitFlags[scenarioIndex] == YES) {
 			error_msg([NSString stringWithFormat:@"%@: %ld",
@@ -310,7 +311,11 @@ NSInteger nQueues = 10;
 				predicateToStop = (NSPredicate *)((NSArray *)item)[1];
 				hasStopCond = YES;
 				break;
-			} else md[((NSArray *)item)[0]] = ((NSArray *)item)[1];	// paramter assignment
+			} else if (((NSArray *)item).count == 2)
+				md[((NSArray *)item)[0]] = ((NSArray *)item)[1];	// paramter assignment
+			else paramChangers[((NSArray *)item)[0]] = @[((NSArray *)item)[1],
+				@(runtimeParams.step / worldParams.stepsPerDay +
+					((NSNumber *)(((NSArray *)item)[2])).doubleValue)];
 		} else if ([item isKindOfClass:NSDictionary.class]) {	// for upper compatibility
 			[md addEntriesFromDictionary:(NSDictionary *)item];
 		} else if ([item isKindOfClass:NSNumber.class]) {	// add infected individuals
@@ -325,9 +330,13 @@ NSInteger nQueues = 10;
 	if (hasStopCond) in_main_thread( ^{ [self adjustScenarioText]; });
 #endif
 	if (md.count > 0) {
-		set_params_from_dict(&runtimeParams, &worldParams, md);
+		for (NSString *key in md.keyEnumerator) {
+			NSInteger idx = paramIndexFromKey[key].integerValue;
+			(&runtimeParams.PARAM_F1)[idx] = md[key].doubleValue;
+		}
 #ifndef NOGUI
-		in_main_thread( ^{ [self->paramPanel adjustControls]; });
+		NSArray<NSString *> *allKeys = md.allKeys;
+		in_main_thread( ^{ [self->paramPanel adjustParamControls:allKeys]; });
 #endif
 	}
 	if (predicateToStop == nil && scenarioIndex == scenario.count) scenarioIndex ++;
@@ -374,6 +383,7 @@ NSInteger nQueues = 10;
 	scenarioIndex = 0;
 	[self setupPhaseInfo];
 	[self adjustScenarioText];
+	paramChangers = NSMutableDictionary.new;
 	if (runtimeParams.step == 0) [self execScenario];
 	[scenarioPanel adjustControls:
 		self.undoManager.undoing || self.undoManager.redoing];
@@ -471,6 +481,7 @@ NSInteger nQueues = 10;
 	runtimeParams.step = 0;
 	[statInfo reset:nPop infected:worldParams.nInitInfec];
 	[popLock unlock];
+	paramChangers = NSMutableDictionary.new;
 	scenarioIndex = 0;
 	[self execScenario];
 #ifdef NOGUI
@@ -622,6 +633,7 @@ NSInteger nQueues = 10;
 }
 #endif
 NSString *keyParameters = @"parameters", *keyScenario = @"scenario";
+static NSString *keyDaysToStop = @"daysToStop";
 static NSObject *property_from_element(NSObject *elm) {
 	if ([elm isKindOfClass:NSPredicate.class]) return ((NSPredicate *)elm).predicateFormat;
 	else if (![elm isKindOfClass:NSArray.class]) return elm;
@@ -686,6 +698,7 @@ static NSObject *element_from_property(NSObject *prop) {
 - (NSData *)dataOfType:(NSString *)typeName error:(NSError **)outError {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyAnimeSteps] = @(animeSteps);
+	if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
 	if (scenario != nil) {
 		dict[keyParameters] = param_dict(&initParams, &worldParams);
 		dict[keyScenario] = [self scenarioPList];
@@ -700,6 +713,7 @@ static NSObject *element_from_property(NSObject *prop) {
 	if (dict == nil) return NO;
 	NSNumber *num = dict[keyAnimeSteps];
 	if (num != nil) animeSteps = num.integerValue;
+	if ((num = dict[keyDaysToStop]) != nil) stopAtNDays = num.integerValue;
 	NSDictionary *pDict = dict[keyParameters];
 	if (pDict != nil) {
 		set_params_from_dict(&runtimeParams, &worldParams, pDict);
@@ -711,6 +725,23 @@ static NSObject *element_from_property(NSObject *prop) {
 		@catch (NSString *msg) { error_msg(msg, nil, NO); }
 	}
 	return YES;
+}
+void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
+	NSError *error;
+	NSData *data = [NSJSONSerialization dataWithJSONObject:plist
+		options:JSONFormat error:&error];
+	if (data != nil) {
+		NSPasteboard *pb = NSPasteboard.generalPasteboard;
+		[pb declareTypes:@[NSPasteboardTypeString] owner:NSApp];
+		[pb setData:data forType:NSPasteboardTypeString];
+	} else if (window != nil) error_msg(error, window, NO);
+}
+- (IBAction)copy:(id)sender {
+	NSMutableDictionary *dict = NSMutableDictionary.new;
+	if (stopAtNDays > 0) dict[@"stopAt"] = @(stopAtNDays);
+	if (scenario != nil) dict[keyScenario] = [self scenarioPList];
+	dict[keyParameters] = param_dict(&initParams, &worldParams);
+	copy_plist_as_JSON_text(dict, view.window);
 }
 #endif
 static NSLock *testEntriesLock = nil;
@@ -803,6 +834,29 @@ static NSInteger mCount = 0, mCount2 = 0;
 	NSInteger tmIdx = 0;
 	mCount ++;
 #endif
+	if (paramChangers != nil && paramChangers.count > 0) {
+		NSMutableArray<NSString *> *keyToRemove = NSMutableArray.new;
+		for (NSString *key in paramChangers.keyEnumerator) {
+			NSArray<NSNumber *> *entry = paramChangers[key];
+			CGFloat newValue, goalStep = entry[1].doubleValue * worldParams.stepsPerDay;
+			NSInteger idx = paramIndexFromKey[key].integerValue;
+			if (goalStep < runtimeParams.step) {
+				[keyToRemove addObject:key];
+				newValue = entry[0].doubleValue;
+			} else {
+				CGFloat value = (&runtimeParams.PARAM_F1)[idx];
+				newValue = value + (entry[0].doubleValue - value) /
+					(goalStep - runtimeParams.step);
+			}
+			(&runtimeParams.PARAM_F1)[idx] = newValue;
+		}
+#ifndef NOGUI
+		NSArray<NSString *> *allKeys = paramChangers.allKeys;
+		in_main_thread(^{ [self->paramPanel adjustParamControls:allKeys]; });
+#endif
+		for (NSString *key in keyToRemove) [paramChangers removeObjectForKey:key];
+	}
+//
     NSInteger unitJ = 4;
 	NSInteger nCells = worldParams.mesh * worldParams.mesh;
 	memset(pRange, 0, sizeof(NSRange) * nCells);

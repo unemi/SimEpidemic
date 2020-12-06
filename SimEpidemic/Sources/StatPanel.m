@@ -361,7 +361,7 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 		rect.origin.x += rect.size.width;
 		rect.size.width = step * size.width / steps - rect.origin.x;
 		[[NSColor colorWithHue:((CGFloat)phase) / nPhases
-			saturation:1. brightness:1. alpha:.2] setFill];
+			saturation:1. brightness:1. alpha:.15] setFill];
 		[NSBezierPath fillRect:rect];
 		if (i == n - 1) break;
 		NSInteger lblIdx = scenarioPhases[i].integerValue;

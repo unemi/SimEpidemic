@@ -12,6 +12,9 @@
 extern NSString *keyParameters, *keyScenario;
 extern void add_new_cinfo(Agent *a, Agent *b, NSInteger tm);
 extern void in_main_thread(dispatch_block_t block);
+#ifndef NOGUI
+extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
+#endif
 #ifdef DEBUG
 extern void my_exit(void);
 #endif

@@ -15,7 +15,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 
 @interface ParameterCellView : NSTableCellView
 @property (readonly) NSPopUpButton *namePopUp;
-@property (readonly) NSTextField *digits;
+@property (readonly) NSTextField *digits, *days;
 @end
 @interface ScenarioItem : NSObject {
 	Scenario *scenario;

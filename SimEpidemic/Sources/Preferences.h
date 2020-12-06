@@ -19,6 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 	IBOutlet NSSlider *warpOpacitySld, *panelsAlphaSld;
 	IBOutlet NSTextField *warpOpacityDgt, *panelsAlphaDgt;
 	IBOutlet NSButton *childWinCBox;
+	IBOutlet NSButton *jsonPPCBox, *jsonSKCBox;
 }
 @end
 

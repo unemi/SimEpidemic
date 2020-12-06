@@ -14,8 +14,8 @@
             filePath = "SimEpidemic/Sources/Agent.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "109"
-            endingLineNumber = "109"
+            startingLineNumber = "116"
+            endingLineNumber = "116"
             landmarkName = "add_agent(a, wp, Pop)"
             landmarkType = "9">
          </BreakpointContent>
@@ -46,8 +46,8 @@
             filePath = "SimEpidemic/Sources/Agent.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "92"
-            endingLineNumber = "92"
+            startingLineNumber = "99"
+            endingLineNumber = "99"
             landmarkName = "add_to_list(a, list)"
             landmarkType = "9">
             <Locations>
@@ -171,26 +171,10 @@
             filePath = "SimEpidemic/Sources/Agent.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "293"
-            endingLineNumber = "293"
+            startingLineNumber = "301"
+            endingLineNumber = "301"
             landmarkName = "step_agent(a, rp, wp, doc, cellLocks)"
             landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "09A94373-0747-4704-B9C9-BB2B3D13EA0F"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "SimEpidemic/Sources/Document.m"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "341"
-            endingLineNumber = "341"
-            landmarkName = "-setupPhaseInfo"
-            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy

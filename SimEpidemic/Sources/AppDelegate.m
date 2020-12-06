@@ -95,7 +95,7 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 		NSError *error;
 		NSData *data = [sp.URL.pathExtension isEqualToString:@"json"]?
 			[NSJSONSerialization dataWithJSONObject:object
-				options:NSJSONWritingSortedKeys error:&error] :
+				options:JSONFormat error:&error] :
 			[NSPropertyListSerialization dataWithPropertyList:object
 			format:NSPropertyListXMLFormat_v1_0 options:0 error:&error];
 		if (data == nil) { error_msg(error, window, NO); return; }
@@ -105,6 +105,7 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 }
 NSString *keyAnimeSteps = @"animeSteps";
 static ParamInfo paramInfo[] = {
+	{ ParamTypeFloat, @"mass", {.f = { 20., 1., 100.}}},
 	{ ParamTypeFloat, @"friction", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"avoidance", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"maxSpeed", {.f = { 50., 10., 100.}}},
@@ -126,7 +127,6 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloatS, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
 	{ ParamTypeFloatS, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
 
-	{ ParamTypeDist, @"mass", {.d = { 10., 20., 100.}}},
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
 	{ ParamTypeDist, @"fatality", {.d = { 4., 16., 20.}}},
@@ -177,8 +177,15 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 		NSNumber *idxNum = paramIndexFromKey[key];
 		if (idxNum == nil) continue;
 		NSInteger index = idxNum.integerValue;
-		if (index < IDX_D) { if (fp != NULL) fp[index] = [dict[key] doubleValue]; }
-		else if (index < IDX_I) { if (dp != NULL) {
+		if (index < IDX_D) {
+			if (fp != NULL) {
+				if ([dict[key] isKindOfClass:NSNumber.class])
+					fp[index] = [dict[key] doubleValue];
+				else if ([dict[key] isKindOfClass:NSArray.class]
+					&& ((NSArray *)dict[key]).count > 2)
+					fp[index] = [((NSArray *)dict[key])[2] doubleValue];
+			}
+		} else if (index < IDX_I) { if (dp != NULL) {
 			NSArray<NSNumber *> *arr = dict[key];
 			if ([arr isKindOfClass:NSArray.class] && arr.count >= 3)
 				dp[index - IDX_D] = (DistInfo){
@@ -206,8 +213,9 @@ NSString *colKeys[] = {
 CGFloat warpOpacity = DEFAULT_WARP_OPACITY;
 CGFloat panelsAlpha = DEFAULT_PANELS_ALPHA;
 BOOL makePanelChildWindow = DEFAULT_CHILD_WIN;
+NSJSONWritingOptions JSONFormat = DEFAULT_JSON_FORM;
 NSString *keyWarpOpacity = @"warpOpacity", *keyPanelsAlpha = @"panelsAlpha",
-	*keyChildWindow = @"makePanelChildWindow";
+	*keyChildWindow = @"makePanelChildWindow", *keyJSONFormat = @"JSONFormat";
 void setup_colors(void) {
 	NSColorSpace *colSpc = NSColorSpace.genericRGBColorSpace;
 	for (NSInteger i = 0; i < N_COLORS; i ++) {
@@ -307,8 +315,12 @@ static struct SetupInfo
 	for (NSInteger i = 0; i < N_COLORS; i ++)
 		if ((num = [ud objectForKey:colKeys[i]])) stateRGB[i] = num.integerValue;
 	for (NSInteger i = 0; i < info.nF; i ++)
-		if ((num = [ud objectForKey:paramInfo[i].key]))
-			(&userDefaultRuntimeParams.PARAM_F1)[i] = num.doubleValue;
+		if ((num = [ud objectForKey:paramInfo[i].key])) {
+			CGFloat *vp = &(&userDefaultRuntimeParams.PARAM_F1)[i];
+			if ([num isKindOfClass:NSNumber.class]) *vp = num.doubleValue;
+			else if ([num isKindOfClass:NSArray.class] && ((NSArray *)num).count > 2)
+				*vp = [((NSArray *)num)[2] doubleValue];
+		}
 	for (NSInteger i = 0; i < info.nD; i ++)
 		if ((arr = [ud objectForKey:paramInfo[i + info.nF].key]))
 			(&userDefaultRuntimeParams.PARAM_D1)[i] = (DistInfo){
@@ -319,6 +331,7 @@ static struct SetupInfo
 	if ((num = [ud objectForKey:keyWarpOpacity])) warpOpacity = num.doubleValue;
 	if ((num = [ud objectForKey:keyPanelsAlpha])) panelsAlpha = num.doubleValue;
 	if ((num = [ud objectForKey:keyChildWindow])) makePanelChildWindow = num.boolValue;
+	if ((num = [ud objectForKey:keyJSONFormat])) JSONFormat = num.integerValue;
 	setup_colors();
 	NSBezierPath.defaultLineJoinStyle = NSLineJoinStyleBevel;
 }

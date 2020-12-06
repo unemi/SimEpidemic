@@ -38,7 +38,6 @@
 "Any" = "いずれか";
 "All" = "すべて";
 "of the following are true." = "が真のとき";
-"days" = "経過日数";
 "susceptible" = "未感染者数";
 "infected" = "感染者数";
 "symptomatic" = "発症者数";
@@ -76,3 +75,4 @@
 "day" = "日";
 "days" = "日";
 "Looping was found in the Scenario." = "シナリオ内でループが見つかりました。";
+"ParamTransitionPre" = "遷移";
