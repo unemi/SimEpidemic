@@ -116,15 +116,34 @@ static NSTextField *label_field(NSString *message) {
 }
 @end
 
+NSString *paramMenuInfo[] = {
+	// move
+	@"mass", @"friction", @"avoidance", @"maxSpeed", @"",
+	// pathogenesis
+	@"infectionProberbility", @"infectionDistance",
+//	@"incubation", @"contagionDelay", @"contagionPeak",
+//	@"fatality", @"recovery", @"immunity",
+	@"",
+	// measures
+	@"distancingStrength", @"distancingObedience",
+	@"mobilityFrequency", @"mobilityDistance",
+	@"gatheringFrequency", @"gatheringSize", @"gatheringDuration", @"gatheringStrength",
+	@"contactTracing", @"",
+	// tests
+	@"testDelay", @"testProcess", @"testInterval",
+	@"testSensitivity", @"testSpecificity",
+	@"subjectAsymptomatic", @"subjectSymptomatic",
+nil };
 @implementation ParameterCellView
 - (instancetype)init {
 	NSSize fSize = CELL_SIZE;
 	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
 	set_subview(label_field(@"Parameters"), self, YES);
 	_namePopUp = NSPopUpButton.new;
-	for (NSString *title in paramNames) {
-		if ([paramKeyFromName[title] isEqualTo:@"initPop"]) break;
-		[_namePopUp addItemWithTitle:title];
+	for (NSInteger i = 0; paramMenuInfo[i] != nil; i ++) {
+		if (paramMenuInfo[i].length == 0)
+			[_namePopUp.menu addItem:NSMenuItem.separatorItem];
+		else [_namePopUp addItemWithTitle:NSLocalizedString(paramMenuInfo[i], nil)];
 	}
 	set_subview(_namePopUp, self, YES);
 	set_subview(label_field(@"⇐"), self, YES);
@@ -136,8 +155,23 @@ static NSTextField *label_field(NSString *message) {
 	_days.doubleValue = 99.9;
 	set_subview(_days, self, YES);
 	set_subview(label_field(NSLocalizedString(@"days", nil)), self, YES);
+	_distBtn = [NSButton.alloc initWithFrame:_digits.frame];
+	_distBtn.title = NSLocalizedString(@"Value...", nil);
+	_distBtn.controlSize = NSControlSizeMini;
+	_distBtn.bezelStyle = NSBezelStyleRounded;
 	[_namePopUp selectItemAtIndex:0];
 	return self;
+}
+- (void)adjustView:(BOOL)isScalar {
+	if (isScalar) {
+		if (_digits.superview == nil) {
+			[_distBtn removeFromSuperview];
+			[self addSubview:_digits];
+		}
+	} else if (_distBtn.superview == nil) {
+			[_digits removeFromSuperview];
+			[self addSubview:_distBtn];
+	}
 }
 @end
 @interface CondCellView : NSTableCellView
@@ -327,18 +361,22 @@ static void check_images(void) {
 
 @interface ParamItem : ScenarioItem
 @property NSInteger index;
+@property DistInfo distInfo;
 @end
 @implementation ParamItem
 - (instancetype)initWithScenario:(Scenario *)scen {
 	if (!(self = [super initWithScenario:scen])) return nil;
 	[super setupButtonView:@[removeImage]];
-	self.view = ParameterCellView.new;
-	NSPopUpButton *namePopUp = ((ParameterCellView *)self.view).namePopUp;
-	namePopUp.target = self;
+	ParameterCellView *view = ParameterCellView.new;
+	self.view = view;
+	NSPopUpButton *namePopUp = view.namePopUp;
+	NSButton *distBtn = view.distBtn;
+	namePopUp.target = distBtn.target = self;
 	namePopUp.action = @selector(chooseParameter:);
+	distBtn.action = @selector(distParamBeginSheet:);
 	NSTextField *digits = ((ParameterCellView *)self.view).digits,
 		*days = ((ParameterCellView *)self.view).days;
-	digits.doubleValue = scen.doc.runtimeParamsP->PARAM_FS1;
+	digits.doubleValue = scen.doc.runtimeParamsP->PARAM_F1;
 	days.doubleValue = 0.;
 	days.delegate = digits.delegate = scen;
 	return self;
@@ -354,17 +392,46 @@ static void check_images(void) {
 	else _index = newIndex;
 	((ParameterCellView *)self.view).digits.doubleValue = newValue;
 }
+- (void)setDistUndoable:(NSInteger)newIndex value:(DistInfo)newValue {
+	NSInteger orgIndex = _index;
+	DistInfo orgValue = _distInfo;
+	[scenario.undoManager registerUndoWithTarget:self handler:
+		^(ParamItem *target) { [target setDistUndoable:orgIndex value:orgValue]; }];
+	if (newIndex >= 0) [((ParameterCellView *)self.view).namePopUp selectItemAtIndex:newIndex];
+	else _index = newIndex;
+	_distInfo = newValue;
+}
 - (void)chooseParameter:(NSPopUpButton *)sender {
 	NSInteger idx = sender.indexOfSelectedItem;
 	if (idx == _index) return;
-	[self setParamUndoable:-1 value:(&scenario.doc.runtimeParamsP->PARAM_FS1)[idx]];
+	NSInteger prmIdx = paramIndexFromKey[paramMenuInfo[idx]].integerValue;
+	ParameterCellView *view = (ParameterCellView *)self.view;
+	RuntimeParams *rp = scenario.doc.runtimeParamsP;
+	if (prmIdx < IDX_D) {
+		[view adjustView:YES];
+		[self setParamUndoable:-1 value:(&rp->PARAM_F1)[prmIdx]];
+	} else {
+		[view adjustView:NO];
+		[self setDistUndoable:-1 value:(&rp->PARAM_D1)[prmIdx - IDX_D]];
+	}
 	_index = idx;
 }
+- (void)distParamBeginSheet:(id)sender {
+	[scenario distParamBySheetWithItem:self value:_distInfo];
+}
+- (void)distParamEndSheet:(DistInfo)info {
+	DistInfo orgValue = _distInfo;
+	[scenario.undoManager registerUndoWithTarget:self handler:
+		^(ParamItem *target) { target.distInfo = orgValue; }];
+	_distInfo = info;
+}
 - (NSObject *)scenarioElement {
-	NSString *name = ((ParameterCellView *)self.view).namePopUp.titleOfSelectedItem;
+	NSString *key =
+		paramMenuInfo[((ParameterCellView *)self.view).namePopUp.indexOfSelectedItem];
+	NSObject *value = (paramIndexFromKey[key].integerValue < IDX_D)? @(self.value) :
+		@[@(_distInfo.min), @(_distInfo.max), @(_distInfo.mode)];
 	CGFloat days = self.days;
-	return (days == 0.)? @[paramKeyFromName[name], @(self.value)] :
-		@[paramKeyFromName[name], @(self.value), @(days)];
+	return (days == 0.)? @[key, value] : @[key, value, @(days)];
 }
 @end
 
@@ -969,7 +1036,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		return item;
 	} else return nil;
 }
-- (ParamItem *)paramItemWithKey:(NSString *)key value:(NSNumber *)num days:(NSNumber *)days {
+- (ParamItem *)paramItemWithKey:(NSString *)key value:(NSObject *)value days:(NSNumber *)days {
 	ParamItem *item = [ParamItem.alloc initWithScenario:self];
 	ParameterCellView *cView = (ParameterCellView *)item.view;
 	NSPopUpButton *prmPopUp = cView.namePopUp;
@@ -977,8 +1044,16 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	if (idx == -1) return nil;
 	item.index = idx;
 	[prmPopUp selectItemAtIndex:idx];
-	cView.digits.doubleValue = num.doubleValue;
+	if ([value isKindOfClass:NSNumber.class])
+		cView.digits.doubleValue = ((NSNumber *)value).doubleValue;
+	else if ([value isKindOfClass:NSArray.class]) {
+		NSArray<NSNumber *> *arr = (NSArray<NSNumber *> *)value;
+		item.distInfo = (DistInfo)
+			{arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
+	}
 	cView.days.doubleValue = (days == nil)? 0. : days.doubleValue;
+	NSInteger prmIdx = paramIndexFromKey[key].integerValue;
+	[cView adjustView:prmIdx < IDX_D];
 	return item;
 }
 - (CondItem *)condItemFromObject:(NSObject *)elm label:(NSString *)label {
@@ -1013,7 +1088,8 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 				[(CondCellView *)item.view adjustViews:CondTypeMoveWhen];
 			} else if (((NSArray *)elm).count < 2) continue;
 			else if (![((NSArray *)elm)[0] isKindOfClass:NSString.class]) continue;
-			else if ([((NSArray *)elm)[1] isKindOfClass:NSNumber.class])
+			else if ([((NSArray *)elm)[1] isKindOfClass:NSNumber.class] ||
+				[((NSArray *)elm)[1] isKindOfClass:NSArray.class])
 				item = [self paramItemWithKey:((NSArray *)elm)[0] value:((NSArray *)elm)[1]
 					days:(((NSArray *)elm).count > 2)? ((NSArray *)elm)[2] : nil];
 			else item = [self condItemFromObject:((NSArray *)elm)[1] label:((NSArray *)elm)[0]];
@@ -1093,6 +1169,26 @@ static NSArray *plist_of_all_items(NSArray *itemList) {
 	appliedCount = modificationCount;
 	applyBtn.enabled = NO;
 	removeBtn.enabled = ma.count > 0;
+}
+- (IBAction)ok:(NSButton *)button {
+	[self.window endSheet:button.window returnCode:NSModalResponseOK];
+}
+- (IBAction)cancel:(NSButton *)button {
+	[self.window endSheet:button.window returnCode:NSModalResponseCancel];
+}
+- (void)distParamBySheetWithItem:(ParamItem *)item value:(DistInfo)info {
+	ParameterCellView *view = (ParameterCellView *)item.view;
+	itemIdx.integerValue = [itemList indexOfObject:item] + 1;
+	paramNameTxt.stringValue = view.namePopUp.titleOfSelectedItem;
+	NSTextField *min = minDgt, *max = maxDgt, *mode = modeDgt;
+	min.doubleValue = info.min;
+	max.doubleValue = info.max;
+	mode.doubleValue = info.mode;
+	[self.window beginSheet:distParamSheet completionHandler:
+	^(NSModalResponse returnCode) { if (returnCode == NSModalResponseOK) {
+		[item distParamEndSheet:(DistInfo)
+			{min.doubleValue, max.doubleValue, mode.doubleValue}];
+	}}];
 }
 // NSWindowDelagate methods
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {

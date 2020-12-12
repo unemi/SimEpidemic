@@ -63,7 +63,6 @@ void show_anime_steps(NSTextField *txtField, NSInteger steps) {
 		NSLocalizedString(@"Draw in each step.", nil) :
 		[NSString stringWithFormat:NSLocalizedString(@"AnimeStepsFormat", nil), steps];
 }
-#endif
 NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window) {
 	NSError *error;
 	NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
@@ -104,6 +103,7 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 	}];
 }
 NSString *keyAnimeSteps = @"animeSteps";
+#endif
 static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"mass", {.f = { 20., 1., 100.}}},
 	{ ParamTypeFloat, @"friction", {.f = { 50., 0., 100.}}},
@@ -111,21 +111,20 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"maxSpeed", {.f = { 50., 10., 100.}}},
 	{ ParamTypeFloat, @"contagionDelay", {.f = { .5, 0., 10.}}},
 	{ ParamTypeFloat, @"contagionPeak", {.f = { 3., 1., 10.}}},
-
-	{ ParamTypeFloatS, @"infectionProberbility", {.f = { 80., 0., 100.}}},
-	{ ParamTypeFloatS, @"infectionDistance", {.f = { 3., .1, 10.}}},
-	{ ParamTypeFloatS, @"distancingStrength", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloatS, @"distancingObedience", {.f = { 20., 0., 100.}}},
-	{ ParamTypeFloatS, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloatS, @"gatheringFrequency", {.f = { 30., 0., 100.}}},
-	{ ParamTypeFloatS, @"contactTracing", {.f = { 20., 0., 100.}}},
-	{ ParamTypeFloatS, @"testDelay", {.f = { 1., 0., 10.}}},
-	{ ParamTypeFloatS, @"testProcess", {.f = { 1., 0., 10.}}},
-	{ ParamTypeFloatS, @"testInterval", {.f = { 2., 0., 10.}}},
-	{ ParamTypeFloatS, @"testSensitivity", {.f = { 70., 0., 100.}}},
-	{ ParamTypeFloatS, @"testSpecificity", {.f = { 99.8, 0., 100.}}},
-	{ ParamTypeFloatS, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
-	{ ParamTypeFloatS, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
+	{ ParamTypeFloat, @"infectionProberbility", {.f = { 80., 0., 100.}}},
+	{ ParamTypeFloat, @"infectionDistance", {.f = { 3., .1, 10.}}},
+	{ ParamTypeFloat, @"distancingStrength", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
+	{ ParamTypeFloat, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"gatheringFrequency", {.f = { 30., 0., 100.}}},
+	{ ParamTypeFloat, @"contactTracing", {.f = { 20., 0., 100.}}},
+	{ ParamTypeFloat, @"testDelay", {.f = { 1., 0., 10.}}},
+	{ ParamTypeFloat, @"testProcess", {.f = { 1., 0., 10.}}},
+	{ ParamTypeFloat, @"testInterval", {.f = { 2., 0., 10.}}},
+	{ ParamTypeFloat, @"testSensitivity", {.f = { 70., 0., 100.}}},
+	{ ParamTypeFloat, @"testSpecificity", {.f = { 99.8, 0., 100.}}},
+	{ ParamTypeFloat, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
+	{ ParamTypeFloat, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
 
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
@@ -146,7 +145,7 @@ static ParamInfo paramInfo[] = {
 NSInteger defaultAnimeSteps = 1;
 RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
 WorldParams defaultWorldParams, userDefaultWorldParams;
-NSArray<NSString *> *paramKeys, *paramNames;
+NSArray<NSString *> *paramKeys;
 NSArray<NSNumberFormatter *> *paramFormatters;
 NSDictionary<NSString *, NSString *> *paramKeyFromName;
 NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
@@ -156,7 +155,7 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
 	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
-		case ParamTypeFloat: case ParamTypeFloatS:
+		case ParamTypeFloat:
 			if (fp != NULL) md[p->key] = @(*(fp ++)); break;
 		case ParamTypeDist: if (dp != NULL) {
 			md[p->key] = @[@(dp[0].min), @(dp[0].max), @(dp[0].mode)];
@@ -167,8 +166,6 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	}
 	return md;
 }
-#define IDX_D 1000
-#define IDX_I 2000
 void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict) {
 	CGFloat *fp = (rp != NULL)? &rp->PARAM_F1 : NULL;
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
@@ -240,9 +237,8 @@ static struct SetupInfo
 #endif
 	applicationSetups(void) {
 	nCores = NSProcessInfo.processInfo.processorCount;
-	NSInteger nF = 0, nFS = 0, nD = 0, nI = 0;
+	NSInteger nF = 0, nD = 0, nI = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
-		case ParamTypeFloatS: nFS ++;
 		case ParamTypeFloat:
 			(&defaultRuntimeParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
 		case ParamTypeDist: (&defaultRuntimeParams.PARAM_D1)[nD ++] = (DistInfo){
@@ -257,7 +253,7 @@ static struct SetupInfo
 		ParamInfo *p = paramInfo + i;
 		keys[i] = p->key;
 		switch (p->type) {
-			case ParamTypeFloat: case ParamTypeFloatS:
+			case ParamTypeFloat:
 			indexes[i] = @(i);
 			names[i] = NSLocalizedString(p->key, nil);
 			break;
@@ -267,7 +263,6 @@ static struct SetupInfo
 		}
 	}
 	paramKeys = [NSArray arrayWithObjects:keys count:nn];
-	paramNames = [NSArray arrayWithObjects:names + nF - nFS count:nFS];
 	paramKeyFromName = [NSDictionary dictionaryWithObjects:keys forKeys:names count:nF];
 	paramIndexFromKey = [NSDictionary dictionaryWithObjects:indexes forKeys:keys count:nn];
 	memcpy(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams));
@@ -286,7 +281,7 @@ static struct SetupInfo
 	for (NSInteger i = 0; i < info.nn; i ++) {
 		ParamInfo *p = paramInfo + i;
 		switch (p->type) {
-			case ParamTypeFloat: case ParamTypeFloatS:
+			case ParamTypeFloat:
 			fmt = NSNumberFormatter.new;
 			fmt.allowsFloats = YES;
 			fmt.minimum = @(p->v.f.minValue);

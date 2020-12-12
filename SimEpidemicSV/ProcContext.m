@@ -86,7 +86,7 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 	bufData = [NSMutableData dataWithLength:BUFFER_SIZE];
 	ip4addr = ipaddr;
 	if (commandDict == nil) commandDict = @{
-		COM(getWorldID), COM(closeWorld),
+		COM(getWorldID), COM(closeWorld), COM(newWorld),
 		COM(getParams), COM(setParams),
 		COM(start), COM(step), COM(stop), COM(reset),
 		COM(getIndexes), COM(getDistribution),

@@ -12,8 +12,8 @@
 #import <signal.h>
 #import "noGUI.h"
 #import "../SimEpidemic/Sources/AppDelegate.h"
-#import "Document.h"
-#import "StatPanel.h"
+#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/StatPanel.h"
 #import "noGUIInfo.h"
 #import "ProcContext.h"
 #import "BatchJob.h"
@@ -190,7 +190,7 @@ static NSDictionary *index_name_to_index(void) {
 }
 static NSDictionary *test_index_name_to_index(void) {
 	return @{
-	@"testTotal":@(TestTotal),
+	@"tests":@(TestTotal),
 	@"testAsSymptom":@(TestAsSymptom),
 	@"testAsContact":@(TestAsContact),
 	@"testAsSuspected":@(TestAsSuspected),

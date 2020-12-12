@@ -7,14 +7,16 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import "CommonTypes.h"
 
 NS_ASSUME_NONNULL_BEGIN
 typedef enum { CondTypeRunUntil, CondTypeMoveWhen } CondType;
 typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
-@class Document, Scenario, ButtonsCellView;
+@class Document, Scenario, ButtonsCellView, ParamItem;
 
 @interface ParameterCellView : NSTableCellView
 @property (readonly) NSPopUpButton *namePopUp;
+@property (readonly) NSButton *distBtn;
 @property (readonly) NSTextField *digits, *days;
 @end
 @interface ScenarioItem : NSObject {
@@ -53,6 +55,8 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 	<NSWindowDelegate, NSTextFieldDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate> {
 	IBOutlet NSButton *shiftUpBtn, *shiftDownBtn, *deselectBtn;
 	IBOutlet NSButton *removeBtn, *applyBtn;
+	IBOutlet NSWindow *distParamSheet;
+	IBOutlet NSTextField *itemIdx, *paramNameTxt, *minDgt, *maxDgt, *modeDgt;
 }
 @property IBOutlet NSOutlineView *outlineView;
 @property (readonly) Document *doc;
@@ -64,6 +68,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 - (void)removeItem:(ScenarioItem *)item;
 - (CondElmItem *)itemWithPredicate:(NSPredicate *)predicate parent:(ScenarioItem *)parent;
 - (void)setScenarioWithArray:(NSArray *)array;
+- (void)distParamBySheetWithItem:(ParamItem *)item value:(DistInfo)info;
 @end
 
 NS_ASSUME_NONNULL_END

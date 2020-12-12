@@ -5,11 +5,19 @@
   Created by Tatsuo Unemi on 2020/05/24.
   Copyright © 2020 Tatsuo Unemi. All rights reserved.
 */
+"mass" = "individual mass";
+"maxSpeed" = "max speed";
+// "contagionDelay" = "contagion delay";
+// "contagionPeak" = "contagion peak";
 "infectionProberbility" = "infection rate";
 "infectionDistance" = "infection distance";
 "distancingStrength" = "distancing strength";
 "distancingObedience" = "distancing obedience";
-"mobilityFrequency" = "mobility frequency";
+"mobilityFrequency" = "long trip frequency";
+"mobilityDistance" = "long trip distance";
+"gatheringSize" = "gatherings size";
+"gatheringDuration" = "gatherings duration";
+"gatheringStrength" = "gatherings strength";
 "contactTracing" = "contact tracing";
 "testDelay" = "test delay";
 "testInterval" = "test interval";

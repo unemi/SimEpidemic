@@ -58,9 +58,10 @@ typedef struct {
 } WorldParams;
 
 #define PARAM_F1 mass
-#define PARAM_FS1 infec
 #define PARAM_D1 mobDist
 #define PARAM_I1 initPop
+#define IDX_D 1000
+#define IDX_I 2000
 
 typedef struct StatDataRec {
 	struct StatDataRec *next;

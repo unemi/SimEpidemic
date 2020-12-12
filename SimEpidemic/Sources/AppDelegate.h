@@ -17,7 +17,7 @@
 enum { ColBackground = NHealthTypes,
 	ColHospital, ColCemetery, ColText, ColGathering };
 typedef enum {
-	ParamTypeNone, ParamTypeFloat, ParamTypeFloatS, ParamTypeDist, ParamTypeInteger
+	ParamTypeNone, ParamTypeFloat, ParamTypeDist, ParamTypeInteger
 } ParamType;
 typedef struct {
 	ParamType type;
@@ -40,7 +40,7 @@ extern NSString *keyAnimeSteps;
 extern NSInteger defaultAnimeSteps;
 extern RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
 extern WorldParams defaultWorldParams, userDefaultWorldParams;
-extern NSArray<NSString *> *paramKeys, *paramNames;
+extern NSArray<NSString *> *paramKeys;
 extern NSArray<NSNumberFormatter *> *paramFormatters;
 extern NSDictionary<NSString *, NSString *> *paramKeyFromName;
 extern NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;

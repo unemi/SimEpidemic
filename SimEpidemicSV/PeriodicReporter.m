@@ -8,8 +8,8 @@
 
 #import "PeriodicReporter.h"
 #import "noGUI.h"
-#import "Document.h"
-#import "StatPanel.h"
+#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/StatPanel.h"
 #import "DataCompress.h"
 #import <os/log.h>
 #import <zlib.h>

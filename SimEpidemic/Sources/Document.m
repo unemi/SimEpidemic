@@ -285,7 +285,7 @@ NSInteger nQueues = 10;
 	char visitFlags[scenario.count];
 	memset(visitFlags, 0, scenario.count);
 	BOOL hasStopCond = NO;
-	NSMutableDictionary<NSString *, NSNumber *> *md = NSMutableDictionary.new;
+	NSMutableDictionary<NSString *, NSObject *> *md = NSMutableDictionary.new;
 	while (scenarioIndex < scenario.count) {
 		if (visitFlags[scenarioIndex] == YES) {
 			error_msg([NSString stringWithFormat:@"%@: %ld",
@@ -315,7 +315,7 @@ NSInteger nQueues = 10;
 				md[((NSArray *)item)[0]] = ((NSArray *)item)[1];	// paramter assignment
 			else paramChangers[((NSArray *)item)[0]] = @[((NSArray *)item)[1],
 				@(runtimeParams.step / worldParams.stepsPerDay +
-					((NSNumber *)(((NSArray *)item)[2])).doubleValue)];
+					[(((NSArray *)item)[2]) doubleValue])];
 		} else if ([item isKindOfClass:NSDictionary.class]) {	// for upper compatibility
 			[md addEntriesFromDictionary:(NSDictionary *)item];
 		} else if ([item isKindOfClass:NSNumber.class]) {	// add infected individuals
@@ -332,7 +332,12 @@ NSInteger nQueues = 10;
 	if (md.count > 0) {
 		for (NSString *key in md.keyEnumerator) {
 			NSInteger idx = paramIndexFromKey[key].integerValue;
-			(&runtimeParams.PARAM_F1)[idx] = md[key].doubleValue;
+			NSObject *value = md[key];
+			if (idx < IDX_D)
+				(&runtimeParams.PARAM_F1)[idx] = ((NSNumber *)md[key]).doubleValue;
+			else if ([value isKindOfClass:NSArray.class] && ((NSArray *)value).count == 3)
+				set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
+					(NSArray<NSNumber *> *)value, 1.);
 		}
 #ifndef NOGUI
 		NSArray<NSString *> *allKeys = md.allKeys;
@@ -462,7 +467,7 @@ NSInteger nQueues = 10;
 		Agent *a = &agents[i];
 		reset_agent(a, &runtimeParams, &worldParams);
 		a->ID = i;
-		if (i < nDist) a->distancing = YES;
+		a->distancing = (i < nDist);
 		if (iIdx < worldParams.nInitInfec && i == infecIdxs[iIdx]) {
 			a->health = Asymptomatic; iIdx ++;
 			a->nInfects = 0;
@@ -814,7 +819,7 @@ static NSLock *testEntriesLock = nil;
 - (void)gridToGridA:(NSInteger)iA B:(NSInteger)iB {
 	Agent **apA = pop + pRange[iA].location, **apB = pop + pRange[iB].location;
 	for (NSInteger j = 0; j < pRange[iA].length; j ++)
-	interacts(apA[j], apB, pRange[iB].length, &runtimeParams, &worldParams);
+		interacts(apA[j], apB, pRange[iB].length, &runtimeParams, &worldParams);
 }
 - (void)addNewWarp:(WarpInfo *)info {
 	[newWarpLock lock];
@@ -827,6 +832,11 @@ static NSLock *testEntriesLock = nil;
 static unsigned long mtime[N_MTIME] = {0,0,0,0,0,0,0};
 static NSInteger mCount = 0, mCount2 = 0;
 #endif
+static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat steps) {
+	dp->min += (arr[0].doubleValue - dp->min) / steps;
+	dp->max += (arr[1].doubleValue - dp->max) / steps;
+	dp->mode += (arr[2].doubleValue - dp->mode) / steps;
+}
 - (void)doOneStep {
 	[popLock lock];
 #ifdef MEASURE_TIME
@@ -838,17 +848,19 @@ static NSInteger mCount = 0, mCount2 = 0;
 		NSMutableArray<NSString *> *keyToRemove = NSMutableArray.new;
 		for (NSString *key in paramChangers.keyEnumerator) {
 			NSArray<NSNumber *> *entry = paramChangers[key];
-			CGFloat newValue, goalStep = entry[1].doubleValue * worldParams.stepsPerDay;
+			CGFloat stepsLeft = entry[1].doubleValue * worldParams.stepsPerDay
+				- runtimeParams.step;
 			NSInteger idx = paramIndexFromKey[key].integerValue;
-			if (goalStep < runtimeParams.step) {
+			if (stepsLeft <= 1.) {
 				[keyToRemove addObject:key];
-				newValue = entry[0].doubleValue;
-			} else {
-				CGFloat value = (&runtimeParams.PARAM_F1)[idx];
-				newValue = value + (entry[0].doubleValue - value) /
-					(goalStep - runtimeParams.step);
-			}
-			(&runtimeParams.PARAM_F1)[idx] = newValue;
+				if (idx < IDX_D) (&runtimeParams.PARAM_F1)[idx] = entry[0].doubleValue;
+				else set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
+					(NSArray<NSNumber *> *)entry[0], 1.);
+			} else if (idx < IDX_D) {
+				CGFloat *vp = &runtimeParams.PARAM_F1 + idx;
+				*vp += (entry[0].doubleValue - *vp) / stepsLeft;
+			} else set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
+				(NSArray<NSNumber *> *)entry[0], stepsLeft);
 		}
 #ifndef NOGUI
 		NSArray<NSString *> *allKeys = paramChangers.allKeys;
@@ -900,20 +912,23 @@ static NSInteger mCount = 0, mCount2 = 0;
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-	unitJ = nCells / 4;
+	unitJ = 6;
 	__weak typeof(self) weakSelf = self;
     NSRange *pRng = pRange;
-    for (NSInteger j = 0; j < nCells; j += unitJ) {
-    if (nCells - j < unitJ) unitJ = nCells - j;
-    [self addOperation:^{
-		for (NSInteger k = 0; k < unitJ; k ++) {
-			NSInteger i = j + k;
-			Agent **ap = popL + pRng[i].location;
-			NSRange rng = pRng[i];
-			for (NSInteger j = 1; j < rng.length; j ++)
-			interacts(ap[j], ap, j, rp, wp);
-		}
-    }];}
+    for (NSInteger j = 0; j < unitJ; j ++) {
+		NSInteger start = j * nCells / unitJ;
+		NSInteger end = (j + 1) * nCells / unitJ;
+		void (^block)(void) = ^{
+			for (NSInteger i = start; i < end; i ++) {
+				Agent **ap = popL + pRng[i].location;
+				NSRange rng = pRng[i];
+				for (NSInteger j = 1; j < rng.length; j ++)
+					interacts(ap[j], ap, j, rp, wp);
+			}
+		};
+		if (j < unitJ - 1) [self addOperation:block];
+		else block();
+	}
 	[self waitAllOperations];
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
@@ -961,8 +976,6 @@ static NSInteger mCount = 0, mCount2 = 0;
 // Step
     unitJ = 2;
 	NSMutableArray<NSValue *> *infectors[unitJ];
-	NSUInteger transitCnt[NHealthTypes][unitJ];
-	memset(transitCnt, 0, sizeof(transitCnt));
 	NSMutableArray<NSLock *> *locks = cellLocks;
 	for (NSInteger j = 0; j < unitJ; j ++) {
 		NSInteger start = j * nInField / unitJ;
@@ -1017,10 +1030,6 @@ static NSInteger mCount = 0, mCount2 = 0;
 	NSUInteger testCount[NIntTestTypes];
 	memset(testCount, 0, sizeof(testCount));
 	[self deliverTestResults:testCount];
-
-//	BOOL finished = [statInfo calcStat:_Pop nCells:nCells
-//		qlist:_QList clist:_CList warp:_WarpList
-//		testCount:testCount stepsPerDay:worldParams.stepsPerDay];
 	BOOL finished = [statInfo calcStatWithTestCount:testCount infects:
 		[NSArray arrayWithObjects:infectors count:unitJ]];
 	[popLock unlock];

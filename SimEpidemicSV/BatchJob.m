@@ -8,8 +8,8 @@
 
 #import "BatchJob.h"
 #import "noGUI.h"
-#import "Document.h"
-#import "StatPanel.h"
+#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/StatPanel.h"
 #import <os/log.h>
 
 @implementation StatInfo (JobResultExtension)
@@ -227,7 +227,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	availableWorlds = NSMutableArray.new;
 #ifdef DEBUG
 	in_main_thread(^{
-		[NSTimer scheduledTimerWithTimeInterval:1. repeats:YES block:
+		[NSTimer scheduledTimerWithTimeInterval:10. repeats:YES block:
 			^(NSTimer * _Nonnull timer) { [self monitorProgress]; }]; });
 #endif
 	return self;
@@ -294,9 +294,9 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	[lock lock];
 	if (availableWorlds.count <= 0) {
 		doc = make_new_world(@"Job", nil);
-		[doc setScenarioWithPList:_scenario];
 		set_params_from_dict(doc.runtimeParamsP, doc.worldParamsP, _parameters);
 		set_params_from_dict(doc.initParamsP, doc.tmpWorldParamsP, _parameters);
+		[doc setScenarioWithPList:_scenario];
 	} else {
 		doc = [availableWorlds lastObject];
 		[availableWorlds removeLastObject];

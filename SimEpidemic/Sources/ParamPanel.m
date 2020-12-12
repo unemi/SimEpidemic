@@ -126,8 +126,10 @@ static NSNumberFormatter *distDgtFmt = nil;
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
 	RuntimeParams *rp = doc.runtimeParamsP;
 	for (NSString *key in paramNames) {
-		NSInteger i = paramIndexFromKey[key].integerValue;
-		fDigits[i].doubleValue = fSliders[i].doubleValue = (&rp->PARAM_F1)[i];
+		NSInteger idx = paramIndexFromKey[key].integerValue;
+		if (idx < IDX_D) fDigits[idx].doubleValue =
+			fSliders[idx].doubleValue = (&rp->PARAM_F1)[idx];
+		else [dDigits[idx - IDX_D] adjustDigitsToCurrentValue];
 	}
 }
 - (void)checkUpdate {

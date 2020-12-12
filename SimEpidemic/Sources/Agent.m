@@ -99,9 +99,8 @@ for (Agent *b = *list; b != NULL; b = b->next) if (a == b) {
 	my_exit();
 }
 #endif
-	a->next = *list;
 	a->prev = NULL;
-	if (*list != NULL) (*list)->prev = a;
+	if ((a->next = *list) != NULL) a->next->prev = a;
 	*list = a;
 }
 void remove_from_list(Agent *a, Agent **list) {
@@ -285,7 +284,8 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 		}
 		a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 		a->fy += wall(a->y) - wall(wp->worldSize - a->y);
-		CGFloat mass = ((a->health == Symptomatic)? 200. : 10.) * rp->mass / 100.;
+		CGFloat mass = rp->mass / 10.;
+		if (a->health == Symptomatic) mass *= 20.; 
 		if (a->best != NULL && !a->distancing) {
 			CGFloat dx = a->best->x - a->x;
 			CGFloat dy = a->best->y - a->y;
@@ -305,12 +305,14 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 		}
 		a->x += a->vx / wp->stepsPerDay;
 		a->y += a->vy / wp->stepsPerDay;
-		if (a->x < AGENT_RADIUS) a->x = AGENT_RADIUS * 2 - a->x;
+		if (a->x < AGENT_RADIUS)
+			{ a->x = AGENT_RADIUS * 2 - a->x; a->vx = - a->vx; }
 		else if (a->x > wp->worldSize - AGENT_RADIUS)
-			a->x = (wp->worldSize - AGENT_RADIUS) * 2 - a->x;
-		if (a->y < AGENT_RADIUS) a->y = AGENT_RADIUS * 2 - a->y;
+			{ a->x = (wp->worldSize - AGENT_RADIUS) * 2 - a->x; a->vx = - a->vx; }
+		if (a->y < AGENT_RADIUS)
+			{ a->y = AGENT_RADIUS * 2 - a->y; a->vy = - a->vy; }
 		else if (a->y > wp->worldSize - AGENT_RADIUS)
-			a->y = (wp->worldSize - AGENT_RADIUS) * 2 - a->y;
+			{ a->y = (wp->worldSize - AGENT_RADIUS) * 2 - a->y; a->vy = - a->vy; }
 	}
 	NSInteger newIdx = index_in_pop(a, wp);
 	if (newIdx != orgIdx) {
