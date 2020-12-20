@@ -14,9 +14,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef struct {
-	NSInteger idxBits, nIndexes, windowSize;
-} TimeEvoInfo;
+extern StatData *new_stat(void);
 
 typedef struct {
 	NSUInteger positive, negative;
@@ -24,6 +22,7 @@ typedef struct {
 
 @interface MyCounter : NSObject
 @property NSInteger cnt;
+- (instancetype)initWithCount:(NSInteger)count;
 - (void)inc;
 - (void)dec;
 @end
@@ -40,10 +39,11 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 - (InfectionCntInfo)infectValue;
 @end
 
-@class Document, WarpInfo;
+@class Document;
 #ifndef NOGUI
 @class StatPanel;
 #endif
+
 @interface StatInfo : NSObject {
 	IBOutlet Document *doc;
 	NSUInteger maxCounts[NIntIndexes], maxTransit[NIntIndexes];
@@ -59,20 +59,22 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 	TestResultCount testResultsW[7];
 	CGFloat maxStepPRate, maxDailyPRate, pRateCumm;	// Rate of positive
 }
-@property (readonly) StatData *statistics, *transit;
-@property (readonly) TestResultCount testResultCnt;	// weekly total
-@property (readonly) NSMutableArray<MyCounter *>
-	*IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
+@property (readonly) NSMutableArray<MyCounter *> *IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
 - (Document *)doc;
 - (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec;
+- (void)cummulateHistgrm:(HistogramType)type days:(CGFloat)d;
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects;
 #ifdef NOGUI
+@property (readonly) StatData *statistics, *transit;
+@property (readonly) TestResultCount testResultCnt;	// weekly total
 - (NSInteger)skipSteps;
 - (NSInteger)skipDays;
 - (void)setDoc:(Document *)doc;
 - (void)discardMemory;
 #else
+@property StatData *statistics, *transit;
+@property TestResultCount testResultCnt;	// weekly total
 @property (readonly) NSMutableArray<StatPanel *> *statPanels;
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info;
 - (void)setLabelInfo:(NSArray<NSString *> *)info;
@@ -84,9 +86,14 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 @end
 
 #ifndef NOGUI
+typedef struct {
+	NSInteger idxBits, nIndexes, windowSize;
+} TimeEvoInfo;
+
 typedef enum {
 	StatWhole, StatTimeEvo, StatPeriods, StatSpreaders
 } StatType;
+
 typedef enum {
 	MskSusceptible = (1<<Susceptible),
 	MskInfected = (1<<Asymptomatic),

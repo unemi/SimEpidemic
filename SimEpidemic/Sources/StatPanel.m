@@ -12,7 +12,7 @@
 
 static NSLock *statLock = nil;
 static StatData *freeStat = NULL;
-static StatData *new_stat(void) {
+StatData *new_stat(void) {
 	[statLock lock];
 	if (freeStat == NULL) {
 		freeStat = malloc(sizeof(StatData) * ALLOC_UNIT);
@@ -35,11 +35,12 @@ static void free_stat_mem(StatData **memp) {
 	*memp = NULL;
 }
 @implementation MyCounter
-- (instancetype)init {
+- (instancetype)initWithCount:(NSInteger)count {
 	if ((self = [super init]) == nil) return nil;
-	_cnt = 0;
+	_cnt = count;
 	return self;
 }
+- (instancetype)init { return [self initWithCount:0]; }
 - (void)inc { _cnt ++; }
 - (void)dec { _cnt --; }
 - (NSString *)description
@@ -153,6 +154,18 @@ static void free_stat_mem(StatData **memp) {
 	[self fillImageForOneStep:_statistics atX:0];
 #endif
 }
+- (void)cummulateHistgrm:(HistogramType)type days:(CGFloat)d {
+	NSMutableArray<MyCounter *> *h = (type == HistIncub)? _IncubPHist :
+		(type == HistRecov)? _RecovPHist :
+		(type == HistDeath)? _DeathPHist : nil;
+	if (h == nil) return;
+	NSInteger ds = floor(d);
+	if (h.count <= d) {
+		NSInteger n = ds - h.count;
+		for (NSInteger i = 0; i <= n; i ++) [h addObject:MyCounter.new];
+	}
+	[h[ds] inc];
+}
 #ifndef NOGUI
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info {
 	phaseInfo = info;
@@ -203,20 +216,33 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 }
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects {
-	Agent **Pop = doc.Pop;
+	Agent *agents = doc.agents;
 	WorldParams *wp = doc.worldParamsP;
-	NSInteger nCells = wp->mesh * wp->mesh;
-	Agent *qlist = doc.QList, *clist = doc.CList;
-	NSArray<WarpInfo *> *warp = doc.WarpList;
+	NSInteger nPop = wp->initPop;
+	Agent *qlist = doc.QList;
 	NSInteger stepsPerDay = wp->stepsPerDay;
 
-	StatData tmpStat;
-	memset(&tmpStat, 0, sizeof(StatData));
 	if (steps % stepsPerDay == 0) memset(&transDaily, 0, sizeof(StatData));
 	steps ++;
-	for (NSInteger i = 0; i < nCells; i ++)
-		for (Agent *a = Pop[i]; a; a = a->next)
-			count_health(a, &tmpStat, &transDaily);
+	NSInteger unitJ = 8;
+	StatData *tmpStats, *tmpTrans;
+	tmpStats = malloc(sizeof(StatData) * unitJ * 2);
+	memset(tmpStats, 0, sizeof(StatData) * unitJ * 2);
+	tmpTrans = tmpStats + unitJ;
+	for (NSInteger j = 0; j < unitJ; j ++) {
+		NSInteger start = j * nPop / unitJ, end = (j + 1) * nPop / unitJ;
+		void (^block)(void) = ^{ for (NSInteger i = start; i < end; i ++)
+			count_health(agents + i, tmpStats + j, tmpTrans + j); };
+		if (j < unitJ - 1) [doc addOperation:block]; else block();
+	}
+	[doc waitAllOperations];
+	StatData tmpStat;
+	memset(&tmpStat, 0, sizeof(StatData));
+	for (NSInteger j = 0; j < unitJ; j ++) for (NSInteger i = 0; i < NIntIndexes; i ++) {
+		tmpStat.cnt[i] += tmpStats[j].cnt[i];
+		transDaily.cnt[i] += tmpTrans[j].cnt[i];
+	}
+	free(tmpStats);
 	for (Agent *a = qlist; a; a = a->next) {
 		NSInteger qIdx = (a->health == Symptomatic)? QuarantineSymp : QuarantineAsym;
 		if (a->gotAtHospital) {
@@ -224,12 +250,8 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 			a->gotAtHospital = NO;
 		} else if (a->health == Asymptomatic && a->newHealth == Symptomatic)
 			transDaily.cnt[QuarantineSymp] ++;
-		count_health(a, &tmpStat, &transDaily);
 		tmpStat.cnt[qIdx] ++;
 	}
-	for (WarpInfo *info in warp)
-		count_health(info.agent, &tmpStat, &transDaily);
-	for (Agent *a = clist; a; a = a->next) count_health(a, &tmpStat, &transDaily);
 
 	for (NSInteger i = 0; i < NIntTestTypes; i ++) {
 		transDaily.cnt[i + NStateIndexes] += testCount[i];
@@ -439,7 +461,7 @@ static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info, NSUInteger 
 	free(pts);
 	return teMax;
 }
-static void show_histogram(NSArray<MyCounter *> *hist,
+static void show_histogram(NSMutableArray<MyCounter *> *hist,
 	NSRect area, NSColor *color, NSString *title) {
 	NSInteger n = hist.count;
 	if (n == 0) return;
@@ -464,7 +486,7 @@ static void show_histogram(NSArray<MyCounter *> *hist,
 		drawAtPoint:(NSPoint){area.origin.x + 4., 10.}
 		withAttributes:textAttributes];
 }
-static void show_period_hist(NSArray<MyCounter *> *hist,
+static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 	NSInteger idx, NSSize size, NSString *title) {
 	static HealthType colIdx[] = {Asymptomatic, Recovered, Died};
 	NSRect area = {size.width * idx / 3., 0., size.width / 3., size.height};

@@ -94,7 +94,7 @@ static void get_population1(void) {
 		[md addObject:agent_cood_h(a, wp)];
 	for (Agent *a = document.CList; a != NULL; a = a->next)
 		[md addObject:agent_cood_h(a, wp)];
-	for (WarpInfo *info in document.WarpList) {
+	for (WarpInfo *info in document.WarpList.objectEnumerator) {
 		Agent *a = info.agent;
 		[md addObject:@[@(int_coord(a->x, wp->worldSize)),
 			@(int_coord(a->y, wp->worldSize)), @(a->health),
@@ -121,7 +121,7 @@ static void get_population2(void) {
 		[posts[a->health] addObject:agent_cood(a, wp)];
 	for (Agent *a = document.CList; a != NULL; a = a->next)
 		[posts[a->health] addObject:agent_cood(a, wp)];
-	for (WarpInfo *info in document.WarpList) {
+	for (WarpInfo *info in document.WarpList.objectEnumerator) {
 		Agent *a = info.agent;
 		[posts[a->health] addObject:@[
 			@(int_coord(a->x, wp->worldSize)), @(int_coord(a->y, wp->worldSize)),

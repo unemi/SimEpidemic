@@ -27,15 +27,7 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 	NSInteger right = ceil(fmin(wSize, x) / grid);
 	return (right <= mesh)? right : mesh;
 }
-- (instancetype)initWithMap:(GatheringMap *)map
-	world:(WorldParams *)wp runtime:(RuntimeParams *)rp {
-	if (!(self = [super init])) return nil;
-	size = my_random(&rp->gatSZ);
-	duration = my_random(&rp->gatDR);
-	strength = my_random(&rp->gatST);
-	NSInteger wSize = wp->worldSize;
-	p = (NSPoint){ random() / (CGFloat)0x7fffffff * wSize,
-		random() / (CGFloat)0x7fffffff * wSize };
+- (void)setupCellIndexes:(WorldParams *)wp map:(GatheringMap *)map {	
 	cellIdxs = NSMutableArray.new;
 	CGFloat grid = (CGFloat)wp->worldSize / wp->mesh, r = size + SURROUND;
 	NSInteger bottom = floor(fmax(0., p.y - r) / grid),
@@ -56,6 +48,17 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 			floor(fmax(0., p.x - dx) / grid),
 			ix_right(wp->worldSize, wp->mesh, p.x + dx, grid));
 	}
+}
+- (instancetype)initWithMap:(GatheringMap *)map
+	world:(WorldParams *)wp runtime:(RuntimeParams *)rp {
+	if (!(self = [super init])) return nil;
+	size = my_random(&rp->gatSZ);
+	duration = my_random(&rp->gatDR);
+	strength = my_random(&rp->gatST);
+	NSInteger wSize = wp->worldSize;
+	p = (NSPoint){ random() / (CGFloat)0x7fffffff * wSize,
+		random() / (CGFloat)0x7fffffff * wSize };
+	[self setupCellIndexes:wp map:map];
 	return self;
 }
 - (BOOL)step:(CGFloat)stepsPerDay {

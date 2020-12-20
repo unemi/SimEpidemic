@@ -8,23 +8,33 @@
 
 #import <Cocoa/Cocoa.h>
 #import "AppDelegate.h"
+#ifdef NOGUI
+//#define DEBUGz
+#endif
 
-extern NSString *keyParameters, *keyScenario;
+extern NSString *keyParameters, *keyScenario, *keyDaysToStop;
 extern void add_new_cinfo(Agent *a, Agent *b, NSInteger tm);
 extern void in_main_thread(dispatch_block_t block);
 #ifndef NOGUI
+extern TestEntry *new_testEntry(void);
+extern ContactInfo *new_cinfo(void);
 extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
 #endif
 #ifdef DEBUG
 extern void my_exit(void);
 #endif
-extern NSInteger nQueues;
 
-@interface WarpInfo : NSObject
-@property Agent *agent;
-@property CGPoint goal;
-@property WarpType mode;
-- (instancetype)initWithAgent:(Agent *)a goal:(CGPoint)p mode:(WarpType)md;
+typedef struct { Agent *agent; NSInteger newIdx; } MoveToIdxInfo;
+typedef struct { Agent *agent; WarpType mode; CGPoint goal; } WarpInfo;
+typedef struct { Agent *agent; HistogramType type; CGFloat days; } HistInfo;
+typedef struct { Agent *agent; TestType reason; } TestInfo;
+
+@interface NSValue (WoldExtension)
+#define DEC_VAL(t,b,g) + (NSValue *)b:(t)info; -(t)g;
+DEC_VAL(MoveToIdxInfo, valueWithMoveToIdxInfo, moveToIdxInfoValue)
+DEC_VAL(WarpInfo, valueWithWarpInfo, warpInfoValue)
+DEC_VAL(HistInfo, valueWithHistInfo, histInfoValue)
+DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)					
 @end
 
 @class MyView, LegendView, StatInfo, MyCounter;
@@ -42,16 +52,29 @@ extern NSInteger nQueues;
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;
+	IBOutlet NSView *savePanelAccView;
+	IBOutlet NSButton *savePopCBox;
+	NSArray<void (^)(StatInfo *)> *statInfoInitializer;
 #else
 @interface Document : NSObject {
 #endif
 	RuntimeParams runtimeParams, initParams;
 	WorldParams worldParams, tmpWorldParams;
+	NSInteger animeSteps, stopAtNDays;
 	NSLock *popLock;
+	NSArray *scenario;
+	NSInteger scenarioIndex;
 	IBOutlet StatInfo *statInfo;
+	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
+	TestEntry *testQueHead, *testQueTail;
+	GatheringMap *gatheringsMap;
+	NSMutableArray<Gathering *> *gatherings;
 }
-@property (readonly) Agent **Pop, *QList, *CList;
-@property (readonly) NSMutableArray<WarpInfo *> *WarpList;
+@property (readonly) Agent *agents, **Pop, *QList, *CList;
+@property (readonly) NSMutableDictionary<NSNumber *, NSValue *> *WarpList;
+#ifdef DEBUGz
+@property NSInteger phaseInStep;
+#endif
 - (Agent **)QListP;
 - (Agent **)CListP;
 - (RuntimeParams *)runtimeParamsP;
@@ -64,9 +87,11 @@ extern NSInteger nQueues;
 - (NSMutableArray<MyCounter *> *)RecovPHist;
 - (NSMutableArray<MyCounter *> *)IncubPHist;
 - (NSMutableArray<MyCounter *> *)DeathPHist;
+- (void)addOperation:(void (^)(void))block;
+- (void)waitAllOperations;
 - (NSArray *)scenario;
+- (void)allocateMemory;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
-- (void)addNewWarp:(WarpInfo *)info;
 #ifdef NOGUI
 @property (readonly) NSString *ID;
 @property (readonly) NSLock *lastTLock;
@@ -91,11 +116,12 @@ extern NSInteger nQueues;
 - (void)setScenario:(NSArray *)newScen;
 - (void)setPanelTitle:(NSWindow *)panel;
 - (void)reviseColors;
-- (void)setInitialParameters:(NSData *)newParams;
 - (void)openScenarioFromURL:(NSURL *)url;
 - (void)openParamsFromURL:(NSURL *)url;
 - (void)revisePanelsAlpha;
 - (void)revisePanelChildhood;
+- (NSArray *)scenarioPList;
+- (void)setScenarioWithPList:(NSArray *)plist;
 #endif
 @end
 

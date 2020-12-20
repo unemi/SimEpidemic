@@ -92,7 +92,7 @@ static NSInteger index_in_pop(Agent *a, WorldParams *p) {
 	if (ix < 0) ix = 0; else if (ix >= p->mesh) ix = p->mesh - 1;
 	return iy * p->mesh + ix;
 }
-static void add_to_list(Agent *a, Agent **list) {
+void add_to_list(Agent *a, Agent **list) {
 #ifdef DEBUG
 for (Agent *b = *list; b != NULL; b = b->next) if (a == b) {
 	printf("agent %ld is already in the list.\n", a->ID);
@@ -155,25 +155,6 @@ static void check_infection(Agent *a, Agent *b,
 		is_infected(a) && a->daysInfected > rp->contagDelay)
 		infects(b, a, rp, wp, d);
 }
-//void interacts(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp) {
-//	CGFloat dx = b->x - a->x;
-//	CGFloat dy = b->y - a->y;
-//	CGFloat d2 = fmax(1e-4, dx * dx + dy * dy);
-//	CGFloat d = sqrt(d2);
-//	CGFloat viewRange = wp->worldSize / wp->mesh;
-//	if (d >= viewRange) { return; }
-//	CGFloat dd = ((d < viewRange * 0.8)? 1.0 : (1 - d / viewRange) / 0.2) / d / d2
-//		 * AVOIDANCE * rp->avoidance / 50.;
-//	CGFloat ax = dx * dd;
-//	CGFloat ay = dy * dd;
-//	a->fx -= ax;
-//	a->fy -= ay;
-//	b->fx += ax;
-//	b->fy += ay;
-//	attracted(a, b, rp, wp, d);
-//	attracted(b, a, rp, wp, d);
-//	check_infection(a, b, rp, wp, d[i]);
-//}
 void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp) {
 	CGFloat dx[n], dy[n], d2[n], d[n];
 	Agent *bb[n];
@@ -202,27 +183,11 @@ void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams 
 		check_infection(a, bb[i], rp, wp, d[i]);
 	}
 }
-static void starts_warping(Agent *a, WarpType mode, CGPoint newPt, Document *doc) {
-	[doc addNewWarp:[WarpInfo.alloc initWithAgent:a goal:newPt mode:mode]];
-}
-static void died(Agent *a, WarpType mode, WorldParams *p, Document *doc) {
-	a->newHealth = Died;
-	starts_warping(a, mode, (CGPoint){
-		(random() * .248 / 0x7fffffff + 1.001) * p->worldSize,
-		(random() * .468 / 0x7fffffff + .001) * p->worldSize}, doc);
-}
-static void cummulate_histgrm(NSMutableArray<MyCounter *> *h, CGFloat d) {
-  NSInteger ds = floor(d);
-  if (h.count <= d) {
-    NSInteger n = ds - h.count;
-    for (NSInteger i = 0; i <= n; i ++) [h addObject:MyCounter.new];
-  }
-  [h[ds] inc];
-}
-static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, Document *doc) {
+#define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
+static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, StepInfo *info) {
   if (a->daysToDie == BIG_NUM) { // in the recovery phase
 	if (a->daysInfected >= a->daysToRecover) {
-		if (a->health == Symptomatic) cummulate_histgrm(doc.RecovPHist, a->daysDiseased);
+		if (a->health == Symptomatic) SET_HIST(HistRecov, daysDiseased)
 		a->newHealth = Recovered;
 		a->daysInfected = 0;
 	}
@@ -230,12 +195,16 @@ static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, Document *
 	a->daysToRecover *= 1. + 10. / a->daysToDie;
 	a->daysToDie = BIG_NUM;
   } else if (a->daysInfected >= a->daysToDie) {
-	cummulate_histgrm(doc.DeathPHist, a->daysDiseased);
-	died(a, inQuarantine? WarpToCemeteryH : WarpToCemeteryF, p, doc);
+	SET_HIST(HistDeath, daysDiseased);
+	a->newHealth = Died;
+	info->warpType = inQuarantine? WarpToCemeteryH : WarpToCemeteryF;
+	info->warpTo = (CGPoint){
+		(random() * .248 / 0x7fffffff + 1.001) * p->worldSize,
+		(random() * .468 / 0x7fffffff + .001) * p->worldSize};
 	return YES;
   } else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset) {
 	a->newHealth = Symptomatic;
-	cummulate_histgrm(doc.IncubPHist, a->daysInfected);
+	SET_HIST(HistIncub, daysInfected);
   }
   return NO;
 }
@@ -243,17 +212,16 @@ static CGFloat wall(CGFloat d) {
 	if (d < .02) d = .02;
 	return AVOIDANCE * 20. / d / d;
 }
-void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
-	NSArray<NSLock *> *cellLocks) {
+void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	switch (a->health) {
 		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
 		a->daysDiseased += 1. / wp->stepsPerDay;
-		if (patient_step(a, wp, NO, doc)) return;
+		if (patient_step(a, wp, NO, info)) return;
 		else if (a->daysDiseased >= rp->tstDelay && was_hit(wp, rp->tstSbjSym / 100.))
-			[doc testInfectionOfAgent:a reason:TestAsSymptom];
+			info->testType = TestAsSymptom;
 		break;
 		case Asymptomatic: a->daysInfected += 1. / wp->stepsPerDay;
-		if (patient_step(a, wp, NO, doc)) return;
+		if (patient_step(a, wp, NO, info)) return;
 		break;
 		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
 		if (a->daysInfected > a->imExpr) {
@@ -264,7 +232,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 		default: break;
 	}
 	if (a->health != Symptomatic && was_hit(wp, rp->tstSbjAsy / 100.))
-		[doc testInfectionOfAgent:a reason:TestAsSuspected];
+		info->testType = TestAsSuspected;
 	NSInteger orgIdx = index_in_pop(a, wp);
 	if (a->health != Symptomatic && was_hit(wp, rp->mobFr / 1000.)) {
 		CGFloat dst = my_random(&rp->mobDist) * wp->worldSize / 100.;
@@ -274,7 +242,8 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 		else if (newPt.x > wp->worldSize - 3.) newPt.x = (wp->worldSize - 3.) * 2. - newPt.x;
 		if (newPt.y < 3.) newPt.y = 3. - newPt.y;
 		else if (newPt.y > wp->worldSize - 3.) newPt.y = (wp->worldSize - 3.) * 2. - newPt.y;
-		starts_warping(a, WarpInside, newPt, doc);
+		info->warpType = WarpInside;
+		info->warpTo = newPt;
 		return;
 	} else {
 		if (a->distancing) {
@@ -315,25 +284,18 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, Document *doc,
 			{ a->y = (wp->worldSize - AGENT_RADIUS) * 2 - a->y; a->vy = - a->vy; }
 	}
 	NSInteger newIdx = index_in_pop(a, wp);
-	if (newIdx != orgIdx) {
-		[cellLocks[orgIdx] lock];
-		remove_from_list(a, doc.Pop + orgIdx);
-		[cellLocks[orgIdx] unlock];
-		[cellLocks[newIdx] lock];
-		add_to_list(a, doc.Pop + newIdx);
-		[cellLocks[newIdx] unlock];
-	}
+	if (newIdx != orgIdx) { info->moveFrom = orgIdx; info->moveTo = newIdx; }
 }
-void step_agent_in_quarantine(Agent *a, WorldParams *p, Document *doc) {
+void step_agent_in_quarantine(Agent *a, WorldParams *p, StepInfo *info) {
 	switch (a->health) {
 		case Symptomatic: a->daysDiseased += 1. / p->stepsPerDay;
 		case Asymptomatic: a->daysInfected += 1. / p->stepsPerDay;
 		break;
-		default: starts_warping(a, WarpBack, a->orgPt, doc);
+		default: info->warpType = WarpBack; info->warpTo = a->orgPt;
 		return;
 	}
-	if (!patient_step(a, p, YES, doc) && a->health == Recovered)
-		starts_warping(a, WarpBack, a->orgPt, doc);
+	if (!patient_step(a, p, YES, info) && a->newHealth == Recovered)
+		info->warpType = WarpBack; info->warpTo = a->orgPt;
 }
 BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, CGPoint goal) {
 	CGPoint dp = {goal.x - a->x, goal.y - a->y};
@@ -346,6 +308,7 @@ BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, CGPoint 
 			case WarpToHospital:
 				add_to_list(a, doc.QListP); a->gotAtHospital = YES; break;
 			case WarpToCemeteryF: case WarpToCemeteryH: add_to_list(a, doc.CListP);
+			default: break;
 		}
 		return YES;
 	} else {

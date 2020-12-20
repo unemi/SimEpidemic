@@ -14,11 +14,12 @@ typedef enum {
 } HealthType;
 
 typedef enum {
-	TestTotal,
+	TestNone,
 	TestAsSymptom, TestAsContact, TestAsSuspected,
 	TestPositive, TestNegative,
 	TestPositiveRate,
-	NAllTestTypes
+	NAllTestTypes,
+	TestTotal = TestNone
 } TestType;
 
 #define NIntTestTypes TestPositiveRate
@@ -26,8 +27,12 @@ typedef enum {
 #define NAllIndexes (NStateIndexes+NAllTestTypes)
 
 typedef enum {
-	WarpInside, WarpToHospital, WarpToCemeteryF, WarpToCemeteryH, WarpBack
+	WarpNone, WarpInside, WarpToHospital, WarpToCemeteryF, WarpToCemeteryH, WarpBack
 } WarpType;
+
+typedef enum {
+	HistNone, HistIncub, HistRecov, HistDeath
+} HistogramType;
 
 typedef enum {
 	LoopNone, LoopRunning, LoopFinished, LoopEndByUser,

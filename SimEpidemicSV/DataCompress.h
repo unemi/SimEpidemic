@@ -10,5 +10,7 @@
 
 @interface NSData (CompressExtension)
 - (NSData *)zippedData;
-//- (NSData *)unzippedData;
+#ifndef NOGUI
+- (NSData *)unzippedData;
+#endif
 @end

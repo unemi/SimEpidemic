@@ -8,7 +8,7 @@
 
 #import "DataCompress.h"
 #import <zlib.h>
-//#define CHUNK 256*1024
+#define CHUNK 256*1024
 
 @implementation NSData (CompressExtension)
 - (NSData *)zippedData {
@@ -36,32 +36,34 @@
 	free(outBuf);
 	return data;
 }
-//- (NSData *)unzippedData {
-//	z_stream strm;
-//    strm.zalloc = Z_NULL;
-//    strm.zfree = Z_NULL;
-//    strm.opaque = Z_NULL;
-//	strm.avail_in = 0;
-//	strm.next_in = Z_NULL;
-//    int ret = inflateInit(&strm);
-//    if (ret != Z_OK) @throw @(ret);
-//	uInt dataLen = 0, bufLen = CHUNK, restLen;
-//	unsigned char *outBuf = malloc(CHUNK);
-//	strm.avail_in = (uInt)self.length;
-//	strm.next_in = (z_const Bytef *)self.bytes;
-//	do {
-//		strm.next_out = outBuf + dataLen;
-//		strm.avail_out = (restLen = bufLen - dataLen);
-//		ret = inflate(&strm, Z_NO_FLUSH);
-//		dataLen += restLen - strm.avail_out;
-//		if (ret == Z_STREAM_END) break;
-//		else if (ret != Z_OK) { free(outBuf); @throw @(ret); }
-//		if (ret != Z_STREAM_END && strm.avail_out < CHUNK)
-//			outBuf = realloc(outBuf, (bufLen += CHUNK));
-//	} while (ret != Z_STREAM_END);
-//	(void)inflateEnd(&strm);
-//	NSData *data = [NSData dataWithBytes:outBuf length:dataLen];
-//	free(outBuf);
-//	return data;
-//}
+#ifndef NOGUI
+- (NSData *)unzippedData {
+	z_stream strm;
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+	strm.avail_in = 0;
+	strm.next_in = Z_NULL;
+    int ret = inflateInit(&strm);
+    if (ret != Z_OK) @throw @(ret);
+	uInt dataLen = 0, bufLen = CHUNK, restLen;
+	unsigned char *outBuf = malloc(CHUNK);
+	strm.avail_in = (uInt)self.length;
+	strm.next_in = (z_const Bytef *)self.bytes;
+	do {
+		strm.next_out = outBuf + dataLen;
+		strm.avail_out = (restLen = bufLen - dataLen);
+		ret = inflate(&strm, Z_NO_FLUSH);
+		dataLen += restLen - strm.avail_out;
+		if (ret == Z_STREAM_END) break;
+		else if (ret != Z_OK) { free(outBuf); @throw @(ret); }
+		if (ret != Z_STREAM_END && strm.avail_out < CHUNK)
+			outBuf = realloc(outBuf, (bufLen += CHUNK));
+	} while (ret != Z_STREAM_END);
+	(void)inflateEnd(&strm);
+	NSData *data = [NSData dataWithBytes:outBuf length:dataLen];
+	free(outBuf);
+	return data;
+}
+#endif
 @end

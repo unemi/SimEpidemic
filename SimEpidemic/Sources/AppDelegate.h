@@ -51,6 +51,7 @@ extern void applicationSetups(void);
 #else
 extern void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void));
 extern void show_anime_steps(NSTextField *txtField, NSInteger steps);
+extern NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg);
 extern void setup_colors(void);
 extern NSInteger defaultStateRGB[N_COLORS], stateRGB[N_COLORS];
 extern NSColor *stateColors[N_COLORS], *warpColors[NHealthTypes];

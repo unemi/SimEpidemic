@@ -91,6 +91,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 #define N_SUBPANELS 5
 @interface ParamPanel () {
 	Document *doc;
+	RuntimeParams *targetParams;
 	NSArray<NSTextField *> *fDigits, *iDigits;
 	NSArray<DistDigits *> *dDigits;
 	NSArray<NSSlider *> *fSliders;
@@ -106,6 +107,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 - (instancetype)initWithDoc:(Document *)dc {
 	if (!(self = [super initWithWindowNibName:@"ParamPanel"])) return nil;
 	doc = dc;
+	targetParams = dc.initParamsP;
 	undoManager = NSUndoManager.new;
 	return self;
 }
@@ -113,10 +115,9 @@ static NSNumberFormatter *distDgtFmt = nil;
 	return undoManager;
 }
 - (void)adjustControls {
-	RuntimeParams *rp = doc.runtimeParamsP;
 	WorldParams *wp = doc.tmpWorldParamsP;
 	for (NSInteger i = 0; i < fDigits.count; i ++)
-		fDigits[i].doubleValue = fSliders[i].doubleValue = (&rp->PARAM_F1)[i];
+		fDigits[i].doubleValue = fSliders[i].doubleValue = (&targetParams->PARAM_F1)[i];
 	for (DistDigits *d in dDigits) [d adjustDigitsToCurrentValue];
 	for (NSInteger i = 0; i < iDigits.count; i ++)
 		iDigits[i].integerValue = iSteppers[i].integerValue = (&wp->PARAM_I1)[i];
@@ -124,25 +125,23 @@ static NSNumberFormatter *distDgtFmt = nil;
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 }
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
-	RuntimeParams *rp = doc.runtimeParamsP;
-	for (NSString *key in paramNames) {
+	if (targetParams == doc.runtimeParamsP) for (NSString *key in paramNames) {
 		NSInteger idx = paramIndexFromKey[key].integerValue;
 		if (idx < IDX_D) fDigits[idx].doubleValue =
-			fSliders[idx].doubleValue = (&rp->PARAM_F1)[idx];
+			fSliders[idx].doubleValue = (&targetParams->PARAM_F1)[idx];
 		else [dDigits[idx - IDX_D] adjustDigitsToCurrentValue];
 	}
 }
 - (void)checkUpdate {
 	revertUDBtn.enabled = hasUserDefaults &&
-		(memcmp(doc.runtimeParamsP, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
+		(memcmp(targetParams, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
 		memcmp(doc.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams)));
 	revertFDBtn.enabled =
-		memcmp(doc.runtimeParamsP, &defaultRuntimeParams, sizeof(RuntimeParams)) ||
+		memcmp(targetParams, &defaultRuntimeParams, sizeof(RuntimeParams)) ||
 		memcmp(doc.tmpWorldParamsP, &defaultWorldParams, sizeof(WorldParams));
 	saveAsUDBtn.enabled =
-		memcmp(doc.runtimeParamsP, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
+		memcmp(targetParams, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
 		memcmp(doc.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams));
-	makeInitBtn.enabled = memcmp(doc.runtimeParamsP, doc.initParamsP, sizeof(RuntimeParams));
 }
 #define DDGT(d1,d2,d3) [DistDigits.alloc initWithDigits:@[d1,d2,d3] tabView:tabView]
 - (void)windowDidLoad {
@@ -192,7 +191,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	}
 	for (NSInteger i = 0; i < dDigits.count; i ++) {
 		dDigits[i].index = i;
-		dDigits[i].distInfo = &doc.runtimeParamsP->PARAM_D1 + i;
+		dDigits[i].distInfo = &targetParams->PARAM_D1 + i;
 	}
     for (NSInteger idx = 0; idx < iDigits.count; idx ++) {
 		NSTextField *d = iDigits[idx];
@@ -210,7 +209,6 @@ static NSNumberFormatter *distDgtFmt = nil;
 		memcmp(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
     [self adjustControls];
 	[self checkUpdate];
-	makeInitBtn.toolTip = NSLocalizedString(@"Effective with Scenario", nil);
     [doc setPanelTitle:self.window];
 }
 - (IBAction)changeStepsPerDay:(id)sender {
@@ -227,12 +225,12 @@ static NSNumberFormatter *distDgtFmt = nil;
 	[self checkUpdate];
 }
 - (void)setParamsOfRuntime:(const RuntimeParams *)rp world:(const WorldParams *)wp {
-	RuntimeParams rtPr = *(doc.runtimeParamsP);
+	RuntimeParams rtPr = *targetParams;
 	WorldParams wlPr = *(doc.tmpWorldParamsP);
 	[undoManager registerUndoWithTarget:self handler:^(ParamPanel *panel) {
 		[panel setParamsOfRuntime:&rtPr world:&wlPr];
 	}];
-	*(doc.runtimeParamsP) = *rp;
+	*targetParams = *rp;
 	*(doc.tmpWorldParamsP) = *wp;
 	[self adjustControls];
 	[self checkUpdate];
@@ -244,7 +242,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	[self setParamsOfRuntime:&defaultRuntimeParams world:&defaultWorldParams];
 }
 - (IBAction)saveAsUserDefaults:(id)sender {
-	RuntimeParams *rp = doc.runtimeParamsP;
+	RuntimeParams *rp = targetParams;
 	WorldParams *wp = doc.tmpWorldParamsP;
 	confirm_operation(@"Will overwrites the current user's defaults.", self.window, ^{
 		NSDictionary<NSString *, NSNumber *> *dict = param_dict(rp, wp);
@@ -264,12 +262,20 @@ static NSNumberFormatter *distDgtFmt = nil;
 		self->hasUserDefaults = NO;
 	});
 }
-- (IBAction)makeItInitialParameters:(id)sender {
-	doc.initialParameters = [NSData dataWithBytes:doc.runtimeParamsP length:sizeof(RuntimeParams)];
-	[self checkUpdate];
+- (IBAction)switchInitOrCurrent:(id)sender {
+	RuntimeParams *newTarget = (sender == initPrmRdBtn)? doc.initParamsP : doc.runtimeParamsP;
+	if (newTarget != targetParams) {
+		[undoManager registerUndoWithTarget:(sender == initPrmRdBtn)? crntPrmRdBtn : initPrmRdBtn
+			handler:^(NSButton *target) {
+				[target performClick:nil];
+		}];
+		targetParams = newTarget;
+		[self adjustControls];
+		[self checkUpdate];
+	}
 }
 - (IBAction)saveDocument:(id)sender {
-	save_property_data(@"sEpP", self.window, param_dict(doc.runtimeParamsP, doc.tmpWorldParamsP));
+	save_property_data(@"sEpP", self.window, param_dict(targetParams, doc.tmpWorldParamsP));
 }
 - (IBAction)loadDocument:(id)sender {
 	NSWindow *window = self.window;
@@ -291,11 +297,11 @@ static NSNumberFormatter *distDgtFmt = nil;
 }
 - (IBAction)copyAsJSON:(id)sender {
 	copy_plist_as_JSON_text(
-		param_dict(doc.runtimeParamsP, doc.tmpWorldParamsP),
+		param_dict(targetParams, doc.tmpWorldParamsP),
 		self.window);
 }
 - (void)fValueChanged:(NSControl *)sender {
-	RuntimeParams *p = doc.runtimeParamsP;
+	RuntimeParams *p = targetParams;
 	NSControl *d = fDigits[sender.tag], *s = fSliders[sender.tag];
 	CGFloat orgValue = (&p->PARAM_F1)[sender.tag];
 	CGFloat newValue = sender.doubleValue;
@@ -342,6 +348,6 @@ static NSNumberFormatter *distDgtFmt = nil;
 	if ((wFrame.origin.y -= newSz.height - orgFrame.size.height) < 0)
 		wFrame.origin.y = 0.;
 	[self.window setFrame:wFrame display:YES animate:YES];
-	makeInitBtn.hidden = index == 0;
+	initPrmRdBtn.hidden = crntPrmRdBtn.hidden = index == 0;
 }
 @end

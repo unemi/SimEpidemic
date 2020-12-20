@@ -37,8 +37,8 @@ NS_ASSUME_NONNULL_BEGIN
 		*tstSbjAsyDgt, *tstSbjSymDgt;
 	IBOutlet NSSlider *tstDelaySld, *tstProcSld, *tstIntvlSld, *tstSensSld, *tstSpecSld,
 		*tstSbjAsySld, *tstSbjSymSld;
-	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn,
-		*saveAsUDBtn, *makeInitBtn;
+	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn, *saveAsUDBtn;
+	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn; 
 }
 - (instancetype)initWithDoc:(Document *)dc;
 - (void)adjustControls;
@@ -50,7 +50,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (IBAction)resetToFactoryDefaults:(id)sender;
 - (IBAction)saveAsUserDefaults:(id)sender;
 - (IBAction)clearUserDefaults:(id)sender;
-- (IBAction)makeItInitialParameters:(id)sender;
 - (IBAction)saveDocument:(id)sender;
 - (IBAction)loadDocument:(id)sender;
 @end

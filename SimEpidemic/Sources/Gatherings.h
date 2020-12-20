@@ -16,6 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 	NSPoint p;
 	NSMutableArray<NSNumber *> *cellIdxs;
 }
+- (void)setupCellIndexes:(WorldParams *)wp map:(GatheringMap *)map;
 - (void)affectToAgent:(Agent *)a;
 #ifndef NOGUI
 - (void)drawItWithRGB:(CGFloat *)rgb rect:(NSRect)dRect;

@@ -66,7 +66,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>327</string>
+	<string>384</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSAppleScriptEnabled</key>
@@ -83,5 +83,25 @@
 	<true/>
 	<key>OSAScriptingDefinition</key>
 	<string>SimEpidemic.sdef</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeDescription</key>
+			<string>SimEpidemic1Document</string>
+			<key>UTTypeIconFile</key>
+			<string>DocIcon</string>
+			<key>UTTypeIdentifier</key>
+			<string>jp.ac.soka.unemi.SimEpidemicDoc</string>
+			<key>UTTypeReferenceURL</key>
+			<string>http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sEpi</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -317,10 +317,18 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 - (NSDictionary *)jobStatus {
 	[lock lock];
 	NSInteger nowProcessed = runningTrials.count;
+#ifdef DEBUGz
+	NSNumber *steps[nowProcessed * 2];
+#else
 	NSNumber *steps[nowProcessed];
+#endif
 	NSInteger n = 0;
-	for (Document *doc in runningTrials.objectEnumerator)
+	for (Document *doc in runningTrials.objectEnumerator) {
 		steps[n ++] = @(doc.runtimeParamsP->step);
+#ifdef DEBUGz
+		steps[n ++] = @(doc.phaseInStep);
+#endif
+	}
 	[lock unlock];
 	return @{@"notYet":@(_nIteration - nextTrialNumber),
 		@"nowProcessed":[NSArray arrayWithObjects:steps count:n],

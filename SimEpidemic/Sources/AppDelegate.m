@@ -195,6 +195,22 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 	}
 }
 #ifndef NOGUI
+NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg) {
+	NSMutableDictionary *md = NSMutableDictionary.new;
+	CGFloat *fpNew = &rpNew->PARAM_F1, *fpOrg = &rpOrg->PARAM_F1;
+	DistInfo *dpNew = &rpNew->PARAM_D1, *dpOrg = &rpOrg->PARAM_D1;
+	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
+		case ParamTypeFloat: if (*fpNew != *fpOrg) md[p->key] = @(*fpNew);
+			fpNew ++; fpOrg ++; break;
+		case ParamTypeDist: if (dpNew->min != dpOrg->min ||
+			dpNew->max != dpOrg->max || dpNew->mode != dpOrg->mode)
+			md[p->key] = @[@(dpNew->min), @(dpNew->max), @(dpNew->mode)];
+			dpNew ++; dpOrg ++; break;
+		default: break;
+	}
+	return md;
+}
+
 #define RGB3(r,g,b) ((r<<16)|(g<<8)|b)
 NSInteger defaultStateRGB[N_COLORS] = {
 	RGB3(39,85,154), RGB3(246,214,0), RGB3(250,48,46), RGB3(32,120,100), RGB3(182,182,182),

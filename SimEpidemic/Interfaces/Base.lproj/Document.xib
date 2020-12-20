@@ -20,6 +20,8 @@
                 <outlet property="prmBtn" destination="8oB-6Q-T7R" id="M7t-24-LAU"/>
                 <outlet property="qDSNum" destination="cdS-6l-yC3" id="QvI-2x-h4e"/>
                 <outlet property="qNSNum" destination="Tgb-tI-PQH" id="f23-il-ajI"/>
+                <outlet property="savePanelAccView" destination="X9U-U8-xMN" id="zbE-yp-Pp4"/>
+                <outlet property="savePopCBox" destination="gEb-89-QHE" id="en8-Jk-uPu"/>
                 <outlet property="scenarioText" destination="Awo-S3-2Qp" id="FkL-Sa-7tC"/>
                 <outlet property="scnBtn" destination="bUt-Py-ffz" id="YyT-PF-GKh"/>
                 <outlet property="showGatheringsCBox" destination="IFU-W9-eTe" id="ugJ-zr-fPC"/>
@@ -389,6 +391,21 @@
                 <outlet property="doc" destination="-2" id="TNt-yA-EHQ"/>
             </connections>
         </customObject>
+        <customView id="X9U-U8-xMN">
+            <rect key="frame" x="0.0" y="0.0" width="185" height="25"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+            <subviews>
+                <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="gEb-89-QHE">
+                    <rect key="frame" x="8" y="4" width="169" height="18"/>
+                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    <buttonCell key="cell" type="check" title="Save Current Population" bezelStyle="regularSquare" imagePosition="left" inset="2" id="XsK-yp-42R">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                </button>
+            </subviews>
+            <point key="canvasLocation" x="630.5" y="192.5"/>
+        </customView>
     </objects>
     <resources>
         <image name="loupeMinus" width="16" height="16"/>

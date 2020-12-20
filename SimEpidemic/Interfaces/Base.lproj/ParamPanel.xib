@@ -17,6 +17,7 @@
                 <outlet property="contagDSld" destination="2TX-Ym-EdZ" id="UZQ-4O-05m"/>
                 <outlet property="contagPDgt" destination="Qjk-1W-dMg" id="1GZ-kr-wXo"/>
                 <outlet property="contagPSld" destination="DtQ-T7-c7x" id="5sy-OO-UG4"/>
+                <outlet property="crntPrmRdBtn" destination="Fim-97-sSC" id="Idz-dw-rQS"/>
                 <outlet property="dstOBDgt" destination="3kE-9b-MjM" id="y4d-xT-Cvq"/>
                 <outlet property="dstOBSld" destination="SXu-Go-G6w" id="GM8-z2-J5f"/>
                 <outlet property="dstSTDgt" destination="toU-R4-lZc" id="fOY-Jj-zrv"/>
@@ -49,7 +50,7 @@
                 <outlet property="infecSld" destination="lhP-mp-8S0" id="WBB-B5-0qf"/>
                 <outlet property="initPopDgt" destination="E5S-K9-Y2l" id="di5-wb-sg5"/>
                 <outlet property="initPopStp" destination="mKi-ys-8Kp" id="0zl-0c-RAF"/>
-                <outlet property="makeInitBtn" destination="1w3-eu-PIq" id="YUB-ph-PnC"/>
+                <outlet property="initPrmRdBtn" destination="yjB-xQ-Wmg" id="Kc0-dn-OJt"/>
                 <outlet property="massDgt" destination="hke-Px-dKI" id="tdO-cz-ved"/>
                 <outlet property="massSld" destination="MIq-4H-OAC" id="V2R-h7-4l5"/>
                 <outlet property="maxSpdDgt" destination="QBx-4I-pOt" id="NTL-1e-S1Z"/>
@@ -162,17 +163,6 @@
                             <action selector="saveAsUserDefaults:" target="-2" id="c4Y-FX-MOo"/>
                         </connections>
                     </button>
-                    <button hidden="YES" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="1w3-eu-PIq">
-                        <rect key="frame" x="15" y="14" width="158" height="27"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                        <buttonCell key="cell" type="push" title="Make it Initial Parameters" bezelStyle="rounded" alignment="center" controlSize="small" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Nzz-qW-QhE">
-                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
-                            <font key="font" metaFont="smallSystem"/>
-                        </buttonCell>
-                        <connections>
-                            <action selector="makeItInitialParameters:" target="-2" id="ta5-Ok-ke1"/>
-                        </connections>
-                    </button>
                     <tabView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="F3A-Yc-KVJ">
                         <rect key="frame" x="-8" y="107" width="396" height="111"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -233,6 +223,28 @@
                         </buttonCell>
                         <connections>
                             <action selector="copyAsJSON:" target="-2" id="YU1-y3-m1c"/>
+                        </connections>
+                    </button>
+                    <button hidden="YES" verticalHuggingPriority="750" fixedFrame="YES" tag="1" translatesAutoresizingMaskIntoConstraints="NO" id="yjB-xQ-Wmg">
+                        <rect key="frame" x="19" y="16" width="57" height="20"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <buttonCell key="cell" type="radio" title="Initial" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" state="on" inset="2" id="udK-1y-abc">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="switchInitOrCurrent:" target="-2" id="y8s-sn-SBu"/>
+                        </connections>
+                    </button>
+                    <button hidden="YES" verticalHuggingPriority="750" fixedFrame="YES" tag="1" translatesAutoresizingMaskIntoConstraints="NO" id="Fim-97-sSC">
+                        <rect key="frame" x="81" y="16" width="62" height="20"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <buttonCell key="cell" type="radio" title="Current" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" inset="2" id="9AF-pR-oul">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="switchInitOrCurrent:" target="-2" id="y65-hR-CHb"/>
                         </connections>
                     </button>
                 </subviews>

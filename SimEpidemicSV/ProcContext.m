@@ -664,7 +664,8 @@ NSData *JSON_pop(Document *doc) {
 		p += store_agent_xyh(a, p, wp->worldSize);
 	for (Agent *a = doc.CList; a != NULL; a = a->next, nAgents ++)
 		p += store_agent_xyh(a, p, wp->worldSize);
-	for (WarpInfo *info in doc.WarpList) {
+	for (NSValue *value in doc.WarpList.objectEnumerator) {
+		WarpInfo info = value.warpInfoValue;
 		Agent *a = info.agent;
 		p += sprintf((char *)p, "[%d,%d,%d,%d,%d,%d],",
 			int_coord(a->x, wp->worldSize), int_coord(a->y, wp->worldSize), a->health,
@@ -711,7 +712,8 @@ NSData *JSON_pop2(Document *doc) {
 		[posts[a->health] addObject:agent_cood(a, wp)];
 	for (Agent *a = doc.CList; a != NULL; a = a->next)
 		[posts[a->health] addObject:agent_cood(a, wp)];
-	for (WarpInfo *info in doc.WarpList) {
+	for (NSValue *value in doc.WarpList.objectEnumerator) {
+		WarpInfo info = value.warpInfoValue;
 		Agent *a = info.agent;
 		[posts[a->health] addObject:@[
 			@(int_coord(a->x, wp->worldSize)), @(int_coord(a->y, wp->worldSize)),

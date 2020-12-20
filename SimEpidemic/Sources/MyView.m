@@ -91,8 +91,10 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 			NSMinX(hospitalRect) + fontSize * .2, NSMaxY(hospitalRect) - fontSize * 1.2}
 			withAttributes:attr];
 	}
-	for (WarpInfo *item in doc.WarpList)
+	for (NSValue *value in doc.WarpList.objectEnumerator) {
+		WarpInfo item = value.warpInfoValue;
 		warp_show(item.agent, item.mode, item.goal, dRect, pathsW);
+	}
 	[doc popUnlock];
 	for (NSInteger i = 0; i < NHealthTypes; i ++) {
 		[stateColors[i] setFill]; [pathsI[i] fill];
