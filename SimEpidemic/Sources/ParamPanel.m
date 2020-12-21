@@ -16,15 +16,9 @@ static void reveal_me_in_tabview(NSControl *me, NSTabView *tabView) {
 	for (NSTabViewItem *item in tabView.tabViewItems) if (item.view == parent)
 		{ [tabView selectTabViewItem:item]; break; }
 }
-@interface DistDigits : NSObject {
-	DistInfo *distInfo;
-	NSTextField __weak *minDgt, *maxDgt, *modDgt;
-}
-@property (readonly,weak) NSTabView *tabView;
-@end
 @implementation DistDigits
 static NSNumberFormatter *distDgtFmt = nil;
-- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits tabView:(NSTabView *)tabV {
+- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits tabView:(nullable NSTabView *)tabV {
 	if (!(self = [super init])) return nil;
 	if (distDgtFmt == nil) {
 		distDgtFmt = NSNumberFormatter.new;
@@ -44,30 +38,30 @@ static NSNumberFormatter *distDgtFmt = nil;
 - (void)setIndex:(NSInteger)index {
 	minDgt.tag = maxDgt.tag = modDgt.tag = index;
 }
-- (void)setDistInfo:(DistInfo *)dInfo { distInfo = dInfo; }
 - (void)adjustDigitsToCurrentValue {
-	minDgt.doubleValue = distInfo->min;
-	maxDgt.doubleValue = distInfo->max;
-	modDgt.doubleValue = distInfo->mode;
+	minDgt.doubleValue = _distInfo->min;
+	maxDgt.doubleValue = _distInfo->max;
+	modDgt.doubleValue = _distInfo->mode;
 }
 - (NSUndoManager *)undoManager {
 	NSWindow *window = minDgt.window;
-	return [(ParamPanel *)window.delegate windowWillReturnUndoManager:window];
+	return [window.delegate windowWillReturnUndoManager:window];
 }
 - (NSTextField *)minDgt { return minDgt; }
 - (void)changeDistInfo:(DistInfo)newInfo {
-	DistInfo orgInfo = *distInfo;
-	*distInfo = newInfo;
+	DistInfo orgInfo = *_distInfo;
+	*_distInfo = newInfo;
 	[self adjustDigitsToCurrentValue];
 	[self.undoManager registerUndoWithTarget:self handler:^(DistDigits *dd) {
-		reveal_me_in_tabview(dd.minDgt, dd.tabView);
+		if (dd.tabView != nil) reveal_me_in_tabview(dd.minDgt, dd.tabView);
 		[dd changeDistInfo:orgInfo];
 	}];
-	[(ParamPanel *)minDgt.window.delegate checkUpdate];
+	ParamPanel *pp = (ParamPanel *)minDgt.window.delegate;
+	if (pp != nil && [pp isKindOfClass:ParamPanel.class]) [pp checkUpdate];
 }
 - (void)dValueChanged:(NSTextField *)sender {
 	CGFloat newValue = sender.doubleValue;
-	DistInfo newInfo = *distInfo;
+	DistInfo newInfo = *_distInfo;
 	if (sender == minDgt) {
 		if (newValue == newInfo.min) return;
 		newInfo.min = newValue;

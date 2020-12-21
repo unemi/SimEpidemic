@@ -10,8 +10,17 @@
 #import "CommonTypes.h"
 
 NS_ASSUME_NONNULL_BEGIN
-@class Document;
 
+@interface DistDigits : NSObject {
+	NSTextField __weak *minDgt, *maxDgt, *modDgt;
+}
+@property DistInfo *distInfo;
+@property (readonly,weak) NSTabView *tabView;
+- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits tabView:(nullable NSTabView *)tabV;
+- (void)adjustDigitsToCurrentValue;
+@end
+
+@class Document;
 @interface ParamPanel : NSWindowController
 	<NSWindowDelegate, NSTabViewDelegate> {
 	IBOutlet NSView *worldPView, *movePView, *pathoPView, *measPView, *testPView;

@@ -15,6 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 	IBOutlet Document *doc;
 	IBOutlet NSButton *magDownBtn;
 	NSBitmapImageRep *imgRep;
+	BOOL liveResizeEnded;
 	NSMutableDictionary *attr;
 	NSInteger worldSize;
 	CGFloat fontSize;
@@ -23,6 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property CGFloat scale;
 @property NSPoint offset;
 @property BOOL showGatherings;
+- (void)enableMagDownButton;
 @end
 
 @interface LegendView: NSView {

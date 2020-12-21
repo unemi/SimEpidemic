@@ -26,19 +26,24 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 	[self addCursorRect:self.frame cursor:
 		(_scale > 1.)? NSCursor.openHandCursor : NSCursor.arrowCursor];
 }
+- (void)enableMagDownButton { magDownBtn.enabled = YES; }
 - (void)drawRect:(NSRect)dirtyRect {
+	if (imgRep != nil) {
+		[imgRep drawInRect:self.bounds];
+		if (!liveResizeEnded) return;
+	}
 	NSSize fSize = self.frame.size;
 	if (!NSEqualSizes(fSize, frameSize)) {
 		self.bounds = (NSRect){0, 0, 100, 80};
 		frameSize = fSize;
-	}
+		return;
+	} else if (liveResizeEnded) { imgRep = nil; liveResizeEnded = NO; }
 	NSInteger m = doc.worldParamsP->mesh, wSize = doc.worldParamsP->worldSize;
 	if (wSize != worldSize) {
 		fontSize = LV_FONT_SIZE * wSize / 500;
 		attr[NSFontAttributeName] = [NSFont userFontOfSize:fontSize];
 		worldSize = wSize;
 	}
-	[super drawRect:dirtyRect];
 	[NSGraphicsContext saveGraphicsState];
 	CGFloat cellSize = (CGFloat)wSize / m;
 	NSRect fieldRect = {0, 0, wSize, wSize};
@@ -103,7 +108,7 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 	[NSGraphicsContext restoreGraphicsState];
 }
 -(void)adjustOffset:(NSPoint)newOffset {
-	CGFloat a = -4.5 * (1. - 1. / _scale);
+	CGFloat a = doc.worldParamsP->worldSize / -80. * (1. - 1. / _scale);
 	NSSize size = self.bounds.size;
 	_offset = (NSPoint){
 		fmin(0., fmax(size.width * a, newOffset.x)),
@@ -117,30 +122,44 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 	self.needsDisplay = YES;
 }
 - (void)mouseDragged:(NSEvent *)event {
-	[self shiftView:event bias:1.];
+	[self shiftView:event bias:2.];
 }
 - (void)scrollWheel:(NSEvent *)event {
-	[self shiftView:event bias:5.];
+	[self shiftView:event bias:10.];
+}
+- (void)setNewScale:(CGFloat)newScale {
+	CGFloat a = doc.worldParamsP->worldSize * (1./newScale - 1./_scale) / 2.;
+	_scale = newScale;
+	[self adjustOffset:(NSPoint){_offset.x + 1.25 * a, _offset.y + a}];
 }
 - (IBAction)magnifyMore:(id)sender {
 	if (_scale <= 1.) {
 		magDownBtn.enabled = YES;
 		[self.window invalidateCursorRectsForView:self];
 	}
-	_scale *= M_SQRT2;
-	[self adjustOffset:_offset];
+	[self setNewScale:_scale * M_SQRT2];
 	self.needsDisplay = YES;
 }
 - (IBAction)magnifyLess:(id)sender {
-	if (_scale >= M_SQRT2) _scale /= M_SQRT2;
-	else _scale = 1.;
-	if (_scale < 1.1) {
-		_scale = 1.; magDownBtn.enabled = NO;
+	CGFloat newScale = (_scale >= M_SQRT2)? _scale / M_SQRT2 : 1.;
+	if (newScale < 1.1) {
+		newScale = 1.; magDownBtn.enabled = NO;
 		[self.window invalidateCursorRectsForView:self];
 	}
-	[self adjustOffset:_offset];
+	[self setNewScale:newScale];
 	self.needsDisplay = YES;
 }
+- (void)startLiveResize {
+	NSBitmapImageRep *bm = [self bitmapImageRepForCachingDisplayInRect:self.bounds];
+	[self cacheDisplayInRect:self.bounds toBitmapImageRep:bm];
+	imgRep = bm;
+}
+- (void)endLiveResize { liveResizeEnded = YES; self.needsDisplay = YES; }
+@end
+
+@implementation Document (WindowResizeExtension)
+- (void)windowWillStartLiveResize:(NSNotification *)notification { [view startLiveResize]; }
+- (void)windowDidEndLiveResize:(NSNotification *)notification { [view endLiveResize]; }
 @end
 
 @implementation LegendView

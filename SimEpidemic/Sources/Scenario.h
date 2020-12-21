@@ -68,7 +68,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 - (void)removeItem:(ScenarioItem *)item;
 - (CondElmItem *)itemWithPredicate:(NSPredicate *)predicate parent:(ScenarioItem *)parent;
 - (void)setScenarioWithArray:(NSArray *)array;
-- (void)distParamBySheetWithItem:(ParamItem *)item value:(DistInfo)info;
+- (void)distParamBySheetWithItem:(ParamItem *)item value:(DistInfo *)info;
 @end
 
 NS_ASSUME_NONNULL_END

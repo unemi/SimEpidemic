@@ -7,6 +7,7 @@
 //
 
 #import "SaveDoc.h"
+#import "MyView.h"
 #import "StatPanel.h"
 #import "Agent.h"
 #import "Gatherings.h"
@@ -185,7 +186,8 @@ static NSString *fnParamsPList = @"initParams.plist",
 	*fnStatImageBM = @"statImageBitmap.gz",
 	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
 	*keyCurrentParams = @"currentParams",
-	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex";
+	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex",
+	*keyViewOffsetAndScale = @"viewOffsetAndScale";
 - (BOOL)prepareSavePanel:(NSSavePanel *)savePanel {
 	savePanel.accessoryView = savePanelAccView;
 	return YES;
@@ -213,6 +215,8 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 	NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
 	if (scenario != nil) dict[keyScenarioIndex] = @(scenarioIndex);
 	dict[keyStep] = @(runtimeParams.step);
+	if (view.scale > 1.) dict[keyViewOffsetAndScale] =
+		@[@(view.offset.x), @(view.offset.y), @(view.scale)];
 	md[fnParamsPList] = fileWrapper_from_plist(dict);
 	[dict removeAllObjects];
 
@@ -334,6 +338,16 @@ static NSDictionary *plist_from_data(NSData *data) {
 	}
 	if ((num = dict[keyScenarioIndex]) != nil) scenarioIndex = num.integerValue;
 	if ((num = dict[keyStep]) != nil) runtimeParams.step = num.integerValue;
+	NSArray<NSNumber *> *arr;
+	if ((arr = dict[keyViewOffsetAndScale]) != nil && arr.count >= 3) {
+		CGPoint pt = (CGPoint){arr[0].doubleValue, arr[1].doubleValue};
+		CGFloat sc = arr[2].doubleValue;
+		void (^block)(MyView *) = ^(MyView *v){ v.offset = pt; v.scale = sc; };
+		if (view == nil) {
+			if (UIInitializers == nil) UIInitializers = NSMutableDictionary.new;
+			UIInitializers[keyViewInits] = @[block];
+		} else block(view);
+	}
 	return YES;
 }
 #define CP_L(m) a->m = as[i].m
@@ -424,8 +438,10 @@ static NSDictionary *plist_from_data(NSData *data) {
 		[st copyImageBitmapFromData:[fw.regularFileContents unzippedData]]; }];
 	NSInteger popSize = worldParams.initPop;
 	[statProcs addObject:^(StatInfo *st) { st.popsize = popSize; }];
-	if (statInfo == nil) statInfoInitializer = statProcs;
-	else for (void (^block)(StatInfo *) in statProcs) block(statInfo);
+	if (statInfo == nil) {
+		if (UIInitializers == nil) UIInitializers = NSMutableDictionary.new;
+		UIInitializers[keyStatInits] = statProcs;
+	} else for (void (^block)(StatInfo *) in statProcs) block(statInfo);
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO; }
 	return YES;
 }

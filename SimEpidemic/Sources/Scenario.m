@@ -10,6 +10,7 @@
 #import "AppDelegate.h"
 #import "Document.h"
 #import "StatPanel.h"
+#import "ParamPanel.h"
 
 @implementation StatInfo (PredicateExtension)
 - (NSInteger)days { return days; }
@@ -417,13 +418,7 @@ static void check_images(void) {
 	_index = idx;
 }
 - (void)distParamBeginSheet:(id)sender {
-	[scenario distParamBySheetWithItem:self value:_distInfo];
-}
-- (void)distParamEndSheet:(DistInfo)info {
-	DistInfo orgValue = _distInfo;
-	[scenario.undoManager registerUndoWithTarget:self handler:
-		^(ParamItem *target) { target.distInfo = orgValue; }];
-	_distInfo = info;
+	[scenario distParamBySheetWithItem:self value:&_distInfo];
 }
 - (NSObject *)scenarioElement {
 	NSString *key =
@@ -868,6 +863,8 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	NSArray *savedPList;
 	NSInteger modificationCount, appliedCount;
 	NSMutableDictionary<NSNumber *, NSNumber *> *valueDict;
+	DistDigits *distDigits;
+	ParamItem *sheetItem;
 }
 @end
 @implementation Scenario
@@ -1171,24 +1168,23 @@ static NSArray *plist_of_all_items(NSArray *itemList) {
 	removeBtn.enabled = ma.count > 0;
 }
 - (IBAction)ok:(NSButton *)button {
-	[self.window endSheet:button.window returnCode:NSModalResponseOK];
+	ParamItem *item = sheetItem;
+	DistInfo *dInfo = distDigits.distInfo;
+	[_undoManager registerUndoWithTarget:self handler:^(Scenario *target)
+		{ [target distParamBySheetWithItem:item value:dInfo]; }];
+	[self.window endSheet:distParamSheet returnCode:NSModalResponseOK];
 }
-- (IBAction)cancel:(NSButton *)button {
-	[self.window endSheet:button.window returnCode:NSModalResponseCancel];
-}
-- (void)distParamBySheetWithItem:(ParamItem *)item value:(DistInfo)info {
+- (void)distParamBySheetWithItem:(ParamItem *)item value:(DistInfo *)info {
 	ParameterCellView *view = (ParameterCellView *)item.view;
 	itemIdx.integerValue = [itemList indexOfObject:item] + 1;
+	sheetItem = item;
 	paramNameTxt.stringValue = view.namePopUp.titleOfSelectedItem;
-	NSTextField *min = minDgt, *max = maxDgt, *mode = modeDgt;
-	min.doubleValue = info.min;
-	max.doubleValue = info.max;
-	mode.doubleValue = info.mode;
-	[self.window beginSheet:distParamSheet completionHandler:
-	^(NSModalResponse returnCode) { if (returnCode == NSModalResponseOK) {
-		[item distParamEndSheet:(DistInfo)
-			{min.doubleValue, max.doubleValue, mode.doubleValue}];
-	}}];
+	if (distDigits == nil) distDigits =
+		[DistDigits.alloc initWithDigits:@[minDgt, maxDgt, modeDgt] tabView:nil];
+	distDigits.distInfo = info;
+	[distDigits adjustDigitsToCurrentValue];
+	[_undoManager registerUndoWithTarget:self handler:^(Scenario *target) { [target ok:nil]; }];
+	[self.window beginSheet:distParamSheet completionHandler:^(NSModalResponse returnCode) {}];
 }
 // NSWindowDelagate methods
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {

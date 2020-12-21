@@ -205,8 +205,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "176"
             endingLineNumber = "176"
-            landmarkName = "ParameterCellView"
-            landmarkType = "3">
+            landmarkName = "-adjustView:"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -219,9 +219,9 @@
             filePath = "SimEpidemic/Sources/Scenario.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1187"
-            endingLineNumber = "1187"
-            landmarkName = "-distParamBySheetWithItem:value:"
+            startingLineNumber = "1192"
+            endingLineNumber = "1192"
+            landmarkName = "-windowWillReturnUndoManager:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -235,8 +235,8 @@
             filePath = "SimEpidemic/Sources/Document.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1066"
-            endingLineNumber = "1066"
+            startingLineNumber = "1070"
+            endingLineNumber = "1070"
             landmarkName = "-doOneStep"
             landmarkType = "7">
          </BreakpointContent>
@@ -251,8 +251,8 @@
             filePath = "SimEpidemic/Sources/Document.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1010"
-            endingLineNumber = "1010"
+            startingLineNumber = "1014"
+            endingLineNumber = "1014"
             landmarkName = "-doOneStep"
             landmarkType = "7">
          </BreakpointContent>

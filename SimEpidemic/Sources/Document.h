@@ -43,6 +43,7 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 #endif
 
 #ifndef NOGUI
+extern NSString *keyStatInits, *keyViewInits;
 @interface Document : NSDocument <NSWindowDelegate> {
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
@@ -54,7 +55,7 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 	NSArray<LegendView *> *lvViews;
 	IBOutlet NSView *savePanelAccView;
 	IBOutlet NSButton *savePopCBox;
-	NSArray<void (^)(StatInfo *)> *statInfoInitializer;
+	NSMutableDictionary<NSString *, NSArray *> *UIInitializers;
 #else
 @interface Document : NSObject {
 #endif

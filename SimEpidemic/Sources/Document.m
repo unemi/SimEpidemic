@@ -544,6 +544,16 @@ NSInteger nQueues = 10;
 }
 #else
 - (NSString *)windowNibName { return @"Document"; }
+NSString *keyStatInits = @"statInits", *keyViewInits = @"viewInits";
+- (void)initializeUI {
+	NSArray *arr;
+	if ((arr = UIInitializers[keyStatInits]) != nil)
+		for (void (^block)(StatInfo *) in arr) block(statInfo);
+	if ((arr = UIInitializers[keyViewInits]) != nil)
+		for (void (^block)(MyView *) in arr) block(view);
+	if (view.scale > 1.) [view enableMagDownButton];
+	savePopCBox.state = NSControlStateValueOn;
+}
 - (void)windowControllerDidLoadNib:(NSWindowController *)windowController {
 	static NSString *lvNames[] = {
 		@"Susceptible", @"Asymptomatic", @"Symptomatic", @"Recovered", @"Dead"
@@ -557,11 +567,7 @@ NSInteger nQueues = 10;
 	windowController.window.delegate = self;
 	if (scenario != nil) [self setupPhaseInfo];
 	if (nMesh == 0) [self resetPop];
-	else if (statInfoInitializer != nil) {
-		for (void (^block)(StatInfo *) in statInfoInitializer) block(statInfo);
-		statInfoInitializer = nil;
-		savePopCBox.state = NSControlStateValueOn;
-	}
+	else if (UIInitializers != nil) [self initializeUI];
 	animeStepper.integerValue = log2(animeSteps);
 	show_anime_steps(animeStepsTxt, animeSteps);
 	stopAtNDaysDgt.integerValue = (stopAtNDays > 0)? stopAtNDays : - stopAtNDays;
@@ -571,6 +577,8 @@ NSInteger nQueues = 10;
 	orgViewSize = view.frame.size;
 //	[self openStatPenel:self];
 }
+// NSWindowDelegate methods
+// You can find the other delegate methods in MyView.m
 - (void)windowWillClose:(NSNotification *)notification {
 	if (scenarioPanel != nil) [scenarioPanel close];
 	if (paramPanel != nil) [paramPanel close];
@@ -623,6 +631,7 @@ NSInteger nQueues = 10;
 	orgViewInfo = nil;
 	for (NSButton *btn in @[scnBtn, prmBtn, sttBtn, datBtn]) btn.enabled = YES;
 }
+//
 #endif
 NSString *keyParameters = @"parameters", *keyScenario = @"scenario",
 	*keyDaysToStop = @"daysToStop";
