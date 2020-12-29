@@ -5,6 +5,7 @@
 //  Created by Tatsuo Unemi on 2020/05/05.
 //  Copyright © 2020 Tatsuo Unemi. All rights reserved.
 //
+#define VER_1_8
 
 typedef enum {
 	Susceptible, Asymptomatic, Symptomatic, Recovered, Died,
@@ -45,6 +46,9 @@ typedef struct {
 
 typedef struct {
 	CGFloat mass, friction, avoidance, maxSpeed;
+	CGFloat actMode, actKurt; // activeness as individuality
+	CGFloat mobAct, gatAct; // bias for mility and gatherings
+	CGFloat incubAct, fatalAct, recovAct, immuneAct;	// correlation
 	CGFloat contagDelay, contagPeak; // contagion delay and peak;
 	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat dstST, dstOB; // Distancing strength and obedience
@@ -87,23 +91,33 @@ typedef struct ContactInfoRec {
 	struct AgentRec *agent;
 } ContactInfo;
 
-@class Gathering;
-typedef NSMutableDictionary<NSNumber *, NSMutableArray<Gathering *> *>
-	GatheringMap;
+typedef struct GatheringRec {
+	struct GatheringRec *prev, *next;
+	CGFloat size, duration, strength;
+	NSPoint p;
+	NSInteger nAgents;
+	struct AgentRec **agents;
+} Gathering;
 
 typedef struct AgentRec {
 	NSInteger ID;
 	struct AgentRec *prev, *next;
-	CGFloat app, prf, x, y, vx, vy, fx, fy;
+	CGFloat app, prf, x, y, vx, vy;
 	CGPoint orgPt;
 	CGFloat daysInfected, daysDiseased;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
-	HealthType health, newHealth;
-	int nInfects, newNInfects;
-	BOOL distancing, isOutOfField, isWarping, gotAtHospital,
-		inTestQueue;
+	CGFloat activeness;
+	HealthType health;
+	int nInfects;
+	BOOL distancing, isOutOfField, isWarping, inTestQueue;
 	NSInteger lastTested;
+	ContactInfo *contactInfoHead, *contactInfoTail;
+	Gathering *gathering;
+// working memory
+	CGFloat fx, fy;
+	HealthType newHealth;
+	int newNInfects;
 	struct AgentRec *best;
 	CGFloat bestDist, gatDist;
-	ContactInfo *contactInfoHead, *contactInfoTail;
+	BOOL gotAtHospital;
 } Agent;

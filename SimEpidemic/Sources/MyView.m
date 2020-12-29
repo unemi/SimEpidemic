@@ -75,7 +75,8 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 		if (_showGatherings) {
 			CGFloat rgb[3];
 			[stateColors[ColGathering] getRed:rgb green:rgb+1 blue:rgb+2 alpha:NULL];
-			for (Gathering *gat in doc.gatherings) [gat drawItWithRGB:rgb rect:dRect];
+			for (Gathering *gat = doc.gatherings; gat != NULL; gat = gat->next)
+				draw_gathering(gat, rgb, dRect);
 	}}
 	attr[NSForegroundColorAttributeName] = stateColors[ColText];
 	if (NSIntersectsRect(cemeteryRect, dRect)) {

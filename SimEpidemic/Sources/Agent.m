@@ -12,38 +12,51 @@
 #define BIG_NUM 1e10
 #define AVOIDANCE .2
 // Random number of psuedo Gaussian distribution by Box-Müller method
-static CGFloat random_guassian(CGFloat mu, CGFloat sigma) {
+static CGFloat random_guassian(void) {
 	static CGFloat z = 0.;
 	static BOOL secondTime = NO;
-	CGFloat x;
-	if (secondTime) { secondTime = NO; x = z; }
+	if (secondTime) { secondTime = NO; return z; }
 	else {
 		secondTime = YES;
 		CGFloat r = sqrt(-2. * log(random() / (CGFloat)0x7fffffff)),
 			th = random() / (CGFloat)0x7fffffff * M_PI * 2.;
-		x = r * sin(th);
 		z = r * cos(th);
+		return r * sin(th);
 	}
-	return x * sigma + mu;
 }
 #define EXP_BASE .02
+static CGFloat random_exp(void) {
+	return (pow(EXP_BASE, random() / (CGFloat)0x7fffffff) - EXP_BASE) / (1. - EXP_BASE);
+}
+static CGFloat random_mk(CGFloat mode, CGFloat kurt) {
+	CGFloat x =
+		(mode <= 0.)? random_exp() * 2. - 1. :
+		(mode >= 1.)? 1. - random_exp() * 2. :
+		random_guassian() / 3.;
+	if (x < -2.) x = -1.;
+	else if (x < -1.) x = -2. - x;
+	else if (x > 2.) x = 1.;
+	else if (x > 1.) x = 2. - x;
+	if (kurt != 0.) {
+		CGFloat b = pow(2., -kurt);
+		x = (x < 0.)? pow(x + 1., b) - 1. : 1. - pow(1. - x, b);
+	}
+	x = (x + 1.) / 2.;
+	CGFloat a = mode / (1. - mode);
+	return a * x / ((a - 1.) * x + 1.);
+}
 CGFloat my_random(DistInfo *p) {
-	if (p->mode == p->min) return (pow(EXP_BASE, random() / (CGFloat)0x7fffffff) - EXP_BASE)
-		/ (1. - EXP_BASE) * (p->max - p->min) + p->min;
-	else if (p->mode == p->max) return (1. - pow(EXP_BASE, random() / (CGFloat)0x7fffffff))
-		/ (1. - EXP_BASE) * (p->max - p->min) + p->min;
-	CGFloat x = random_guassian(.5, .166667);
-	if (x < 0.) x += floor(1. - x);
-	else if (x > 1.) x -= floor(x);
-//	if (kurtosis != 0.) {
-//		CGFloat b = pow(2., -kurtosis);
-//		/* x = (x < .5)? b * x / ((b - 1) * x * 2. + 1.) :
-//			(x - .5) / ((x + b - b * x) * 2. - 1.) + .5;  */
-//		x = (x < .5)? pow(x * 2., b) * .5 : 1. - pow(2. - x * 2., b) * .5;
-//	}
-//	if (x < 0.) x = 0.; else if (x > 1.) x = 1.;
-	CGFloat a = (p->mode - p->min) / (p->max - p->mode);
-	return a * x / ((a - 1.) * x + 1.) * (p->max - p->min) + p->min;
+	return (p->max == p->min)? p->min :
+		random_mk((p->mode - p->min) / (p->max - p->min), 0.) * (p->max - p->min) + p->min;
+}
+struct ActivenessEffect { CGFloat x, mX; };
+static CGFloat random_with_corr(DistInfo *p, struct ActivenessEffect a, CGFloat c) {
+	if (c == 0.) return my_random(p);
+	CGFloat m = (p->mode - p->min) / (p->max - p->min), mY = (c < 0.)? 1. - m : m;
+	CGFloat y = mY * (1. - a.mX) * a.x / (a.mX * (1. - mY) - (a.mX - mY) * a.x);
+	y = (random_mk(y * .1 + mY * .9, 0.) - y) * (1. - fabs(c));
+	if (c < 0.) y = 1. - y;
+	return y * (p->max - p->min) + p->min;
 }
 BOOL was_hit(WorldParams *wp, CGFloat prob) {
 	return (random() > pow(1. - prob, 1. / wp->stepsPerDay) * 0x7fffffff);
@@ -52,17 +65,20 @@ BOOL is_infected(Agent *a) {
 	return a->health == Asymptomatic || a->health == Symptomatic;
 }
 static void reset_days(Agent *a, RuntimeParams *p) {
-	a->daysToRecover = my_random(&p->recov);
-	a->daysToOnset = my_random(&p->incub);
-	a->daysToDie = my_random(&p->fatal) + a->daysToOnset;
-	a->imExpr = my_random(&p->immun);
+	struct ActivenessEffect ae = {a->activeness, p->actMode/100.};
+	a->daysToRecover = random_with_corr(&p->recov, ae, p->recovAct/100.);
+	a->daysToOnset = random_with_corr(&p->incub, ae, p->incubAct/100.);
+	a->daysToDie = random_with_corr(&p->fatal, ae, p->fatalAct/100.) + a->daysToOnset;
+	a->imExpr = random_with_corr(&p->immun, ae, p->immuneAct/100.);
 }
 #define ALT_RATE .1
 static void alter_days(Agent *a, RuntimeParams *p) {
-	a->daysToRecover += (my_random(&p->recov) - a->daysToRecover) * ALT_RATE;
-	a->daysToOnset += (my_random(&p->incub) - a->daysToOnset) * ALT_RATE;
-	a->daysToDie += (my_random(&p->fatal) + a->daysToOnset - a->daysToDie) * ALT_RATE;
-	a->imExpr += (my_random(&p->immun) - a->imExpr) * ALT_RATE;
+	Agent tmpA;
+	reset_days(&tmpA, p);
+	a->daysToRecover += (tmpA.daysToRecover - a->daysToRecover) * ALT_RATE;
+	a->daysToOnset += (tmpA.daysToOnset - a->daysToOnset) * ALT_RATE;
+	a->daysToDie += (tmpA.daysToDie - a->daysToDie) * ALT_RATE;
+	a->imExpr += (tmpA.imExpr - a->imExpr) * ALT_RATE;
 }
 void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	memset(a, 0, sizeof(Agent));
@@ -78,12 +94,15 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->isOutOfField = YES;
 	reset_days(a, rp);
 	a->lastTested = -999999;
+	a->activeness = random_mk(rp->actMode / 100., rp->actKurt / 100.);
+	a->gathering = NULL;
 }
 void reset_for_step(Agent *a) {
 	a->fx = a->fy = 0.;
 	a->best = NULL;
 	a->bestDist = a->gatDist = BIG_NUM;
 	a->newHealth = a->health;
+	a->newNInfects = 0;
 }
 static NSInteger index_in_pop(Agent *a, WorldParams *p) {
 	NSInteger iy = floor(a->y * p->mesh / p->worldSize);
@@ -185,33 +204,37 @@ void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams 
 }
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
 static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, StepInfo *info) {
-  if (a->daysToDie == BIG_NUM) { // in the recovery phase
-	if (a->daysInfected >= a->daysToRecover) {
-		if (a->health == Symptomatic) SET_HIST(HistRecov, daysDiseased)
-		a->newHealth = Recovered;
-		a->daysInfected = 0;
+	if (a->daysToDie == BIG_NUM) { // in the recovery phase
+		if (a->daysInfected >= a->daysToRecover) {
+			if (a->health == Symptomatic) SET_HIST(HistRecov, daysDiseased)
+			a->newHealth = Recovered;
+			a->daysInfected = 0;
+		}
+	} else if (a->daysInfected > a->daysToRecover) { // starts recovery
+		a->daysToRecover *= 1. + 10. / a->daysToDie;
+		a->daysToDie = BIG_NUM;
+	} else if (a->daysInfected >= a->daysToDie) {
+		SET_HIST(HistDeath, daysDiseased);
+		a->newHealth = Died;
+		info->warpType = inQuarantine? WarpToCemeteryH : WarpToCemeteryF;
+		info->warpTo = (CGPoint){
+			(random() * .248 / 0x7fffffff + 1.001) * p->worldSize,
+			(random() * .468 / 0x7fffffff + .001) * p->worldSize};
+		return YES;
+	} else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset) {
+		a->newHealth = Symptomatic;
+		SET_HIST(HistIncub, daysInfected);
 	}
-  } else if (a->daysInfected > a->daysToRecover) { // starts recovery
-	a->daysToRecover *= 1. + 10. / a->daysToDie;
-	a->daysToDie = BIG_NUM;
-  } else if (a->daysInfected >= a->daysToDie) {
-	SET_HIST(HistDeath, daysDiseased);
-	a->newHealth = Died;
-	info->warpType = inQuarantine? WarpToCemeteryH : WarpToCemeteryF;
-	info->warpTo = (CGPoint){
-		(random() * .248 / 0x7fffffff + 1.001) * p->worldSize,
-		(random() * .468 / 0x7fffffff + .001) * p->worldSize};
-	return YES;
-  } else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset) {
-	a->newHealth = Symptomatic;
-	SET_HIST(HistIncub, daysInfected);
-  }
-  return NO;
+	return NO;
 }
 static CGFloat wall(CGFloat d) {
 	if (d < .02) d = .02;
 	return AVOIDANCE * 20. / d / d;
 }
+static inline CGFloat mov_act(Agent *a, RuntimeParams *rp) {
+	return pow(pow(10., rp->mobAct / 100.), (a->activeness - .5) / .5);
+}
+static inline CGFloat mass_bias(Agent *a) { return pow(4., (a->activeness - .5) / .5); }
 void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	switch (a->health) {
 		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
@@ -234,7 +257,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	if (a->health != Symptomatic && was_hit(wp, rp->tstSbjAsy / 100.))
 		info->testType = TestAsSuspected;
 	NSInteger orgIdx = index_in_pop(a, wp);
-	if (a->health != Symptomatic && was_hit(wp, rp->mobFr / 1000.)) {
+	if (a->health != Symptomatic && was_hit(wp, rp->mobFr / 1000. * mov_act(a, rp))) {
 		CGFloat dst = my_random(&rp->mobDist) * wp->worldSize / 100.;
 		CGFloat th = random() * M_PI * 2. / 0x7fffffff;
 		CGPoint newPt = {a->x + cos(th) * dst, a->y + sin(th) * dst};
@@ -253,7 +276,11 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 		}
 		a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 		a->fy += wall(a->y) - wall(wp->worldSize - a->y);
+#ifdef VER_1_8
+		CGFloat mass = rp->mass / 100. * mass_bias(a);
+#else
 		CGFloat mass = rp->mass / 10.;
+#endif
 		if (a->health == Symptomatic) mass *= 20.; 
 		if (a->best != NULL && !a->distancing) {
 			CGFloat dx = a->best->x - a->x;
@@ -262,7 +289,11 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 			a->fx += dx / d;
 			a->fy += dy / d;
 		}
-		CGFloat fric = pow(1. - .8 * rp->friction / 100., 1. / wp->stepsPerDay);
+#ifdef VER_1_8
+		CGFloat fric = pow(.99 * (1. - rp->friction / 100.), 1. / wp->stepsPerDay);
+#else
+		CGFloat fric = pow(1. - rp->friction / 100., 1. / wp->stepsPerDay);
+#endif
 		if (a->gatDist < 1.) fric *= a->gatDist * .5 + .5;
 		a->vx = a->vx * fric + a->fx / mass / wp->stepsPerDay;
 		a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
@@ -295,7 +326,7 @@ void step_agent_in_quarantine(Agent *a, WorldParams *p, StepInfo *info) {
 		return;
 	}
 	if (!patient_step(a, p, YES, info) && a->newHealth == Recovered)
-		info->warpType = WarpBack; info->warpTo = a->orgPt;
+		{ info->warpType = WarpBack; info->warpTo = a->orgPt; }
 }
 BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, CGPoint goal) {
 	CGPoint dp = {goal.x - a->x, goal.y - a->y};

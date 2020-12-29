@@ -11,24 +11,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface Gathering : NSObject {
-	CGFloat size, duration, strength;
-	NSPoint p;
-	NSMutableArray<NSNumber *> *cellIdxs;
-}
-- (void)setupCellIndexes:(WorldParams *)wp map:(GatheringMap *)map;
-- (void)affectToAgent:(Agent *)a;
+extern void affect_to_agent(Gathering *gat, Agent *a);
 #ifndef NOGUI
-- (void)drawItWithRGB:(CGFloat *)rgb rect:(NSRect)dRect;
+extern void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect);
 #endif
-#ifdef DEBUG
-- (void)printInfo:(WorldParams *)wp;
-#endif
-@end
 
-extern void manage_gatherings(
-	NSMutableArray<Gathering *> *gatherings,
-	GatheringMap *gatMap,
-	WorldParams *wp, RuntimeParams *rp);
+extern Gathering *manage_gatherings(Gathering *gatherings,
+	Agent *_Nonnull*_Nullable popmap, WorldParams *wp, RuntimeParams *rp);
 
 NS_ASSUME_NONNULL_END

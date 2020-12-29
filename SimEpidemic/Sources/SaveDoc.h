@@ -30,6 +30,8 @@ typedef struct {
 typedef struct {
 	CGFloat size, duration, strength;
 	NSPoint p;
+	NSInteger nAgents;
+	NSInteger agentIDs[1];	//
 } GatheringSave;
 
 typedef struct {
@@ -42,6 +44,7 @@ typedef struct {
 	CGPoint orgPt;
 	CGFloat daysInfected, daysDiseased;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
+	CGFloat activeness;
 	HealthType health;
 	int nInfects;
 	BOOL distancing, isOutOfField, isWarping, gotAtHospital,

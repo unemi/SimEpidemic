@@ -25,9 +25,14 @@ NS_ASSUME_NONNULL_BEGIN
 	<NSWindowDelegate, NSTabViewDelegate> {
 	IBOutlet NSView *worldPView, *movePView, *pathoPView, *measPView, *testPView;
 	IBOutlet NSTabView *tabView;
-	IBOutlet NSTextField *fricDgt, *avoidDgt, *maxSpdDgt;
-	IBOutlet NSSlider *fricSld, *avoidSld, *maxSpdSld;
-	IBOutlet NSTextField *massDgt, *infecDgt, *infecDstDgt, *contagDDgt, *contagPDgt;
+	IBOutlet NSTextField *massDgt, *fricDgt, *avoidDgt, *maxSpdDgt;
+	IBOutlet NSSlider *massSld, *fricSld, *avoidSld, *maxSpdSld;
+	IBOutlet NSTextField *actModeDgt, *actKurtDgt, *mobActDgt, *gatActDgt;
+	IBOutlet NSSlider *actModeSld, *actKurtSld, *mobActSld, *gatActSld;
+	IBOutlet NSTextField *incubActDgt, *fatalActDgt, *recovActDgt, *immueActDgt;
+	IBOutlet NSSlider *incubActSld, *fatalActSld, *recovActSld, *immueActSld;
+	IBOutlet NSTextField *infecDgt, *infecDstDgt, *contagDDgt, *contagPDgt;
+	IBOutlet NSSlider *infecSld, *infecDstSld, *contagDSld, *contagPSld;
 	IBOutlet NSTextField
 		*mobDistMinDgt, *mobDistMaxDgt, *mobDistModeDgt,
 		*incubMinDgt, *incubMaxDgt, *incubModeDgt,
@@ -37,7 +42,6 @@ NS_ASSUME_NONNULL_BEGIN
 		*gatSZMinDgt, *gatSZMaxDgt, *gatSZModeDgt,
 		*gatDRMinDgt, *gatDRMaxDgt, *gatDRModeDgt,
 		*gatSTMinDgt, *gatSTMaxDgt, *gatSTModeDgt;
-	IBOutlet NSSlider *massSld, *infecSld, *infecDstSld, *contagDSld, *contagPSld;
 	IBOutlet NSTextField *initPopDgt, *worldSizeDgt, *stepsPerDayDgt, *meshDgt, *nInfecDgt;
 	IBOutlet NSStepper *initPopStp, *worldSizeStp, *stepsPerDayStp, *meshStp, *nInfecStp;
 	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *mobFrDgt, *gatFrDgt, *cntctTrcDgt;

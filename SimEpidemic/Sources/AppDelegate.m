@@ -24,16 +24,11 @@ unsigned long current_time_us(void) {
 	return (tv.tv_sec - startTime) * 1000000L + tv.tv_usec;
 }
 void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
-	NSString *message = 
-		[obj isKindOfClass:NSString.class]? (NSString *)obj :
+	NSString *message = [obj isKindOfClass:NSString.class]? (NSString *)obj :
 		[obj isKindOfClass:NSError.class]? [NSString stringWithFormat:
 			@"%@ (%ld)", ((NSError *)obj).localizedDescription, ((NSError *)obj).code] :
 		[obj isKindOfClass:NSException.class]? ((NSException *)obj).reason :
 		[NSString stringWithFormat:@"%@ (%@)", obj.description, obj.className];
-#ifdef NOGUI
-	fprintf(stderr, "%s\n", message.UTF8String);
-	if (critical) terminateApp(EXIT_FATAL_ERROR);
-#else
 	NSAlert *alt = NSAlert.new;
 	alt.alertStyle = critical? NSAlertStyleCritical : NSAlertStyleWarning;
 	alt.messageText = message;
@@ -44,7 +39,6 @@ void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
 		[alt runModal];
 		if (critical) [NSApp terminate:nil];
 	}
-#endif
 }
 #ifndef NOGUI
 void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void)) {
@@ -102,6 +96,35 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 			error_msg(error, window, NO);
 	}];
 }
+static NSString *keyWinFrame = @"windowFrame", *keyWinOrder = @"windowOrder";
+NSMutableDictionary *dict_of_window_geom(NSWindow *window) {
+	NSMutableDictionary *md = NSMutableDictionary.new;
+	NSRect frm = window.frame;
+	md[keyWinFrame] = @[@(frm.origin.x), @(frm.origin.y), @(frm.size.width), @(frm.size.height)];
+	md[keyWinOrder] = @(window.isVisible? window.orderedIndex : -1);
+	return md;
+}
+NSRect frame_rect_from_dict(NSDictionary *dict) {
+	NSArray<NSNumber *> *array = dict[keyWinFrame];
+	if (array == nil || array.count < 4) return NSZeroRect;
+	return (NSRect){array[0].doubleValue, array[1].doubleValue,
+		array[2].doubleValue, array[3].doubleValue};
+}
+void window_order_info(NSWindow *window, NSDictionary *dict, NSMutableArray *winList) {
+	NSNumber *num = dict[keyWinOrder];
+	if (num != nil) [winList addObject:@[window, num]]; 
+}
+void rearrange_window_order(NSMutableArray<NSArray *> *winList) {
+	if (winList.count <= 1) return;
+	[winList sortUsingComparator:^NSComparisonResult(NSArray *a, NSArray *b) {
+		NSInteger ia = [a[1] integerValue], ib = [b[1] integerValue];
+		return (ia < ib)? NSOrderedAscending : (ia > ib)? NSOrderedDescending
+			: NSOrderedSame;
+	}];
+	for (NSInteger i = winList.count - 1; i > 0; i --)
+		[(NSWindow *)winList[i][0] orderFront:nil];
+	[(NSWindow *)winList[0][0] makeKeyAndOrderFront:nil];
+}
 NSString *keyAnimeSteps = @"animeSteps";
 #endif
 static ParamInfo paramInfo[] = {
@@ -109,10 +132,21 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"friction", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"avoidance", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"maxSpeed", {.f = { 50., 10., 100.}}},
+
+	{ ParamTypeFloat, @"activenessMode", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"activenessKurtosis", {.f = { 0., -100., 100.}}},
+	{ ParamTypeFloat, @"mobilityBias", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"gatheringBias", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"incubationBias", {.f = { 0., -100., 100.}}},
+	{ ParamTypeFloat, @"fatalityBias", {.f = { 0., -100., 100.}}},
+	{ ParamTypeFloat, @"recoveryBias", {.f = { 50., -100., 100.}}},
+	{ ParamTypeFloat, @"immunityBias", {.f = { 0., -100., 100.}}},
+
 	{ ParamTypeFloat, @"contagionDelay", {.f = { .5, 0., 10.}}},
 	{ ParamTypeFloat, @"contagionPeak", {.f = { 3., 1., 10.}}},
 	{ ParamTypeFloat, @"infectionProberbility", {.f = { 80., 0., 100.}}},
 	{ ParamTypeFloat, @"infectionDistance", {.f = { 3., .1, 10.}}},
+
 	{ ParamTypeFloat, @"distancingStrength", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
@@ -132,13 +166,13 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeDist, @"recovery", {.d = { 4., 10., 40.}}},
 	{ ParamTypeDist, @"immunity", {.d = { 30., 180., 360.}}},
 	{ ParamTypeDist, @"gatheringSize", {.d = { 5., 10., 20.}}},
-	{ ParamTypeDist, @"gatheringDuration", {.d = { 24., 48., 168.}}},
+	{ ParamTypeDist, @"gatheringDuration", {.d = { 6., 12., 24.}}},
 	{ ParamTypeDist, @"gatheringStrength", {.d = { 50., 80., 100.}}},
 
 	{ ParamTypeInteger, @"populationSize", {.i = { 10000, 100, 999900}}},
 	{ ParamTypeInteger, @"worldSize", {.i = { 360, 10, 999999}}},
 	{ ParamTypeInteger, @"mesh", {.i = { 18, 1, 999}}},
-	{ ParamTypeInteger, @"initialInfected", {.i = { 4, 1, 999}}},
+	{ ParamTypeInteger, @"initialInfected", {.i = { 20, 1, 999}}},
 	{ ParamTypeInteger, @"stepsPerDay", {.i = { 16, 1, 999}}},
 	{ ParamTypeNone, nil }
 };
@@ -158,7 +192,7 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 		case ParamTypeFloat:
 			if (fp != NULL) md[p->key] = @(*(fp ++)); break;
 		case ParamTypeDist: if (dp != NULL) {
-			md[p->key] = @[@(dp[0].min), @(dp[0].max), @(dp[0].mode)];
+			md[p->key] = @[@(dp->min), @(dp->max), @(dp->mode)];
 			dp ++;
 		} break;
 		case ParamTypeInteger: if (ip != NULL) md[p->key] = @(*(ip ++));
@@ -257,9 +291,9 @@ static struct SetupInfo
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat:
 			(&defaultRuntimeParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
-		case ParamTypeDist: (&defaultRuntimeParams.PARAM_D1)[nD ++] = (DistInfo){
-			p->v.d.defMin, p->v.d.defMax, p->v.d.defMode}; break;
-		case ParamTypeInteger: (&defaultWorldParams.PARAM_I1)[nI ++] = p->v.i.defaultValue;
+		case ParamTypeDist: (&defaultRuntimeParams.PARAM_D1)[nD ++] =
+			(DistInfo){p->v.d.defMin, p->v.d.defMax, p->v.d.defMode}; break;
+		case ParamTypeInteger: (&defaultWorldParams.PARAM_I1)[nI ++] = p->v.i.defaultValue; break;
 		default: break;
 	}
 	NSInteger nn = nF + nD + nI;

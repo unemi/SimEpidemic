@@ -126,11 +126,13 @@ typedef enum {
 	IBOutlet NSStepper *mvAvrgStp;
 	IBOutlet StatView *view;
 	NSMutableArray<ULinedButton *> *indexCBoxes;
+	NSButton *transitCBox;
 	StatInfo *statInfo;
 	TimeEvoInfo timeEvoInfo;
 	BOOL isClosing;
 }
 - (instancetype)initWithInfo:(StatInfo *)info;
+- (void)setupColorForCBoxes;
 - (IBAction)flushView:(id)sender;
 - (NSView *)view;
 @end

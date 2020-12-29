@@ -12,7 +12,7 @@
 #define N_COLORS (NHealthTypes+N_ENV_COLORS)
 #define DEFAULT_WARP_OPACITY .5
 #define DEFAULT_PANELS_ALPHA .9
-#define DEFAULT_CHILD_WIN YES
+#define DEFAULT_CHILD_WIN NO
 
 enum { ColBackground = NHealthTypes,
 	ColHospital, ColCemetery, ColText, ColGathering };
@@ -31,11 +31,6 @@ typedef struct {
 
 extern NSInteger nCores;
 extern unsigned long current_time_us(void);
-extern void error_msg(NSObject *obj, NSWindow *window, BOOL critical);
-extern NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window);
-extern void load_property_data(NSArray<NSString *> *fileTypes, NSWindow *window,
-	Class class, void (^block)(NSURL *url, NSObject *));
-extern void save_property_data(NSString *fileType, NSWindow *window, NSObject *object);
 extern NSString *keyAnimeSteps;
 extern NSInteger defaultAnimeSteps;
 extern RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
@@ -49,6 +44,15 @@ extern void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionar
 #ifdef NOGUI
 extern void applicationSetups(void);
 #else
+extern void error_msg(NSObject *obj, NSWindow *window, BOOL critical);
+extern NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window);
+extern void load_property_data(NSArray<NSString *> *fileTypes, NSWindow *window,
+	Class class, void (^block)(NSURL *url, NSObject *));
+extern void save_property_data(NSString *fileType, NSWindow *window, NSObject *object);
+extern NSMutableDictionary *dict_of_window_geom(NSWindow *window);
+extern NSRect frame_rect_from_dict(NSDictionary *dict);
+extern void window_order_info(NSWindow *window, NSDictionary *dict, NSMutableArray *winList);
+extern void rearrange_window_order(NSMutableArray<NSArray *> *winList);
 extern void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void));
 extern void show_anime_steps(NSTextField *txtField, NSInteger steps);
 extern NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg);

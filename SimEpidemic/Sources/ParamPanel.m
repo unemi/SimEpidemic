@@ -90,6 +90,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	NSArray<DistDigits *> *dDigits;
 	NSArray<NSSlider *> *fSliders;
 	NSArray<NSStepper *> *iSteppers;
+	DistDigits *dDigitW;
 	NSUndoManager *undoManager;
 	BOOL hasUserDefaults;
 	NSSize viewSize[N_SUBPANELS];
@@ -117,6 +118,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		iDigits[i].integerValue = iSteppers[i].integerValue = (&wp->PARAM_I1)[i];
 	stepsPerDayStp.integerValue = round(log2(wp->stepsPerDay));
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
+	[dDigitW adjustDigitsToCurrentValue];
 }
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
 	if (targetParams == doc.runtimeParamsP) for (NSString *key in paramNames) {
@@ -152,11 +154,15 @@ static NSNumberFormatter *distDgtFmt = nil;
 	wFrame.size.height += dh; wFrame.origin.y -= dh;
 	[self.window setFrame:wFrame display:NO];
     fDigits = @[massDgt, fricDgt, avoidDgt, maxSpdDgt,
+		actModeDgt, actKurtDgt, mobActDgt, gatActDgt,
+		incubActDgt, fatalActDgt, recovActDgt, immueActDgt,
 		contagDDgt, contagPDgt, infecDgt, infecDstDgt,
 		dstSTDgt, dstOBDgt, mobFrDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
+		actModeSld, actKurtSld, mobActSld, gatActSld,
+		incubActSld, fatalActSld, recovActSld, immueActSld,
 		contagDSld, contagPSld, infecSld, infecDstSld,
 		dstSTSld, dstOBSld, mobFrSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
@@ -198,7 +204,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		s.minValue = fmt.minimum.doubleValue;
 		s.maxValue = fmt.maximum.doubleValue;
 	}
-	hasUserDefaults =
+	clearUDBtn.enabled = hasUserDefaults =
 		memcmp(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams)) ||
 		memcmp(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
     [self adjustControls];

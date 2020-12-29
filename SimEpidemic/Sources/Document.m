@@ -35,7 +35,8 @@ t *n(void) {\
 }
 DYNAMIC_STRUCT(TestEntry, freeTestEntries, new_testEntry)
 DYNAMIC_STRUCT(ContactInfo, freeCInfo, new_cinfo)
-static NSLock *cInfoLock = nil;
+DYNAMIC_STRUCT(Gathering, freeGatherings, new_gathering)
+static NSLock *gatheringLock = nil, *cInfoLock = nil;
 void add_new_cinfo(Agent *a, Agent *b, NSInteger tm) {
 	[cInfoLock lock];
 	ContactInfo *c = new_cinfo();
@@ -67,7 +68,30 @@ static void remove_old_cinfo(Agent *a, NSInteger tm) {
 	gbTail->next = freeCInfo; freeCInfo = gbHead;
 	[cInfoLock unlock];
 }
-
+void free_gatherings(Gathering *gats) {
+	if (gats == NULL) return;
+	[gatheringLock lock];
+	Gathering *g = gats;
+	while(g->next) {
+		free(g->agents);
+		g = g->next;
+	}
+	free(g->agents);
+	g->next = freeGatherings; freeGatherings = gats;
+	[gatheringLock unlock];
+}
+Gathering *new_n_gatherings(NSInteger n) {
+	if (n <= 0) return NULL;
+	[gatheringLock lock];
+	Gathering *gat = new_gathering(), *p = gat;
+	gat->prev = NULL;
+	for (NSInteger i = 1; i < n; i ++, p = p->next)
+		(p->next = new_gathering())->prev = p;
+	[gatheringLock unlock];
+	for (Gathering *g = gat; g != NULL; g = g->next)
+		{ g->nAgents = 0; g->agents = NULL; }
+	return gat;
+}
 CGFloat get_uptime(void) {
 	struct timespec ts;
 	clock_gettime(CLOCK_UPTIME_RAW, &ts);
@@ -113,7 +137,7 @@ NSInteger nQueues = 10;
 #endif
 //#define MEASURE_TIME
 #ifdef MEASURE_TIME
-#define N_MTIME 7
+#define N_MTIME 8
 #endif
 
 @interface Document () {
@@ -144,9 +168,6 @@ NSInteger nQueues = 10;
 	NSLock *reportersLock;
 	CGFloat maxSPS;
 #else
-	Scenario *scenarioPanel;
-	ParamPanel *paramPanel;
-	DataPanel *dataPanel;
 	NSMutableDictionary *orgViewInfo;
 	FillView *fillView;
 #endif
@@ -166,7 +187,7 @@ NSInteger nQueues = 10;
 	BOOL orgState = loopMode == LoopRunning;
 	if (orgState != newState) [self startStop:nil];
 }
-- (NSArray<Gathering *> *)gatherings { return gatherings; }
+- (Gathering *)gatherings { return gatherings; }
 #endif
 - (void)popLock { [popLock lock]; }
 - (void)popUnlock { [popLock unlock]; }
@@ -268,15 +289,14 @@ NSInteger nQueues = 10;
 	NSMutableDictionary<NSString *, NSObject *> *md = NSMutableDictionary.new;
 	while (scenarioIndex < scenario.count) {
 		if (visitFlags[scenarioIndex] == YES) {
-			error_msg([NSString stringWithFormat:@"%@: %ld",
+			NSString *message = [NSString stringWithFormat:@"%@: %ld",
 				NSLocalizedString(@"Looping was found in the Scenario.", nil),
-				scenarioIndex + 1],
+				scenarioIndex + 1];
 #ifdef NOGUI
-				nil,
+			fprintf(stderr, "%s\n", message.UTF8String);
 #else
-				scenarioPanel? scenarioPanel.window : view.window,
+			error_msg(message, scenarioPanel? scenarioPanel.window : view.window, NO);
 #endif
-				NO);
 			break;
 		}
 		visitFlags[scenarioIndex] = YES;
@@ -411,14 +431,12 @@ NSInteger nQueues = 10;
 		[self updateChangeCount:NSChangeDone];
 #endif
 	}
-	if (scenario != nil) {
-		memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
+	memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
 #ifndef NOGUI
-		[paramPanel adjustControls];
+	[paramPanel adjustControls];
 #endif
-	}
-	[gatheringsMap removeAllObjects];
-	[gatherings removeAllObjects];
+	free_gatherings(gatherings);
+	gatherings = NULL;
 	[popLock lock];
 	[cInfoLock lock];
 	for (NSInteger i = 0; i < nPop; i ++)
@@ -482,7 +500,9 @@ NSInteger nQueues = 10;
 }
 - (instancetype)init {
 	if ((self = [super init]) == nil) return nil;
-	if (cInfoLock == nil) cInfoLock = NSLock.new;
+	if (gatheringLock == nil) {
+		gatheringLock = NSLock.new; cInfoLock = NSLock.new;
+	}
 	dispatchGroup = dispatch_group_create();
 #ifdef GCD_CONCURRENT_QUEUE
 	dispatchQueue = dispatch_queue_create(
@@ -500,8 +520,6 @@ NSInteger nQueues = 10;
 	_WarpList = NSMutableDictionary.new;
 	testees = NSMutableDictionary.new;
 	testeesLock = NSLock.new;
-	gatheringsMap = NSMutableDictionary.new;
-	gatherings = NSMutableArray.new;
 	animeSteps = defaultAnimeSteps;
 	stopAtNDays = -365;
 	memcpy(&runtimeParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
@@ -532,6 +550,7 @@ NSInteger nQueues = 10;
 		freeCInfo = _agents[i].contactInfoHead;
 	}
 	[cInfoLock unlock];
+	free_gatherings(gatherings);
 	if (testQueTail != nil) {
 		[testEntriesLock lock];
 		testQueTail->next = freeTestEntries;
@@ -544,16 +563,6 @@ NSInteger nQueues = 10;
 }
 #else
 - (NSString *)windowNibName { return @"Document"; }
-NSString *keyStatInits = @"statInits", *keyViewInits = @"viewInits";
-- (void)initializeUI {
-	NSArray *arr;
-	if ((arr = UIInitializers[keyStatInits]) != nil)
-		for (void (^block)(StatInfo *) in arr) block(statInfo);
-	if ((arr = UIInitializers[keyViewInits]) != nil)
-		for (void (^block)(MyView *) in arr) block(view);
-	if (view.scale > 1.) [view enableMagDownButton];
-	savePopCBox.state = NSControlStateValueOn;
-}
 - (void)windowControllerDidLoadNib:(NSWindowController *)windowController {
 	static NSString *lvNames[] = {
 		@"Susceptible", @"Asymptomatic", @"Symptomatic", @"Recovered", @"Dead"
@@ -567,7 +576,10 @@ NSString *keyStatInits = @"statInits", *keyViewInits = @"viewInits";
 	windowController.window.delegate = self;
 	if (scenario != nil) [self setupPhaseInfo];
 	if (nMesh == 0) [self resetPop];
-	else if (UIInitializers != nil) [self initializeUI];
+	else if (statPanelInitializer != nil) {
+		for (void (^block)(StatInfo *) in statPanelInitializer) block(statInfo);
+		[self showAllAfterStep];
+	}
 	animeStepper.integerValue = log2(animeSteps);
 	show_anime_steps(animeStepsTxt, animeSteps);
 	stopAtNDaysDgt.integerValue = (stopAtNDays > 0)? stopAtNDays : - stopAtNDays;
@@ -575,10 +587,17 @@ NSString *keyStatInits = @"statInits", *keyViewInits = @"viewInits";
 	[self adjustScenarioText];
 	orgWindowSize = windowController.window.frame.size;
 	orgViewSize = view.frame.size;
-//	[self openStatPenel:self];
 }
 // NSWindowDelegate methods
 // You can find the other delegate methods in MyView.m
+- (void)windowDidBecomeMain:(NSNotification *)notification {
+	if (notification.object != view.window || panelInitializer == nil) return;
+	void (^block)(Document *) = panelInitializer;
+	panelInitializer = nil;
+	block(self);
+	if (view.scale > 1.) [view enableMagDownButton];
+	savePopCBox.state = NSControlStateValueOn;
+}
 - (void)windowWillClose:(NSNotification *)notification {
 	if (scenarioPanel != nil) [scenarioPanel close];
 	if (paramPanel != nil) [paramPanel close];
@@ -864,22 +883,8 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 	}
 	RuntimeParams *rp = &runtimeParams;
 	WorldParams *wp = &worldParams;
-	manage_gatherings(gatherings, gatheringsMap, wp, rp);
-	[self waitAllOperations];
-//
 	Agent **popMap = _Pop;
-	__weak NSArray<NSNumber *> *keys = gatheringsMap.allKeys;
-	__weak GatheringMap *gMap = gatheringsMap;
-	for (NSInteger j = 0; j < unitJ; j ++) {
-		NSInteger start = j * keys.count / unitJ, end = (j + 1) * keys.count / unitJ;
-		[self addOperation:^{
-		for (NSInteger i = start; i < end; i ++) {
-			NSNumber *key = keys[i];
-			NSMutableArray<Gathering *> *obj = gMap[key];
-			for (Agent *a = popMap[key.integerValue]; a != NULL; a = a->next)
-				if (a->health != Symptomatic)
-					for (Gathering *gat in obj) [gat affectToAgent:a];
-		}}]; }
+	gatherings = manage_gatherings(gatherings, popMap, wp, rp);
 	[self waitAllOperations];
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
@@ -887,8 +892,8 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 	tm1 = tm2;
 #endif
 	unitJ = 7;
-	__weak typeof(self) weakSelf = self;
     NSRange *pRng = pRange;
+	__weak typeof(self) weakSelf = self;
     for (NSInteger j = 0; j < unitJ; j ++) {
 		NSInteger start = j * nCells / unitJ;
 		NSInteger end = (j + 1) * nCells / unitJ;
@@ -1003,6 +1008,7 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 				for (NSInteger j = 0; j < rng.length; j ++) {
 					Agent *a = ap[j];
 					memset(&info, 0, sizeof(info));
+					if (a->gathering != NULL) affect_to_agent(a->gathering, a);
 					step_agent(a, rp, wp, &info);
 					if (info.moveFrom != info.moveTo) {
 						[move addObject:
@@ -1019,7 +1025,6 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 						[infec addObject:[NSValue valueWithInfect:
 							(InfectionCntInfo){a->nInfects, a->nInfects + a->newNInfects}]];
 						a->nInfects += a->newNInfects;
-						a->newNInfects = 0;
 		}}}};
 		if (j < unitJ - 1) [self addOperation:block];
 		else block();
@@ -1053,7 +1058,7 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-NSInteger nMoves = 0;
+	NSInteger nMoves = 0;
 	for (NSInteger i = 0; i < unitJ; i ++) for (NSValue *value in movers[i]) {
 		MoveToIdxInfo info = value.moveToIdxInfoValue;
 		add_to_list(info.agent, _Pop + info.newIdx);
@@ -1102,9 +1107,9 @@ NSInteger nMoves = 0;
 	mtime[tmIdx ++] += tm2 - tm1;
 	mtime[tmIdx] += tm2 - tm0;
 	if (mCount >= 500) {
-		printf("%ld\t", ++ mCount2);
+		printf("%ld, ", ++ mCount2);
 		for (NSInteger i = 0; i <= tmIdx; i ++) {
-			printf("%.3f%c", (double)mtime[i] / mCount, (i < tmIdx)? '\t' : '\n');
+			printf("%8.2f%c", (double)mtime[i] / mCount, (i < tmIdx)? ',' : '\n');
 			mtime[i] = 0;
 		}
 		mCount = 0;
@@ -1255,14 +1260,6 @@ NSInteger nMoves = 0;
 		stepBtn.enabled = YES;
 		loopMode = LoopEndByUser;
 		[scenarioPanel adjustControls:NO];
-#ifdef DEBUGx
-printf("%ld gatherings, %ld cells\n", gatherings.count, gatheringsMap.count);
-for (Gathering *g in gatherings) [g printInfo:&worldParams];
-NSArray *keys = [gatheringsMap.allKeys sortedArrayUsingSelector:@selector(compare:)];
-for (NSNumber *key in keys)
-	printf("%ld:%ld, ", key.integerValue, gatheringsMap[key].count);
-printf("\n");
-#endif
 	}
 }
 - (IBAction)step:(id)sedner {
@@ -1331,18 +1328,15 @@ printf("\n");
 	[self changeAnimeSteps:sender];
 }
 - (IBAction)openScenarioPanel:(id)sender {
-	if (scenarioPanel == nil) scenarioPanel =
-		[Scenario.alloc initWithDoc:self];
+	if (scenarioPanel == nil) scenarioPanel = [Scenario.alloc initWithDoc:self];
 	[scenarioPanel showWindowWithParent:view.window];
 }
 - (IBAction)openParamPanel:(id)sender {
-	if (paramPanel == nil) paramPanel =
-		[ParamPanel.alloc initWithDoc:self];
+	if (paramPanel == nil) paramPanel = [ParamPanel.alloc initWithDoc:self];
 	[paramPanel showWindowWithParent:view.window];
 }
 - (IBAction)openDataPanel:(id)sender {
-	if (dataPanel == nil) dataPanel =
-		[DataPanel.alloc initWithInfo:statInfo];
+	if (dataPanel == nil) dataPanel = [DataPanel.alloc initWithInfo:statInfo];
 	[dataPanel showWindowWithParent:view.window];
 }
 - (IBAction)openStatPenel:(id)sender { [statInfo openStatPanel:view.window]; }

@@ -365,7 +365,7 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 - (void)flushPanels {
 	for (StatPanel *panel in _statPanels) [panel flushView:self];
 }
-- (NSArray *)fillPhaseBackground:(NSSize)size {
+- (NSArray *)fillPhaseBackground:(NSSize)size xMax:(NSInteger)xMax {
 	NSInteger n = scenarioPhases.count;
 	if (n < 2) return nil;
 	NSMutableSet<NSNumber *> *ms = NSMutableSet.new;
@@ -375,13 +375,13 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 	for (NSNumber *num in ms) phs[idx ++] = num;
 	NSArray<NSNumber *> *phases = [NSArray arrayWithObjects:phs count:nPhases];
 	NSRect rect = {0., 0.,
-		scenarioPhases[0].integerValue * size.width / steps, size.height};
+		scenarioPhases[0].integerValue * size.width / xMax, size.height};
 	NSMutableArray *labels = NSMutableArray.new;
 	for (NSInteger i = 1; i < n; i += 2) {
 		NSInteger phase = [phases indexOfObject:scenarioPhases[i]],
-			step = (i < n - 1)? scenarioPhases[i + 1].integerValue : steps;
+			step = (i < n - 1)? scenarioPhases[i + 1].integerValue : xMax;
 		rect.origin.x += rect.size.width;
-		rect.size.width = step * size.width / steps - rect.origin.x;
+		rect.size.width = step * size.width / xMax - rect.origin.x;
 		[[NSColor colorWithHue:((CGFloat)phase) / nPhases
 			saturation:1. brightness:1. alpha:.15] setFill];
 		[NSBezierPath fillRect:rect];
@@ -419,6 +419,19 @@ static void draw_tics(NSRect area, CGFloat xMax) {
 	}
 }
 typedef struct { NSUInteger maxCnt; CGFloat maxRate; } TimeEvoMax;
+static NSColor *color_for_index(NSUInteger k, TimeEvoInfo *info) {
+	static struct RGBA { CGFloat r, g, b; } L = {0.2126, 0.7152, 0.0722};
+	CGFloat H = k * 6. / info->nIndexes, X = 1 - fabs(fmod(H, 2.) - 1.);
+	struct RGBA c =
+		(H < 1.)? (struct RGBA){1., X, 0.} : (H < 2.)? (struct RGBA){X, 1., 0.} :
+		(H < 3.)? (struct RGBA){0., 1., X} : (H < 4.)? (struct RGBA){0., X, 1.} :
+		(H < 5.)? (struct RGBA){X, 0., 1.} : (struct RGBA){1., 0., X};
+	CGFloat d = (L.r + L.g - (c.r * L.r + c.g * L.g * c.b * L.b)) / (L.r + L.g) * .667;
+	c.r += (1. - c.r) * d * (1. - L.r);
+	c.g += (1. - c.g) * d * (1. - L.g);
+	c.b += (1. - c.b) * d * (1. - L.b);
+	return [NSColor colorWithRed:c.r green:c.g blue:c.b alpha:1.];
+}
 static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info, NSUInteger maxV[],
 	NSInteger steps, NSInteger skip, CGFloat maxPRate, NSRect rect) {
 	TimeEvoMax teMax = {0, 0};
@@ -447,13 +460,15 @@ static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info, NSUInteger 
 		}
 		NSBezierPath *path = NSBezierPath.new;
 		[path appendBezierPathWithPoints:pts count:nPoints];
-		[[NSColor colorWithHue:(CGFloat)k / info->nIndexes
-			saturation:1. brightness:1. alpha:1.] setStroke];
+		[color_for_index(k, info) setStroke];
 		[path stroke];
 	};
 	if (steps > 0 && teMax.maxCnt > 0) for (NSInteger i = 0; i < NIntIndexes; i ++)
-	if ((info->idxBits & 1 << i) != 0 && maxV[i] > 0)
-		block(^(StatData *tran) { return (CGFloat)tran->cnt[i]; }, teMax.maxCnt, k ++);
+	if ((info->idxBits & 1 << i) != 0) {
+		if (maxV[i] > 0)
+			block(^(StatData *tran) { return (CGFloat)tran->cnt[i]; }, teMax.maxCnt, k);
+		k ++;
+	}
 	if (drawPRate && maxPRate > 0) {
 		block(^(StatData *tran) { return tran->pRate; }, maxPRate, k);
 		teMax.maxRate = maxPRate;
@@ -525,7 +540,7 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 		case StatWhole: {
 		NSRect dRect = drawing_area(bounds);
 		NSArray *labels =
-			[self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y}];
+			[self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y} xMax:steps];
 		NSBitmapImageRep *imgRep = [NSBitmapImageRep.alloc
 			initWithBitmapDataPlanes:(unsigned char *[]){imgBm}
 			pixelsWide:IMG_WIDTH pixelsHigh:IMG_HEIGHT bitsPerSample:8 samplesPerPixel:3
@@ -538,9 +553,11 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
 		} break;
 		case StatTimeEvo: {
-		[self drawLabels:[self fillPhaseBackground:bounds.size] y:NSMaxY(bounds)];
+		BOOL isTransit = (info->idxBits & MskTransit) != 0;
+		[self drawLabels:[self fillPhaseBackground:bounds.size xMax:
+			isTransit? days * doc.worldParamsP->stepsPerDay : steps] y:NSMaxY(bounds)];
 		NSRect dRect = drawing_area(bounds);
-		TimeEvoMax teMax = ((info->idxBits & MskTransit) != 0)?
+		TimeEvoMax teMax = isTransit?
 			show_time_evo(_transit, info, maxTransit, days, skipDays, maxDailyPRate, dRect) :
 			show_time_evo(_statistics, info, maxCounts, steps, skip, maxStepPRate, dRect);
 		NSMutableString *ms = NSMutableString.new;
@@ -552,7 +569,7 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 		if (ms.length > 0) [ms
 			drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
 			withAttributes:textAttributes];
-		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
+		draw_tics(bounds, isTransit? days : (CGFloat)steps/doc.worldParamsP->stepsPerDay);
 		} break;
 		case StatPeriods:
 		show_period_hist(_IncubPHist, 0, bounds.size, @"Incubation Period");
@@ -576,9 +593,7 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 - (void)setupColorForCBoxes {
 	NSInteger k = 0;
 	for (ULinedButton *cbox in indexCBoxes) {
-		cbox.underLineColor = cbox.state?
-			[NSColor colorWithHue:((CGFloat)(k ++)) / timeEvoInfo.nIndexes
-				saturation:1. brightness:1. alpha:1.] : nil;
+		cbox.underLineColor = cbox.state? color_for_index(k ++, &timeEvoInfo) : nil;
 		cbox.needsDisplay = YES;
 	}
 }
@@ -596,8 +611,9 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 				[indexCBoxes addObject:(ULinedButton *)view];
 				tag <<= 1;
 			} else {
-				((NSButton *)view).tag = MskTransit;
-				if (((NSButton *)view).state) timeEvoInfo.idxBits |= MskTransit;
+				transitCBox = (NSButton *)view;
+				transitCBox.tag = MskTransit;
+				if (transitCBox.state) timeEvoInfo.idxBits |= MskTransit;
 			}
 		} else if ([view isKindOfClass:NSBox.class])
 			if (((NSBox *)view).boxType == NSBoxPrimary)

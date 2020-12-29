@@ -9,9 +9,13 @@
 #import "SaveDoc.h"
 #import "MyView.h"
 #import "StatPanel.h"
+#import "ParamPanel.h"
+#import "Scenario.h"
+#import "DataPanel.h"
 #import "Agent.h"
 #import "Gatherings.h"
 #import "DataCompress.h"
+#import <zlib.h>
 
 static NSString *keyIncubation = @"incubation",
 	*keyRecovery = @"recovery", *keyFatality = @"fatality",
@@ -20,7 +24,132 @@ static NSString *keyIncubation = @"incubation",
 	*keyTestCumm = @"testCumm", *keyTestResults = @"testResults",
 	*keyPRateInfo = @"pRateInfo", *keyMaxValues = @"maxValues", *keyStepsAndSkips = @"stepsAndSkips",
 	*keyScenarioPhases = @"scenarioPhases",
-	*keyStatCnt = @"cnt", *keyStatPRate = @"pRate";
+	*keyStatCnt = @"cnt", *keyStatPRate = @"pRate",
+	*keyStatType = @"statType", *keyTimeEvoBits = @"timeEvoBits";
+
+@implementation ParamPanel (SaveDocExtension)
+static NSString *keySelectedTabIndex = @"selectedTabIndex";
+- (NSDictionary *)UIInfoPlist {
+	NSMutableDictionary *md = dict_of_window_geom(self.window);
+	md[keySelectedTabIndex] = @([tabView indexOfTabViewItem:tabView.selectedTabViewItem]);
+	return md;
+}
+- (void)applyUIInfo:(NSDictionary *)info {
+	NSNumber *num;
+	if ((num = info[keySelectedTabIndex]) != nil)
+		[tabView selectTabViewItemAtIndex:num.integerValue];
+	NSRect frm = frame_rect_from_dict(info);
+	if (frm.size.width > 0.) [self.window setFrameOrigin:frm.origin];
+}
+@end
+
+@implementation Scenario (SaveDocExtension)
+static NSString *keyScrollY = @"scrollY", *keyExpandedItems = @"expandedItems";
+static NSObject *expansion_info(NSOutlineView *outline, CondElmItem *item) {
+	if (![item isKindOfClass:CompoundItem.class]) return @YES;
+	NSMutableArray *ma = NSMutableArray.new;
+	for (CondElmItem *subItem in ((CompoundItem *)item).children)
+	if ([subItem isKindOfClass:CompoundItem.class]) {
+		NSObject *elm = expansion_info(outline, subItem);
+		[ma addObject:elm];
+	}
+	return ma;
+}
+- (NSDictionary *)UIInfoPlist {
+	NSMutableDictionary *md = dict_of_window_geom(self.window);
+	if (itemList == nil) return md;
+	NSClipView *clpv = (NSClipView *)self.outlineView.superview;
+	CGFloat y = clpv.documentVisibleRect.origin.y;
+	if (y > 0.) md[keyScrollY] = @(y);
+	NSMutableArray *ma = NSMutableArray.new;
+	BOOL isExpanded = NO;
+	for (ScenarioItem *item in itemList) if ([item isKindOfClass:CondItem.class]) {
+		if ([self.outlineView isItemExpanded:item]) {
+			[ma addObject:expansion_info(self.outlineView, ((CondItem *)item).element)];
+			isExpanded = YES;
+		} else [ma addObject:@NO];
+	}
+	if (isExpanded) md[keyExpandedItems] = ma;
+	return md;
+}
+static void expand_item(NSOutlineView *outline, CondElmItem *item, NSArray *info) {
+	[outline expandItem:item];
+	NSEnumerator *enm = info.objectEnumerator;
+	for (CondElmItem *subItem in ((CompoundItem *)item).children)
+	if ([subItem isKindOfClass:CompoundItem.class]) {
+		NSObject *obj = enm.nextObject;
+		if (obj == nil || [obj isEqualTo:@NO]) continue;
+		if ([obj isKindOfClass:NSArray.class])
+			expand_item(outline, subItem, (NSArray *)obj);
+		else [outline expandItem:subItem];
+	}
+}
+- (void)applyUIInfo:(NSDictionary *)info {
+	NSArray *arr;
+	if ((arr = info[keyExpandedItems]) != nil) {
+		NSEnumerator *enm = arr.objectEnumerator;
+		for (ScenarioItem *item in itemList) if ([item isKindOfClass:CondItem.class]) {
+			NSObject *obj = enm.nextObject;
+			if ([obj isEqualTo:@NO]) continue;
+			[self.outlineView expandItem:item];
+			if ([obj isKindOfClass:NSArray.class])
+				expand_item(self.outlineView, ((CondItem *)item).element, (NSArray *)obj);
+		}
+	}
+	NSRect frm = frame_rect_from_dict(info);
+	if (frm.size.width > 0.) [self.window setFrame:frm display:self.window.isVisible];
+}
+@end
+
+@implementation DataPanel (SaveDocExtension)
+static NSString *keyTableType = @"tableType", *keyIntervalIdx = @"intervalIndex";
+- (NSDictionary *)UIInfoPlist {
+	NSMutableDictionary *md = dict_of_window_geom(self.window);
+	md[keyTableType] = @(typePopUp.indexOfSelectedItem);
+	md[keyIntervalIdx] = @(intervalPopUp.indexOfSelectedItem);
+	return md;
+}
+- (void)applyUIInfo:(NSDictionary *)info {
+	NSNumber *num;
+	if ((num = info[keyTableType]) != nil) {
+		[typePopUp selectItemAtIndex:num.integerValue];
+		[typePopUp sendAction:typePopUp.action to:typePopUp.target];
+	}
+	if ((num = info[keyIntervalIdx]) != nil) {
+		[intervalPopUp selectItemAtIndex:num.integerValue];
+		[intervalPopUp sendAction:intervalPopUp.action to:intervalPopUp.target];
+	}
+	NSRect frm = frame_rect_from_dict(info);
+	if (frm.size.width > 0.) [self.window setFrame:frm display:self.window.isVisible];
+}
+@end
+
+@implementation StatPanel (SaveDocExtension)
+- (StatType)statType { return (StatType)typePopUp.indexOfSelectedItem; }
+- (NSInteger)indexBits { return timeEvoInfo.idxBits; }
+- (void)applyUIInfo:(NSDictionary *)dict {
+	NSRect frm = frame_rect_from_dict(dict);
+	if (frm.size.width > 0.) [self.window setFrame:frm display:YES];
+	NSNumber *num;
+	if ((num = dict[keyStatType]) != nil) {
+		StatType type = (StatType)num.integerValue;
+		[typePopUp selectItemAtIndex:type];
+		[typePopUp sendAction:typePopUp.action to:typePopUp.target];
+	}
+	if ((num = dict[keyTimeEvoBits]) != nil) {
+		timeEvoInfo.idxBits = num.integerValue;
+		timeEvoInfo.nIndexes = 0;
+		for (ULinedButton *btn in indexCBoxes) {
+			BOOL isOn = (btn.tag & timeEvoInfo.idxBits) != 0;
+			if (isOn) timeEvoInfo.nIndexes ++;
+			btn.state = isOn? NSControlStateValueOn : NSControlStateValueOff;
+		}
+		if (timeEvoInfo.idxBits & MskTransit)
+			transitCBox.state = NSControlStateValueOn;
+		[self setupColorForCBoxes];
+	}
+}
+@end
 
 @implementation StatInfo (SaveDocExtension)
 static NSArray *counter_array(NSUInteger cnt[NIntIndexes]) {
@@ -160,23 +289,52 @@ static StatData *stat_chain_from_data(NSData *data) {
 	memcpy(imgBm, data.bytes, IMG_WIDTH * IMG_HEIGHT * 4);
 }
 - (void)setPopsize:(NSInteger)psz { popSize = psz; }
+- (NSArray *)UIInfoPlist {
+	NSMutableArray *ma = NSMutableArray.new;
+	for (StatPanel *sp in self.statPanels) {
+		NSMutableDictionary *md = dict_of_window_geom(sp.window);
+		md[keyStatType] = @(sp.statType);
+		if (sp.statType == StatTimeEvo) md[keyTimeEvoBits] = @(sp.indexBits);
+		[ma addObject:md];
+	}
+	return ma;
+}
+- (void)setupPanelsWithPlist:(NSArray *)info parent:(NSWindow *)parentWindow
+	windowList:(NSMutableArray *)winList {
+	NSEnumerator *enm = self.statPanels.objectEnumerator;
+	StatPanel *panel;
+	for (NSDictionary *dict in info) {
+		if (enm == nil || (panel = enm.nextObject) == nil) {
+			[self openStatPanel:parentWindow];
+			panel = self.statPanels.lastObject;
+		}
+		[panel applyUIInfo:dict];
+		window_order_info(panel.window, dict, winList);
+	}
+	while ((panel = enm.nextObject) != nil) [panel close];
+}
 @end
 
-@implementation Gathering (SaveDocExtension)
-- (GatheringSave)saveData {
-	return (GatheringSave){ size, duration, strength, p };
+static void set_save_data(Gathering *gat, GatheringSave *sv) {
+	sv->size = gat->size;
+	sv->duration = gat->duration;
+	sv->strength = gat->strength;
+	sv->p = gat->p;
+	NSInteger j = 0;
+	for (NSInteger i = 0; i < gat->nAgents; i ++)
+		if (gat->agents[i] != NULL) sv->agentIDs[j ++] = gat->agents[i]->ID;
+	sv->nAgents = j;
 }
-- (instancetype)initWithSavedData:(const GatheringSave *)sv
-	map:(GatheringMap *)map world:(WorldParams *)wp {
-	if (!(self = [super init])) return nil;
-	size = sv->size;
-	duration = sv->duration;
-	strength = sv->strength;
-	p = sv->p;
-	[self setupCellIndexes:wp map:map];
-	return self;
+static void setup_with_saved_data(Gathering *gat, const GatheringSave *sv, Agent *agents) {
+	gat->size = sv->size;
+	gat->duration = sv->duration;
+	gat->strength = sv->strength;
+	gat->p = sv->p;
+	gat->nAgents = sv->nAgents;
+	gat->agents = malloc(sizeof(void *) * sv->nAgents);
+	for (NSInteger i = 0; i < sv->nAgents; i ++)
+		gat->agents[i] = agents + sv->agentIDs[i];
 }
-@end
 
 @implementation Document (SaveDocExtension)
 static NSString *fnParamsPList = @"initParams.plist",
@@ -185,12 +343,51 @@ static NSString *fnParamsPList = @"initParams.plist",
 	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
 	*fnStatImageBM = @"statImageBitmap.gz",
 	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
+	*fnUIInfo = @"UIInfo.plist",
 	*keyCurrentParams = @"currentParams",
 	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex",
-	*keyViewOffsetAndScale = @"viewOffsetAndScale";
+	*keyParamChangers = @"paramChangers",
+	*keyViewOffsetAndScale = @"viewOffsetAndScale",
+	*keyDocWindow = @"documentWindow",
+	*keyStatWindows = @"statWindows", *keyParamPanel = @"paramPanel",
+	*keyScenarioPanel = @"scenarioPanel", *keyDataPanel = @"dataPanel";
 - (BOOL)prepareSavePanel:(NSSavePanel *)savePanel {
 	savePanel.accessoryView = savePanelAccView;
 	return YES;
+}
+- (void)setupPanelsWithInfo:(NSDictionary *)info {
+	NSDictionary *dict;
+	NSMutableArray<NSArray *> *winList = NSMutableArray.new;
+	if ((dict = info[keyParamPanel]) != nil) {
+		[self openParamPanel:nil];
+		[paramPanel applyUIInfo:dict];
+		window_order_info(paramPanel.window, dict, winList);
+	}
+	if ((dict = info[keyScenarioPanel]) != nil) {
+		[self openScenarioPanel:nil];
+		[scenarioPanel applyUIInfo:dict];
+		window_order_info(scenarioPanel.window, dict, winList);
+	}
+	if ((dict = info[keyDataPanel]) != nil) {
+		[self openDataPanel:nil];
+		[dataPanel applyUIInfo:dict];
+		window_order_info(dataPanel.window, dict, winList);
+	}
+	NSArray<NSDictionary *> *dArr;
+	if ((dArr = info[keyStatWindows]) != nil)
+		[statInfo setupPanelsWithPlist:dArr parent:view.window windowList:winList];
+	if ((dict = info[keyDocWindow]) != nil) {
+		NSRect frm = frame_rect_from_dict(dict);
+		if (frm.size.width > 0.) [view.window setFrame:frm display:YES];
+		window_order_info(view.window, dict, winList);
+	}
+	NSArray<NSNumber *> *nArr;
+	if ((nArr = info[keyViewOffsetAndScale]) != nil && nArr.count >= 3) {
+		view.offset = (CGPoint){nArr[0].doubleValue, nArr[1].doubleValue};
+		view.scale = nArr[2].doubleValue;
+		view.needsDisplay = YES;
+	}
+	rearrange_window_order(winList);
 }
 static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 	if (plist == nil) return nil;
@@ -200,6 +397,12 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 	if (data == nil) @throw error;
 	return [NSFileWrapper.alloc initRegularFileWithContents:data];
 }
+#define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
+z(orgPt); z(daysInfected); z(daysDiseased);\
+z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr); z(activeness);\
+z(health); z(nInfects); z(distancing); z(isOutOfField); z(isWarping);\
+z(inTestQueue); z(lastTested);
+
 #define CP_S(m) as[i].m = a->m
 - (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError {
 	@try {
@@ -215,25 +418,21 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 	NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
 	if (scenario != nil) dict[keyScenarioIndex] = @(scenarioIndex);
 	dict[keyStep] = @(runtimeParams.step);
-	if (view.scale > 1.) dict[keyViewOffsetAndScale] =
-		@[@(view.offset.x), @(view.offset.y), @(view.scale)];
+	if (paramChangers != nil && paramChangers.count > 0)
+		dict[keyParamChangers] = paramChangers;
 	md[fnParamsPList] = fileWrapper_from_plist(dict);
 	[dict removeAllObjects];
 
 	NSInteger nPop = worldParams.initPop, unitJ = 8, n = 0, nn[unitJ];
 	NSMutableData *mdata = [NSMutableData dataWithLength:sizeof(AgentSave) * nPop];
 	AgentSave *as = mdata.mutableBytes;
+	Agent *agents = self.agents;
 	for (NSInteger j = 0; j < unitJ; j ++) {
 		nn[j] = 0; NSInteger *np = nn + j;
 		NSInteger start = j * nPop / unitJ, end = (j + 1) * nPop / unitJ;
 		void (^block)(void) = ^{ for (NSInteger i = start; i < end; i ++) {
-			Agent *a = self.agents + i;
-			CP_S(app); CP_S(prf); CP_S(x); CP_S(y); CP_S(vx); CP_S(vy);
-			CP_S(orgPt); CP_S(daysInfected); CP_S(daysDiseased);
-			CP_S(daysToRecover); CP_S(daysToOnset); CP_S(daysToDie); CP_S(imExpr);
-			CP_S(health); CP_S(nInfects);
-			CP_S(distancing); CP_S(isOutOfField); CP_S(isWarping); CP_S(gotAtHospital);
-			CP_S(inTestQueue); CP_S(lastTested);
+			Agent *a = agents + i;
+			SAVE_AGENT_PROP(CP_S)
 			for (ContactInfo *p = a->contactInfoHead; p; p = p->next) np[0] ++;
 		}};
 		if (j < unitJ - 1) [self addOperation:block]; else block();
@@ -250,7 +449,7 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 			void (^block)(void) = ^{
 				NSInteger *vp = saveP + kStart;
 				for (NSInteger i = start; i < end; i ++) {
-					Agent *a = self.agents + i;
+					Agent *a = agents + i;
 					NSInteger count = 0;
 					for (ContactInfo *p = a->contactInfoHead; p; p = p->next)
 						((ContactInfoSave *)(vp + 1))[count ++] =
@@ -262,7 +461,8 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 			kStart += end - start + sizeof(ContactInfoSave) / sizeof(NSInteger) * nn[j];
 		}
 		[self waitAllOperations];
-		md[fnContacts] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
+		md[fnContacts] = [NSFileWrapper.alloc initRegularFileWithContents:
+			[mdata zippedDataWithLevel:Z_BEST_SPEED]];
 	}
 
 	n = 0;
@@ -290,11 +490,24 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 		}
 		md[fnWarps] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	}
-	
-	if (gatherings.count > 0) {
-		mdata = [NSMutableData dataWithLength:sizeof(GatheringSave) * gatherings.count];
-		GatheringSave *vp = mdata.mutableBytes;
-		for (Gathering *gat in gatherings) *(vp ++) = gat.saveData;
+
+	NSInteger nGatherings = 0;
+	for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) nGatherings ++;
+	if (nGatherings > 0) {
+		NSInteger agentsCount = 0;
+		for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) {
+			NSInteger ac = 0;
+			for (NSInteger i = 0; i < gat->nAgents; i ++) if (gat->agents[i] != NULL) ac ++;
+			agentsCount += ac;
+		}
+		mdata = [NSMutableData dataWithLength:
+			(sizeof(GatheringSave) - sizeof(NSInteger)) * nGatherings +
+			sizeof(NSInteger) * agentsCount];
+		GatheringSave *sv = mdata.mutableBytes;
+		for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) {
+			set_save_data(gat, sv);
+			sv = (GatheringSave *)((NSInteger *)(sv + 1) + sv->nAgents - 1);
+		}
 		md[fnGatherings] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	}
 	
@@ -307,6 +520,15 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 		md[fnStatTransit] = [NSFileWrapper.alloc initRegularFileWithContents:data];
 	md[fnStatImageBM] = [NSFileWrapper.alloc initRegularFileWithContents:
 		[[statInfo dataOfImageBitmap] zippedData]];
+
+	dict[keyDocWindow] = dict_of_window_geom(view.window);
+	if (view.scale > 1.) dict[keyViewOffsetAndScale] =
+		@[@(view.offset.x), @(view.offset.y), @(view.scale)];
+	dict[keyStatWindows] = [statInfo UIInfoPlist];
+	if (paramPanel != nil) dict[keyParamPanel] = [paramPanel UIInfoPlist];
+	if (scenarioPanel != nil) dict[keyScenarioPanel] = [scenarioPanel UIInfoPlist];
+	if (dataPanel != nil) dict[keyDataPanel] = [dataPanel UIInfoPlist];	
+	md[fnUIInfo] = fileWrapper_from_plist(dict);
 
 	return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return nil; }
@@ -338,16 +560,8 @@ static NSDictionary *plist_from_data(NSData *data) {
 	}
 	if ((num = dict[keyScenarioIndex]) != nil) scenarioIndex = num.integerValue;
 	if ((num = dict[keyStep]) != nil) runtimeParams.step = num.integerValue;
-	NSArray<NSNumber *> *arr;
-	if ((arr = dict[keyViewOffsetAndScale]) != nil && arr.count >= 3) {
-		CGPoint pt = (CGPoint){arr[0].doubleValue, arr[1].doubleValue};
-		CGFloat sc = arr[2].doubleValue;
-		void (^block)(MyView *) = ^(MyView *v){ v.offset = pt; v.scale = sc; };
-		if (view == nil) {
-			if (UIInitializers == nil) UIInitializers = NSMutableDictionary.new;
-			UIInitializers[keyViewInits] = @[block];
-		} else block(view);
-	}
+	if ((pDict = dict[keyParamChangers]) != nil) paramChangers =
+		[NSMutableDictionary dictionaryWithDictionary:pDict];
 	return YES;
 }
 #define CP_L(m) a->m = as[i].m
@@ -367,17 +581,17 @@ static NSDictionary *plist_from_data(NSData *data) {
 		const AgentSave *as = data.bytes;
 		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
 			Agent *a = self.agents + i;
-			CP_L(app); CP_L(prf); CP_L(x); CP_L(y); CP_L(vx); CP_L(vy);
-			CP_L(orgPt); CP_L(daysInfected); CP_L(daysDiseased);
-			CP_L(daysToRecover); CP_L(daysToOnset); CP_L(daysToDie); CP_L(imExpr);
-			CP_L(health); CP_L(nInfects);
-			CP_L(distancing); CP_L(isWarping); CP_L(gotAtHospital);
-			CP_L(inTestQueue); CP_L(lastTested);
+			SAVE_AGENT_PROP(CP_L)
 			a->ID = i;
 			a->prev = a->next = NULL;
 			a->contactInfoHead = a->contactInfoTail = NULL;
+			a->newHealth = a->health;
 			a->isOutOfField = YES;
 			if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
+			else if (!a->isWarping) {
+				if (a->health == Died) add_to_list(a, self.CListP);
+				else add_to_list(a, self.QListP);
+			}
 		}
 	} else return YES;
 
@@ -415,15 +629,25 @@ static NSDictionary *plist_from_data(NSData *data) {
 	if ((fw = dict[fnWarps]) != nil) {
 		NSData *data = [fw.regularFileContents unzippedData];
 		const WarpInfoSave *vp = data.bytes;
-		WarpInfo info = (WarpInfo){self.agents + vp->agentID, vp->mode, vp->goal};
-		self.WarpList[@(vp->agentID)] = [NSValue valueWithWarpInfo:info];
+		NSInteger n = data.length / sizeof(WarpInfoSave);
+		for (NSInteger i = 0; i < n; i ++, vp ++) {
+			WarpInfo info = (WarpInfo){self.agents + vp->agentID, vp->mode, vp->goal};
+			self.WarpList[@(vp->agentID)] = [NSValue valueWithWarpInfo:info];
+		}
 	}
 	if ((fw = dict[fnGatherings]) != nil) {
 		NSData *data = [fw.regularFileContents unzippedData];
-		const GatheringSave *vp = data.bytes;
-		NSInteger n = data.length / sizeof(GatheringSave);
-		for (NSInteger i = 0; i < n; i ++, vp ++) [gatherings addObject:
-			[Gathering.alloc initWithSavedData:vp map:gatheringsMap world:&worldParams]];
+		const GatheringSave *sv = data.bytes;
+		for (NSInteger nBytes = 0; nBytes < data.length; ) {
+			Gathering *gat = new_n_gatherings(1);
+			setup_with_saved_data(gat, sv, self.agents);
+			gat->next = gatherings; gat->prev = NULL;
+			if (gatherings) gatherings->prev = gat;
+			gatherings = gat;
+			NSInteger sz = sizeof(GatheringSave) + sizeof(NSInteger) * (sv->nAgents - 1);
+			sv = (GatheringSave *)((char *)sv + sz);
+			nBytes += sz;
+		}
 	}
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
@@ -438,10 +662,16 @@ static NSDictionary *plist_from_data(NSData *data) {
 		[st copyImageBitmapFromData:[fw.regularFileContents unzippedData]]; }];
 	NSInteger popSize = worldParams.initPop;
 	[statProcs addObject:^(StatInfo *st) { st.popsize = popSize; }];
+	void (^panelBlock)(Document *) = ((fw = dict[fnUIInfo]) == nil)? nil : ^(Document *doc){
+		[doc setupPanelsWithInfo:plist_from_data(fw.regularFileContents)];
+	};
 	if (statInfo == nil) {
-		if (UIInitializers == nil) UIInitializers = NSMutableDictionary.new;
-		UIInitializers[keyStatInits] = statProcs;
-	} else for (void (^block)(StatInfo *) in statProcs) block(statInfo);
+		statPanelInitializer = statProcs;
+		if (panelBlock != nil) panelInitializer = panelBlock;
+	} else {
+		for (void (^block)(StatInfo *) in statProcs) block(statInfo);
+		if (panelBlock != nil) panelBlock(self);
+	}
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO; }
 	return YES;
 }

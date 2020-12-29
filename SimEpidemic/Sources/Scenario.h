@@ -57,6 +57,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 	IBOutlet NSButton *removeBtn, *applyBtn;
 	IBOutlet NSWindow *distParamSheet;
 	IBOutlet NSTextField *itemIdx, *paramNameTxt, *minDgt, *maxDgt, *modeDgt;
+	NSMutableArray<ScenarioItem *> *itemList;
 }
 @property IBOutlet NSOutlineView *outlineView;
 @property (readonly) Document *doc;

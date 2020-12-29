@@ -14,9 +14,9 @@
             filePath = "SimEpidemic/Sources/Agent.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "116"
-            endingLineNumber = "116"
-            landmarkName = "add_agent(a, wp, Pop)"
+            startingLineNumber = "123"
+            endingLineNumber = "123"
+            landmarkName = "add_to_list(a, list)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -46,9 +46,9 @@
             filePath = "SimEpidemic/Sources/Agent.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "99"
-            endingLineNumber = "99"
-            landmarkName = "add_to_list(a, list)"
+            startingLineNumber = "106"
+            endingLineNumber = "106"
+            landmarkName = "reset_for_step(a)"
             landmarkType = "9">
             <Locations>
                <Location
@@ -180,22 +180,6 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "5ABE0D9E-4E56-4140-8F7E-E54F8D5070FF"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "SimEpidemic/Sources/Scenario.m"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "407"
-            endingLineNumber = "407"
-            landmarkName = "-chooseParameter:"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
             uuid = "454F93E1-303F-4B29-B644-D62C5F50949E"
             shouldBeEnabled = "No"
             ignoreCount = "0"
@@ -235,8 +219,8 @@
             filePath = "SimEpidemic/Sources/Document.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1070"
-            endingLineNumber = "1070"
+            startingLineNumber = "1064"
+            endingLineNumber = "1064"
             landmarkName = "-doOneStep"
             landmarkType = "7">
          </BreakpointContent>
@@ -251,9 +235,41 @@
             filePath = "SimEpidemic/Sources/Document.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1014"
-            endingLineNumber = "1014"
+            startingLineNumber = "1007"
+            endingLineNumber = "1007"
             landmarkName = "-doOneStep"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "A291D613-770A-4F5F-88B0-48621AFFF3D9"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimEpidemic/Sources/Document.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "443"
+            endingLineNumber = "443"
+            landmarkName = "-resetPop"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "9A77720D-B8CF-4D6A-983B-0C3ADB829118"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimEpidemic/Sources/SaveDoc.m"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "67"
+            endingLineNumber = "67"
+            landmarkName = "-UIInfoPlist"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

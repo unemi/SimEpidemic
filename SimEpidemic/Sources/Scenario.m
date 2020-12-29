@@ -859,7 +859,6 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 @end
 
 @interface Scenario () {
-	NSMutableArray<ScenarioItem *> *itemList;
 	NSArray *savedPList;
 	NSInteger modificationCount, appliedCount;
 	NSMutableDictionary<NSNumber *, NSNumber *> *valueDict;
@@ -1132,6 +1131,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 			{ error_msg(@"Property is invalid class.", window, NO); return; }
 		[self setScenarioWithArray:(NSArray *)object];
 		self->savedPList = (NSArray *)object;
+		self->applyBtn.enabled = YES;
 	});
 }
 static NSArray *plist_of_all_items(NSArray *itemList) {

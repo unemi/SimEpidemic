@@ -15,9 +15,11 @@
 extern NSString *keyParameters, *keyScenario, *keyDaysToStop;
 extern void add_new_cinfo(Agent *a, Agent *b, NSInteger tm);
 extern void in_main_thread(dispatch_block_t block);
-#ifndef NOGUI
 extern TestEntry *new_testEntry(void);
 extern ContactInfo *new_cinfo(void);
+extern void free_gatherings(Gathering *gats);
+extern Gathering *new_n_gatherings(NSInteger n);
+#ifndef NOGUI
 extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
 #endif
 #ifdef DEBUG
@@ -38,12 +40,12 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 @end
 
 @class MyView, LegendView, StatInfo, MyCounter;
+@class Scenario, ParamPanel, DataPanel;
 #ifdef NOGUI
 @class PeriodicReporter;
 #endif
 
 #ifndef NOGUI
-extern NSString *keyStatInits, *keyViewInits;
 @interface Document : NSDocument <NSWindowDelegate> {
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
@@ -55,7 +57,11 @@ extern NSString *keyStatInits, *keyViewInits;
 	NSArray<LegendView *> *lvViews;
 	IBOutlet NSView *savePanelAccView;
 	IBOutlet NSButton *savePopCBox;
-	NSMutableDictionary<NSString *, NSArray *> *UIInitializers;
+	NSMutableArray<void (^)(StatInfo *)> *statPanelInitializer;
+	void (^panelInitializer)(Document *);
+	Scenario *scenarioPanel;
+	ParamPanel *paramPanel;
+	DataPanel *dataPanel;
 #else
 @interface Document : NSObject {
 #endif
@@ -68,8 +74,7 @@ extern NSString *keyStatInits, *keyViewInits;
 	IBOutlet StatInfo *statInfo;
 	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
 	TestEntry *testQueHead, *testQueTail;
-	GatheringMap *gatheringsMap;
-	NSMutableArray<Gathering *> *gatherings;
+	Gathering *gatherings;
 }
 @property (readonly) Agent *agents, **Pop, *QList, *CList;
 @property (readonly) NSMutableDictionary<NSNumber *, NSValue *> *WarpList;
@@ -113,7 +118,7 @@ extern NSString *keyStatInits, *keyViewInits;
 - (NSArray *)scenarioPList;
 - (void)setScenarioWithPList:(NSArray *)plist;
 #else
-- (NSArray<Gathering *> *)gatherings;
+- (Gathering *)gatherings;
 - (void)setScenario:(NSArray *)newScen;
 - (void)setPanelTitle:(NSWindow *)panel;
 - (void)reviseColors;
@@ -123,6 +128,9 @@ extern NSString *keyStatInits, *keyViewInits;
 - (void)revisePanelChildhood;
 - (NSArray *)scenarioPList;
 - (void)setScenarioWithPList:(NSArray *)plist;
+- (IBAction)openScenarioPanel:(id)sender;
+- (IBAction)openParamPanel:(id)sender;
+- (IBAction)openDataPanel:(id)sender;
 #endif
 @end
 

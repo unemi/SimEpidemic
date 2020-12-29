@@ -11,13 +11,13 @@
 #define CHUNK 256*1024
 
 @implementation NSData (CompressExtension)
-- (NSData *)zippedData {
+- (NSData *)zippedDataWithLevel:(int)level {
 	z_stream strm;
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
     strm.data_type = Z_TEXT;
-    int ret = deflateInit(&strm, Z_BEST_COMPRESSION);
+    int ret = deflateInit(&strm, level);
     if (ret != Z_OK) @throw @(ret);
 	uInt dataLen = (uInt)self.length;
 	unsigned char *outBuf = malloc(dataLen);
@@ -35,6 +35,9 @@
 	NSData *data = [NSData dataWithBytes:outBuf length:dataLen - strm.avail_out];
 	free(outBuf);
 	return data;
+}
+- (NSData *)zippedData {
+	return [self zippedDataWithLevel:Z_BEST_COMPRESSION];
 }
 #ifndef NOGUI
 - (NSData *)unzippedData {
