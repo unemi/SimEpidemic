@@ -53,7 +53,7 @@ static CGFloat random_with_corr(DistInfo *p, struct ActivenessEffect a, CGFloat 
 	if (c == 0.) return my_random(p);
 	CGFloat m = (p->mode - p->min) / (p->max - p->min), mY = (c < 0.)? 1. - m : m;
 	CGFloat y = mY * (1. - a.mX) * a.x / (a.mX * (1. - mY) - (a.mX - mY) * a.x);
-	y = (random_mk(y * .1 + mY * .9, 0.) - y) * (1. - fabs(c));
+	y += (random_mk(y * .1 + mY * .9, 0.) - y) * (1. - fabs(c));
 	if (c < 0.) y = 1. - y;
 	return y * (p->max - p->min) + p->min;
 }
