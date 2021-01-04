@@ -27,8 +27,8 @@ NS_ASSUME_NONNULL_BEGIN
 	IBOutlet NSTabView *tabView;
 	IBOutlet NSTextField *massDgt, *fricDgt, *avoidDgt, *maxSpdDgt;
 	IBOutlet NSSlider *massSld, *fricSld, *avoidSld, *maxSpdSld;
-	IBOutlet NSTextField *actModeDgt, *actKurtDgt, *mobActDgt, *gatActDgt;
-	IBOutlet NSSlider *actModeSld, *actKurtSld, *mobActSld, *gatActSld;
+	IBOutlet NSTextField *actModeDgt, *actKurtDgt, *massActDgt, *mobActDgt, *gatActDgt;
+	IBOutlet NSSlider *actModeSld, *actKurtSld, *massActSld, *mobActSld, *gatActSld;
 	IBOutlet NSTextField *incubActDgt, *fatalActDgt, *recovActDgt, *immueActDgt;
 	IBOutlet NSSlider *incubActSld, *fatalActSld, *recovActSld, *immueActSld;
 	IBOutlet NSTextField *infecDgt, *infecDstDgt, *contagDDgt, *contagPDgt;
@@ -41,11 +41,13 @@ NS_ASSUME_NONNULL_BEGIN
 		*immunMinDgt, *immunMaxDgt, *immunModeDgt,
 		*gatSZMinDgt, *gatSZMaxDgt, *gatSZModeDgt,
 		*gatDRMinDgt, *gatDRMaxDgt, *gatDRModeDgt,
-		*gatSTMinDgt, *gatSTMaxDgt, *gatSTModeDgt;
+		*gatSTMinDgt, *gatSTMaxDgt, *gatSTModeDgt,
+		*mobFreqMinDgt, *mobFreqMaxDgt, *mobFreqModeDgt,
+		*gatFreqMinDgt, *gatFreqMaxDgt, *gatFreqModeDgt;
 	IBOutlet NSTextField *initPopDgt, *worldSizeDgt, *stepsPerDayDgt, *meshDgt, *nInfecDgt;
 	IBOutlet NSStepper *initPopStp, *worldSizeStp, *stepsPerDayStp, *meshStp, *nInfecStp;
-	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *mobFrDgt, *gatFrDgt, *cntctTrcDgt;
-	IBOutlet NSSlider *dstSTSld, *dstOBSld, *mobFrSld, *gatFrSld, *cntctTrcSld;
+	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *gatFrDgt, *cntctTrcDgt;
+	IBOutlet NSSlider *dstSTSld, *dstOBSld, *gatFrSld, *cntctTrcSld;
 	IBOutlet NSTextField *tstDelayDgt, *tstProcDgt, *tstIntvlDgt, *tstSensDgt, *tstSpecDgt,
 		*tstSbjAsyDgt, *tstSbjSymDgt;
 	IBOutlet NSSlider *tstDelaySld, *tstProcSld, *tstIntvlSld, *tstSensSld, *tstSpecSld,
@@ -53,6 +55,7 @@ NS_ASSUME_NONNULL_BEGIN
 	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn, *saveAsUDBtn;
 	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn; 
 }
+@property BOOL byUser;
 - (instancetype)initWithDoc:(Document *)dc;
 - (void)adjustControls;
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames;

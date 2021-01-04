@@ -10,6 +10,7 @@
 #import "CommonTypes.h"
 #define AGENT_RADIUS .75
 #define AGENT_SIZE .665
+#define BIG_NUM 1e10
 
 typedef enum {
 	AgntDrwCircle, AgntDrwOctagon, AgntDrwSquire, AgntDrwPoint

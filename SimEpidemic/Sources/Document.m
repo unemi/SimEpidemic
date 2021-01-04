@@ -451,7 +451,7 @@ NSInteger nQueues = 10;
 	NSInteger iIdx = 0, infecIdxs[worldParams.nInitInfec];
 	for (NSInteger i = 0; i < worldParams.nInitInfec; i ++) {
 		NSInteger k = (nPop - i - 1) * random() / 0x7fffffff;
-		for (NSInteger j = 0; j < i; j ++) if (k >= infecIdxs[j]) k ++;
+		for (NSInteger j = 0; j < i; j ++) if (k <= infecIdxs[j]) k ++;
 		infecIdxs[i] = k;
 	}
 	qsort_b(infecIdxs, worldParams.nInitInfec, sizeof(NSInteger),
@@ -575,8 +575,9 @@ NSInteger nQueues = 10;
 	}
 	windowController.window.delegate = self;
 	if (scenario != nil) [self setupPhaseInfo];
-	if (nMesh == 0) [self resetPop];
-	else if (statPanelInitializer != nil) {
+	if (runtimeParams.step == 0) [self resetPop];
+	else savePopCBox.state = NSControlStateValueOn;
+	if (statPanelInitializer != nil) {
 		for (void (^block)(StatInfo *) in statPanelInitializer) block(statInfo);
 		[self showAllAfterStep];
 	}
@@ -596,7 +597,7 @@ NSInteger nQueues = 10;
 	panelInitializer = nil;
 	block(self);
 	if (view.scale > 1.) [view enableMagDownButton];
-	savePopCBox.state = NSControlStateValueOn;
+	saveGUICBox.state = NSControlStateValueOn;
 }
 - (void)windowWillClose:(NSNotification *)notification {
 	if (scenarioPanel != nil) [scenarioPanel close];

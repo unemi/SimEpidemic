@@ -14,15 +14,12 @@
 
 //a->gatActive = (1. - a->activeness) * rp->gatAct / 100.;
 
-static inline CGFloat gat_act(Agent *a, RuntimeParams *rp) {
-	return (1. - a->activeness) * rp->gatAct / 100.;
-}
 static void collect_participants(Gathering *gat, Agent **pop,
 	NSMutableArray<NSNumber *> *agents, RuntimeParams *rp,
 	NSInteger row, NSInteger left, NSInteger right) {
 	for (NSInteger ix = left; ix < right; ix ++)
 		for (Agent *a = pop[row + ix]; a; a = a->next)
-			if (a->health != Symptomatic && random() / (CGFloat)0x7fffffff > gat_act(a, rp)) {
+			if (a->health != Symptomatic && random() / (CGFloat)0x7fffffff > a->gatFreq / 100.) {
 				[agents addObject:@((NSUInteger)a)];
 				a->gathering = gat;
 			}

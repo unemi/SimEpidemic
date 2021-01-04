@@ -712,7 +712,7 @@ static CondElmItem *new_item_by_button(NSButton *button, Scenario *scen, Scenari
 @end
 static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	NSInteger m = pb.numberOfItems;
-	if (m > n) for (NSInteger i = n; i < m; i ++) [pb removeItemAtIndex:i];
+	if (m > n) for (NSInteger i = m; i > n; i --) [pb removeItemAtIndex:i - 1];
 	else for (NSInteger i = m; i < n; i ++) [pb addItemWithTitle:@(i + 1).stringValue];
 }
 @implementation CondItem

@@ -18,8 +18,7 @@
 #import <zlib.h>
 
 static NSString *keyIncubation = @"incubation",
-	*keyRecovery = @"recovery", *keyFatality = @"fatality",
-	*keyInfects = @"infects",
+	*keyRecovery = @"recovery", *keyFatality = @"fatality", *keyInfects = @"infects",
 	*keyStatCumm = @"statCumm", *keyTransDaily = @"transDaily", *keyTransCumm = @"transCumm",
 	*keyTestCumm = @"testCumm", *keyTestResults = @"testResults",
 	*keyPRateInfo = @"pRateInfo", *keyMaxValues = @"maxValues", *keyStepsAndSkips = @"stepsAndSkips",
@@ -36,6 +35,7 @@ static NSString *keySelectedTabIndex = @"selectedTabIndex";
 }
 - (void)applyUIInfo:(NSDictionary *)info {
 	NSNumber *num;
+	self.byUser = NO;
 	if ((num = info[keySelectedTabIndex]) != nil)
 		[tabView selectTabViewItemAtIndex:num.integerValue];
 	NSRect frm = frame_rect_from_dict(info);
@@ -337,8 +337,8 @@ static void setup_with_saved_data(Gathering *gat, const GatheringSave *sv, Agent
 }
 
 @implementation Document (SaveDocExtension)
-static NSString *fnParamsPList = @"initParams.plist",
-	*fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
+NSString *fnParamsPList = @"initParams.plist";
+static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*fnTestees = @"testees.gz", *fnWarps = @"warps.gz", *fnGatherings = @"gatherings.gz",
 	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
 	*fnStatImageBM = @"statImageBitmap.gz",
@@ -399,29 +399,17 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 }
 #define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
 z(orgPt); z(daysInfected); z(daysDiseased);\
-z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr); z(activeness);\
+z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr);\
+z(mobFreq); z(gatFreq); z(activeness);\
 z(health); z(nInfects); z(distancing); z(isOutOfField); z(isWarping);\
 z(inTestQueue); z(lastTested);
 
 #define CP_S(m) as[i].m = a->m
-- (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError {
-	@try {
-	NSMutableDictionary *dict = NSMutableDictionary.new;
-	dict[keyAnimeSteps] = @(animeSteps);
-	if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
-	dict[keyParameters] = param_dict(&initParams, &worldParams);
-	NSDictionary *dif = param_diff_dict(&runtimeParams, &initParams);
-	if (dif.count > 0) dict[keyCurrentParams] = dif;
-	if (scenario != nil) dict[keyScenario] = [self scenarioPList];
-	if (savePopCBox.state == NSControlStateValueOff || runtimeParams.step <= 0)
-		return fileWrapper_from_plist(dict);
-	NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
+- (void)addSavePop:(NSMutableDictionary *)md info:(NSMutableDictionary *)dict {
 	if (scenario != nil) dict[keyScenarioIndex] = @(scenarioIndex);
 	dict[keyStep] = @(runtimeParams.step);
 	if (paramChangers != nil && paramChangers.count > 0)
 		dict[keyParamChangers] = paramChangers;
-	md[fnParamsPList] = fileWrapper_from_plist(dict);
-	[dict removeAllObjects];
 
 	NSInteger nPop = worldParams.initPop, unitJ = 8, n = 0, nn[unitJ];
 	NSMutableData *mdata = [NSMutableData dataWithLength:sizeof(AgentSave) * nPop];
@@ -490,7 +478,7 @@ z(inTestQueue); z(lastTested);
 		}
 		md[fnWarps] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	}
-
+	
 	NSInteger nGatherings = 0;
 	for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) nGatherings ++;
 	if (nGatherings > 0) {
@@ -520,7 +508,9 @@ z(inTestQueue); z(lastTested);
 		md[fnStatTransit] = [NSFileWrapper.alloc initRegularFileWithContents:data];
 	md[fnStatImageBM] = [NSFileWrapper.alloc initRegularFileWithContents:
 		[[statInfo dataOfImageBitmap] zippedData]];
-
+}
+- (void)addSaveGUI:(NSMutableDictionary *)md {
+	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyDocWindow] = dict_of_window_geom(view.window);
 	if (view.scale > 1.) dict[keyViewOffsetAndScale] =
 		@[@(view.offset.x), @(view.offset.y), @(view.scale)];
@@ -529,8 +519,24 @@ z(inTestQueue); z(lastTested);
 	if (scenarioPanel != nil) dict[keyScenarioPanel] = [scenarioPanel UIInfoPlist];
 	if (dataPanel != nil) dict[keyDataPanel] = [dataPanel UIInfoPlist];	
 	md[fnUIInfo] = fileWrapper_from_plist(dict);
-
-	return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];
+}
+- (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError {
+	@try {
+		NSMutableDictionary *dict = NSMutableDictionary.new;
+		dict[keyAnimeSteps] = @(animeSteps);
+		if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
+		dict[keyParameters] = param_dict(&initParams, &worldParams);
+		NSDictionary *dif = param_diff_dict(&runtimeParams, &initParams);
+		if (dif.count > 0) dict[keyCurrentParams] = dif;
+		if (scenario != nil) dict[keyScenario] = [self scenarioPList];
+		BOOL savePop = (savePopCBox.state == NSControlStateValueOn && runtimeParams.step > 0);
+		BOOL saveGUI = saveGUICBox.state == NSControlStateValueOn;
+		if (!saveGUI && !savePop) return fileWrapper_from_plist(dict);
+		NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
+		if (savePop) [self addSavePop:md info:dict];
+		md[fnParamsPList] = fileWrapper_from_plist(dict);
+		if (saveGUI) [self addSaveGUI:md];
+		return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return nil; }
 }
 static NSDictionary *plist_from_data(NSData *data) {
@@ -587,13 +593,15 @@ static NSDictionary *plist_from_data(NSData *data) {
 			a->contactInfoHead = a->contactInfoTail = NULL;
 			a->newHealth = a->health;
 			a->isOutOfField = YES;
+			if (a->daysToDie == BIG_NUM) a->dayStartedRecov =
+				a->daysToRecover / (1. + 10. / a->daysToDie);
 			if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
 			else if (!a->isWarping) {
 				if (a->health == Died) add_to_list(a, self.CListP);
 				else add_to_list(a, self.QListP);
 			}
 		}
-	} else return YES;
+	}
 
 	if ((fw = dict[fnContacts]) != nil) {
 		NSData *data = [fw.regularFileContents unzippedData];

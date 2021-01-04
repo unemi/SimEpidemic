@@ -104,6 +104,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	doc = dc;
 	targetParams = dc.initParamsP;
 	undoManager = NSUndoManager.new;
+	_byUser = YES;
 	return self;
 }
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
@@ -154,17 +155,17 @@ static NSNumberFormatter *distDgtFmt = nil;
 	wFrame.size.height += dh; wFrame.origin.y -= dh;
 	[self.window setFrame:wFrame display:NO];
     fDigits = @[massDgt, fricDgt, avoidDgt, maxSpdDgt,
-		actModeDgt, actKurtDgt, mobActDgt, gatActDgt,
+		actModeDgt, actKurtDgt, massActDgt, mobActDgt, gatActDgt,
 		incubActDgt, fatalActDgt, recovActDgt, immueActDgt,
 		contagDDgt, contagPDgt, infecDgt, infecDstDgt,
-		dstSTDgt, dstOBDgt, mobFrDgt, gatFrDgt, cntctTrcDgt,
+		dstSTDgt, dstOBDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
-		actModeSld, actKurtSld, mobActSld, gatActSld,
+		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, recovActSld, immueActSld,
 		contagDSld, contagPSld, infecSld, infecDstSld,
-		dstSTSld, dstOBSld, mobFrSld, gatFrSld, cntctTrcSld,
+		dstSTSld, dstOBSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld];
 	dDigits = @[
@@ -175,7 +176,9 @@ static NSNumberFormatter *distDgtFmt = nil;
 		DDGT(immunMinDgt, immunMaxDgt, immunModeDgt),
 		DDGT(gatSZMinDgt, gatSZMaxDgt, gatSZModeDgt),
 		DDGT(gatDRMinDgt, gatDRMaxDgt, gatDRModeDgt),
-		DDGT(gatSTMinDgt, gatSTMaxDgt, gatSTModeDgt) ];
+		DDGT(gatSTMinDgt, gatSTMaxDgt, gatSTModeDgt),
+		DDGT(mobFreqMinDgt, mobFreqMaxDgt, mobFreqModeDgt),
+		DDGT(gatFreqMinDgt, gatFreqMaxDgt, gatFreqModeDgt) ];
 	iDigits = @[initPopDgt, worldSizeDgt, meshDgt, nInfecDgt];
 	iSteppers = @[initPopStp, worldSizeStp, meshStp, nInfecStp];
     for (NSInteger idx = 0; idx < fDigits.count; idx ++) {
@@ -347,7 +350,8 @@ static NSNumberFormatter *distDgtFmt = nil;
 	wFrame.size.height += newSz.height - orgFrame.size.height;
 	if ((wFrame.origin.y -= newSz.height - orgFrame.size.height) < 0)
 		wFrame.origin.y = 0.;
-	[self.window setFrame:wFrame display:YES animate:YES];
+	[self.window setFrame:wFrame display:YES animate:_byUser];
 	initPrmRdBtn.hidden = crntPrmRdBtn.hidden = index == 0;
+	_byUser = YES;
 }
 @end

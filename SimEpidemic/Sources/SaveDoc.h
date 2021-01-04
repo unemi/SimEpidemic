@@ -44,6 +44,7 @@ typedef struct {
 	CGPoint orgPt;
 	CGFloat daysInfected, daysDiseased;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
+	CGFloat mobFreq, gatFreq;
 	CGFloat activeness;
 	HealthType health;
 	int nInfects;
@@ -52,6 +53,7 @@ typedef struct {
 	NSInteger lastTested;
 } AgentSave;
 
+extern NSString *fnParamsPList;
 @interface Document (SaveDocExtension)
 @end
 

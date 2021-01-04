@@ -47,19 +47,20 @@ typedef struct {
 typedef struct {
 	CGFloat mass, friction, avoidance, maxSpeed;
 	CGFloat actMode, actKurt; // activeness as individuality
-	CGFloat mobAct, gatAct; // bias for mility and gatherings
+	CGFloat massAct, mobAct, gatAct; // bias for mility and gatherings
 	CGFloat incubAct, fatalAct, recovAct, immuneAct;	// correlation
 	CGFloat contagDelay, contagPeak; // contagion delay and peak;
 	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat dstST, dstOB; // Distancing strength and obedience
-	CGFloat mobFr; // Mobility frequency
-	CGFloat gatFr; // Gathering's frequency
+	CGFloat gatFr;	// Gathering's frequency
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
 	DistInfo mobDist; // mass and warp distance
 	DistInfo incub, fatal, recov, immun; // contagiousness, incubation, fatality, recovery, immunity
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
+	DistInfo mobFreq; // Participation frequency in long travel
+	DistInfo gatFreq; // Participation frequency in gathering
 	NSInteger step;
 } RuntimeParams;
 typedef struct {
@@ -106,6 +107,8 @@ typedef struct AgentRec {
 	CGPoint orgPt;
 	CGFloat daysInfected, daysDiseased;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
+	CGFloat mass;
+	CGFloat mobFreq, gatFreq;	// frequency of participation in travel & gathering
 	CGFloat activeness;
 	HealthType health;
 	int nInfects;
@@ -119,5 +122,6 @@ typedef struct AgentRec {
 	int newNInfects;
 	struct AgentRec *best;
 	CGFloat bestDist, gatDist;
+	CGFloat dayStartedRecov;
 	BOOL gotAtHospital;
 } Agent;

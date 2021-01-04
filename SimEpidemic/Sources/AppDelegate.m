@@ -8,6 +8,7 @@
 
 #import "AppDelegate.h"
 #import "Document.h"
+#import "SaveDoc.h"
 #ifdef NOGUI
 #import "../../SimEpidemicSV/noGUI.h"
 #else
@@ -60,7 +61,15 @@ void show_anime_steps(NSTextField *txtField, NSInteger steps) {
 NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window) {
 	NSError *error;
 	NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
-	if (data == nil) { error_msg(error, window, NO); return nil; }
+	if (data == nil) { @try {
+		if (error.code != NSFileReadNoPermissionError) @throw error;
+		NSFileWrapper *fw = [NSFileWrapper.alloc initWithURL:url options:0 error:NULL];
+		if (fw == nil || !fw.isDirectory) @throw error;
+		fw = fw.fileWrappers[fnParamsPList];
+		if (fw == nil || !fw.isRegularFile) @throw error;
+		data = fw.regularFileContents;
+		} @catch (NSError *err) { error_msg(err, window, NO); return nil; }
+	}
 	NSObject *object = [url.pathExtension isEqualToString:@"json"]?
 		[NSJSONSerialization JSONObjectWithData:data options:0 error:&error] :
 		[NSPropertyListSerialization propertyListWithData:data
@@ -129,28 +138,28 @@ NSString *keyAnimeSteps = @"animeSteps";
 #endif
 static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"mass", {.f = { 20., 1., 100.}}},
-	{ ParamTypeFloat, @"friction", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"friction", {.f = { 80., 0., 100.}}},
 	{ ParamTypeFloat, @"avoidance", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"maxSpeed", {.f = { 50., 10., 100.}}},
 
 	{ ParamTypeFloat, @"activenessMode", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"activenessKurtosis", {.f = { 0., -100., 100.}}},
+	{ ParamTypeFloat, @"massBias", {.f = { 4., 1., 10.}}},
 	{ ParamTypeFloat, @"mobilityBias", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"gatheringBias", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"incubationBias", {.f = { 0., -100., 100.}}},
 	{ ParamTypeFloat, @"fatalityBias", {.f = { 0., -100., 100.}}},
-	{ ParamTypeFloat, @"recoveryBias", {.f = { 50., -100., 100.}}},
+	{ ParamTypeFloat, @"recoveryBias", {.f = { 0., -100., 100.}}},
 	{ ParamTypeFloat, @"immunityBias", {.f = { 0., -100., 100.}}},
 
 	{ ParamTypeFloat, @"contagionDelay", {.f = { .5, 0., 10.}}},
 	{ ParamTypeFloat, @"contagionPeak", {.f = { 3., 1., 10.}}},
-	{ ParamTypeFloat, @"infectionProberbility", {.f = { 80., 0., 100.}}},
+	{ ParamTypeFloat, @"infectionProberbility", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"infectionDistance", {.f = { 3., .1, 10.}}},
 
 	{ ParamTypeFloat, @"distancingStrength", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
-	{ ParamTypeFloat, @"mobilityFrequency", {.f = { 50., 0., 100.}}},
-	{ ParamTypeFloat, @"gatheringFrequency", {.f = { 30., 0., 100.}}},
+	{ ParamTypeFloat, @"gatheringFrequency", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"contactTracing", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"testDelay", {.f = { 1., 0., 10.}}},
 	{ ParamTypeFloat, @"testProcess", {.f = { 1., 0., 10.}}},
@@ -168,7 +177,9 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeDist, @"gatheringSize", {.d = { 5., 10., 20.}}},
 	{ ParamTypeDist, @"gatheringDuration", {.d = { 6., 12., 24.}}},
 	{ ParamTypeDist, @"gatheringStrength", {.d = { 50., 80., 100.}}},
-
+	{ ParamTypeDist, @"mobilityFrequency", {.d = { 40., 70., 100.}}},
+	{ ParamTypeDist, @"gatheringParticipation", {.d = { 40., 70., 100.}}},
+	
 	{ ParamTypeInteger, @"populationSize", {.i = { 10000, 100, 999900}}},
 	{ ParamTypeInteger, @"worldSize", {.i = { 360, 10, 999999}}},
 	{ ParamTypeInteger, @"mesh", {.i = { 18, 1, 999}}},

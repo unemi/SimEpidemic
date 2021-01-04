@@ -9,7 +9,6 @@
 #import "Agent.h"
 #import "Document.h"
 #import "StatPanel.h"
-#define BIG_NUM 1e10
 #define AVOIDANCE .2
 // Random number of psuedo Gaussian distribution by Box-Müller method
 static CGFloat random_guassian(void) {
@@ -96,6 +95,10 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->lastTested = -999999;
 	a->activeness = random_mk(rp->actMode / 100., rp->actKurt / 100.);
 	a->gathering = NULL;
+	a->mass = rp->mass * pow(rp->massAct, (a->activeness - .5) / .5);
+	struct ActivenessEffect ae = {a->activeness, rp->actMode/100.};
+	a->mobFreq = random_with_corr(&rp->mobFreq, ae, rp->mobAct/100.);
+	a->gatFreq = random_with_corr(&rp->gatFreq, ae, rp->gatAct/100.);
 }
 void reset_for_step(Agent *a) {
 	a->fx = a->fy = 0.;
@@ -153,8 +156,12 @@ static void attracted(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CG
 }
 static void infects(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFloat d) {
 	// b infects a
-	CGFloat timeFactor = fmin(1., (b->daysInfected - rp->contagDelay) /
-		(b->daysInfected - fmin(rp->contagPeak, b->daysToOnset)));
+//	CGFloat timeFactor = fmin(1., (b->daysInfected - rp->contagDelay) /
+//		(b->daysInfected - fmin(rp->contagPeak, b->daysToOnset)));
+	CGFloat timeFactor = (b->daysToDie != BIG_NUM)?
+		fmin(1., (b->daysInfected - rp->contagDelay) /
+			(fmin(rp->contagPeak, b->daysToOnset) - rp->contagDelay)) :
+		(b->daysToRecover - b->daysInfected) / (b->daysToRecover - b->dayStartedRecov);
 	CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
 	if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor)) {
 		a->newHealth = Asymptomatic;
@@ -211,6 +218,7 @@ static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, StepInfo *
 			a->daysInfected = 0;
 		}
 	} else if (a->daysInfected > a->daysToRecover) { // starts recovery
+		a->dayStartedRecov = a->daysToRecover;
 		a->daysToRecover *= 1. + 10. / a->daysToDie;
 		a->daysToDie = BIG_NUM;
 	} else if (a->daysInfected >= a->daysToDie) {
@@ -231,10 +239,6 @@ static CGFloat wall(CGFloat d) {
 	if (d < .02) d = .02;
 	return AVOIDANCE * 20. / d / d;
 }
-static inline CGFloat mov_act(Agent *a, RuntimeParams *rp) {
-	return pow(pow(10., rp->mobAct / 100.), (a->activeness - .5) / .5);
-}
-static inline CGFloat mass_bias(Agent *a) { return pow(4., (a->activeness - .5) / .5); }
 void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	switch (a->health) {
 		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
@@ -257,7 +261,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	if (a->health != Symptomatic && was_hit(wp, rp->tstSbjAsy / 100.))
 		info->testType = TestAsSuspected;
 	NSInteger orgIdx = index_in_pop(a, wp);
-	if (a->health != Symptomatic && was_hit(wp, rp->mobFr / 1000. * mov_act(a, rp))) {
+	if (a->health != Symptomatic && was_hit(wp, a->mobFreq / 1000.)) {
 		CGFloat dst = my_random(&rp->mobDist) * wp->worldSize / 100.;
 		CGFloat th = random() * M_PI * 2. / 0x7fffffff;
 		CGPoint newPt = {a->x + cos(th) * dst, a->y + sin(th) * dst};
@@ -276,11 +280,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 		}
 		a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 		a->fy += wall(a->y) - wall(wp->worldSize - a->y);
-#ifdef VER_1_8
-		CGFloat mass = rp->mass / 100. * mass_bias(a);
-#else
-		CGFloat mass = rp->mass / 10.;
-#endif
+		CGFloat mass = a->mass / 100.;
 		if (a->health == Symptomatic) mass *= 20.; 
 		if (a->best != NULL && !a->distancing) {
 			CGFloat dx = a->best->x - a->x;
@@ -289,11 +289,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 			a->fx += dx / d;
 			a->fy += dy / d;
 		}
-#ifdef VER_1_8
 		CGFloat fric = pow(.99 * (1. - rp->friction / 100.), 1. / wp->stepsPerDay);
-#else
-		CGFloat fric = pow(1. - rp->friction / 100., 1. / wp->stepsPerDay);
-#endif
 		if (a->gatDist < 1.) fric *= a->gatDist * .5 + .5;
 		a->vx = a->vx * fric + a->fx / mass / wp->stepsPerDay;
 		a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;

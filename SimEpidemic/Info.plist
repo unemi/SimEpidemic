@@ -17,8 +17,10 @@
 			<string>DocumentType</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSItemContentTypes</key>
+			<array/>
 			<key>LSTypeIsPackage</key>
-			<integer>0</integer>
+			<integer>1</integer>
 			<key>NSDocumentClass</key>
 			<string>Document</string>
 		</dict>
@@ -33,6 +35,8 @@
 			<string>ScenarioType</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSTypeIsPackage</key>
+			<integer>0</integer>
 			<key>NSDocumentClass</key>
 			<string></string>
 		</dict>
@@ -47,6 +51,8 @@
 			<string>ParametersType</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSTypeIsPackage</key>
+			<integer>0</integer>
 			<key>NSDocumentClass</key>
 			<string></string>
 		</dict>
@@ -66,7 +72,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>510</string>
+	<string>540</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSAppleScriptEnabled</key>
@@ -86,6 +92,11 @@
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.content</string>
+				<string>com.apple.package</string>
+			</array>
 			<key>UTTypeDescription</key>
 			<string>SimEpidemic1Document</string>
 			<key>UTTypeIconFile</key>

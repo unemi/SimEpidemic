@@ -56,7 +56,7 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;
 	IBOutlet NSView *savePanelAccView;
-	IBOutlet NSButton *savePopCBox;
+	IBOutlet NSButton *savePopCBox, *saveGUICBox;
 	NSMutableArray<void (^)(StatInfo *)> *statPanelInitializer;
 	void (^panelInitializer)(Document *);
 	Scenario *scenarioPanel;

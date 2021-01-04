@@ -8,7 +8,7 @@
 "4SU-KP-KAU.title" = "初期人口:";
 "5HN-F1-gG0.title" = "日";
 "6sA-dH-SYN.title" = "既定値に戻す";
-"8ye-Rq-mG5.title" = "最小:";
+"8ye-Rq-mG5.title" = "最小";
 "9NK-Ij-sAU.title" = "潜伏期間の日数";
 "AHT-ki-ztX.title" = "日";
 "AdB-cs-9q4.title" = "最小";
@@ -44,9 +44,9 @@
 "Voh-kv-nLT.title" = "最小:";
 "VvD-nT-U0j.title" = "既定値設定を消去";
 "XA3-JG-Xrd.title" = "感度:";
-"a4U-Mx-33N.title" = "最頻値:";
+"a4U-Mx-33N.title" = "最頻値";
 "a5N-lP-cRC.title" = "社会距離";
-"bHi-h2-md2.title" = "最大:";
+"bHi-h2-md2.title" = "最大";
 "bKB-AV-bUi.title" = "検査間隔:";
 "bkG-JD-nGU.title" = "接触者の検査率は対策で設定できます。";
 "bvt-Jd-LST.title" = "割合:";
@@ -70,7 +70,7 @@
 "p8K-my-yBa.title" = "日";
 "rh6-ax-Y7G.title" = "読み込む…";
 "sKr-zD-pTP.title" = "イベント・集会など";
-"tab-2r-jdh.title" = "強さ (%):";
+"tab-2r-jdh.title" = "強さ:";
 "vdS-iU-fiy.title" = "感染確率";
 "x0e-PZ-qAI.title" = "移動";
 "ywo-2M-5ea.title" = "最頻値:";
@@ -94,3 +94,7 @@
 "nMu-Hr-o59.title" = "亢進期間:";
 "Lzc-UR-SMe.title" = "快復開始:";
 "tgj-h8-qiG.title" = "免疫:";
+"Rlx-z0-LAO.title" = "単位";
+"feS-it-NsD.title" = "単位";
+"Pc7-Hi-vU4.title" = "時間";
+"IJi-nd-ExV.title" = "参加率:";
