@@ -153,7 +153,6 @@ NSInteger nQueues = 10;
 	NSMutableDictionary<NSNumber *, NSValue *> *newWarpF;
 	NSMutableDictionary<NSNumber *, NSNumber *> *testees;
 	NSLock *newWarpLock, *testeesLock;
-	NSPredicate *predicateToStop;
 	dispatch_group_t dispatchGroup;
 #ifdef GCD_CONCURRENT_QUEUE
 	dispatch_queue_t dispatchQueue;
@@ -280,6 +279,16 @@ NSInteger nQueues = 10;
 	else scenarioText.stringValue = NSLocalizedString(@"None", nil);
 }
 #endif
+NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
+	if ([item isKindOfClass:NSPredicate.class]) {
+		if (comment) *comment = @""; return (NSPredicate *)item;
+	} else if ([item isKindOfClass:NSArray.class] && ((NSArray *)item).count > 1
+		&& [((NSArray *)item)[1] isKindOfClass:NSPredicate.class]) {
+		if (comment) *comment = [((NSArray *)item)[0] isKindOfClass:NSString.class]?
+			(NSString *)((NSArray *)item)[0] : @"";
+		return (NSPredicate *)((NSArray *)item)[1];
+	} else return nil;
+}
 - (void)execScenario {
 	predicateToStop = nil;
 	if (scenario == nil) return;
@@ -302,20 +311,22 @@ NSInteger nQueues = 10;
 		visitFlags[scenarioIndex] = YES;
 		NSObject *item = scenario[scenarioIndex ++];
 		if ([item isKindOfClass:NSArray.class]) {
-			if ([((NSArray *)item)[0] isKindOfClass:NSNumber.class]) {	// jump N if --
-				NSInteger destIdx = [((NSArray *)item)[0] integerValue];
-				if (((NSArray *)item).count == 1) scenarioIndex = destIdx;
-				else if ([(NSPredicate *)((NSArray *)item)[1] evaluateWithObject:statInfo])
-					scenarioIndex = destIdx;
-			} else if ([((NSArray *)item)[1] isKindOfClass:NSPredicate.class]) {
-				predicateToStop = (NSPredicate *)((NSArray *)item)[1];
+			NSArray *arr = (NSArray *)item;
+			if ([arr[0] isKindOfClass:NSNumber.class]) {	// jump N if --
+				NSInteger destIdx = [arr[0] integerValue];
+				if (arr.count == 1) scenarioIndex = destIdx;
+				else if ([(NSPredicate *)arr[1] evaluateWithObject:statInfo]) scenarioIndex = destIdx;
+			} else if ([arr[1] isKindOfClass:NSPredicate.class]) {
+				predicateToStop = (NSPredicate *)arr[1];
 				hasStopCond = YES;
 				break;
-			} else if (((NSArray *)item).count == 2)
-				md[((NSArray *)item)[0]] = ((NSArray *)item)[1];	// paramter assignment
-			else paramChangers[((NSArray *)item)[0]] = @[((NSArray *)item)[1],
-				@(runtimeParams.step / worldParams.stepsPerDay +
-					[(((NSArray *)item)[2]) doubleValue])];
+			} else if (arr.count == 2) md[arr[0]] = arr[1];	// paramter assignment
+			else {
+				NSObject *goal = (paramIndexFromKey[arr[0]].integerValue > IDX_D &&
+				  [arr[1] isKindOfClass:NSNumber.class])? @[arr[1], arr[1], arr[1]] : arr[1];
+				paramChangers[arr[0]] = @[goal,
+					@(runtimeParams.step / worldParams.stepsPerDay + [(arr[2]) doubleValue])];
+			}
 		} else if ([item isKindOfClass:NSDictionary.class]) {	// for upper compatibility
 			[md addEntriesFromDictionary:(NSDictionary *)item];
 		} else if ([item isKindOfClass:NSNumber.class]) {	// add infected individuals
@@ -361,14 +372,11 @@ NSInteger nQueues = 10;
 	NSMutableArray<NSString *> *maLabel = NSMutableArray.new;
 	for (NSInteger i = 0; i < scenario.count; i ++) {
 		NSObject *elm = scenario[i];
-		if ([elm isKindOfClass:NSPredicate.class]) {
+		NSString *label;
+		NSPredicate *pred = predicate_in_item(elm, &label);
+		if (pred != nil) {
 			[maPhase addObject:@(i + 1)];
-			[maLabel addObject:@""];
-		} else if (![elm isKindOfClass:NSArray.class]) continue;
-		else if (((NSArray *)elm).count != 2) continue;
-		else if ([((NSArray *)elm)[1] isKindOfClass:NSPredicate.class]) {
-			[maPhase addObject:@(i + 1)];
-			[maLabel addObject:((NSArray *)elm)[0]];
+			[maLabel addObject:label];
 		}
 	}
 	// if the final item is not an unconditional jump then add finale phase.
@@ -410,6 +418,16 @@ NSInteger nQueues = 10;
 }
 #endif
 - (void)allocateMemory {
+	free_gatherings(gatherings);
+	gatherings = NULL;
+	[cInfoLock lock];
+	for (NSInteger i = 0; i < nPop; i ++)
+		if (_agents[i].contactInfoHead != NULL) {
+			_agents[i].contactInfoTail->next = freeCInfo;
+			freeCInfo = _agents[i].contactInfoHead;
+			_agents[i].contactInfoHead = _agents[i].contactInfoTail = NULL;
+	}
+	[cInfoLock unlock];
 	if (nMesh != worldParams.mesh) {
 		NSInteger nCNew = worldParams.mesh * worldParams.mesh;
 		nMesh = worldParams.mesh;
@@ -423,6 +441,16 @@ NSInteger nQueues = 10;
 		_agents = realloc(_agents, sizeof(Agent) * nPop);
 	}
 	memset(_agents, 0, sizeof(Agent) * nPop);
+	if (testQueTail != nil) {
+		[testEntriesLock lock];
+		testQueTail->next = freeTestEntries;
+		freeTestEntries = testQueHead;
+		[testEntriesLock unlock];
+		testQueTail = testQueHead = NULL;
+	}
+	paramChangers = NSMutableDictionary.new;
+	_QList = _CList = NULL;
+	[_WarpList removeAllObjects];
 }
 - (void)resetPop {
 	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
@@ -435,17 +463,7 @@ NSInteger nQueues = 10;
 #ifndef NOGUI
 	[paramPanel adjustControls];
 #endif
-	free_gatherings(gatherings);
-	gatherings = NULL;
 	[popLock lock];
-	[cInfoLock lock];
-	for (NSInteger i = 0; i < nPop; i ++)
-		if (_agents[i].contactInfoHead != NULL) {
-			_agents[i].contactInfoTail->next = freeCInfo;
-			freeCInfo = _agents[i].contactInfoHead;
-			_agents[i].contactInfoHead = _agents[i].contactInfoTail = NULL;
-	}
-	[cInfoLock unlock];
 	[self allocateMemory];
 	NSInteger nDist = runtimeParams.dstOB / 100. * nPop;
 	NSInteger iIdx = 0, infecIdxs[worldParams.nInitInfec];
@@ -471,19 +489,9 @@ NSInteger nQueues = 10;
 		}
 		add_agent(a, &worldParams, _Pop);
 	}
-	_QList = _CList = NULL;
-	[_WarpList removeAllObjects];
-	if (testQueTail != nil) {
-		[testEntriesLock lock];
-		testQueTail->next = freeTestEntries;
-		freeTestEntries = testQueHead;
-		[testEntriesLock unlock];
-		testQueTail = testQueHead = NULL;
-	}
 	runtimeParams.step = 0;
 	[statInfo reset:nPop infected:worldParams.nInitInfec];
 	[popLock unlock];
-	paramChangers = NSMutableDictionary.new;
 	scenarioIndex = 0;
 	[self execScenario];
 #ifdef NOGUI
@@ -580,6 +588,7 @@ NSInteger nQueues = 10;
 	if (statPanelInitializer != nil) {
 		for (void (^block)(StatInfo *) in statPanelInitializer) block(statInfo);
 		[self showAllAfterStep];
+		statPanelInitializer = nil;
 	}
 	animeStepper.integerValue = log2(animeSteps);
 	show_anime_steps(animeStepsTxt, animeSteps);
@@ -656,19 +665,11 @@ NSInteger nQueues = 10;
 NSString *keyParameters = @"parameters", *keyScenario = @"scenario",
 	*keyDaysToStop = @"daysToStop";
 static NSObject *property_from_element(NSObject *elm) {
-	if ([elm isKindOfClass:NSPredicate.class]) return ((NSPredicate *)elm).predicateFormat;
-	else if (![elm isKindOfClass:NSArray.class]) return elm;
-	NSInteger n = ((NSArray *)elm).count;
-	NSObject *elms[n];
-	BOOL hasPredicate = NO;
-	for (NSInteger i = 0; i < n; i ++) {
-		NSObject *obj = ((NSArray *)elm)[i];
-		if ([obj isKindOfClass:NSPredicate.class]) {
-			elms[i] = ((NSPredicate *)obj).predicateFormat;
-			hasPredicate = YES;
-		} else elms[i] = obj;
-	}
-	return hasPredicate? [NSArray arrayWithObjects:elms count:n] : elm;
+	NSString *label;
+	NSPredicate *pred = predicate_in_item(elm, &label);
+	if (pred == nil) return elm;
+	if (label.length == 0) return pred.predicateFormat;
+	return @[label, pred.predicateFormat];
 }
 static NSObject *element_from_property(NSObject *prop) {
 	if ([prop isKindOfClass:NSString.class])
@@ -708,7 +709,7 @@ static NSObject *element_from_property(NSObject *prop) {
 #ifndef NOGUI
 		[self setupPhaseInfo];
 #endif
-		[self execScenario];
+		if (runtimeParams.step == 0) [self execScenario];
 	}
 #ifndef NOGUI
 	if (orgScen == nil)
@@ -865,10 +866,36 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 //
     NSInteger unitJ = 4;
 	NSInteger nCells = worldParams.mesh * worldParams.mesh;
+//#define PARTIAL_CALC
+#ifdef PARTIAL_CALC
+	unsigned char IMap[nCells], *IMapP = IMap;
+	memset(IMap, 0, nCells);
+	Agent **PopL = _Pop;
+	for (NSInteger j = 0; j < unitJ; j ++) {
+		NSInteger start = j * nCells / unitJ, end = (j + 1) * nCells / unitJ;
+		void (^block)(void) = ^{
+			for (NSInteger i = start; i < end; i ++) {
+				for (Agent *a = PopL[i]; a; a = a->next)
+					if (a->health != Susceptible) { IMapP[i] = '\001'; break; }
+		}};
+		if (j < unitJ - 1) [self addOperation:block]; else block();
+	}
+	[self waitAllOperations];
+	for (NSInteger i = 0; i < nMesh; i ++) {
+		NSInteger aFrom = (i == 0)? 0 : -1, aTo = (i == nMesh - 1)? 0 : 1;
+		for (NSInteger j = 0; j < nMesh; j ++) if (IMap[i * nMesh + j] & '\001') {
+			NSInteger bFrom = (j == 0)? 0 : -1, bTo = (j == nMesh - 1)? 0 : 1;
+			for (NSInteger a = aFrom; a <= aTo; a ++) for (NSInteger b = bFrom; b <= bTo; b ++)
+				IMap[(i + a) * nMesh + j + b] |= '\002';
+	}}
+#endif
 	memset(pRange, 0, sizeof(NSRange) * nCells);
 	NSInteger nInField = 0;
 	for (NSInteger i = 0; i < nCells; i ++) {
 		pRange[i].location = nInField;
+#ifdef PARTIAL_CALC
+		if (IMap[i])
+#endif
 		for (Agent *p = _Pop[i]; p; p = p->next) pop[nInField ++] = p;
 		pRange[i].length = nInField - pRange[i].location;
 	}
@@ -892,7 +919,7 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-	unitJ = 7;
+	unitJ = isARM? 4 : (nCores <= 8)? nCores - 1 : 8;
     NSRange *pRng = pRange;
 	__weak typeof(self) weakSelf = self;
     for (NSInteger j = 0; j < unitJ; j ++) {
@@ -914,7 +941,7 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
-//	unitJ = 7;
+	if (nCores > 20) unitJ = 20;
 	NSInteger mesh = worldParams.mesh;
 	for (NSInteger j = 0; j < unitJ; j ++) {
 		NSInteger start = j * mesh / unitJ, end = (j + 1) * mesh / unitJ;
@@ -987,7 +1014,7 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 #endif
 // Step
 	INC_PHASE
-    unitJ = 8;
+	unitJ = 8;
 	NSMutableArray<NSValue *> *infectors[unitJ];
 	NSMutableArray<NSValue *> *movers[unitJ];
 	NSMutableArray<NSValue *> *warps[unitJ];

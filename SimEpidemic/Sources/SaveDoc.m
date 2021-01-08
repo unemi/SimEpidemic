@@ -40,6 +40,7 @@ static NSString *keySelectedTabIndex = @"selectedTabIndex";
 		[tabView selectTabViewItemAtIndex:num.integerValue];
 	NSRect frm = frame_rect_from_dict(info);
 	if (frm.size.width > 0.) [self.window setFrameOrigin:frm.origin];
+	[self adjustControls];
 }
 @end
 
@@ -144,8 +145,8 @@ static NSString *keyTableType = @"tableType", *keyIntervalIdx = @"intervalIndex"
 			if (isOn) timeEvoInfo.nIndexes ++;
 			btn.state = isOn? NSControlStateValueOn : NSControlStateValueOff;
 		}
-		if (timeEvoInfo.idxBits & MskTransit)
-			transitCBox.state = NSControlStateValueOn;
+		transitCBox.state = (timeEvoInfo.idxBits & MskTransit)?
+			NSControlStateValueOn : NSControlStateValueOff;
 		[self setupColorForCBoxes];
 	}
 }
@@ -364,7 +365,9 @@ static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 		window_order_info(paramPanel.window, dict, winList);
 	}
 	if ((dict = info[keyScenarioPanel]) != nil) {
+		BOOL alreadyOpen = scenarioPanel != nil;
 		[self openScenarioPanel:nil];
+		if (alreadyOpen) [scenarioPanel makeDocItemList];
 		[scenarioPanel applyUIInfo:dict];
 		window_order_info(scenarioPanel.window, dict, winList);
 	}
@@ -400,7 +403,7 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 #define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
 z(orgPt); z(daysInfected); z(daysDiseased);\
 z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr);\
-z(mobFreq); z(gatFreq); z(activeness);\
+z(mass); z(mobFreq); z(gatFreq); z(activeness);\
 z(health); z(nInfects); z(distancing); z(isOutOfField); z(isWarping);\
 z(inTestQueue); z(lastTested);
 
@@ -559,13 +562,22 @@ static NSDictionary *plist_from_data(NSData *data) {
 	}
 	if ((pDict = dict[keyCurrentParams]) != nil)
 		set_params_from_dict(&runtimeParams, NULL, pDict);
+	if ((num = dict[keyStep]) != nil) runtimeParams.step = num.integerValue;
 	NSArray *seq = dict[keyScenario];
 	if (seq != nil) {
-		@try { [self setScenarioWithPList:seq]; }
-		@catch (NSString *msg) { error_msg(msg, nil, NO); }
+		@try {
+			[self setScenarioWithPList:seq];
+			if ((num = dict[keyScenarioIndex]) != nil) {
+				NSInteger sIdx = num.integerValue;
+				if (sIdx < 1 || sIdx > scenario.count) @throw @"Invalid scenario index.";
+				NSObject *item = scenario[sIdx - 1];
+				NSPredicate *pred = predicate_in_item(item, NULL);
+				if (pred == nil) @throw @"Indexed scenario item is not a predicate.";
+				predicateToStop = pred;
+				scenarioIndex = sIdx;
+			}
+		} @catch (NSString *msg) { error_msg(msg, nil, NO); }
 	}
-	if ((num = dict[keyScenarioIndex]) != nil) scenarioIndex = num.integerValue;
-	if ((num = dict[keyStep]) != nil) runtimeParams.step = num.integerValue;
 	if ((pDict = dict[keyParamChangers]) != nil) paramChangers =
 		[NSMutableDictionary dictionaryWithDictionary:pDict];
 	return YES;
@@ -584,6 +596,10 @@ static NSDictionary *plist_from_data(NSData *data) {
 	if ((fw = dict[fnPopulation]) != nil) {
 		[self allocateMemory];
 		NSData *data = [fw.regularFileContents unzippedData];
+		if (data.length != sizeof(AgentSave) * worldParams.initPop)
+			@throw [NSError errorWithDomain:@"SimEpi" code:1 userInfo:
+				@{NSLocalizedFailureReasonErrorKey:@"Saved population data was short.",
+				NSLocalizedRecoverySuggestionErrorKey:@"The file format seems to be old."}];
 		const AgentSave *as = data.bytes;
 		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
 			Agent *a = self.agents + i;
@@ -679,6 +695,7 @@ static NSDictionary *plist_from_data(NSData *data) {
 	} else {
 		for (void (^block)(StatInfo *) in statProcs) block(statInfo);
 		if (panelBlock != nil) panelBlock(self);
+		[self adjustScenarioText];
 	}
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO; }
 	return YES;

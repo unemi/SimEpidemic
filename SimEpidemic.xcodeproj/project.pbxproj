@@ -835,7 +835,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.8.0;
-				OTHER_CFLAGS = "-mavx2";
+				OTHER_CFLAGS = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -856,7 +856,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.8.0;
-				OTHER_CFLAGS = "-mavx2";
+				OTHER_CFLAGS = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

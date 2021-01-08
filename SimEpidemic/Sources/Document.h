@@ -19,6 +19,7 @@ extern TestEntry *new_testEntry(void);
 extern ContactInfo *new_cinfo(void);
 extern void free_gatherings(Gathering *gats);
 extern Gathering *new_n_gatherings(NSInteger n);
+extern NSPredicate *predicate_in_item(NSObject *item, NSString **comment);
 #ifndef NOGUI
 extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
 #endif
@@ -71,6 +72,7 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 	NSLock *popLock;
 	NSArray *scenario;
 	NSInteger scenarioIndex;
+	NSPredicate *predicateToStop;
 	IBOutlet StatInfo *statInfo;
 	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
 	TestEntry *testQueHead, *testQueTail;
@@ -119,6 +121,7 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 - (void)setScenarioWithPList:(NSArray *)plist;
 #else
 - (Gathering *)gatherings;
+- (void)adjustScenarioText;
 - (void)setScenario:(NSArray *)newScen;
 - (void)setPanelTitle:(NSWindow *)panel;
 - (void)reviseColors;

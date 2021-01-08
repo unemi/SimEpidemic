@@ -91,3 +91,5 @@
 "gatheringDuration" = "集会の長さ";
 "gatheringStrength" = "集会の強さ";
 "Value..." = "値...";
+"Saved population data was short." = "保存された個体集団のデータが足りません。";
+"The file format seems to be old." = "ファイル形式が古いようです。";

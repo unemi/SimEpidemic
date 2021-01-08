@@ -30,6 +30,7 @@ typedef struct {
 } ParamInfo;
 
 extern NSInteger nCores;
+extern BOOL isARM;
 extern unsigned long current_time_us(void);
 extern NSString *keyAnimeSteps;
 extern NSInteger defaultAnimeSteps;

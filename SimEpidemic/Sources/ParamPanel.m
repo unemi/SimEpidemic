@@ -18,7 +18,8 @@ static void reveal_me_in_tabview(NSControl *me, NSTabView *tabView) {
 }
 @implementation DistDigits
 static NSNumberFormatter *distDgtFmt = nil;
-- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits tabView:(nullable NSTabView *)tabV {
+- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits
+	tabView:(nullable NSTabView *)tabV callBack:(void (^)(void))proc {
 	if (!(self = [super init])) return nil;
 	if (distDgtFmt == nil) {
 		distDgtFmt = NSNumberFormatter.new;
@@ -33,6 +34,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	minDgt.action = maxDgt.action = modDgt.action = @selector(dValueChanged:);
 	minDgt.formatter = maxDgt.formatter = modDgt.formatter = distDgtFmt;
 	_tabView = tabV;
+	valueChanedCB = proc;
 	return self;
 }
 - (void)setIndex:(NSInteger)index {
@@ -56,8 +58,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		if (dd.tabView != nil) reveal_me_in_tabview(dd.minDgt, dd.tabView);
 		[dd changeDistInfo:orgInfo];
 	}];
-	ParamPanel *pp = (ParamPanel *)minDgt.window.delegate;
-	if (pp != nil && [pp isKindOfClass:ParamPanel.class]) [pp checkUpdate];
+	if (valueChanedCB != nil) valueChanedCB();
 }
 - (void)dValueChanged:(NSTextField *)sender {
 	CGFloat newValue = sender.doubleValue;
@@ -140,7 +141,8 @@ static NSNumberFormatter *distDgtFmt = nil;
 		memcmp(targetParams, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
 		memcmp(doc.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams));
 }
-#define DDGT(d1,d2,d3) [DistDigits.alloc initWithDigits:@[d1,d2,d3] tabView:tabView]
+#define DDGT(d1,d2,d3) [DistDigits.alloc initWithDigits:@[d1,d2,d3]\
+ tabView:tabView callBack:proc]
 - (void)windowDidLoad {
     [super windowDidLoad];
     self.window.alphaValue = panelsAlpha;
@@ -168,6 +170,8 @@ static NSNumberFormatter *distDgtFmt = nil;
 		dstSTSld, dstOBSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld];
+	ParamPanel __weak *pp = self;
+	void (^proc)(void) = ^{ [pp checkUpdate]; };
 	dDigits = @[
 		DDGT(mobDistMinDgt, mobDistMaxDgt, mobDistModeDgt),
 		DDGT(incubMinDgt, incubMaxDgt, incubModeDgt),

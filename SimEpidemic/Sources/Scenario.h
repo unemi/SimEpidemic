@@ -56,7 +56,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 	IBOutlet NSButton *shiftUpBtn, *shiftDownBtn, *deselectBtn;
 	IBOutlet NSButton *removeBtn, *applyBtn;
 	IBOutlet NSWindow *distParamSheet;
-	IBOutlet NSTextField *itemIdx, *paramNameTxt, *minDgt, *maxDgt, *modeDgt;
+	IBOutlet NSTextField *minDgt, *maxDgt, *modeDgt;
 	NSMutableArray<ScenarioItem *> *itemList;
 }
 @property IBOutlet NSOutlineView *outlineView;
@@ -64,6 +64,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 @property (readonly) NSUndoManager *undoManager;
 @property (readonly) NSNumberFormatter *intFormatter;
 - (instancetype)initWithDoc:(Document *)dc;
+- (void)makeDocItemList;
 - (void)adjustControls:(BOOL)undoOrRedo;
 - (NSInteger)numberOfItems;
 - (void)removeItem:(ScenarioItem *)item;

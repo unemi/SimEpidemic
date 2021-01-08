@@ -15,8 +15,10 @@
 #import "Preferences.h"
 #endif
 #import <sys/time.h>
+#import <sys/sysctl.h>
 
 NSInteger nCores = 1;
+BOOL isARM = NO;
 unsigned long current_time_us(void) {
 	static long startTime = -1;
 	struct timeval tv;
@@ -293,10 +295,20 @@ void setup_colors(void) {
 #ifdef NOGUI
 void
 #else
+static NSString *archtectureName = nil;
 struct SetupInfo { NSInteger nF, nD, nI, nn; };
 static struct SetupInfo
 #endif
 	applicationSetups(void) {
+	int mib[2] = { CTL_HW, HW_MACHINE };
+	size_t dataSize = 128;
+	char archName[128];
+	memset(archName, 0, 128);
+	if (sysctl(mib, 2, archName, &dataSize, NULL, 0) < 0) {
+		fprintf(stderr, "sysctl err = %d\n", errno);
+		[NSApp terminate:nil];
+	}
+	isARM = strcmp(archName, "x86_64") != 0;
 	nCores = NSProcessInfo.processInfo.processorCount;
 	NSInteger nF = 0, nD = 0, nI = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
@@ -330,6 +342,7 @@ static struct SetupInfo
 	memcpy(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
 #ifndef NOGUI
 	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
+	archtectureName = [NSString stringWithUTF8String:archName];
 	return (struct SetupInfo){nF, nD, nI, nn};
 #endif
 }
@@ -421,6 +434,19 @@ static struct SetupInfo
 	if (makePanelChildWindow == DEFAULT_CHILD_WIN)
 		[ud removeObjectForKey:keyChildWindow];
 	else [ud setBool:makePanelChildWindow forKey:keyChildWindow];
+}
+- (IBAction)orderFrontMyAboutPanel:(id)sender {
+	NSURL *url = [NSBundle.mainBundle URLForResource:@"Credits" withExtension:@"rtf"];
+	NSMutableAttributedString *credit = [NSMutableAttributedString.alloc
+		initWithRTF:[NSData dataWithContentsOfURL:url] documentAttributes:nil];
+	NSMutableParagraphStyle *style = NSMutableParagraphStyle.new;
+	style.alignment = NSTextAlignmentCenter;
+	[credit appendAttributedString:[NSAttributedString.alloc initWithString:
+		[NSString stringWithFormat:@"\nNow running on %@ architecture.", archtectureName]
+		attributes:@{NSFontAttributeName:[NSFont messageFontOfSize:10],
+			NSParagraphStyleAttributeName:style}]];
+	[NSApp orderFrontStandardAboutPanelWithOptions:
+		@{NSAboutPanelOptionCredits:credit}];
 }
 - (IBAction)openPreferencePanel:(id)sender {
 	static Preferences *pref = nil;

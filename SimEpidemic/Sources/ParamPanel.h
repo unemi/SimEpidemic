@@ -13,10 +13,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface DistDigits : NSObject {
 	NSTextField __weak *minDgt, *maxDgt, *modDgt;
+	void (^valueChanedCB)(void);
 }
 @property DistInfo *distInfo;
 @property (readonly,weak) NSTabView *tabView;
-- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits tabView:(nullable NSTabView *)tabV;
+- (instancetype)initWithDigits:(NSArray<NSTextField *> *)digits
+	tabView:(nullable NSTabView *)tabV callBack:(void (^)(void))proc;
 - (void)adjustDigitsToCurrentValue;
 @end
 

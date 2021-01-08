@@ -95,7 +95,7 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->lastTested = -999999;
 	a->activeness = random_mk(rp->actMode / 100., rp->actKurt / 100.);
 	a->gathering = NULL;
-	a->mass = rp->mass * pow(rp->massAct, (a->activeness - .5) / .5);
+	a->mass = rp->mass * pow(rp->massAct, (.5 - a->activeness) / .5);
 	struct ActivenessEffect ae = {a->activeness, rp->actMode/100.};
 	a->mobFreq = random_with_corr(&rp->mobFreq, ae, rp->mobAct/100.);
 	a->gatFreq = random_with_corr(&rp->gatFreq, ae, rp->gatAct/100.);
@@ -132,16 +132,20 @@ void remove_from_list(Agent *a, Agent **list) {
 }
 void add_agent(Agent *a, WorldParams *wp, Agent **Pop) {
 #ifdef DEBUG
-if (!a->isOutOfField)
-	{ printf("agent %ld is already in the field.\n", a->ID); my_exit(); }
+if (!a->isOutOfField) {
+	printf("agent %ld is already in the field.\n", a->ID);
+	my_exit();
+}
 #endif
 	a->isOutOfField = NO;
 	add_to_list(a, Pop + index_in_pop(a, wp));
 }
 void remove_agent(Agent *a, WorldParams *wp, Agent **Pop) {
 #ifdef DEBUG
-if (a->isOutOfField)
-	{ printf("agent %ld is already out of field.\n", a->ID); my_exit(); }
+if (a->isOutOfField) {
+	printf("agent %ld is already out of field.\n", a->ID);
+	my_exit();
+}
 #endif
 	a->isOutOfField = YES;
 	remove_from_list(a, Pop + index_in_pop(a, wp));

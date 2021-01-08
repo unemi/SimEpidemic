@@ -393,6 +393,10 @@ static void check_images(void) {
 	else _index = newIndex;
 	((ParameterCellView *)self.view).digits.doubleValue = newValue;
 }
+- (void)setToolTipForDistBtn {
+	((ParameterCellView *)self.view).distBtn.toolTip = [NSString stringWithFormat:
+		@"%.1f, %.1f, %.1f", _distInfo.min, _distInfo.max, _distInfo.mode];
+}
 - (void)setDistUndoable:(NSInteger)newIndex value:(DistInfo)newValue {
 	NSInteger orgIndex = _index;
 	DistInfo orgValue = _distInfo;
@@ -401,6 +405,7 @@ static void check_images(void) {
 	if (newIndex >= 0) [((ParameterCellView *)self.view).namePopUp selectItemAtIndex:newIndex];
 	else _index = newIndex;
 	_distInfo = newValue;
+	[self setToolTipForDistBtn];
 }
 - (void)chooseParameter:(NSPopUpButton *)sender {
 	NSInteger idx = sender.indexOfSelectedItem;
@@ -858,12 +863,24 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 }
 @end
 
+@implementation Document (ScenarioExtension)
+- (void)setScenario:(NSArray *)newScen index:(NSInteger)index {
+	if (index == 0) { self.scenario = newScen; return; }
+	scenario = newScen;
+	scenarioIndex = index;
+	if (index > 0 && index <= newScen.count)
+		predicateToStop = predicate_in_item(newScen[index - 1], NULL);
+	[self adjustScenarioText];
+}
+- (NSInteger)scenarioIndex { return scenarioIndex; }
+@end
+
 @interface Scenario () {
 	NSArray *savedPList;
 	NSInteger modificationCount, appliedCount;
+	NSDictionary<NSNumber *, CondItem *> *orgIndexes;
 	NSMutableDictionary<NSNumber *, NSNumber *> *valueDict;
 	DistDigits *distDigits;
-	ParamItem *sheetItem;
 }
 @end
 @implementation Scenario
@@ -884,23 +901,49 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 }
 - (void)checkUndoable:(NSNotification *)note {
 	NSUndoManager *um = note.object;
-	if (um.undoing) modificationCount --; else modificationCount ++;
+	if (um.undoing) modificationCount --;
+	else modificationCount ++;
 	applyBtn.enabled = modificationCount != appliedCount;
+#ifdef DEBUG
+NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
+#endif
 }
 - (void)adjustControls:(BOOL)undoOrRedo {
 	if (undoOrRedo) appliedCount = -1;
 	removeBtn.enabled = !_doc.running && (_doc.scenario != nil && _doc.scenario.count > 0);
 	applyBtn.enabled = !_doc.running && modificationCount != appliedCount;
 }
+- (void)makeOrgIndexes {
+	NSInteger n = itemList.count, nn = 0;
+	CondItem *items[n];
+	NSNumber *idxs[n];
+	for (NSInteger i = 0; i < n; i ++) if ([itemList[i] isKindOfClass:CondItem.class]) {
+		items[nn] = (CondItem *)itemList[i];
+		idxs[nn ++] = @(i + 1);
+	}
+	orgIndexes = [NSDictionary dictionaryWithObjects:items forKeys:idxs count:nn];
+}
+- (void)makeDocItemList {
+	appliedCount = modificationCount;
+	modificationCount --;	// for reload the saved file.
+    if (_doc.scenario != nil) {
+		[self setScenarioWithArray:_doc.scenario];
+		[self makeOrgIndexes];
+	} else {
+		itemList = NSMutableArray.new;
+		orgIndexes = @{};
+	}
+}
 - (void)windowDidLoad {
-    [super windowDidLoad];
-    self.window.alphaValue = panelsAlpha;
-    [_doc setPanelTitle:self.window];
+	[super windowDidLoad];
+	self.window.alphaValue = panelsAlpha;
+	[_doc setPanelTitle:self.window];
 	removeBtn.toolTip = NSLocalizedString(@"Remove scenario from the simulator", nil);
 	applyBtn.toolTip = NSLocalizedString(@"Apply this scenario to the simulator", nil);
-    if (_doc.scenario != nil) [self setScenarioWithArray:_doc.scenario];
-    else itemList = NSMutableArray.new;
-    [self adjustControls:NO];
+	distParamSheet.alphaValue = .9;
+	[self makeDocItemList];
+	appliedCount = modificationCount;
+	[self adjustControls:NO];
 }
 - (NSInteger)numberOfItems { return itemList.count; }
 - (void)removeItem:(ScenarioItem *)item {
@@ -954,8 +997,18 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		itemList[i].lineNumber = i + 1;
 	for (CondItem *itm in itemList) if ([itm isKindOfClass:CondItem.class])
 		[itm removeDestMenuItemAtIndex:idx];
-	[_undoManager registerUndoWithTarget:self handler:
-		^(Scenario *scen) { [scen insertItem:orgItem atIndex:idx]; }];
+    void (^handler)(id);
+	if ([orgItem isKindOfClass:ParamItem.class]) {
+        ParameterCellView *cView = (ParameterCellView *)orgItem.view;
+		NSTextField *digits = cView.digits, *days = cView.days;
+        CGFloat value = digits.doubleValue, dVal = days.doubleValue;
+        handler = ^(Scenario *scen) {
+            digits.doubleValue = value;
+            days.doubleValue = dVal;
+            [scen insertItem:orgItem atIndex:idx];
+        };
+    } else handler = ^(Scenario *scen) { [scen insertItem:orgItem atIndex:idx]; };
+	[_undoManager registerUndoWithTarget:self handler:handler];
 	[_outlineView removeItemsAtIndexes:[NSIndexSet indexSetWithIndex:idx]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
 	[self checkSelection];
@@ -1046,6 +1099,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 		NSArray<NSNumber *> *arr = (NSArray<NSNumber *> *)value;
 		item.distInfo = (DistInfo)
 			{arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
+		[item setToolTipForDistBtn];
 	}
 	cView.days.doubleValue = (days == nil)? 0. : days.doubleValue;
 	NSInteger prmIdx = paramIndexFromKey[key].integerValue;
@@ -1162,29 +1216,37 @@ static NSArray *plist_of_all_items(NSArray *itemList) {
 		NSObject *elm = item.scenarioElement;
 		if (elm != nil) [ma addObject:elm];
 	}
-	_doc.scenario = [NSArray arrayWithArray:ma];
+	NSInteger scenIndex = 0;
+	if (orgIndexes != nil) {
+		CondItem *item = orgIndexes[@(_doc.scenarioIndex)];
+		if (item != nil) {
+			NSInteger idx = [itemList indexOfObject:item];
+			if (idx != NSNotFound) scenIndex = idx + 1;
+	}}
+	[_doc setScenario:[NSArray arrayWithArray:ma] index:scenIndex];
+	[self makeOrgIndexes];
 	appliedCount = modificationCount;
 	applyBtn.enabled = NO;
 	removeBtn.enabled = ma.count > 0;
 }
 - (IBAction)ok:(NSButton *)button {
-	ParamItem *item = sheetItem;
-	DistInfo *dInfo = distDigits.distInfo;
-	[_undoManager registerUndoWithTarget:self handler:^(Scenario *target)
-		{ [target distParamBySheetWithItem:item value:dInfo]; }];
-	[self.window endSheet:distParamSheet returnCode:NSModalResponseOK];
+	[distParamSheet orderOut:nil];
 }
 - (void)distParamBySheetWithItem:(ParamItem *)item value:(DistInfo *)info {
+	if (distParamSheet.isVisible && distDigits.distInfo == info) { [self ok:nil]; return; }
 	ParameterCellView *view = (ParameterCellView *)item.view;
-	itemIdx.integerValue = [itemList indexOfObject:item] + 1;
-	sheetItem = item;
-	paramNameTxt.stringValue = view.namePopUp.titleOfSelectedItem;
+	distParamSheet.title = [NSString stringWithFormat:@"%ld %@",
+		[itemList indexOfObject:item] + 1, view.namePopUp.titleOfSelectedItem];
 	if (distDigits == nil) distDigits =
-		[DistDigits.alloc initWithDigits:@[minDgt, maxDgt, modeDgt] tabView:nil];
+		[DistDigits.alloc initWithDigits:@[minDgt, maxDgt, modeDgt] tabView:nil
+			callBack:^{ [item setToolTipForDistBtn]; }];
 	distDigits.distInfo = info;
 	[distDigits adjustDigitsToCurrentValue];
-	[_undoManager registerUndoWithTarget:self handler:^(Scenario *target) { [target ok:nil]; }];
-	[self.window beginSheet:distParamSheet completionHandler:^(NSModalResponse returnCode) {}];
+	NSPoint pt = [self.window convertPointToScreen:
+		[view.distBtn convertPoint:(NSPoint){NSMidX(view.distBtn.bounds), 0.}
+			toView:self.window.contentView]];
+	[distParamSheet setFrameOrigin:(NSPoint){pt.x - distParamSheet.frame.size.width / 2, pt.y}];
+	[distParamSheet makeKeyAndOrderFront:nil];
 }
 // NSWindowDelagate methods
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
