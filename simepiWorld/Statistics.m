@@ -43,6 +43,9 @@ void get_indexes(ComGetIndexes *c) {
 	if (c->nameFlag & MskDays) md[@"days"] = @((CGFloat)rp->step / wp->stepsPerDay);
 	if (c->nameFlag & MskTestPRate) md[@"testPositiveRate"] =
 		make_history(statData, nItems, ^(StatData *st) { return @(st->pRate); });
+	if ((c->nameFlag & (MskReproRate|MskTransit)) == (MskReproRate|MskTransit))
+		md[@"reproductionRate"] =
+			make_history(statData, nItems, ^(StatData *st) { return @(st->reproRate); });
 	uint32 msk = 1;
 	for (NSInteger idx = 0; indexNames[idx] != NULL; idx ++, msk <<= 1)
 	if (c->nameFlag & msk) md[indexNames[idx]] =

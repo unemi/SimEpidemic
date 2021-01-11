@@ -10,6 +10,10 @@
 #import "Document.h"
 #import "StatPanel.h"
 #define AVOIDANCE .2
+
+CGFloat d_random(void) {
+	return random() / (CGFloat)0x7fffffff;
+}
 // Random number of psuedo Gaussian distribution by Box-Müller method
 static CGFloat random_guassian(void) {
 	static CGFloat z = 0.;
@@ -17,15 +21,19 @@ static CGFloat random_guassian(void) {
 	if (secondTime) { secondTime = NO; return z; }
 	else {
 		secondTime = YES;
-		CGFloat r = sqrt(-2. * log(random() / (CGFloat)0x7fffffff)),
-			th = random() / (CGFloat)0x7fffffff * M_PI * 2.;
+		CGFloat r = sqrt(-2. * log(d_random())), th = d_random() * M_PI * 2.;
 		z = r * cos(th);
 		return r * sin(th);
 	}
 }
 #define EXP_BASE .02
 static CGFloat random_exp(void) {
-	return (pow(EXP_BASE, random() / (CGFloat)0x7fffffff) - EXP_BASE) / (1. - EXP_BASE);
+	return (pow(EXP_BASE, d_random()) - EXP_BASE) / (1. - EXP_BASE);
+}
+static CGFloat revise_prob(CGFloat x, CGFloat mode) {
+// x is a sample from distribution [0,1] mode = 0.5;
+	CGFloat a = mode / (1. - mode);
+	return a * x / ((a - 1.) * x + 1.);
 }
 static CGFloat random_mk(CGFloat mode, CGFloat kurt) {
 	CGFloat x =
@@ -40,9 +48,11 @@ static CGFloat random_mk(CGFloat mode, CGFloat kurt) {
 		CGFloat b = pow(2., -kurt);
 		x = (x < 0.)? pow(x + 1., b) - 1. : 1. - pow(1. - x, b);
 	}
-	x = (x + 1.) / 2.;
-	CGFloat a = mode / (1. - mode);
-	return a * x / ((a - 1.) * x + 1.);
+	return revise_prob((x + 1.) / 2., mode);
+}
+CGFloat modified_prob(CGFloat x, DistInfo *p) {
+	CGFloat span = p->max - p->min;
+	return revise_prob(x, (p->mode - p->min) / span) * span + p->min;
 }
 CGFloat my_random(DistInfo *p) {
 	return (p->max == p->min)? p->min :
@@ -58,7 +68,7 @@ static CGFloat random_with_corr(DistInfo *p, struct ActivenessEffect a, CGFloat 
 	return y * (p->max - p->min) + p->min;
 }
 BOOL was_hit(WorldParams *wp, CGFloat prob) {
-	return (random() > pow(1. - prob, 1. / wp->stepsPerDay) * 0x7fffffff);
+	return (d_random() > pow(1. - prob, 1. / wp->stepsPerDay));
 }
 BOOL is_infected(Agent *a) {
 	return a->health == Asymptomatic || a->health == Symptomatic;
@@ -81,24 +91,26 @@ static void alter_days(Agent *a, RuntimeParams *p) {
 }
 void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	memset(a, 0, sizeof(Agent));
-	a->app = random() / (CGFloat)0x7fffffff;
-	a->prf = random() / (CGFloat)0x7fffffff;
-	a->x = random() / (CGFloat)0x7fffffff * (wp->worldSize - 6.) + 3.;
-	a->y = random() / (CGFloat)0x7fffffff * (wp->worldSize - 6.) + 3.;
-	CGFloat th = random() / (CGFloat)0x7fffffff * M_PI * 2.;
+	a->app = d_random();
+	a->prf = d_random();
+	a->x = d_random() * (wp->worldSize - 6.) + 3.;
+	a->y = d_random() * (wp->worldSize - 6.) + 3.;
+	CGFloat th = d_random() * M_PI * 2.;
 	a->vx = cos(th);
 	a->vy = sin(th);
 	a->health = Susceptible;
 	a->nInfects = -1;
 	a->isOutOfField = YES;
 	reset_days(a, rp);
+	a->daysToCompleteRecov = 0.;
 	a->lastTested = -999999;
 	a->activeness = random_mk(rp->actMode / 100., rp->actKurt / 100.);
 	a->gathering = NULL;
 	a->mass = rp->mass * pow(rp->massAct, (.5 - a->activeness) / .5);
 	struct ActivenessEffect ae = {a->activeness, rp->actMode/100.};
-	a->mobFreq = random_with_corr(&rp->mobFreq, ae, rp->mobAct/100.);
-	a->gatFreq = random_with_corr(&rp->gatFreq, ae, rp->gatAct/100.);
+	DistInfo dInfo = {0., 1., .5};
+	a->mobFreq = random_with_corr(&dInfo, ae, rp->mobAct/100.);
+	a->gatFreq = random_with_corr(&dInfo, ae, rp->gatAct/100.);
 }
 void reset_for_step(Agent *a) {
 	a->fx = a->fy = 0.;
@@ -162,10 +174,10 @@ static void infects(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFl
 	// b infects a
 //	CGFloat timeFactor = fmin(1., (b->daysInfected - rp->contagDelay) /
 //		(b->daysInfected - fmin(rp->contagPeak, b->daysToOnset)));
-	CGFloat timeFactor = (b->daysToDie != BIG_NUM)?
+	CGFloat timeFactor = (b->daysToCompleteRecov <= 0.)?
 		fmin(1., (b->daysInfected - rp->contagDelay) /
 			(fmin(rp->contagPeak, b->daysToOnset) - rp->contagDelay)) :
-		(b->daysToRecover - b->daysInfected) / (b->daysToRecover - b->dayStartedRecov);
+		(b->daysToCompleteRecov - b->daysInfected) / (b->daysToCompleteRecov - b->daysToRecover);
 	CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
 	if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor)) {
 		a->newHealth = Asymptomatic;
@@ -215,23 +227,21 @@ void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams 
 }
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
 static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, StepInfo *info) {
-	if (a->daysToDie == BIG_NUM) { // in the recovery phase
-		if (a->daysInfected >= a->daysToRecover) {
+	if (a->daysToCompleteRecov > 0.) { // in the recovery phase
+		if (a->daysInfected >= a->daysToCompleteRecov) {
 			if (a->health == Symptomatic) SET_HIST(HistRecov, daysDiseased)
 			a->newHealth = Recovered;
-			a->daysInfected = 0;
+			a->daysInfected = a->daysToCompleteRecov = 0.;
 		}
 	} else if (a->daysInfected > a->daysToRecover) { // starts recovery
-		a->dayStartedRecov = a->daysToRecover;
-		a->daysToRecover *= 1. + 10. / a->daysToDie;
-		a->daysToDie = BIG_NUM;
+		a->daysToCompleteRecov = a->daysToRecover * (1. + 10. / a->daysToDie);
 	} else if (a->daysInfected >= a->daysToDie) {
 		SET_HIST(HistDeath, daysDiseased);
 		a->newHealth = Died;
 		info->warpType = inQuarantine? WarpToCemeteryH : WarpToCemeteryF;
-		info->warpTo = (CGPoint){
-			(random() * .248 / 0x7fffffff + 1.001) * p->worldSize,
-			(random() * .468 / 0x7fffffff + .001) * p->worldSize};
+		info->warpTo = (NSPoint){
+			(d_random() * .248 + 1.001) * p->worldSize,
+			(d_random() * .468 + 0.001) * p->worldSize};
 		return YES;
 	} else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset) {
 		a->newHealth = Symptomatic;
@@ -265,10 +275,11 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	if (a->health != Symptomatic && was_hit(wp, rp->tstSbjAsy / 100.))
 		info->testType = TestAsSuspected;
 	NSInteger orgIdx = index_in_pop(a, wp);
-	if (a->health != Symptomatic && was_hit(wp, a->mobFreq / 1000.)) {
+	if (a->health != Symptomatic &&
+		was_hit(wp, modified_prob(a->mobFreq, &rp->mobFreq) / 1000.)) {
 		CGFloat dst = my_random(&rp->mobDist) * wp->worldSize / 100.;
-		CGFloat th = random() * M_PI * 2. / 0x7fffffff;
-		CGPoint newPt = {a->x + cos(th) * dst, a->y + sin(th) * dst};
+		CGFloat th = d_random() * M_PI * 2.;
+		NSPoint newPt = {a->x + cos(th) * dst, a->y + sin(th) * dst};
 		if (newPt.x < 3.) newPt.x = 3. - newPt.x;
 		else if (newPt.x > wp->worldSize - 3.) newPt.x = (wp->worldSize - 3.) * 2. - newPt.x;
 		if (newPt.y < 3.) newPt.y = 3. - newPt.y;
@@ -328,8 +339,8 @@ void step_agent_in_quarantine(Agent *a, WorldParams *p, StepInfo *info) {
 	if (!patient_step(a, p, YES, info) && a->newHealth == Recovered)
 		{ info->warpType = WarpBack; info->warpTo = a->orgPt; }
 }
-BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, CGPoint goal) {
-	CGPoint dp = {goal.x - a->x, goal.y - a->y};
+BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, NSPoint goal) {
+	NSPoint dp = {goal.x - a->x, goal.y - a->y};
 	CGFloat d = hypot(dp.y, dp.x), v = wp->worldSize / 5. / wp->stepsPerDay;
 	if (d < v) {
 		a->x = goal.x; a->y = goal.y;
@@ -349,9 +360,9 @@ BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, CGPoint 
 		return NO;
 	}
 }
-void warp_show(Agent *a, WarpType mode, CGPoint goal,
+void warp_show(Agent *a, WarpType mode, NSPoint goal,
 	NSRect dirtyRect, NSArray<NSBezierPath *> *paths) {
-	CGPoint dp = {goal.x - a->x, goal.y - a->y};
+	NSPoint dp = {goal.x - a->x, goal.y - a->y};
 	CGFloat d = fmin(hypot(dp.x, dp.y), 30.), th = atan2(dp.y, dp.x);
 	CGFloat wx = .25 * cos(th + M_PI/2), wy = .25 * sin(th + M_PI/2);
 	NSPoint vertex[3] = {

@@ -12,7 +12,7 @@
 NS_ASSUME_NONNULL_BEGIN
 typedef struct {
 	NSUInteger cnt[NIntIndexes];
-	CGFloat pRate;
+	CGFloat pRate, reproRate;
 } StatDataSave;
 
 typedef struct {
@@ -23,7 +23,7 @@ typedef struct {
 
 typedef struct {
 	WarpType mode;
-	CGPoint goal;
+	NSPoint goal;
 	NSInteger agentID;
 } WarpInfoSave;
 
@@ -41,8 +41,8 @@ typedef struct {
 
 typedef struct {
 	CGFloat app, prf, x, y, vx, vy;
-	CGPoint orgPt;
-	CGFloat daysInfected, daysDiseased;
+	NSPoint orgPt;
+	CGFloat daysInfected, daysDiseased, daysToCompleteRecov;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
 	CGFloat mass, mobFreq, gatFreq;
 	CGFloat activeness;

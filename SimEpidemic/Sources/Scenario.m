@@ -15,13 +15,16 @@
 @implementation StatInfo (PredicateExtension)
 - (NSInteger)days { return days; }
 - (NSInteger)susceptible { return self.statistics->cnt[Susceptible]; }
-- (NSInteger)infected { return self.statistics->cnt[Asymptomatic]; }
+- (NSInteger)infected {
+	NSUInteger *cntp = self.statistics->cnt;
+	return cntp[Asymptomatic] + cntp[Symptomatic];
+}
 - (NSInteger)symptomatic { return self.statistics->cnt[Symptomatic]; }
 - (NSInteger)recovered { return self.statistics->cnt[Recovered]; }
 - (NSInteger)died { return self.statistics->cnt[Died]; }
 - (NSInteger)quarantine {
-	NSUInteger *q = &self.statistics->cnt[QuarantineAsym];
-	return q[0] + q[1];
+	NSUInteger *cntp = self.statistics->cnt;
+	return cntp[QuarantineAsym] + cntp[QuarantineSymp];
 }
 - (NSInteger)dailyInfection { return self.transit->cnt[Asymptomatic]; }
 - (NSInteger)dailySymptomatic { return self.transit->cnt[Symptomatic]; }

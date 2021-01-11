@@ -87,9 +87,9 @@ static NSNumberFormatter *distDgtFmt = nil;
 @interface ParamPanel () {
 	Document *doc;
 	RuntimeParams *targetParams;
-	NSArray<NSTextField *> *fDigits, *iDigits;
+	NSArray<NSTextField *> *fDigits, *iDigits, *rDigits;
 	NSArray<DistDigits *> *dDigits;
-	NSArray<NSSlider *> *fSliders;
+	NSArray<NSSlider *> *fSliders, *rSliders;
 	NSArray<NSStepper *> *iSteppers;
 	DistDigits *dDigitW;
 	NSUndoManager *undoManager;
@@ -118,6 +118,8 @@ static NSNumberFormatter *distDgtFmt = nil;
 	for (DistDigits *d in dDigits) [d adjustDigitsToCurrentValue];
 	for (NSInteger i = 0; i < iDigits.count; i ++)
 		iDigits[i].integerValue = iSteppers[i].integerValue = (&wp->PARAM_I1)[i];
+	for (NSInteger i = 0; i < rDigits.count; i ++)
+		rDigits[i].doubleValue = rSliders[i].doubleValue = (&wp->PARAM_R1)[i];
 	stepsPerDayStp.integerValue = round(log2(wp->stepsPerDay));
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 	[dDigitW adjustDigitsToCurrentValue];
@@ -183,8 +185,10 @@ static NSNumberFormatter *distDgtFmt = nil;
 		DDGT(gatSTMinDgt, gatSTMaxDgt, gatSTModeDgt),
 		DDGT(mobFreqMinDgt, mobFreqMaxDgt, mobFreqModeDgt),
 		DDGT(gatFreqMinDgt, gatFreqMaxDgt, gatFreqModeDgt) ];
-	iDigits = @[initPopDgt, worldSizeDgt, meshDgt, nInfecDgt];
-	iSteppers = @[initPopStp, worldSizeStp, meshStp, nInfecStp];
+	iDigits = @[initPopDgt, worldSizeDgt, meshDgt];
+	iSteppers = @[initPopStp, worldSizeStp, meshStp];
+	rDigits = @[initInfcDgt, initRecvDgt, initQAsymDgt, initQSympDgt];
+	rSliders = @[initInfcSld, initRecvSld, initQAsymSld, initQSympSld];
     for (NSInteger idx = 0; idx < fDigits.count; idx ++) {
 		NSTextField *d = fDigits[idx];
 		NSSlider *s = fSliders[idx];
@@ -211,9 +215,21 @@ static NSNumberFormatter *distDgtFmt = nil;
 		s.minValue = fmt.minimum.doubleValue;
 		s.maxValue = fmt.maximum.doubleValue;
 	}
+	NSInteger fmtBase = fDigits.count + iDigits.count + 1;
+    for (NSInteger idx = 0; idx < rDigits.count; idx ++) {
+		NSTextField *d = rDigits[idx];
+		NSSlider *s = rSliders[idx];
+		d.tag = s.tag = idx;
+		d.action = s.action = @selector(rValueChanged:);
+		d.target = s.target = self;
+		NSNumberFormatter *fmt = paramFormatters[idx + fmtBase];
+		d.formatter = fmt;
+		s.minValue = fmt.minimum.doubleValue;
+		s.maxValue = fmt.maximum.doubleValue;
+	}
 	clearUDBtn.enabled = hasUserDefaults =
-		memcmp(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams)) ||
-		memcmp(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
+		memcmp(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams))
+	 || memcmp(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
     [self adjustControls];
 	[self checkUpdate];
     [doc setPanelTitle:self.window];
@@ -277,6 +293,8 @@ static NSNumberFormatter *distDgtFmt = nil;
 				[target performClick:nil];
 		}];
 		targetParams = newTarget;
+		for (NSInteger i = 0; i < dDigits.count; i ++)
+			dDigits[i].distInfo = &targetParams->PARAM_D1 + i;
 		[self adjustControls];
 		[self checkUpdate];
 	}
@@ -339,6 +357,24 @@ static NSNumberFormatter *distDgtFmt = nil;
 	if (sender != d) d.integerValue = newValue;
 	if (sender != s) s.integerValue = newValue;
 	(&p->PARAM_I1)[sender.tag] = newValue;
+	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :
+		undoManager.isRedoing? NSChangeRedone : NSChangeDone];
+	[self checkUpdate];
+}
+- (void)rValueChanged:(NSControl *)sender {
+	WorldParams *p = doc.tmpWorldParamsP;
+	NSControl *d = rDigits[sender.tag], *s = rSliders[sender.tag];
+	CGFloat orgValue = (&p->PARAM_R1)[sender.tag];
+	CGFloat newValue = sender.doubleValue;
+	if (orgValue == newValue) return;
+	NSTabView *tabV = tabView;
+	[undoManager registerUndoWithTarget:sender handler:^(NSControl *target) {
+		reveal_me_in_tabview(target, tabV);
+		target.doubleValue = orgValue;
+		[target sendAction:target.action to:target.target]; }];
+	if (sender != d) d.doubleValue = newValue;
+	if (sender != s) s.doubleValue = newValue;
+	(&p->PARAM_R1)[sender.tag] = newValue;
 	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :
 		undoManager.isRedoing? NSChangeRedone : NSChangeDone];
 	[self checkUpdate];

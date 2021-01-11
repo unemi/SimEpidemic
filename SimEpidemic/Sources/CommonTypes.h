@@ -25,7 +25,8 @@ typedef enum {
 
 #define NIntTestTypes TestPositiveRate
 #define NIntIndexes (NStateIndexes+NIntTestTypes)
-#define NAllIndexes (NStateIndexes+NAllTestTypes)
+#define ReproductRate (NStateIndexes+NAllTestTypes)
+#define NAllIndexes (ReproductRate+1)
 
 typedef enum {
 	WarpNone, WarpInside, WarpToHospital, WarpToCemeteryF, WarpToCemeteryH, WarpBack
@@ -64,19 +65,29 @@ typedef struct {
 	NSInteger step;
 } RuntimeParams;
 typedef struct {
-	NSInteger initPop, worldSize, mesh, nInitInfec, stepsPerDay;
+	NSInteger initPop, worldSize, mesh, stepsPerDay;
+	CGFloat infected, recovered;	// initial ratio in population
+	CGFloat qAsymp, qSymp;	// initial ratio of separation for each health state
 } WorldParams;
 
 #define PARAM_F1 mass
 #define PARAM_D1 mobDist
 #define PARAM_I1 initPop
+#define PARAM_R1 infected
 #define IDX_D 1000
 #define IDX_I 2000
+#define IDX_R 3000
+
+typedef struct {
+	NSInteger susc, asym, symp, recv, died;
+	NSInteger qAsym, qSymp;
+} PopulationHConf;
 
 typedef struct StatDataRec {
 	struct StatDataRec *next;
 	NSUInteger cnt[NIntIndexes];
-	CGFloat pRate;
+	CGFloat pRate;	// Positive rate
+	CGFloat reproRate;	// log2 of Reproduction rate
 } StatData;
 
 typedef struct TestEntryRec {
@@ -104,7 +115,7 @@ typedef struct AgentRec {
 	NSInteger ID;
 	struct AgentRec *prev, *next;
 	CGFloat app, prf, x, y, vx, vy;
-	CGPoint orgPt;
+	NSPoint orgPt;
 	CGFloat daysInfected, daysDiseased;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
 	CGFloat mass;
@@ -122,6 +133,6 @@ typedef struct AgentRec {
 	int newNInfects;
 	struct AgentRec *best;
 	CGFloat bestDist, gatDist;
-	CGFloat dayStartedRecov;
+	CGFloat daysToCompleteRecov;
 	BOOL gotAtHospital;
 } Agent;

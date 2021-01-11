@@ -41,7 +41,7 @@ static NSString *keyPopulation = @"population";
 static NSArray<NSString *> *valid_report_item_names(void) {
 	static NSArray<NSString *> *validNames = nil;
 	if (validNames == nil) {
-		extraIndexes = @[@"step", @"days", @"testPositiveRate"];
+		extraIndexes = @[@"step", @"days", @"testPositiveRate", @"reproductionRate"];
 		NSString *names[extraIndexes.count
 			+ indexNames.count * 2 + distributionNames.count + 1];
 		NSInteger k;
@@ -202,6 +202,8 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 		else if ([name isEqualToString:@"days"]) md[name] = @(step / stepsPerDay);
 		else if ([name isEqualToString:@"testPositiveRate"])
 			md[name] = make_history(stat, n, ^(StatData *st) { return @(st->pRate); });
+		else if ([name isEqualToString:@"reproductionRate"])
+			md[name] = make_history(statInfo.statistics, n, ^(StatData *st) { return @(st->reproRate); });
 	}
 	NSData *popData = repPop? popProc(document) : nil;
 	[document popUnlock];

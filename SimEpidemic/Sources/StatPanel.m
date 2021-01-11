@@ -121,7 +121,7 @@ static void free_stat_mem(StatData **memp) {
 	[self flushPanels];
 }
 #endif
-- (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec {
+- (void)reset:(PopulationHConf)popConf {
 	if (statLock == nil) statLock = NSLock.new;
 	[statLock lock];
 	free_stat_mem(&_statistics);
@@ -135,19 +135,28 @@ static void free_stat_mem(StatData **memp) {
 	memset(testResultsW, 0, sizeof(testResultsW));
 	memset(maxCounts, 0, sizeof(maxCounts));
 	memset(maxTransit, 0, sizeof(maxTransit));
-	pRateCumm = maxStepPRate = maxDailyPRate = 0.;
+	maxStepPRate = maxDailyPRate = 0.;
+	infectedSeq.len = doc.worldParamsP->stepsPerDay * 3;
+	infectedSeq.rec = realloc(infectedSeq.rec, sizeof(CGFloat) * infectedSeq.len);
+	infectedSeq.n = infectedSeq.tail = 0;
+	minReproRate = maxReproRate = 1.;
 	_testResultCnt = (TestResultCount){0, 0};
-	_statistics->cnt[Susceptible] = maxCounts[Susceptible] = nPop - nInitInfec;
-	_statistics->cnt[Asymptomatic] = maxCounts[Asymptomatic] = nInitInfec;
+	_statistics->cnt[Susceptible] = maxCounts[Susceptible] = popConf.susc;
+	_statistics->cnt[Asymptomatic] = maxCounts[Asymptomatic] = popConf.asym;
+	_statistics->cnt[Symptomatic] = maxCounts[Symptomatic] = popConf.symp;
+	_statistics->cnt[Recovered] = maxCounts[Recovered] = popConf.recv;
+	_statistics->cnt[QuarantineAsym] = maxCounts[QuarantineAsym] = popConf.qAsym;
+	_statistics->cnt[QuarantineSymp] = maxCounts[QuarantineSymp] = popConf.qSymp;
+	_statistics->reproRate = 1.;
 	steps = days = 0;
 	skip = skipDays = 1;
-	popSize = nPop;
+	popSize = popConf.susc + popConf.asym + popConf.symp + popConf.recv;
 	[_IncubPHist removeAllObjects];
 	[_RecovPHist removeAllObjects];
 	[_DeathPHist removeAllObjects];
 	[_NInfectsHist removeAllObjects];
-	[_NInfectsHist addObject:MyCounter.new];
-	_NInfectsHist[0].cnt = nInitInfec;
+//	[_NInfectsHist addObject:MyCounter.new];
+//	_NInfectsHist[0].cnt = nInitInfec;
 #ifndef NOGUI
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	[scenarioPhases removeAllObjects];
@@ -214,6 +223,23 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 	NSUInteger tt = count[TestPositive] + count[TestNegative];
 	return (tt == 0)? 0. : (CGFloat)count[TestPositive] / tt;
 }
+static CGFloat calc_reproduct_rate(NSInteger nInfec, InfecQueInfo *info) {
+	if (nInfec <= 0) return 0.;
+	info->rec[info->tail] = log(nInfec);
+	info->tail = (info->tail + 1) % info->len;
+	if (info->n < info->len) if ((++ info->n) < info->len) return 0.;
+	NSInteger n = info->len;
+	CGFloat sumX = n * (n - 1) / 2, sumY = 0, sumX2 = 0, sumXY = 0;
+	for (NSInteger i = 0; i < n; i ++) {
+		CGFloat y = info->rec[(info->tail + i) % n];
+		sumY += y;
+		sumX2 += i * i;
+		sumXY += i * y;
+	}
+	CGFloat denomi = n * sumX2 - sumX * sumX;
+	return (fabs(denomi) < 1e-6)? 0. :
+		(n * sumXY - sumX * sumY) / denomi;
+}
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects {
 	Agent *agents = doc.agents;
@@ -258,20 +284,27 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 		tmpStat.cnt[i + NStateIndexes] = testCumm[i] += testCount[i];
 	}
 	tmpStat.pRate = calc_positive_rate(testCount);
+	tmpStat.reproRate = exp(calc_reproduct_rate(
+		tmpStat.cnt[Asymptomatic] + tmpStat.cnt[Symptomatic], &infectedSeq)
+		* stepsPerDay);
 
 	for (NSInteger i = 0; i < NIntIndexes; i ++)
 		if (maxCounts[i] < tmpStat.cnt[i]) maxCounts[i] = tmpStat.cnt[i];
 	if (maxStepPRate < tmpStat.pRate) maxStepPRate = tmpStat.pRate;
+	if (minReproRate > tmpStat.reproRate) minReproRate = tmpStat.reproRate;
+	if (maxReproRate < tmpStat.reproRate) maxReproRate = tmpStat.reproRate;
 
 	NSInteger idxInCum = steps % skip;
 	if (idxInCum == 0) memset(&statCumm, 0, sizeof(StatData));
 	for (NSInteger i = 0; i < NIntIndexes; i ++) statCumm.cnt[i] += tmpStat.cnt[i];
 	statCumm.pRate += tmpStat.pRate;
+	statCumm.reproRate += tmpStat.reproRate;
 	if (idxInCum + 1 >= skip) {
 		StatData *newStat = new_stat();
 		for (NSInteger i = 0; i < NIntIndexes; i ++)
 			newStat->cnt[i] = statCumm.cnt[i] / skip;
 		newStat->pRate = statCumm.pRate / skip;
+		newStat->reproRate = statCumm.reproRate / skip;
 		newStat->next = _statistics;
 		_statistics = newStat;
 		if (steps / skip > MAX_N_REC) {
@@ -281,6 +314,7 @@ static CGFloat calc_positive_rate(NSUInteger *count) {
 				for (NSInteger i = 0; i < NIntIndexes; i ++)
 					p->cnt[i] = (p->cnt[i] + q->cnt[i]) / 2;
 				p->pRate = (p->pRate + q->pRate) / 2.;
+				p->reproRate = (p->reproRate + q->reproRate) / 2.;
 				p->next = q->next;
 				q->next = freeStat;
 				freeStat = q;
@@ -418,9 +452,10 @@ static void draw_tics(NSRect area, CGFloat xMax) {
 			withAttributes:textAttributes];
 	}
 }
-typedef struct { NSUInteger maxCnt; CGFloat maxRate; } TimeEvoMax;
+typedef struct { NSUInteger maxCnt; CGFloat maxPRate, maxRRate; } TimeEvoMax;
 static NSColor *color_for_index(NSUInteger k, TimeEvoInfo *info) {
 	static struct RGBA { CGFloat r, g, b; } L = {0.2126, 0.7152, 0.0722};
+	if (k >= info->nIndexes) return nil;
 	CGFloat H = k * 6. / info->nIndexes, X = 1 - fabs(fmod(H, 2.) - 1.);
 	struct RGBA c =
 		(H < 1.)? (struct RGBA){1., X, 0.} : (H < 2.)? (struct RGBA){X, 1., 0.} :
@@ -432,23 +467,24 @@ static NSColor *color_for_index(NSUInteger k, TimeEvoInfo *info) {
 	c.b += (1. - c.b) * d * (1. - L.b);
 	return [NSColor colorWithRed:c.r green:c.g blue:c.b alpha:1.];
 }
-static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info, NSUInteger maxV[],
-	NSInteger steps, NSInteger skip, CGFloat maxPRate, NSRect rect) {
-	TimeEvoMax teMax = {0, 0};
+static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info,
+	NSUInteger maxV[], NSInteger steps, NSInteger skip,
+	CGFloat maxPRate, CGFloat minReproRate, CGFloat maxReproRate, NSRect rect) {
+	TimeEvoMax teMax = {0, 0., 0.};
 	NSUInteger nPoints = 0, k = 0;
 	NSInteger winSz = (info->idxBits & MskTransit)? info->windowSize : 1;
 	for (NSInteger i = 0; i < NIntIndexes; i ++) if ((info->idxBits & 1 << i) != 0)
 		if (teMax.maxCnt < maxV[i]) teMax.maxCnt = maxV[i];
-	BOOL drawPRate = (info->idxBits & MskTestPRate) != 0;
 	for (StatData *tran = stData; tran != NULL; tran = tran->next) nPoints ++;
 	NSPoint *pts = malloc(sizeof(NSPoint) * nPoints);
-	void (^block)(CGFloat (^)(StatData *), CGFloat, NSUInteger) =
-	^(CGFloat (^getter)(StatData *), CGFloat maxv, NSUInteger k) {
+	void (^block)(CGFloat (^)(StatData *), CGFloat, CGFloat, NSUInteger) =
+	^(CGFloat (^getter)(StatData *), CGFloat minv, CGFloat maxv, NSUInteger k) {
 		StatData *tran = stData;
+		CGFloat span = maxv - minv;
 		for (NSInteger j = nPoints - 1; tran && j >= 0; tran = tran->next, j --)
 			pts[j] = (NSPoint){
 				j * (rect.size.width - 1.) / steps * skip + rect.origin.x,
-				getter(tran) * rect.size.height / maxv + rect.origin.y};
+				(getter(tran) - minv) / span * rect.size.height + rect.origin.y};
 		if (winSz > 1) {
 			CGFloat sum = 0, buf[winSz];
 			for (NSInteger j = 0; j < nPoints; j ++) {
@@ -466,12 +502,25 @@ static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info, NSUInteger 
 	if (steps > 0 && teMax.maxCnt > 0) for (NSInteger i = 0; i < NIntIndexes; i ++)
 	if ((info->idxBits & 1 << i) != 0) {
 		if (maxV[i] > 0)
-			block(^(StatData *tran) { return (CGFloat)tran->cnt[i]; }, teMax.maxCnt, k);
+			block(^(StatData *tran) { return (CGFloat)tran->cnt[i]; }, 0., teMax.maxCnt, k);
 		k ++;
 	}
-	if (drawPRate && maxPRate > 0) {
-		block(^(StatData *tran) { return tran->pRate; }, maxPRate, k);
-		teMax.maxRate = maxPRate;
+	if ((info->idxBits & MskTestPRate) != 0 && maxPRate > 0) {
+		block(^(StatData *tran) { return tran->pRate; }, 0., maxPRate, k);
+		teMax.maxPRate = maxPRate;
+	}
+	if ((info->idxBits & MskReproRate) != 0 && minReproRate < maxReproRate) {
+		block(^(StatData *tran) { return tran->reproRate; }, minReproRate, maxReproRate, k);
+		CGFloat span = maxReproRate - minReproRate;
+		if (minReproRate < 1.) {
+			NSBezierPath *path = NSBezierPath.new;
+			[path moveToPoint:(NSPoint){rect.origin.x,
+				rect.size.height * (1. - minReproRate) / span + rect.origin.y}];
+			[path relativeLineToPoint:(NSPoint){rect.size.width, 0.}];
+			[path setLineDash:(CGFloat []){5., 2.} count:2 phase:0.];
+			[path stroke];
+		}
+		teMax.maxRRate = maxReproRate;
 	}
 	free(pts);
 	return teMax;
@@ -558,14 +607,18 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 			isTransit? days * doc.worldParamsP->stepsPerDay : steps] y:NSMaxY(bounds)];
 		NSRect dRect = drawing_area(bounds);
 		TimeEvoMax teMax = isTransit?
-			show_time_evo(_transit, info, maxTransit, days, skipDays, maxDailyPRate, dRect) :
-			show_time_evo(_statistics, info, maxCounts, steps, skip, maxStepPRate, dRect);
+			show_time_evo(_transit, info, maxTransit, days, skipDays,
+				maxDailyPRate, 1., 1., dRect) :
+			show_time_evo(_statistics, info, maxCounts, steps, skip,
+				maxStepPRate, minReproRate, maxReproRate, dRect);
 		NSMutableString *ms = NSMutableString.new;
 		if (teMax.maxCnt > 0) [ms appendFormat:@"%@ %@ (%.2f%%)",
 			NSLocalizedString(@"max count", nil),
 			[decFormat stringFromNumber:@(teMax.maxCnt)], teMax.maxCnt * 100. / popSize];
-		if (teMax.maxRate > 0.) [ms appendFormat:@"%s%@ %.3f%%",
-			(ms.length > 0)? "\n" : "", NSLocalizedString(@"max rate", nil), teMax.maxRate * 100.];
+		if (teMax.maxPRate > 0.) [ms appendFormat:@"%s%@ %.3f%%", (ms.length > 0)? "\n" : "",
+			NSLocalizedString(@"max test positive rate", nil), teMax.maxPRate * 100.];
+		if (teMax.maxRRate > 0.) [ms appendFormat:@"%s%@ %.4f", (ms.length > 0)? "\n" : "",
+			NSLocalizedString(@"max reproductive rate", nil), teMax.maxRRate];
 		if (ms.length > 0) [ms
 			drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
 			withAttributes:textAttributes];
@@ -601,19 +654,21 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 	for (NSInteger i = 0; i < list.count; i ++) {
 		NSView *view = list[i];
 		if ([view isKindOfClass:NSButton.class]) {
-			((NSButton *)view).target = self;
-			((NSButton *)view).action = @selector(switchIndexSelection:);
-			if ([view isKindOfClass:ULinedButton.class]) {
-				((NSButton *)view).tag = tag;
-				if (((NSButton *)view).state) {
-					timeEvoInfo.idxBits |= tag; timeEvoInfo.nIndexes ++;
-				}
-				[indexCBoxes addObject:(ULinedButton *)view];
+			NSButton *btn = (NSButton *)view;
+			btn.target = self;
+			btn.action = @selector(switchIndexSelection:);
+			if ([btn isKindOfClass:ULinedButton.class]) {
+				btn.tag = tag;
+				if (btn.state) { timeEvoInfo.idxBits |= tag; timeEvoInfo.nIndexes ++; }
+				[indexCBoxes addObject:(ULinedButton *)btn];
+				if (tag == MskReproRate)
+					if (!((reproRateCBox = btn).enabled =
+						(timeEvoInfo.idxBits & MskTransit) == 0) && btn.state)
+						timeEvoInfo.nIndexes --;
 				tag <<= 1;
 			} else {
-				transitCBox = (NSButton *)view;
-				transitCBox.tag = MskTransit;
-				if (transitCBox.state) timeEvoInfo.idxBits |= MskTransit;
+				(transitCBox = btn).tag = MskTransit;
+				if (btn.state) timeEvoInfo.idxBits |= MskTransit;
 			}
 		} else if ([view isKindOfClass:NSBox.class])
 			if (((NSBox *)view).boxType == NSBoxPrimary)
@@ -680,7 +735,14 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 	if (sender.tag < MskTransit) {
 		if (getOn) timeEvoInfo.nIndexes ++; else timeEvoInfo.nIndexes --;
 		[self setupColorForCBoxes];
-	} else mvAvrgView.hidden = !getOn;
+	} else {
+		mvAvrgView.hidden = !getOn;
+		reproRateCBox.enabled = !getOn;
+		if (reproRateCBox.state) {
+			if (getOn) timeEvoInfo.nIndexes --; else timeEvoInfo.nIndexes ++;
+			[self setupColorForCBoxes];
+		}
+	}
 	view.needsDisplay = YES;
 }
 - (IBAction)stepMvAvrg:(id)sender {

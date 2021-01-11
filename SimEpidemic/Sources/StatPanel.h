@@ -44,6 +44,11 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 @class StatPanel;
 #endif
 
+typedef struct {
+	CGFloat *rec;
+	NSInteger len, n, tail;
+} InfecQueInfo;
+
 @interface StatInfo : NSObject {
 	IBOutlet Document *doc;
 	NSUInteger maxCounts[NIntIndexes], maxTransit[NIntIndexes];
@@ -57,11 +62,13 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 	StatData statCumm, transDaily, transCumm;
 	NSUInteger testCumm[NIntTestTypes];
 	TestResultCount testResultsW[7];
-	CGFloat maxStepPRate, maxDailyPRate, pRateCumm;	// Rate of positive
+	CGFloat maxStepPRate, maxDailyPRate;	// Rate of positive
+	InfecQueInfo infectedSeq;	// record of the number of infected to calculate ReproRate
+	CGFloat minReproRate, maxReproRate;
 }
 @property (readonly) NSMutableArray<MyCounter *> *IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
 - (Document *)doc;
-- (void)reset:(NSInteger)nPop infected:(NSInteger)nInitInfec;
+- (void)reset:(PopulationHConf)popConf;
 - (void)cummulateHistgrm:(HistogramType)type days:(CGFloat)d;
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects;
@@ -109,6 +116,7 @@ typedef enum {
 	MskTestP = (1<<(TestPositive+NStateIndexes)),
 	MskTestN = (1<<(TestNegative+NStateIndexes)),
 	MskTestPRate = (1<<(TestPositiveRate+NStateIndexes)),
+	MskReproRate = (1<<ReproductRate),
 	MskTransit = (1<<NAllIndexes)
 } IndexMask;
 
@@ -126,13 +134,14 @@ typedef enum {
 	IBOutlet NSStepper *mvAvrgStp;
 	IBOutlet StatView *view;
 	NSMutableArray<ULinedButton *> *indexCBoxes;
-	NSButton *transitCBox;
+	NSButton *transitCBox, *reproRateCBox;
 	StatInfo *statInfo;
 	TimeEvoInfo timeEvoInfo;
 	BOOL isClosing;
 }
 - (instancetype)initWithInfo:(StatInfo *)info;
 - (void)setupColorForCBoxes;
+- (IBAction)stepMvAvrg:(id)sender;
 - (IBAction)flushView:(id)sender;
 - (NSView *)view;
 @end

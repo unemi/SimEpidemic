@@ -284,7 +284,18 @@
                             </subviews>
                         </view>
                     </box>
+                    <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="vuL-A7-Hxr" customClass="ULinedButton">
+                        <rect key="frame" x="369" y="17" width="117" height="18"/>
+                        <buttonCell key="cell" type="check" title="Reproduction rate" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" inset="2" id="I5I-HZ-xpF">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                        </buttonCell>
+                    </button>
                 </subviews>
+                <constraints>
+                    <constraint firstAttribute="bottom" secondItem="vuL-A7-Hxr" secondAttribute="bottom" constant="20" id="4Sh-Qa-do4"/>
+                    <constraint firstAttribute="trailing" secondItem="vuL-A7-Hxr" secondAttribute="trailing" constant="20" id="9bQ-n3-5Yn"/>
+                </constraints>
             </view>
             <connections>
                 <outlet property="delegate" destination="-2" id="ZMQ-qz-HVv"/>

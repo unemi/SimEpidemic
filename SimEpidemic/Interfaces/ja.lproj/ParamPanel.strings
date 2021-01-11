@@ -65,7 +65,7 @@
 "nnt-zr-KF5.title" = "対象者";
 "nye-Nx-D74.title" = "検査の遅れ:";
 "ogJ-xv-fmx.title" = "最大";
-"onK-ka-H4Z.title" = "初期状態での感染者数:";
+"onK-ka-H4Z.title" = "初期状態での健康状態の割り合い";
 "ooh-kP-dG3.title" = "コピー";
 "p8K-my-yBa.title" = "日";
 "rh6-ax-Y7G.title" = "読み込む…";
@@ -99,3 +99,8 @@
 "Pc7-Hi-vU4.title" = "時間";
 "IJi-nd-ExV.title" = "参加率:";
 "TjB-YR-6QN.title" = "質量:";
+"ayc-TN-yRR.title" = "感染者:";
+"vW7-cb-r6a.title" = "快復者:";
+"KJJ-wj-hSL.title" = "初期状態での隔離の割り合い";
+"Lfn-bP-MQt.title" = "無症状者:";
+"6EB-qD-hom.title" = "有症状者:";

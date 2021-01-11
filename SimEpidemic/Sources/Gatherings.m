@@ -12,14 +12,13 @@
 #define SURROUND 5
 #define GATHERING_FORCE .5
 
-//a->gatActive = (1. - a->activeness) * rp->gatAct / 100.;
-
 static void collect_participants(Gathering *gat, Agent **pop,
 	NSMutableArray<NSNumber *> *agents, RuntimeParams *rp,
 	NSInteger row, NSInteger left, NSInteger right) {
 	for (NSInteger ix = left; ix < right; ix ++)
 		for (Agent *a = pop[row + ix]; a; a = a->next)
-			if (a->health != Symptomatic && random() / (CGFloat)0x7fffffff > a->gatFreq / 100.) {
+			if (a->health != Symptomatic &&
+				d_random() < modified_prob(a->gatFreq, &rp->gatFreq) / 100.) {
 				[agents addObject:@((NSUInteger)a)];
 				a->gathering = gat;
 			}
@@ -33,8 +32,7 @@ static void setup_gathering(Gathering *gat, Agent **pmap, WorldParams *wp, Runti
 	gat->duration = my_random(&rp->gatDR);
 	gat->strength = my_random(&rp->gatST);
 	NSInteger wSize = wp->worldSize;
-	gat->p = (NSPoint){ random() / (CGFloat)0x7fffffff * wSize,
-		random() / (CGFloat)0x7fffffff * wSize };
+	gat->p = (NSPoint){ d_random() * wSize, d_random() * wSize };
 	CGFloat grid = (CGFloat)wp->worldSize / wp->mesh, r = gat->size + SURROUND;
 	NSInteger bottom = floor(fmax(0., gat->p.y - r) / grid),
 		top = floor(fmin(wp->worldSize, gat->p.y + r) / grid),
@@ -116,8 +114,7 @@ Gathering *manage_gatherings(Gathering *gatherings,
 //	calculate the number of gathering circles
 //	using random number in exponetial distribution.
 	NSInteger nNewGat = round(rp->gatFr / wp->stepsPerDay
-		* wp->worldSize * wp->worldSize / GAT_DENS *
-		- log(random() / (CGFloat)0x7fffffff * .9999 + .0001));
+		* wp->worldSize * wp->worldSize / GAT_DENS * - log(d_random() * .9999 + .0001));
 	Gathering *newGats;
 	if (nNewGat < nFree) {
 		if (nNewGat <= 0) { free_gatherings(gatToFree); return gatherings; }

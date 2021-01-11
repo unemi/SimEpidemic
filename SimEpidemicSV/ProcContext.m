@@ -607,6 +607,9 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document
 		else if ([idxName isEqualToString:@"testPositiveRate"])
 			md[idxName] = make_history(statData, nItems,
 				^(StatData *st) { return @(st->pRate); });
+		else if ([idxName isEqualToString:@"reproductionRate"] && daysWindow == 0)
+			md[idxName] = make_history(statData, nItems,
+				^(StatData *st) { return @(st->reproRate); });
 		else {
 			NSNumber *num = indexNames[idxName];
 			if (num != nil) {

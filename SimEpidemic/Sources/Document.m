@@ -316,12 +316,12 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 				NSInteger destIdx = [arr[0] integerValue];
 				if (arr.count == 1) scenarioIndex = destIdx;
 				else if ([(NSPredicate *)arr[1] evaluateWithObject:statInfo]) scenarioIndex = destIdx;
-			} else if ([arr[1] isKindOfClass:NSPredicate.class]) {
+			} else if ([arr[1] isKindOfClass:NSPredicate.class]) {	// continue until --
 				predicateToStop = (NSPredicate *)arr[1];
 				hasStopCond = YES;
 				break;
 			} else if (arr.count == 2) md[arr[0]] = arr[1];	// paramter assignment
-			else {
+			else {	// parameter assignment with delay
 				NSObject *goal = (paramIndexFromKey[arr[0]].integerValue > IDX_D &&
 				  [arr[1] isKindOfClass:NSNumber.class])? @[arr[1], arr[1], arr[1]] : arr[1];
 				paramChangers[arr[0]] = @[goal,
@@ -452,6 +452,11 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 	_QList = _CList = NULL;
 	[_WarpList removeAllObjects];
 }
+static NSPoint random_point_in_hospital(CGFloat worldSize) {
+	return (NSPoint){
+		(d_random() * .248 + 1.001) * worldSize,
+		(d_random() * .458 + 0.501) * worldSize};
+}
 - (void)resetPop {
 	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
 		memcpy(&worldParams, &tmpWorldParams, sizeof(WorldParams));
@@ -466,31 +471,62 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 	[popLock lock];
 	[self allocateMemory];
 	NSInteger nDist = runtimeParams.dstOB / 100. * nPop;
-	NSInteger iIdx = 0, infecIdxs[worldParams.nInitInfec];
-	for (NSInteger i = 0; i < worldParams.nInitInfec; i ++) {
-		NSInteger k = (nPop - i - 1) * random() / 0x7fffffff;
-		for (NSInteger j = 0; j < i; j ++) if (k <= infecIdxs[j]) k ++;
-		infecIdxs[i] = k;
-	}
-	qsort_b(infecIdxs, worldParams.nInitInfec, sizeof(NSInteger),
-		^int(const void *a, const void *b) {
-			NSInteger *x = (NSInteger *)a, *y = (NSInteger *)b;
-			return (*x < *y)? -1 : (*x > *y)? 1 : 0;
-	});
-// for (NSInteger i = 0; i < params.nInitInfec; i ++) printf("%ld,", infecIdxs[i]); printf("\n");
 	for (NSInteger i = 0; i < nPop; i ++) {
 		Agent *a = &_agents[i];
 		reset_agent(a, &runtimeParams, &worldParams);
 		a->ID = i;
 		a->distancing = (i < nDist);
-		if (iIdx < worldParams.nInitInfec && i == infecIdxs[iIdx]) {
-			a->health = Asymptomatic; iIdx ++;
-			a->nInfects = 0;
+	}
+	PopulationHConf pconf = { 0,
+		worldParams.initPop * worldParams.infected / 100, 0,
+		worldParams.initPop * worldParams.recovered / 100, 0,
+	};
+	NSInteger nn = pconf.asym + pconf.recv;
+	if (nn > nPop) pconf.recv = (nn = nPop) - pconf.asym;
+	pconf.susc = nPop - nn;
+	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
+	for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
+	for (NSInteger i = 0; i < nn; i ++) {
+		NSInteger j = random() % (nPop - i) + i, k = ibuf[j];
+		if (i != j) ibuf[j] = ibuf[i];
+		Agent *a = &_agents[k];
+		if (i < pconf.asym) {
+			a->daysInfected = d_random() * fmin(a->daysToRecover, a->daysToDie);
+			if (a->daysInfected < a->daysToOnset) a->health = Asymptomatic;
+			else {
+				a->health = Symptomatic;
+				a->daysDiseased = a->daysInfected - a->daysToOnset;
+				pconf.symp ++;
+			}
+		} else {
+			a->health = Recovered;
+			a->daysInfected = d_random() * a->imExpr;
 		}
-		add_agent(a, &worldParams, _Pop);
+	}
+	free(ibuf);
+	pconf.qAsym = (pconf.asym -= pconf.symp) * worldParams.qAsymp / 100;
+	pconf.qSymp = pconf.symp * worldParams.qSymp / 100;
+	NSInteger qaCnt = 0, qsCnt = 0;
+	for (NSInteger i = 0; i < nPop; i ++) {
+		Agent *a = &_agents[i];
+		BOOL inQ = NO;
+		switch (a->health) {
+			case Asymptomatic:
+				if (qaCnt < pconf.qAsym) { qaCnt ++; inQ = YES; } break;
+			case Symptomatic:
+				if (qsCnt < pconf.qSymp) { qsCnt ++; inQ = YES; }
+			default: break;
+		}
+		if (inQ) {
+			a->newHealth = a->health;
+			a->orgPt = (NSPoint){a->x, a->y};
+			NSPoint pt = random_point_in_hospital(worldParams.worldSize);
+			a->x = pt.x; a->y = pt.y;
+			add_to_list(a, &_QList);
+		} else add_agent(a, &worldParams, _Pop);
 	}
 	runtimeParams.step = 0;
-	[statInfo reset:nPop infected:worldParams.nInitInfec];
+	[statInfo reset:pconf];
 	[popLock unlock];
 	scenarioIndex = 0;
 	[self execScenario];
@@ -756,11 +792,9 @@ static NSLock *testEntriesLock = nil;
 		if (entry->isPositive) {
 			testCount[TestPositive] ++;
 			Agent *a = entry->agent;
-			a->orgPt = (CGPoint){a->x, a->y};
-			NSPoint newPt = {
-				(random() * .248 / 0x7fffffff + 1.001) * worldParams.worldSize,
-				(random() * .458 / 0x7fffffff + .501) * worldParams.worldSize};
-			[self addNewWarp:(WarpInfo){a, WarpToHospital, newPt}];
+			a->orgPt = (NSPoint){a->x, a->y};
+			[self addNewWarp:(WarpInfo){a, WarpToHospital,
+				random_point_in_hospital(worldParams.worldSize)}];
 			if (a->contactInfoHead != NULL) {
 				for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
 					[self testInfectionOfAgent:c->agent reason:TestAsContact];
@@ -789,8 +823,8 @@ static NSLock *testEntriesLock = nil;
 		TestEntry *entry = new_testEntry();
 		[testEntriesLock unlock];
 		entry->isPositive = is_infected(agent)?
-			(random() < 0x7fffffff * runtimeParams.tstSens / 100.) :
-			(random() > 0x7fffffff * runtimeParams.tstSpec / 100.);
+			(d_random() < runtimeParams.tstSens / 100.) :
+			(d_random() > runtimeParams.tstSpec / 100.);
 		agent->lastTested = entry->timeStamp = runtimeParams.step;
 		entry->agent = agent;
 		if ((entry->prev = testQueTail) != NULL) testQueTail->next = entry;

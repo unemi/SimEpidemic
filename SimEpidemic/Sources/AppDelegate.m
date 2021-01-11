@@ -185,8 +185,14 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeInteger, @"populationSize", {.i = { 10000, 100, 999900}}},
 	{ ParamTypeInteger, @"worldSize", {.i = { 360, 10, 999999}}},
 	{ ParamTypeInteger, @"mesh", {.i = { 18, 1, 999}}},
-	{ ParamTypeInteger, @"initialInfected", {.i = { 20, 1, 999}}},
+//	{ ParamTypeInteger, @"initialInfected", {.i = { 20, 1, 999}}},
 	{ ParamTypeInteger, @"stepsPerDay", {.i = { 16, 1, 999}}},
+	
+	{ ParamTypeRate, @"initialInfectedRate", {.f = { .1, 0., 100.}}},
+	{ ParamTypeRate, @"initialRecovered", {.f = { 0., 0., 100.}}},
+	{ ParamTypeRate, @"quarantineAsymptomatic", {.f = { 20., 0., 100.}}},
+	{ ParamTypeRate, @"quarantineSymptomatic", {.f = { 50., 0., 100.}}},
+
 	{ ParamTypeNone, nil }
 };
 NSInteger defaultAnimeSteps = 1;
@@ -196,11 +202,13 @@ NSArray<NSString *> *paramKeys;
 NSArray<NSNumberFormatter *> *paramFormatters;
 NSDictionary<NSString *, NSString *> *paramKeyFromName;
 NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
+NSString *keyInitialInfected = @"initialInfected";
 NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	CGFloat *fp = (rp != NULL)? &rp->PARAM_F1 : NULL;
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
 	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
+	CGFloat *tp = (wp != NULL)? &wp->PARAM_R1 : NULL;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat:
 			if (fp != NULL) md[p->key] = @(*(fp ++)); break;
@@ -208,7 +216,8 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 			md[p->key] = @[@(dp->min), @(dp->max), @(dp->mode)];
 			dp ++;
 		} break;
-		case ParamTypeInteger: if (ip != NULL) md[p->key] = @(*(ip ++));
+		case ParamTypeInteger: if (ip != NULL) md[p->key] = @(*(ip ++)); break;
+		case ParamTypeRate: if (tp != NULL) md[p->key] = @(*(tp ++));
 		default: break;
 	}
 	return md;
@@ -217,9 +226,15 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 	CGFloat *fp = (rp != NULL)? &rp->PARAM_F1 : NULL;
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
 	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
+	CGFloat *tp = (wp != NULL)? &wp->PARAM_R1 : NULL;
+	NSInteger initInfected = -1;
 	for (NSString *key in dict.keyEnumerator) {
 		NSNumber *idxNum = paramIndexFromKey[key];
-		if (idxNum == nil) continue;
+		if (idxNum == nil) { // for upper compatibility.
+			if ([key isEqualToString:keyInitialInfected] && wp != NULL)
+				initInfected = [dict[key] integerValue];
+			continue;
+		}
 		NSInteger index = idxNum.integerValue;
 		if (index < IDX_D) {
 			if (fp != NULL) {
@@ -238,8 +253,12 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 				CGFloat value = ((NSNumber *)arr).doubleValue;
 				dp[index - IDX_D] = (DistInfo){value, value, value};
 			}
-		}} else if (ip != NULL) ip[index - IDX_I] = [dict[key] integerValue];
+		}} else if (index < IDX_R) {
+			if (ip != NULL) ip[index - IDX_I] = [dict[key] integerValue];
+		} else if (tp != NULL) tp[index - IDX_R] = [dict[key] doubleValue];
 	}
+	// for upper compatibility.
+	if (initInfected >= 0) wp->infected = initInfected * 100. / wp->initPop;
 }
 #ifndef NOGUI
 NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg) {
@@ -296,8 +315,7 @@ void setup_colors(void) {
 void
 #else
 static NSString *archtectureName = nil;
-struct SetupInfo { NSInteger nF, nD, nI, nn; };
-static struct SetupInfo
+static NSInteger
 #endif
 	applicationSetups(void) {
 	int mib[2] = { CTL_HW, HW_MACHINE };
@@ -310,16 +328,18 @@ static struct SetupInfo
 	}
 	isARM = strcmp(archName, "x86_64") != 0;
 	nCores = NSProcessInfo.processInfo.processorCount;
-	NSInteger nF = 0, nD = 0, nI = 0;
+	NSInteger nF = 0, nD = 0, nI = 0, nR = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat:
 			(&defaultRuntimeParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
 		case ParamTypeDist: (&defaultRuntimeParams.PARAM_D1)[nD ++] =
 			(DistInfo){p->v.d.defMin, p->v.d.defMax, p->v.d.defMode}; break;
-		case ParamTypeInteger: (&defaultWorldParams.PARAM_I1)[nI ++] = p->v.i.defaultValue; break;
+		case ParamTypeInteger: (&defaultWorldParams.PARAM_I1)[nI ++] = p->v.i.defaultValue;
+			break;
+		case ParamTypeRate: (&defaultWorldParams.PARAM_R1)[nR ++] = p->v.f.defaultValue;
 		default: break;
 	}
-	NSInteger nn = nF + nD + nI;
+	NSInteger nn = nF + nD + nI + nR;
 	NSString *keys[nn], *names[nF];
 	NSNumber *indexes[nn];
 	for (NSInteger i = 0; i < nn; i ++) {
@@ -331,7 +351,8 @@ static struct SetupInfo
 			names[i] = NSLocalizedString(p->key, nil);
 			break;
 			case ParamTypeDist: indexes[i] = @(i - nF + IDX_D); break;
-			case ParamTypeInteger: indexes[i] = @(i - nF - nD + IDX_I);
+			case ParamTypeInteger: indexes[i] = @(i - nF - nD + IDX_I); break;
+			case ParamTypeRate: indexes[i] = @(i - nF - nD - nI + IDX_R);
 			default: break;
 		}
 	}
@@ -343,60 +364,65 @@ static struct SetupInfo
 #ifndef NOGUI
 	memcpy(stateRGB, defaultStateRGB, sizeof(stateRGB));
 	archtectureName = [NSString stringWithUTF8String:archName];
-	return (struct SetupInfo){nF, nD, nI, nn};
+	return nF + nI + nR;
 #endif
 }
 
 #ifndef NOGUI
 @implementation AppDelegate
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
-	struct SetupInfo info = applicationSetups();
-	NSNumberFormatter *formatters[info.nF + info.nI], *fmt;
-	for (NSInteger i = 0; i < info.nn; i ++) {
-		ParamInfo *p = paramInfo + i;
-		switch (p->type) {
-			case ParamTypeFloat:
-			fmt = NSNumberFormatter.new;
-			fmt.allowsFloats = YES;
-			fmt.minimum = @(p->v.f.minValue);
-			fmt.maximum = @(p->v.f.maxValue);
-			fmt.minimumFractionDigits = fmt.maximumFractionDigits =
-			fmt.minimumIntegerDigits = 1;
-			formatters[i] = fmt;
-			break;
-			case ParamTypeInteger:
-			fmt = NSNumberFormatter.new;
-			fmt.allowsFloats = NO;
-			fmt.minimum = @(p->v.i.minValue);
-			fmt.maximum = @(p->v.i.maxValue);
-			fmt.usesGroupingSeparator = YES;
-			fmt.groupingSize = 3;
-			formatters[i - info.nD] = fmt;
-			default: break;
-		}
+	NSInteger nFmt = applicationSetups(), k = 0;
+	NSNumberFormatter *formatters[nFmt], *fmt;
+	for (ParamInfo *p = paramInfo; p->type != ParamTypeNone; p ++) switch (p->type) {
+		case ParamTypeFloat: case ParamTypeRate:
+		fmt = NSNumberFormatter.new;
+		fmt.allowsFloats = YES;
+		fmt.minimum = @(p->v.f.minValue);
+		fmt.maximum = @(p->v.f.maxValue);
+		fmt.minimumFractionDigits = fmt.maximumFractionDigits = 2;
+		fmt.minimumIntegerDigits = 1;
+		formatters[k ++] = fmt;
+		break;
+		case ParamTypeInteger:
+		fmt = NSNumberFormatter.new;
+		fmt.allowsFloats = NO;
+		fmt.minimum = @(p->v.i.minValue);
+		fmt.maximum = @(p->v.i.maxValue);
+		fmt.usesGroupingSeparator = YES;
+		fmt.groupingSize = 3;
+		formatters[k ++] = fmt;
+		default: break;
 	}
-	paramFormatters = [NSArray arrayWithObjects:formatters count:info.nF + info.nI];
+	paramFormatters = [NSArray arrayWithObjects:formatters count:nFmt];
 	NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;
 
 	NSNumber *num;
+	NSObject *obj;
 	NSArray<NSNumber *> *arr;
 	if ((num = [ud objectForKey:keyAnimeSteps])) defaultAnimeSteps = num.integerValue;
 	for (NSInteger i = 0; i < N_COLORS; i ++)
 		if ((num = [ud objectForKey:colKeys[i]])) stateRGB[i] = num.integerValue;
-	for (NSInteger i = 0; i < info.nF; i ++)
-		if ((num = [ud objectForKey:paramInfo[i].key])) {
-			CGFloat *vp = &(&userDefaultRuntimeParams.PARAM_F1)[i];
-			if ([num isKindOfClass:NSNumber.class]) *vp = num.doubleValue;
-			else if ([num isKindOfClass:NSArray.class] && ((NSArray *)num).count > 2)
-				*vp = [((NSArray *)num)[2] doubleValue];
-		}
-	for (NSInteger i = 0; i < info.nD; i ++)
-		if ((arr = [ud objectForKey:paramInfo[i + info.nF].key]))
-			(&userDefaultRuntimeParams.PARAM_D1)[i] = (DistInfo){
+	NSInteger kF = 0, kD = 0, kI = 0, kR = 0;
+	for (ParamInfo *p = paramInfo; p->type != ParamTypeNone; p ++)
+	if ((obj = [ud objectForKey:p->key])) switch (p->type) {
+		case ParamTypeFloat: {
+			CGFloat *vp = &(&userDefaultRuntimeParams.PARAM_F1)[kF ++];
+			if ([obj isKindOfClass:NSNumber.class]) *vp = ((NSNumber *)obj).doubleValue;
+			else if ([obj isKindOfClass:NSArray.class] && ((NSArray *)obj).count > 2)
+				*vp = [((NSArray *)obj)[2] doubleValue];
+		} break;
+		case ParamTypeDist: if ([obj isKindOfClass:NSArray.class] && ((NSArray *)obj).count > 2) {
+			arr = (NSArray *)obj;
+			(&userDefaultRuntimeParams.PARAM_D1)[kD ++] = (DistInfo){
 				arr[0].doubleValue, arr[1].doubleValue, arr[2].doubleValue};
-	for (NSInteger i = 0; i < info.nI; i ++)
-		if ((num = [ud objectForKey:paramInfo[i + info.nF + info.nD].key]))
-			(&userDefaultWorldParams.PARAM_I1)[i] = num.integerValue;
+		} break;
+		case ParamTypeInteger: if ([obj isKindOfClass:NSNumber.class])
+			(&userDefaultWorldParams.PARAM_I1)[kI ++] = ((NSNumber *)obj).integerValue;
+		break;
+		case ParamTypeRate: if ([obj isKindOfClass:NSNumber.class])
+			(&userDefaultWorldParams.PARAM_R1)[kR ++] = ((NSNumber *)obj).doubleValue;
+		default: break;
+	}
 	if ((num = [ud objectForKey:keyWarpOpacity])) warpOpacity = num.doubleValue;
 	if ((num = [ud objectForKey:keyPanelsAlpha])) panelsAlpha = num.doubleValue;
 	if ((num = [ud objectForKey:keyChildWindow])) makePanelChildWindow = num.boolValue;

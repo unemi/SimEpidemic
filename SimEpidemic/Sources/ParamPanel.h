@@ -46,8 +46,10 @@ NS_ASSUME_NONNULL_BEGIN
 		*gatSTMinDgt, *gatSTMaxDgt, *gatSTModeDgt,
 		*mobFreqMinDgt, *mobFreqMaxDgt, *mobFreqModeDgt,
 		*gatFreqMinDgt, *gatFreqMaxDgt, *gatFreqModeDgt;
-	IBOutlet NSTextField *initPopDgt, *worldSizeDgt, *stepsPerDayDgt, *meshDgt, *nInfecDgt;
-	IBOutlet NSStepper *initPopStp, *worldSizeStp, *stepsPerDayStp, *meshStp, *nInfecStp;
+	IBOutlet NSTextField *initPopDgt, *worldSizeDgt, *stepsPerDayDgt, *meshDgt;
+	IBOutlet NSStepper *initPopStp, *worldSizeStp, *stepsPerDayStp, *meshStp;
+	IBOutlet NSTextField *initInfcDgt, *initRecvDgt, *initQAsymDgt, *initQSympDgt;
+	IBOutlet NSSlider *initInfcSld, *initRecvSld, *initQAsymSld, *initQSympSld;
 	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *gatFrDgt, *cntctTrcDgt;
 	IBOutlet NSSlider *dstSTSld, *dstOBSld, *gatFrSld, *cntctTrcSld;
 	IBOutlet NSTextField *tstDelayDgt, *tstProcDgt, *tstIntvlDgt, *tstSensDgt, *tstSpecDgt,

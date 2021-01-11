@@ -22,8 +22,8 @@
 			{ idxs[i].type = IdxTypeIndex; idxs[i].idx = num.integerValue; }
 		else if ((num = testINameToIdx[names[i]]) != nil)
 			{ idxs[i].type = IdxTypeTestI; idxs[i].idx = num.integerValue; }
-		else if ([names[i] isEqualToString:@"testPositiveRate"])
-			idxs[i].type = IdxTypeTestF; 
+		else if ([names[i] isEqualToString:@"testPositiveRate"]) idxs[i].type = IdxTypePRate;
+		else if ([names[i] isEqualToString:@"reproductionRate"]) idxs[i].type = IdxTypeRRate;
 		else idxs[i].type = IdxTypeUnknown;
 	}
 	NSInteger nRows = 1;
@@ -38,7 +38,8 @@
 				[row addObject:@(stat->cnt[idxs[j].idx])]; break;
 			case IdxTypeTestI:
 				[row addObject:@(stat->cnt[idxs[j].idx + NStateIndexes])]; break;
-			case IdxTypeTestF: [row addObject:@(stat->pRate)]; break;
+			case IdxTypePRate: [row addObject:@(stat->pRate)]; break;
+			case IdxTypeRRate: [row addObject:@(stat->reproRate)]; break;
 			default: [row addObject:@0];
 		}
 		[rows insertObject:row atIndex:0];
@@ -211,12 +212,12 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	NSInteger n = output.count, nn = 0, nd = 0, nD = 0;
 	NSString *an[n], *ad[n], *aD[n];
 	for (NSString *key in output) {
-		if (indexNames[key] != nil) an[nn ++] = key;
+		if (indexNames[key] != nil || [key isEqualToString:@"reproductionRate"]) an[nn ++] = key;
 		else if ([key hasPrefix:@"daily"]) {
 			unichar uc = [key characterAtIndex:5];
 			if (uc < 'A' || uc > 'Z') continue;
 			NSString *newKey = key.stringByRemovingFirstWord;
-			if (indexNames[newKey] != nil) ad[nd ++] = newKey;
+			if (indexNames[newKey] != nil || [key isEqualToString:@"testPositiveRate"]) ad[nd ++] = newKey;
 		} if ([distributionNames containsObject:key]) aD[nD ++] = key;
 	}
 	output_n = [NSArray arrayWithObjects:an count:nn];

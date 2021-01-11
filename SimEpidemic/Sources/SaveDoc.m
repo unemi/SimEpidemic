@@ -16,15 +16,17 @@
 #import "Gatherings.h"
 #import "DataCompress.h"
 #import <zlib.h>
+#define FORMAT_VER 1
 
-static NSString *keyIncubation = @"incubation",
+static NSString *keyFormatVersion = @"formatVersion", *keyIncubation = @"incubation",
 	*keyRecovery = @"recovery", *keyFatality = @"fatality", *keyInfects = @"infects",
 	*keyStatCumm = @"statCumm", *keyTransDaily = @"transDaily", *keyTransCumm = @"transCumm",
 	*keyTestCumm = @"testCumm", *keyTestResults = @"testResults",
 	*keyPRateInfo = @"pRateInfo", *keyMaxValues = @"maxValues", *keyStepsAndSkips = @"stepsAndSkips",
 	*keyScenarioPhases = @"scenarioPhases",
-	*keyStatCnt = @"cnt", *keyStatPRate = @"pRate",
-	*keyStatType = @"statType", *keyTimeEvoBits = @"timeEvoBits";
+	*keyStatCnt = @"cnt", *keyStatPRate = @"pRate", *keyStatRRate = @"rRate",
+	*keyStatType = @"statType", *keyWantDblDay = @"wantDoublingDay",
+	*keyTimeEvoBits = @"timeEvoBits";
 
 @implementation ParamPanel (SaveDocExtension)
 static NSString *keySelectedTabIndex = @"selectedTabIndex";
@@ -159,7 +161,8 @@ static NSArray *counter_array(NSUInteger cnt[NIntIndexes]) {
 	return [NSArray arrayWithObjects:nums count:NIntIndexes];
 }
 static NSDictionary *statData_plist(StatData *stat) {
-	return @{keyStatCnt:counter_array(stat->cnt), keyStatPRate:@(stat->pRate)};
+	return @{keyStatCnt:counter_array(stat->cnt),
+		keyStatPRate:@(stat->pRate), keyStatRRate:@(stat->reproRate)};
 }
 - (NSDictionary *)statiInfoPList {
 	NSNumber *nums[NIntTestTypes], *trNums[16];
@@ -178,7 +181,7 @@ static NSDictionary *statData_plist(StatData *stat) {
 		statData_plist(&transDaily), statData_plist(&transCumm),
 		[NSArray arrayWithObjects:nums count:NIntTestTypes],
 		[NSArray arrayWithObjects:trNums count:16],
-		@[@(maxStepPRate), @(maxDailyPRate), @(pRateCumm)],
+		@[@(maxStepPRate), @(maxDailyPRate), @(minReproRate), @(maxReproRate)],
 		@[counter_array(maxCounts), counter_array(maxTransit)],
 		@[@(steps), @(skip), @(days), @(skipDays)],
 		scenarioPhases
@@ -194,8 +197,9 @@ static void setCounter_from_array(NSArray<NSNumber *> *arr, NSUInteger *cnt, NSI
 }
 static void statData_from_plist(NSDictionary *plist, StatData *stat) {
 	setCounter_from_array(plist[keyStatCnt], stat->cnt, NIntIndexes);
-	NSNumber *num = plist[keyStatPRate];
-	if (num != nil) stat->pRate = num.doubleValue;
+	NSNumber *num;
+	if ((num = plist[keyStatPRate]) != nil) stat->pRate = num.doubleValue;
+	if ((num = plist[keyStatRRate]) != nil) stat->reproRate = num.doubleValue;
 }
 - (void)setStatInfoFromPList:(NSDictionary *)plist {
 	NSDictionary *dct; NSArray<NSNumber *> *arr;
@@ -210,10 +214,11 @@ static void statData_from_plist(NSDictionary *plist, StatData *stat) {
 			testResultsW[i].negative = arr[i * 2 + 3].integerValue;
 		}
 	}
-	if ((arr = plist[keyTestResults]) != nil && arr.count >= 3) {
+	if ((arr = plist[keyTestResults]) != nil && arr.count >= 4) {
 		maxStepPRate = arr[0].doubleValue;
 		maxDailyPRate = arr[1].doubleValue;
-		pRateCumm = arr[2].doubleValue;
+		minReproRate = arr[2].doubleValue;
+		maxReproRate = arr[3].doubleValue;
 	}
 	NSArray<NSArray<NSNumber *> *> *arar;
 	if ((arar = plist[keyMaxValues]) != nil && arar.count >= 2) {
@@ -266,6 +271,7 @@ static NSData *data_from_stat(StatData *stat) {
 	for (StatData *p = stat; p; p = p->next, sv ++) {
 		memcpy(sv->cnt, p->cnt, sizeof(sv->cnt));
 		sv->pRate = p->pRate;
+		sv->reproRate = p->reproRate;
 	}
 	return [mdata zippedData];
 }
@@ -278,6 +284,7 @@ static StatData *stat_chain_from_data(NSData *data) {
 		StatData *st = (i == 0)? stHead : new_stat();
 		memcpy(st->cnt, sv->cnt, sizeof(st->cnt));
 		st->pRate = sv->pRate;
+		st->reproRate = sv->reproRate;
 		if (stPrev != NULL) stPrev->next = st;
 		stPrev = st;
 	}
@@ -386,7 +393,7 @@ static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	}
 	NSArray<NSNumber *> *nArr;
 	if ((nArr = info[keyViewOffsetAndScale]) != nil && nArr.count >= 3) {
-		view.offset = (CGPoint){nArr[0].doubleValue, nArr[1].doubleValue};
+		view.offset = (NSPoint){nArr[0].doubleValue, nArr[1].doubleValue};
 		view.scale = nArr[2].doubleValue;
 		view.needsDisplay = YES;
 	}
@@ -401,7 +408,7 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 	return [NSFileWrapper.alloc initRegularFileWithContents:data];
 }
 #define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
-z(orgPt); z(daysInfected); z(daysDiseased);\
+z(orgPt); z(daysInfected); z(daysDiseased); z(daysToCompleteRecov);\
 z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr);\
 z(mass); z(mobFreq); z(gatFreq); z(activeness);\
 z(health); z(nInfects); z(distancing); z(isOutOfField); z(isWarping);\
@@ -536,6 +543,7 @@ z(inTestQueue); z(lastTested);
 		BOOL saveGUI = saveGUICBox.state == NSControlStateValueOn;
 		if (!saveGUI && !savePop) return fileWrapper_from_plist(dict);
 		NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
+		dict[keyFormatVersion] = @(FORMAT_VER);
 		if (savePop) [self addSavePop:md info:dict];
 		md[fnParamsPList] = fileWrapper_from_plist(dict);
 		if (saveGUI) [self addSaveGUI:md];
@@ -549,10 +557,10 @@ static NSDictionary *plist_from_data(NSData *data) {
 	if (plist == nil) @throw error;
 	return plist;
 }
-- (BOOL)readParamsFromData:(NSData *)data error:(NSError **)outError {
-	NSDictionary *dict = plist_from_data(data);
-	NSNumber *num = dict[keyAnimeSteps];
-	if (num != nil) animeSteps = num.integerValue;
+- (NSDictionary *)readParamsFromFileWrapper:(NSFileWrapper *)fw {
+	NSDictionary *dict = plist_from_data(fw.regularFileContents);
+	NSNumber *num;
+	if ((num = dict[keyAnimeSteps]) != nil) animeSteps = num.integerValue;
 	if ((num = dict[keyDaysToStop]) != nil) stopAtNDays = num.integerValue;
 	NSDictionary *pDict = dict[keyParameters];
 	if (pDict != nil) {
@@ -580,26 +588,26 @@ static NSDictionary *plist_from_data(NSData *data) {
 	}
 	if ((pDict = dict[keyParamChangers]) != nil) paramChangers =
 		[NSMutableDictionary dictionaryWithDictionary:pDict];
-	return YES;
+	return dict;
 }
 #define CP_L(m) a->m = as[i].m
 - (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper
 	ofType:(NSString *)typeName error:(NSError **)outError {
 	@try {
-	if (fileWrapper.regularFile)
-		return [self readParamsFromData:fileWrapper.regularFileContents error:outError];
+	if (fileWrapper.regularFile) return [self readParamsFromFileWrapper:fileWrapper] != nil;
 	if (!fileWrapper.directory) return NO;
 	NSDictionary *dict = fileWrapper.fileWrappers;
 	NSFileWrapper *fw = dict[fnParamsPList];
-	if (fw != nil && ![self readParamsFromData:fw.regularFileContents error:outError]) return NO;
-
+	if (fw == nil) @throw @"Parameters are missing.";
+	NSDictionary *pDict = [self readParamsFromFileWrapper:fw];
+	NSNumber *num = pDict[keyFormatVersion];
+	if (num == nil && dict[fnStatIndexes] != nil) @throw @"The file format seems to be old.";
+	else if (num.integerValue > FORMAT_VER) @throw @"The file format is too new.";
 	if ((fw = dict[fnPopulation]) != nil) {
 		[self allocateMemory];
 		NSData *data = [fw.regularFileContents unzippedData];
 		if (data.length != sizeof(AgentSave) * worldParams.initPop)
-			@throw [NSError errorWithDomain:@"SimEpi" code:1 userInfo:
-				@{NSLocalizedFailureReasonErrorKey:@"Saved population data was short.",
-				NSLocalizedRecoverySuggestionErrorKey:@"The file format seems to be old."}];
+			@throw @"Saved population data was short.";
 		const AgentSave *as = data.bytes;
 		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
 			Agent *a = self.agents + i;
@@ -609,8 +617,6 @@ static NSDictionary *plist_from_data(NSData *data) {
 			a->contactInfoHead = a->contactInfoTail = NULL;
 			a->newHealth = a->health;
 			a->isOutOfField = YES;
-			if (a->daysToDie == BIG_NUM) a->dayStartedRecov =
-				a->daysToRecover / (1. + 10. / a->daysToDie);
 			if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
 			else if (!a->isWarping) {
 				if (a->health == Died) add_to_list(a, self.CListP);
@@ -697,7 +703,12 @@ static NSDictionary *plist_from_data(NSData *data) {
 		if (panelBlock != nil) panelBlock(self);
 		[self adjustScenarioText];
 	}
-	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO; }
+	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO;
+	} @catch (NSString *msg) {
+		if (outError != NULL) *outError = [NSError errorWithDomain:@"SimEpi" code:1
+			userInfo:@{NSLocalizedFailureReasonErrorKey:NSLocalizedString(msg, nil)}];
+		return NO;
+	}
 	return YES;
 }
 @end

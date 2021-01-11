@@ -39,10 +39,11 @@ enum {
 	MskTestP = (1<<(TestPositive+NStateIndexes)),
 	MskTestN = (1<<(TestNegative+NStateIndexes)),
 	MskTestPRate = (1<<(TestPositiveRate+NStateIndexes)),
-	MskTransit = (1<<NAllIndexes),
-	MskRunning = (1<<(NAllIndexes+1)),
-	MskStep = (1<<(NAllIndexes+2)),
-	MskDays = (1<<(NAllIndexes+3)),
+	MskReproRate = (1<<NAllIndexes),
+	MskTransit = (1<<(NAllIndexes+1)),
+	MskRunning = (1<<(NAllIndexes+2)),
+	MskStep = (1<<(NAllIndexes+3)),
+	MskDays = (1<<(NAllIndexes+4)),
 };
 
 enum {

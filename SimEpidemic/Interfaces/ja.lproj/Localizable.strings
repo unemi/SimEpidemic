@@ -59,7 +59,8 @@
 "Draw in each step." = "毎ステップ描画する";
 "AnimeStepsFormat" = "%ld ステップ毎に描画";
 "max count" = "最大人数";
-"max rate" = "最大陽性率";
+"max test positive rate" = "最大陽性率";
+"max reproductive rate" = "最大再生産率";
 "HistogramFormat" = "%@\nサンプル数 %ld\n最小 %ld, 最大 %ld\n中央値 %ld\n平均値 %.2f";
 "Incubation Period" = "潜伏期間";
 "Recovery Period" = "回復までの期間";
@@ -93,3 +94,4 @@
 "Value..." = "値...";
 "Saved population data was short." = "保存された個体集団のデータが足りません。";
 "The file format seems to be old." = "ファイル形式が古いようです。";
+"The file format is too new." = "新しいファイル形式のようです。";

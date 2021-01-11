@@ -126,6 +126,8 @@
 		233D9E072486A2E000498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		233D9E082486A35900498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = ja; path = ja.lproj/Credits.rtf; sourceTree = "<group>"; };
 		233D9E0C2486B14A00498A77 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		234E8DE225AA88FF00E9D054 /* Rp90_s1500_2.sEpi */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Rp90_s1500_2.sEpi; sourceTree = "<group>"; };
+		234E8DE825AA88FF00E9D054 /* 時系列.numbers */ = {isa = PBXFileReference; lastKnownFileType = file; path = "時系列.numbers"; sourceTree = "<group>"; };
 		235639CA247111A200F941A6 /* Scenario.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scenario.h; sourceTree = "<group>"; };
 		235639CB247111A200F941A6 /* Scenario.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Scenario.m; sourceTree = "<group>"; };
 		23576D3E24D80FCC00120D3F /* SimEpidemic.sdef */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = SimEpidemic.sdef; sourceTree = "<group>"; };
@@ -214,6 +216,7 @@
 				23C3FFE12557FB3F004906AE /* simepiBackend */,
 				23B89E4D255BD61000A95360 /* simepiWorld */,
 				232055ED2457D2C5005ADCCF /* Products */,
+				234E8DD025AA88FF00E9D054 /* Sample */,
 				2378766625027AE500897003 /* Documents */,
 			);
 			sourceTree = "<group>";
@@ -242,6 +245,15 @@
 				231E25C5247401060005A381 /* loupePlus.pdf */,
 			);
 			path = SimEpidemic;
+			sourceTree = "<group>";
+		};
+		234E8DD025AA88FF00E9D054 /* Sample */ = {
+			isa = PBXGroup;
+			children = (
+				234E8DE225AA88FF00E9D054 /* Rp90_s1500_2.sEpi */,
+				234E8DE825AA88FF00E9D054 /* 時系列.numbers */,
+			);
+			path = Sample;
 			sourceTree = "<group>";
 		};
 		235D65762462552300487784 /* Interfaces */ = {
@@ -834,7 +846,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.8.1;
 				OTHER_CFLAGS = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -855,7 +867,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.8.1;
 				OTHER_CFLAGS = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";

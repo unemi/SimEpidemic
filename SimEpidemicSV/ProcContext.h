@@ -12,7 +12,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef enum { IdxTypeIndex, IdxTypeTestI, IdxTypeTestF, IdxTypeUnknown } IndexType;
+typedef enum { IdxTypeIndex, IdxTypeTestI, IdxTypePRate, IdxTypeRRate, IdxTypeUnknown } IndexType;
 typedef enum { MethodHEAD, MethodGET, MethodPOST, MethodNone = NSNotFound } MethodType;
 @class Document, MyCounter, DeflaterStream;
 extern Document *make_new_world(NSString *type, NSString * _Nullable browserID);

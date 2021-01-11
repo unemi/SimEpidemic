@@ -28,7 +28,7 @@ extern void my_exit(void);
 #endif
 
 typedef struct { Agent *agent; NSInteger newIdx; } MoveToIdxInfo;
-typedef struct { Agent *agent; WarpType mode; CGPoint goal; } WarpInfo;
+typedef struct { Agent *agent; WarpType mode; NSPoint goal; } WarpInfo;
 typedef struct { Agent *agent; HistogramType type; CGFloat days; } HistInfo;
 typedef struct { Agent *agent; TestType reason; } TestInfo;
 
