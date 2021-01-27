@@ -324,7 +324,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 					NSString *restPart = [req substringFromIndex:scan.scanLocation];
 					[restPart getCString:bufData.mutableBytes maxLength:BUFFER_SIZE-1
 						encoding:NSUTF8StringEncoding];
-					[self receiveData:contentLength offset:restPart.length];
+					[self receiveData:contentLength offset:strlen(bufData.mutableBytes)];
 				} else [self receiveData:contentLength offset:0];
 				if ([contentType isEqualToString:@"application/x-www-form-urlencoded"])
 					optionStr = [NSString stringWithUTF8String:bufData.bytes];
@@ -387,8 +387,8 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 			if (code == 0) [self setOKMessage];
 		}
 	} @catch (NSString *info) { [self setErrorMessage:info];
-	} @catch (NSException *excp) { [self setErrorMessage:[@"500 "
-		stringByAppendingString:excp.reason]];
+	} @catch (NSException *excp) {
+		[self setErrorMessage:[@"500 " stringByAppendingString:excp.reason]];
 	} @catch (NSNumber *num) { }
 //
 	if (content != nil) {

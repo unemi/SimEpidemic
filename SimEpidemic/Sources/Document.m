@@ -1204,7 +1204,7 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 #endif
 	while (loopMode == LoopRunning) {
 		CGFloat startTime = get_uptime();
-		[self doOneStep];
+		@autoreleasepool{ [self doOneStep]; }
 		CGFloat timePassed = get_uptime() - startTime;
 		if (timePassed < 1.)
 			stepsPerSec += (1. / timePassed - stepsPerSec) * 0.2;

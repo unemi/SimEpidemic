@@ -90,6 +90,7 @@
 /* Begin PBXFileReference section */
 		2310A3122587486F00201F0C /* SaveDoc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SaveDoc.h; sourceTree = "<group>"; };
 		2310A3132587486F00201F0C /* SaveDoc.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SaveDoc.m; sourceTree = "<group>"; };
+		23135F4725B31CEE00BE0292 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		231E000D246125AD00BFBE9E /* CommonTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CommonTypes.h; sourceTree = "<group>"; };
 		231E000E2461497000BFBE9E /* MyView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MyView.h; sourceTree = "<group>"; };
 		231E000F2461497000BFBE9E /* MyView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MyView.m; sourceTree = "<group>"; };
@@ -211,6 +212,7 @@
 		232055E32457D2C5005ADCCF = {
 			isa = PBXGroup;
 			children = (
+				23135F4725B31CEE00BE0292 /* README.md */,
 				232055EE2457D2C5005ADCCF /* SimEpidemic */,
 				2365DEB72506145A006C2A95 /* SimEpidemicSV */,
 				23C3FFE12557FB3F004906AE /* simepiBackend */,
