@@ -13,8 +13,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class Document;
 
-extern void schedule_job_expiration_check(void);
+extern NSString *batch_job_dir(void);
 extern void for_all_bacth_job_documents(void (^block)(Document *));
+extern void check_batch_jobs_to_restart(void);
 
 @interface BatchJob : NSObject {
 	NSLock *lock;
@@ -22,6 +23,7 @@ extern void for_all_bacth_job_documents(void (^block)(Document *));
 	NSMutableArray<Document *> *availableWorlds;
 	NSInteger nextTrialNumber;
 	NSArray<NSString *> *output_n, *output_d, *output_D;
+	NSString *jobDirPath;
 }
 @property (readonly) NSString *ID;
 @property (readonly) NSDictionary<NSString *, NSNumber *> *parameters;
@@ -36,6 +38,7 @@ extern void for_all_bacth_job_documents(void (^block)(Document *));
 	NSMutableDictionary<NSString *, BatchJob *> *theJobs;
 	NSMutableArray<BatchJob *> *jobQueue;
 	NSInteger nRunningTrials;
+	NSMutableArray *unfinishedJobIDs;
 }
 @end
 

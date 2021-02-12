@@ -19,6 +19,7 @@
 "testProcess" = "検査結果にかかる期間";
 "subjectAsymptomatic" = "無症状の検査対象者";
 "subjectSymptomatic" = "有症状の検査対象者";
+"vaccinePerformRate" = "ワクチン接種率/日";
 
 "Effective with Scenario" = "シナリオ開始時に適用されます。";
 "Start" = "開始";
@@ -28,6 +29,7 @@
 "Symptomatic" = "有症状者";
 "Recovered" = "回復者";
 "Dead" = "死者";
+"Vaccinated" = "ワクチン";
 "Hospital" = "病院";
 "Cemetery" = "墓地";
 "None" = "ナシ";

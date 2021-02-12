@@ -40,6 +40,12 @@ typedef struct {
 } ContactInfoSave;
 
 typedef struct {
+	CGFloat subjRem;
+	NSInteger index;
+	NSInteger list[1];
+} VaccineListSave;
+
+typedef struct {
 	CGFloat app, prf, x, y, vx, vy;
 	NSPoint orgPt;
 	CGFloat daysInfected, daysDiseased, daysToCompleteRecov;
@@ -55,6 +61,9 @@ typedef struct {
 
 extern NSString *fnParamsPList;
 @interface Document (SaveDocExtension)
+- (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError;
+- (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper
+	ofType:(NSString *)typeName error:(NSError **)outError;
 @end
 
 NS_ASSUME_NONNULL_END

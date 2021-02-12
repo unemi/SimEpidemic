@@ -33,8 +33,6 @@ typedef struct {
 extern NSInteger nCores;
 extern BOOL isARM;
 extern unsigned long current_time_us(void);
-extern NSString *keyAnimeSteps;
-extern NSInteger defaultAnimeSteps;
 extern RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
 extern WorldParams defaultWorldParams, userDefaultWorldParams;
 extern NSArray<NSString *> *paramKeys;
@@ -43,6 +41,7 @@ extern NSDictionary<NSString *, NSString *> *paramKeyFromName;
 extern NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
 extern NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp);
 extern void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *d);
+extern NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg);
 #ifdef NOGUI
 extern void applicationSetups(void);
 #else
@@ -57,8 +56,9 @@ extern void window_order_info(NSWindow *window, NSDictionary *dict, NSMutableArr
 extern void rearrange_window_order(NSMutableArray<NSArray *> *winList);
 extern void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void));
 extern void show_anime_steps(NSTextField *txtField, NSInteger steps);
-extern NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg);
 extern void setup_colors(void);
+extern NSString *keyAnimeSteps;
+extern NSInteger defaultAnimeSteps;
 extern NSInteger defaultStateRGB[N_COLORS], stateRGB[N_COLORS];
 extern NSColor *stateColors[N_COLORS], *warpColors[NHealthTypes];
 extern NSString *colKeys[];

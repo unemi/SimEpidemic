@@ -11,6 +11,7 @@
 #import "ProcContext.h"
 #import "noGUI.h"
 #import "PeriodicReporter.h"
+#import "SaveState.h"
 #import "BatchJob.h"
 #import "../SimEpidemic/Sources/Document.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
@@ -95,6 +96,8 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		COM(getScenario), COM(setScenario),
 		COM(submitJob), COM(getJobStatus), COM(getJobQueueStatus),
 		COM(stopJob), COM(getJobResults),
+		COM(saveState), COM(loadState), COM(removeState),
+		COM(getState), COM(putState),
 		COM(version) };
 	return self;
 }
@@ -389,6 +392,8 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	} @catch (NSString *info) { [self setErrorMessage:info];
 	} @catch (NSException *excp) {
 		[self setErrorMessage:[@"500 " stringByAppendingString:excp.reason]];
+	} @catch (NSError *error) {
+		[self setErrorMessage:[@"500 " stringByAppendingString:error.localizedDescription]];
 	} @catch (NSNumber *num) { }
 //
 	if (content != nil) {

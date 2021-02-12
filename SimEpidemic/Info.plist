@@ -14,7 +14,7 @@
 			<key>CFBundleTypeIconFile</key>
 			<string>DocIcon</string>
 			<key>CFBundleTypeName</key>
-			<string>DocumentType</string>
+			<string>SimEpidemic Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSItemContentTypes</key>
@@ -32,7 +32,7 @@
 			<key>CFBundleTypeIconFile</key>
 			<string>ScenarioIcon</string>
 			<key>CFBundleTypeName</key>
-			<string>ScenarioType</string>
+			<string>SimEpidemic Scenario</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSTypeIsPackage</key>
@@ -48,7 +48,7 @@
 			<key>CFBundleTypeIconFile</key>
 			<string>ParamIcon</string>
 			<key>CFBundleTypeName</key>
-			<string>ParametersType</string>
+			<string>SimEpidemic Parameters</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSTypeIsPackage</key>
@@ -72,7 +72,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>646</string>
+	<string>664</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSAppleScriptEnabled</key>

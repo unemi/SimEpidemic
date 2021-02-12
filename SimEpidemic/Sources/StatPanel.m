@@ -100,7 +100,7 @@ static void free_stat_mem(StatData **memp) {
 #else
 - (void)fillImageForOneStep:(StatData *)stat atX:(NSInteger)ix {
 	static HealthType typeOrder[] =
-		{Died, Susceptible, Recovered, Asymptomatic, Symptomatic};
+		{Died, Susceptible, Vaccinated, Recovered, Asymptomatic, Symptomatic};
 	unsigned char *pm = imgBm + ((ix > 0)? ix - 1 : ix) * 4;
 	for (NSInteger i = 0, y = 0; i < NHealthTypes; i ++) {
 		NSInteger ii = typeOrder[i], ynext = y + stat->cnt[ii];

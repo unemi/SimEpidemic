@@ -11,6 +11,7 @@
 
 NSString *indexNames[] = {
 	@"susceptible", @"asymptomatic", @"symptomatic", @"recovered", @"died",
+	@"vaccinated",
 	@"quarantineAsymptomatic", @"quarantineSymptomatic",
 	@"tests", @"testAsSymptom", @"testAsContact", @"testAsSuspected",
 	@"testPositive", @"testNegative",

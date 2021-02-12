@@ -7,12 +7,16 @@
 //
 
 #import "SaveDoc.h"
+#ifdef NOGUI
+#import "noGUI.h"
+#else
 #import "MyView.h"
-#import "StatPanel.h"
 #import "ParamPanel.h"
 #import "Scenario.h"
 #import "DataPanel.h"
+#endif
 #import "Agent.h"
+#import "StatPanel.h"
 #import "Gatherings.h"
 #import "DataCompress.h"
 #import <zlib.h>
@@ -28,6 +32,7 @@ static NSString *keyFormatVersion = @"formatVersion", *keyIncubation = @"incubat
 	*keyStatType = @"statType", *keyWantDblDay = @"wantDoublingDay",
 	*keyTimeEvoBits = @"timeEvoBits";
 
+#ifndef NOGUI
 @implementation ParamPanel (SaveDocExtension)
 static NSString *keySelectedTabIndex = @"selectedTabIndex";
 - (NSDictionary *)UIInfoPlist {
@@ -153,6 +158,7 @@ static NSString *keyTableType = @"tableType", *keyIntervalIdx = @"intervalIndex"
 	}
 }
 @end
+#endif
 
 @implementation StatInfo (SaveDocExtension)
 static NSArray *counter_array(NSUInteger cnt[NIntIndexes]) {
@@ -175,7 +181,9 @@ static NSDictionary *statData_plist(StatData *stat) {
 	}
 	NSString *keys[] = {keyStatCumm, keyTransDaily, keyTransCumm,
 		keyTestCumm, keyTestResults, keyPRateInfo, keyMaxValues, keyStepsAndSkips,
+#ifndef NOGUI 
 		keyScenarioPhases,
+#endif
 	nil };
 	NSObject *values[] = { statData_plist(&statCumm),
 		statData_plist(&transDaily), statData_plist(&transCumm),
@@ -183,8 +191,10 @@ static NSDictionary *statData_plist(StatData *stat) {
 		[NSArray arrayWithObjects:trNums count:16],
 		@[@(maxStepPRate), @(maxDailyPRate), @(minReproRate), @(maxReproRate)],
 		@[counter_array(maxCounts), counter_array(maxTransit)],
-		@[@(steps), @(skip), @(days), @(skipDays)],
-		scenarioPhases
+		@[@(steps), @(skip), @(days), @(skipDays)]
+#ifndef NOGUI
+		, scenarioPhases
+#endif
 	};
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	for (NSInteger i = 0; keys[i] != nil; i ++)
@@ -231,8 +241,10 @@ static void statData_from_plist(NSDictionary *plist, StatData *stat) {
 		days = arr[2].integerValue;
 		skipDays = arr[3].integerValue;
 	}
+#ifndef NOGUI
 	if ((arr = plist[keyScenarioPhases]) != nil)
 		scenarioPhases = [NSMutableArray arrayWithArray:arr];
+#endif
 }
 static NSArray *array_from_hist(NSMutableArray<MyCounter *> *hist) {
 	if (hist == nil || hist.count == 0) return @[];
@@ -290,13 +302,14 @@ static StatData *stat_chain_from_data(NSData *data) {
 	}
 	return stHead;
 }
+- (void)setPopsize:(NSInteger)psz { popSize = psz; }
+#ifndef NOGUI
 - (NSData *)dataOfImageBitmap {
 	return [NSData dataWithBytes:imgBm length:IMG_WIDTH * IMG_HEIGHT * 4];
 }
 - (void)copyImageBitmapFromData:(NSData *)data {
 	memcpy(imgBm, data.bytes, IMG_WIDTH * IMG_HEIGHT * 4);
 }
-- (void)setPopsize:(NSInteger)psz { popSize = psz; }
 - (NSArray *)UIInfoPlist {
 	NSMutableArray *ma = NSMutableArray.new;
 	for (StatPanel *sp in self.statPanels) {
@@ -321,6 +334,7 @@ static StatData *stat_chain_from_data(NSData *data) {
 	}
 	while ((panel = enm.nextObject) != nil) [panel close];
 }
+#endif
 @end
 
 static void set_save_data(Gathering *gat, GatheringSave *sv) {
@@ -348,17 +362,22 @@ static void setup_with_saved_data(Gathering *gat, const GatheringSave *sv, Agent
 NSString *fnParamsPList = @"initParams.plist";
 static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*fnTestees = @"testees.gz", *fnWarps = @"warps.gz", *fnGatherings = @"gatherings.gz",
+	*fnVaccineList = @"vaccone.gz",
 	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
-	*fnStatImageBM = @"statImageBitmap.gz",
 	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
-	*fnUIInfo = @"UIInfo.plist",
 	*keyCurrentParams = @"currentParams",
 	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex",
-	*keyParamChangers = @"paramChangers",
+	*keyParamChangers = @"paramChangers"
+#ifndef NOGUI
+	,*fnStatImageBM = @"statImageBitmap.gz",
+	*fnUIInfo = @"UIInfo.plist",
 	*keyViewOffsetAndScale = @"viewOffsetAndScale",
 	*keyDocWindow = @"documentWindow",
 	*keyStatWindows = @"statWindows", *keyParamPanel = @"paramPanel",
-	*keyScenarioPanel = @"scenarioPanel", *keyDataPanel = @"dataPanel";
+	*keyScenarioPanel = @"scenarioPanel", *keyDataPanel = @"dataPanel"
+#endif
+	;
+#ifndef NOGUI
 - (BOOL)prepareSavePanel:(NSSavePanel *)savePanel {
 	savePanel.accessoryView = savePanelAccView;
 	return YES;
@@ -399,6 +418,7 @@ static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	}
 	rearrange_window_order(winList);
 }
+#endif
 static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 	if (plist == nil) return nil;
 	NSError *error;
@@ -509,6 +529,15 @@ z(inTestQueue); z(lastTested);
 		md[fnGatherings] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	}
 	
+	mdata = [NSMutableData dataWithLength:
+		sizeof(VaccineListSave) + sizeof(NSInteger) * (nPop - 1)];
+	VaccineListSave *vcnMem = mdata.mutableBytes;
+	vcnMem->subjRem = vcnSubjectsRem;
+	vcnMem->index = vcnListIndex;
+	for (NSInteger i = 0; i < nPop; i ++) vcnMem->list[i] =
+		self.agents[vaccineList[i]].vaccineTicket? -vaccineList[i] : vaccineList[i];
+	md[fnVaccineList] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
+	
 	md[fnStatInfo] = fileWrapper_from_plist([statInfo statiInfoPList]);
 	md[fnHistograms] = fileWrapper_from_plist([statInfo dictOfHistograms]);
 	NSData *data;
@@ -516,9 +545,12 @@ z(inTestQueue); z(lastTested);
 		md[fnStatIndexes] = [NSFileWrapper.alloc initRegularFileWithContents:data];
 	if ((data = data_from_stat(statInfo.transit)) != nil)
 		md[fnStatTransit] = [NSFileWrapper.alloc initRegularFileWithContents:data];
+#ifndef NOGUI
 	md[fnStatImageBM] = [NSFileWrapper.alloc initRegularFileWithContents:
 		[[statInfo dataOfImageBitmap] zippedData]];
+#endif
 }
+#ifndef NOGUI
 - (void)addSaveGUI:(NSMutableDictionary *)md {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyDocWindow] = dict_of_window_geom(view.window);
@@ -530,23 +562,30 @@ z(inTestQueue); z(lastTested);
 	if (dataPanel != nil) dict[keyDataPanel] = [dataPanel UIInfoPlist];	
 	md[fnUIInfo] = fileWrapper_from_plist(dict);
 }
+#endif
 - (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError {
 	@try {
 		NSMutableDictionary *dict = NSMutableDictionary.new;
-		dict[keyAnimeSteps] = @(animeSteps);
 		if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
 		dict[keyParameters] = param_dict(&initParams, &worldParams);
 		NSDictionary *dif = param_diff_dict(&runtimeParams, &initParams);
 		if (dif.count > 0) dict[keyCurrentParams] = dif;
 		if (scenario != nil) dict[keyScenario] = [self scenarioPList];
+#ifndef NOGUI
+		dict[keyAnimeSteps] = @(animeSteps);
 		BOOL savePop = (savePopCBox.state == NSControlStateValueOn && runtimeParams.step > 0);
 		BOOL saveGUI = saveGUICBox.state == NSControlStateValueOn;
 		if (!saveGUI && !savePop) return fileWrapper_from_plist(dict);
+#endif
 		NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
 		dict[keyFormatVersion] = @(FORMAT_VER);
+#ifdef NOGUI
+		[self addSavePop:md info:dict];
+#else
 		if (savePop) [self addSavePop:md info:dict];
-		md[fnParamsPList] = fileWrapper_from_plist(dict);
 		if (saveGUI) [self addSaveGUI:md];
+#endif
+		md[fnParamsPList] = fileWrapper_from_plist(dict);
 		return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return nil; }
 }
@@ -560,10 +599,13 @@ static NSDictionary *plist_from_data(NSData *data) {
 - (NSDictionary *)readParamsFromFileWrapper:(NSFileWrapper *)fw {
 	NSDictionary *dict = plist_from_data(fw.regularFileContents);
 	NSNumber *num;
+	NSDictionary *pDict;
+	NSArray *seq;
+#ifndef NOGUI
 	if ((num = dict[keyAnimeSteps]) != nil) animeSteps = num.integerValue;
+#endif
 	if ((num = dict[keyDaysToStop]) != nil) stopAtNDays = num.integerValue;
-	NSDictionary *pDict = dict[keyParameters];
-	if (pDict != nil) {
+	if ((pDict = dict[keyParameters]) != nil) {
 		set_params_from_dict(&initParams, &worldParams, pDict);
 		memcpy(&tmpWorldParams, &worldParams, sizeof(WorldParams));
 		memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
@@ -571,20 +613,24 @@ static NSDictionary *plist_from_data(NSData *data) {
 	if ((pDict = dict[keyCurrentParams]) != nil)
 		set_params_from_dict(&runtimeParams, NULL, pDict);
 	if ((num = dict[keyStep]) != nil) runtimeParams.step = num.integerValue;
-	NSArray *seq = dict[keyScenario];
-	if (seq != nil) {
+//
+	if ((seq = dict[keyScenario]) != nil) [self setScenarioWithPList:seq];
+	if (scenario != nil && (num = dict[keyScenarioIndex]) != nil) {
 		@try {
-			[self setScenarioWithPList:seq];
-			if ((num = dict[keyScenarioIndex]) != nil) {
-				NSInteger sIdx = num.integerValue;
-				if (sIdx < 1 || sIdx > scenario.count) @throw @"Invalid scenario index.";
-				NSObject *item = scenario[sIdx - 1];
-				NSPredicate *pred = predicate_in_item(item, NULL);
-				if (pred == nil) @throw @"Indexed scenario item is not a predicate.";
-				predicateToStop = pred;
-				scenarioIndex = sIdx;
-			}
-		} @catch (NSString *msg) { error_msg(msg, nil, NO); }
+			NSInteger sIdx = num.integerValue;
+			if (sIdx < 1 || sIdx > scenario.count) @throw @"Invalid scenario index.";
+			NSObject *item = scenario[sIdx - 1];
+			NSPredicate *pred = predicate_in_item(item, NULL);
+			if (pred == nil) @throw @"Indexed scenario item is not a predicate.";
+			predicateToStop = pred;
+			scenarioIndex = sIdx;
+		} @catch (NSString *msg) {
+#ifdef NOGUI
+			MY_LOG("%@", msg);
+#else
+			error_msg(msg, nil, NO);
+#endif
+		}
 	}
 	if ((pDict = dict[keyParamChangers]) != nil) paramChangers =
 		[NSMutableDictionary dictionaryWithDictionary:pDict];
@@ -679,6 +725,18 @@ static NSDictionary *plist_from_data(NSData *data) {
 			nBytes += sz;
 		}
 	}
+	if ((fw = dict[fnVaccineList]) != nil) {
+		NSData *data = [fw.regularFileContents unzippedData];
+		if (data.length >= sizeof(VaccineListSave) + sizeof(NSInteger) * (worldParams.initPop - 1)) {
+			const VaccineListSave *sv = data.bytes;
+			vcnSubjectsRem = sv->subjRem;
+			vcnListIndex = sv->index;
+			for (NSInteger i = 0; i < worldParams.initPop; i ++) {
+				BOOL ticket;
+				if (sv->list[i] >= 0) { vaccineList[i] = sv->list[i]; ticket = NO; }
+				else { vaccineList[i] = - sv->list[i]; ticket = YES; }
+				self.agents[vaccineList[i]].vaccineTicket = ticket;
+	}}}
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st setStatInfoFromPList:plist_from_data(fw.regularFileContents)]; }];
@@ -688,10 +746,13 @@ static NSDictionary *plist_from_data(NSData *data) {
 		st.statistics = stat_chain_from_data(fw.regularFileContents); }];
 	if ((fw = dict[fnStatTransit]) != nil) [statProcs addObject:^(StatInfo *st) {
 		st.transit = stat_chain_from_data(fw.regularFileContents); }];
+#ifndef NOGUI
 	if ((fw = dict[fnStatImageBM]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st copyImageBitmapFromData:[fw.regularFileContents unzippedData]]; }];
+#endif
 	NSInteger popSize = worldParams.initPop;
 	[statProcs addObject:^(StatInfo *st) { st.popsize = popSize; }];
+#ifndef NOGUI
 	void (^panelBlock)(Document *) = ((fw = dict[fnUIInfo]) == nil)? nil : ^(Document *doc){
 		[doc setupPanelsWithInfo:plist_from_data(fw.regularFileContents)];
 	};
@@ -703,6 +764,7 @@ static NSDictionary *plist_from_data(NSData *data) {
 		if (panelBlock != nil) panelBlock(self);
 		[self adjustScenarioText];
 	}
+#endif
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO;
 	} @catch (NSString *msg) {
 		if (outError != NULL) *outError = [NSError errorWithDomain:@"SimEpi" code:1

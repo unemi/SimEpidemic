@@ -17,6 +17,7 @@
 		232055F92457D2C7005ADCCF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 232055F82457D2C7005ADCCF /* Assets.xcassets */; };
 		232055FC2457D2C7005ADCCF /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 232055FA2457D2C7005ADCCF /* MainMenu.xib */; };
 		232055FF2457D2C7005ADCCF /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055FE2457D2C7005ADCCF /* main.m */; };
+		232683BD25D0FB390023E10C /* SaveDoc.m in Sources */ = {isa = PBXBuildFile; fileRef = 2310A3132587486F00201F0C /* SaveDoc.m */; };
 		232790BA24587B670017AEC2 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
 		233420D22468156200C93F8E /* DataPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 233420D02468156200C93F8E /* DataPanel.m */; };
 		2337CD7A256D0AFE0020DB19 /* Statistics.m in Sources */ = {isa = PBXBuildFile; fileRef = 2337CD79256D0AFE0020DB19 /* Statistics.m */; };
@@ -43,6 +44,7 @@
 		2387B42524FCD2190039796A /* Preferences.m in Sources */ = {isa = PBXBuildFile; fileRef = 2387B42424FCD2190039796A /* Preferences.m */; };
 		238A8F2A246694D300604BF4 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
 		238C4527248B783B00FB5F89 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 238C4525248B783B00FB5F89 /* Preferences.xib */; };
+		23A53E9625D178360072552E /* SaveState.m in Sources */ = {isa = PBXBuildFile; fileRef = 23A53E9525D178360072552E /* SaveState.m */; };
 		23AF0269250F98840074EF87 /* BatchJob.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AF0268250F98840074EF87 /* BatchJob.m */; };
 		23B89E4F255BD61000A95360 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B89E4E255BD61000A95360 /* main.m */; };
 		23B89E53255BD66500A95360 /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F32457D2C6005ADCCF /* Document.m */; };
@@ -60,8 +62,8 @@
 /* Begin PBXCopyFilesBuildPhase section */
 		2365DEB42506145A006C2A95 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
+			buildActionMask = 8;
+			dstPath = "";
 			dstSubfolderSpec = 0;
 			files = (
 			);
@@ -151,8 +153,8 @@
 		23673363252EFA8E00284D91 /* PeriodicReporter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PeriodicReporter.m; sourceTree = "<group>"; };
 		236BD9D2252ADD5300A1D21D /* control.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = control.html; sourceTree = "<group>"; };
 		2372797525203323000BC3C5 /* batch.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = batch.html; sourceTree = "<group>"; };
+		23774D7B25C2F5C2009A3132 /* simepidemic-http-server132.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-http-server132.md"; sourceTree = "<group>"; };
 		2378766825027AE500897003 /* simepidemic-model.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-model.md"; sourceTree = "<group>"; };
-		2378766925027AE500897003 /* simepidemic-http-server.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-http-server.md"; sourceTree = "<group>"; };
 		2378766B25027AE500897003 /* Pathogenesis.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Pathogenesis.svg; sourceTree = "<group>"; };
 		2387B42324FCD2190039796A /* Preferences.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Preferences.h; sourceTree = "<group>"; };
 		2387B42424FCD2190039796A /* Preferences.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Preferences.m; sourceTree = "<group>"; };
@@ -162,6 +164,8 @@
 		239A1AF32513707B00B92DAD /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
 		239A1AF4251370AA00B92DAD /* favicon.ico */ = {isa = PBXFileReference; lastKnownFileType = image.ico; path = favicon.ico; sourceTree = "<group>"; };
 		23A14AFE25317FA500AC765F /* control.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = control.js; sourceTree = "<group>"; };
+		23A53E9425D177D80072552E /* SaveState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SaveState.h; sourceTree = "<group>"; };
+		23A53E9525D178360072552E /* SaveState.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SaveState.m; sourceTree = "<group>"; };
 		23AF0267250F98840074EF87 /* BatchJob.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BatchJob.h; sourceTree = "<group>"; };
 		23AF0268250F98840074EF87 /* BatchJob.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BatchJob.m; sourceTree = "<group>"; };
 		23B89E4C255BD61000A95360 /* simepiWorld */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiWorld; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -317,6 +321,8 @@
 				2365DEC425061537006C2A95 /* noGUIInfo.h */,
 				235B7E762509D7AE0016090F /* ProcContext.h */,
 				235B7E772509D7AE0016090F /* ProcContext.m */,
+				23A53E9425D177D80072552E /* SaveState.h */,
+				23A53E9525D178360072552E /* SaveState.m */,
 				235B7E792509F6800016090F /* DataCompress.h */,
 				235B7E7A2509F6800016090F /* DataCompress.m */,
 				23AF0267250F98840074EF87 /* BatchJob.h */,
@@ -333,7 +339,7 @@
 			isa = PBXGroup;
 			children = (
 				2378766825027AE500897003 /* simepidemic-model.md */,
-				2378766925027AE500897003 /* simepidemic-http-server.md */,
+				23774D7B25C2F5C2009A3132 /* simepidemic-http-server132.md */,
 				2378766A25027AE500897003 /* Figures */,
 			);
 			path = Documents;
@@ -588,6 +594,7 @@
 			files = (
 				2365DEC72506159A006C2A95 /* AppDelegate.m in Sources */,
 				2365DEC82506159A006C2A95 /* Document.m in Sources */,
+				232683BD25D0FB390023E10C /* SaveDoc.m in Sources */,
 				23AF0269250F98840074EF87 /* BatchJob.m in Sources */,
 				23DAF069251737FB00C41E76 /* Gatherings.m in Sources */,
 				2365DEC92506159A006C2A95 /* Agent.m in Sources */,
@@ -597,6 +604,7 @@
 				2359E8E9253B092B004041D9 /* BlockingInfo.m in Sources */,
 				235B7E7B2509F6800016090F /* DataCompress.m in Sources */,
 				23673364252EFA8E00284D91 /* PeriodicReporter.m in Sources */,
+				23A53E9625D178360072552E /* SaveState.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -848,7 +856,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.8.1;
+				MARKETING_VERSION = 1.8.2;
 				OTHER_CFLAGS = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -869,7 +877,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.8.1;
+				MARKETING_VERSION = 1.8.2;
 				OTHER_CFLAGS = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";

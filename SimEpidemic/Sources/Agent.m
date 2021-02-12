@@ -181,21 +181,20 @@ static void infects(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFl
 	CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
 	if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor)) {
 		a->newHealth = Asymptomatic;
+		a->daysInfected = a->daysDiseased = 0;
 		if (a->nInfects < 0) a->newNInfects = 1;
 		b->newNInfects ++;
 	}
 }
 static void check_infection(Agent *a, Agent *b,
 	RuntimeParams *rp, WorldParams *wp, CGFloat d) {
-	if (d >= rp->infecDst) return;
 	if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
-	if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(b, a, rp->step);
-	if (a->health == Susceptible) {
-		if (is_infected(b) && b->daysInfected > rp->contagDelay)
-			infects(a, b, rp, wp, d);
-	} else if (b->health == Susceptible &&
-		is_infected(a) && a->daysInfected > rp->contagDelay)
-		infects(b, a, rp, wp, d);
+	if (a->newHealth != a->health) return;
+	CGFloat aImn = (a->health == Susceptible)? 0. :
+		(a->health == Vaccinated)? exp(log(a->agentImmunity) / 7.) : 1.;
+	if (aImn < 1. && is_infected(b) && b->daysInfected > rp->contagDelay
+		&& (aImn == 0. || was_hit(wp, 1. - aImn)))
+		infects(a, b, rp, wp, d);
 }
 void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp) {
 	CGFloat dx[n], dy[n], d2[n], d[n];
@@ -222,7 +221,10 @@ void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams 
 		bb[i]->fx += ax[i]; bb[i]->fy += ay[i];
 		attracted(a, bb[i], rp, wp, d[i]);
 		attracted(bb[i], a, rp, wp, d[i]);
-		check_infection(a, bb[i], rp, wp, d[i]);
+		if (d[i] < rp->infecDst) {
+			check_infection(a, bb[i], rp, wp, d[i]);
+			check_infection(bb[i], a, rp, wp, d[i]);
+		}
 	}
 }
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
@@ -253,8 +255,18 @@ static CGFloat wall(CGFloat d) {
 	if (d < .02) d = .02;
 	return AVOIDANCE * 20. / d / d;
 }
+static void expire_immunity(Agent *a, RuntimeParams *rp) {
+	a->newHealth = Susceptible;
+	a->daysInfected = a->daysDiseased = 0;
+	alter_days(a, rp);
+}
+#define VCN_1_2_SPAN 21.
 void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	switch (a->health) {
+		case Susceptible: if (a->vaccineTicket) {
+			a->newHealth = Vaccinated;
+			a->vaccineTicket = NO;
+		} break;
 		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
 		a->daysDiseased += 1. / wp->stepsPerDay;
 		if (patient_step(a, wp, NO, info)) return;
@@ -262,14 +274,22 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 			info->testType = TestAsSymptom;
 		break;
 		case Asymptomatic: a->daysInfected += 1. / wp->stepsPerDay;
+		if (a->vaccineTicket) a->vaccineTicket = NO;
 		if (patient_step(a, wp, NO, info)) return;
 		break;
+		case Vaccinated: a->daysVaccinated += 1. / wp->stepsPerDay;
+		if (a->daysVaccinated < VCN_1_2_SPAN)
+			a->agentImmunity = a->daysVaccinated * rp->vcn1stEff / 100. / VCN_1_2_SPAN;
+		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN)
+			a->agentImmunity = ((a->daysVaccinated - VCN_1_2_SPAN)
+				* (rp->vcnMaxEff - rp->vcn1stEff) / rp->vcnEDelay + rp->vcn1stEff) / 100.;
+		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN + a->imExpr * rp->vcnEPeriod)
+			a->agentImmunity = rp->vcnMaxEff / 100.;
+		else expire_immunity(a, rp);
+		break;
 		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
-		if (a->daysInfected > a->imExpr) {
-			a->newHealth = Susceptible;
-			a->daysInfected = a->daysDiseased = 0;
-			alter_days(a, rp);
-		} break;
+		if (a->daysInfected > a->imExpr) expire_immunity(a, rp);
+		break;
 		default: break;
 	}
 	if (a->health != Symptomatic && was_hit(wp, rp->tstSbjAsy / 100.))

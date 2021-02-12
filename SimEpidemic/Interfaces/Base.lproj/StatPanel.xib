@@ -86,14 +86,14 @@
         <window title="Select Indexes" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" visibleAtLaunch="NO" frameAutosaveName="" animationBehavior="default" id="UdJ-5I-9pq">
             <windowStyleMask key="styleMask" titled="YES" closable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
-            <rect key="contentRect" x="196" y="207" width="504" height="158"/>
+            <rect key="contentRect" x="196" y="207" width="504" height="175"/>
             <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1057"/>
             <view key="contentView" id="6EC-Ts-6Pu">
-                <rect key="frame" x="0.0" y="0.0" width="504" height="158"/>
+                <rect key="frame" x="0.0" y="0.0" width="504" height="175"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Cvg-cg-X5q">
-                        <rect key="frame" x="143" y="47" width="97" height="20"/>
+                        <rect key="frame" x="143" y="64" width="97" height="20"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="check" title="Daily count" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" state="on" inset="2" id="2av-uh-P4d">
                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -101,7 +101,7 @@
                         </buttonCell>
                     </button>
                     <customView ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="FEk-tk-gRi">
-                        <rect key="frame" x="146" y="20" width="154" height="24"/>
+                        <rect key="frame" x="146" y="37" width="154" height="24"/>
                         <subviews>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Pl6-Oh-Ggt">
                                 <rect key="frame" x="-2" y="5" width="88" height="14"/>
@@ -143,14 +143,14 @@
                         </constraints>
                     </customView>
                     <box fixedFrame="YES" title="Health" translatesAutoresizingMaskIntoConstraints="NO" id="9Br-G7-Sig">
-                        <rect key="frame" x="17" y="16" width="124" height="132"/>
+                        <rect key="frame" x="17" y="16" width="124" height="149"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <view key="contentView" id="KlK-9S-1eN">
-                            <rect key="frame" x="3" y="3" width="118" height="114"/>
+                            <rect key="frame" x="3" y="3" width="118" height="131"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="8tw-yE-Qkc" customClass="ULinedButton">
-                                    <rect key="frame" x="8" y="88" width="97" height="20"/>
+                                    <rect key="frame" x="8" y="105" width="97" height="20"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <buttonCell key="cell" type="check" title="Susceptible" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" inset="2" id="ySb-1d-Lp3">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -158,7 +158,7 @@
                                     </buttonCell>
                                 </button>
                                 <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="QGA-AY-ETY" customClass="ULinedButton">
-                                    <rect key="frame" x="8" y="68" width="97" height="20"/>
+                                    <rect key="frame" x="8" y="85" width="97" height="20"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <buttonCell key="cell" type="check" title="Asymptomatic" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" state="on" inset="2" id="0Ih-E8-RpA">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -166,7 +166,7 @@
                                     </buttonCell>
                                 </button>
                                 <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="ffr-g5-Eve" customClass="ULinedButton">
-                                    <rect key="frame" x="8" y="48" width="97" height="20"/>
+                                    <rect key="frame" x="8" y="65" width="97" height="20"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <buttonCell key="cell" type="check" title="Symptomatic" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" state="on" inset="2" id="J61-hI-iMi">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -174,7 +174,7 @@
                                     </buttonCell>
                                 </button>
                                 <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="cRP-MS-F96" customClass="ULinedButton">
-                                    <rect key="frame" x="8" y="28" width="97" height="20"/>
+                                    <rect key="frame" x="8" y="45" width="97" height="20"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <buttonCell key="cell" type="check" title="Recovered" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" inset="2" id="ZRw-yl-pz9">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -182,9 +182,17 @@
                                     </buttonCell>
                                 </button>
                                 <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="WRs-OW-OiK" customClass="ULinedButton">
-                                    <rect key="frame" x="8" y="8" width="97" height="20"/>
+                                    <rect key="frame" x="8" y="25" width="97" height="20"/>
                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                     <buttonCell key="cell" type="check" title="Died" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" state="on" inset="2" id="sod-RZ-hhh">
+                                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                        <font key="font" metaFont="smallSystem"/>
+                                    </buttonCell>
+                                </button>
+                                <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="JdP-mK-1ov" customClass="ULinedButton">
+                                    <rect key="frame" x="8" y="5" width="97" height="20"/>
+                                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                    <buttonCell key="cell" type="check" title="Vaccinated" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" state="on" inset="2" id="hUR-Qf-Ju8" userLabel="Vaccinated">
                                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="smallSystem"/>
                                     </buttonCell>
@@ -193,7 +201,7 @@
                         </view>
                     </box>
                     <box fixedFrame="YES" title="Quarantine" translatesAutoresizingMaskIntoConstraints="NO" id="nkz-2S-HLS">
-                        <rect key="frame" x="143" y="71" width="125" height="77"/>
+                        <rect key="frame" x="143" y="88" width="125" height="77"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <view key="contentView" id="Aa1-BC-wLO">
                             <rect key="frame" x="3" y="3" width="119" height="59"/>
@@ -219,7 +227,7 @@
                         </view>
                     </box>
                     <box fixedFrame="YES" title="Tests" translatesAutoresizingMaskIntoConstraints="NO" id="zG4-Md-tG3">
-                        <rect key="frame" x="270" y="39" width="217" height="109"/>
+                        <rect key="frame" x="270" y="56" width="217" height="109"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <view key="contentView" id="oCD-h2-mAv">
                             <rect key="frame" x="3" y="3" width="211" height="91"/>
@@ -285,7 +293,7 @@
                         </view>
                     </box>
                     <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="vuL-A7-Hxr" customClass="ULinedButton">
-                        <rect key="frame" x="369" y="17" width="117" height="18"/>
+                        <rect key="frame" x="369" y="34" width="117" height="18"/>
                         <buttonCell key="cell" type="check" title="Reproduction rate" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" inset="2" id="I5I-HZ-xpF">
                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                             <font key="font" metaFont="smallSystem"/>
@@ -293,14 +301,14 @@
                     </button>
                 </subviews>
                 <constraints>
-                    <constraint firstAttribute="bottom" secondItem="vuL-A7-Hxr" secondAttribute="bottom" constant="20" id="4Sh-Qa-do4"/>
+                    <constraint firstAttribute="bottom" secondItem="vuL-A7-Hxr" secondAttribute="bottom" constant="37" id="4Sh-Qa-do4"/>
                     <constraint firstAttribute="trailing" secondItem="vuL-A7-Hxr" secondAttribute="trailing" constant="20" id="9bQ-n3-5Yn"/>
                 </constraints>
             </view>
             <connections>
                 <outlet property="delegate" destination="-2" id="ZMQ-qz-HVv"/>
             </connections>
-            <point key="canvasLocation" x="-243" y="244"/>
+            <point key="canvasLocation" x="-243" y="252.5"/>
         </window>
     </objects>
 </document>

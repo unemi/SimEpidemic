@@ -136,7 +136,8 @@ NSString *paramMenuInfo[] = {
 	// tests
 	@"testDelay", @"testProcess", @"testInterval",
 	@"testSensitivity", @"testSpecificity",
-	@"subjectAsymptomatic", @"subjectSymptomatic",
+	@"subjectAsymptomatic", @"subjectSymptomatic", @"",
+	@"vaccinePerformRate",
 nil };
 @implementation ParameterCellView
 - (instancetype)init {
@@ -840,6 +841,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	switch (condType) {
 		case CondTypeRunUntil: {
 			NSString *label = self.label;
+			if (element == nil) element = [NSPredicate predicateWithValue:YES];
 			return (label.length == 0)? element : @[label, element];
 		}
 		case CondTypeMoveWhen:

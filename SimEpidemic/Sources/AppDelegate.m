@@ -170,6 +170,11 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"testSpecificity", {.f = { 99.8, 0., 100.}}},
 	{ ParamTypeFloat, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
 	{ ParamTypeFloat, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
+	{ ParamTypeFloat, @"vaccinePerformRate", {.f = { 10., 0., 100.}}},
+	{ ParamTypeFloat, @"vaccineFistDoseEfficacy", {.f = { 30., 0., 100.}}},
+	{ ParamTypeFloat, @"vaccineMaxEfficacy", {.f = { 95., 0., 100.}}},
+	{ ParamTypeFloat, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
+	{ ParamTypeFloat, @"vaccineEffectPeriod", {.f = { 200., 0., 500.}}},
 
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
@@ -260,7 +265,6 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 	// for upper compatibility.
 	if (initInfected >= 0) wp->infected = initInfected * 100. / wp->initPop;
 }
-#ifndef NOGUI
 NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	CGFloat *fpNew = &rpNew->PARAM_F1, *fpOrg = &rpOrg->PARAM_F1;
@@ -276,16 +280,17 @@ NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg)
 	}
 	return md;
 }
-
+#ifndef NOGUI
 #define RGB3(r,g,b) ((r<<16)|(g<<8)|b)
 NSInteger defaultStateRGB[N_COLORS] = {
 	RGB3(39,85,154), RGB3(246,214,0), RGB3(250,48,46), RGB3(32,120,100), RGB3(182,182,182),
+	RGB3(16,160,50),	// vaccinated
 	RGB3(0,0,0), RGB3(64,0,0), RGB3(51,51,51), RGB3(255,255,255), RGB3(64,64,0)
 }, stateRGB[N_COLORS];
 NSColor *stateColors[N_COLORS] = {nil}, *warpColors[NHealthTypes];
 NSString *colKeys[] = {
 	@"colorSusceptible", @"colorAsymptomatic", @"colorSymptomatic",
-	@"colorRecovered", @"colorDied",
+	@"colorRecovered", @"colorDied", @"colorVaccinated",
 	@"colorBackgournd", @"colorHospital", @"colorCemetery", @"colorText",
 	@"colorGathering"
 };

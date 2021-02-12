@@ -83,13 +83,26 @@
 }
 @end
 
-static JobController *theJobController = nil;
+static NSString *batchJobInfoFileName = @"info.json";
+static NSString *unfinishedJobListFileName = @"UnfinishedJobIDs.txt";
+static JobController *the_job_controller(void) {
+	static JobController *theJobController = nil;
+	if (theJobController == nil) theJobController = JobController.new;
+	return theJobController;
+}
+NSString *batch_job_dir(void) {
+	static NSString *batchJobDir = nil;
+	if (batchJobDir == nil) batchJobDir =
+		[dataDirectory stringByAppendingPathComponent:@"BatchJob"];
+	return batchJobDir;
+}
 @implementation JobController
 - (instancetype)init {
 	if (!(self = [super init])) return nil;
 	lock = NSLock.new;
 	theJobs = NSMutableDictionary.new;
 	jobQueue = NSMutableArray.new;
+	unfinishedJobIDs = NSMutableArray.new;
 	return self;
 }
 - (void)tryNewTrial:(BOOL)trialFinished {
@@ -101,12 +114,29 @@ static JobController *theJobController = nil;
 	}
 	[lock unlock];
 }
+- (void)saveUnfinishedJobIDs {
+	NSString *path = [batch_job_dir() stringByAppendingPathComponent:unfinishedJobListFileName];
+	NSMutableString *jobIDList = NSMutableString.new;
+	for (NSString *ID in unfinishedJobIDs) [jobIDList appendFormat:@"%@\n", ID];
+	NSError *error;
+	if (![jobIDList writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:&error])
+		MY_LOG("Unfinished JOB ID list could not be saved in %@. %@",
+			path, error.localizedDescription);
+}
 - (void)submitJob:(BatchJob *)job {
 	[lock lock];
 	theJobs[job.ID] = job;
 	[jobQueue addObject:job];
+	[unfinishedJobIDs addObject:job.ID];
+	[self saveUnfinishedJobIDs];
 	[lock unlock];
 	[self tryNewTrial:NO];
+}
+- (void)finishJobID:(NSString *)jobID {
+	[lock lock];
+	[unfinishedJobIDs removeObject:jobID];
+	[self saveUnfinishedJobIDs];
+	[lock unlock];
 }
 - (void)removeJobFromQueue:(BatchJob *)job shouldLock:(BOOL)shouldLock {
 	if (shouldLock) [lock lock];
@@ -127,62 +157,9 @@ static JobController *theJobController = nil;
 		[job forAllLiveDocuments:block];
 }
 @end
-static NSString *batch_job_dir(void) {
-	static NSString *batchJobDir = nil;
-	if (batchJobDir == nil) batchJobDir =
-		[dataDirectory stringByAppendingPathComponent:@"BatchJob"];
-	return batchJobDir;
-}
-void schedule_job_expiration_check(void) { // called from noGUI.m
-#ifdef DEBUG
-	CGFloat interval = 1.; BOOL repeats = NO;
-#else
-	CGFloat interval = 3600.; BOOL repeats = YES;
-#endif
-	[NSTimer scheduledTimerWithTimeInterval:interval repeats:repeats
-	block:^(NSTimer * _Nonnull timer) {
-		@try {
-			NSFileManager *fm = NSFileManager.defaultManager;
-			NSString *dirPath = batch_job_dir();
-			NSDirectoryEnumerator *dirEnum = [fm enumeratorAtPath:dirPath];
-			NSDate *pastDate = [NSDate dateWithTimeIntervalSinceNow:
-				jobRecExpirationHours * -3600.];
-			NSMutableArray<NSString *> *dirsTobeRemoved = NSMutableArray.new;
-			for (NSString *path in dirEnum) {
-				NSDictionary *attr = dirEnum.fileAttributes;
-				if (attr == nil) {
-					MY_LOG("Job record %@ failed to get attributes", path);
-					continue;
-				}
-				if (![attr[NSFileType] isEqualTo:NSFileTypeDirectory]) continue;
-				NSDate *modDate = attr[NSFileModificationDate];
-				if (modDate == nil) MY_LOG(
-					"Job record %@ failed to get the content modification date.", path)
-				else if ([pastDate compare:modDate] == NSOrderedDescending)
-					[dirsTobeRemoved addObject:path];
-				[dirEnum skipDescendents];
-			}
-			if (dirsTobeRemoved.count > 0) {
-				NSMutableString *ms = NSMutableString.new;
-				NSString *pnc = @"";
-				for (NSString *name in dirsTobeRemoved)
-					{ [ms appendFormat:@"%@%@", pnc, name]; pnc = @", "; }
-				MY_LOG("Job records %@ are going to be removed.", ms);
-			}
-			NSError *error;
-			for (NSString *path in dirsTobeRemoved)
-				if (![fm removeItemAtPath:
-					[dirPath stringByAppendingPathComponent:path] error:&error])
-					MY_LOG("Job record %@ couldn't be removed. %@",
-						path, error.localizedDescription);
-		} @catch (NSException *excp) {
-			MY_LOG("Job record expiration check: %@", excp.reason);
-		}
-	}];
-}
 // to check how much this machine is busy now. called from Contract.m
 void for_all_bacth_job_documents(void (^block)(Document *)) {
-	[theJobController forAllLiveDocuments:block];
+	[the_job_controller() forAllLiveDocuments:block];
 }
 
 @implementation BatchJob
@@ -199,9 +176,10 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	MY_LOG("%s", buf);
 }
 #endif
-- (instancetype)initWithInfo:(NSDictionary *)info {
+- (instancetype)initWithInfo:(NSDictionary *)info ID:(NSString *)ID {
 	if (!(self = [super init])) return nil;
-	_ID = new_uniq_string();
+	_ID = (ID != nil)? ID : new_uniq_string();
+	jobDirPath = [batch_job_dir() stringByAppendingPathComponent:_ID];
 	_parameters = info[@"params"];
 	_scenario = info[@"scenario"];
 	NSNumber *num;
@@ -217,7 +195,8 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 			unichar uc = [key characterAtIndex:5];
 			if (uc < 'A' || uc > 'Z') continue;
 			NSString *newKey = key.stringByRemovingFirstWord;
-			if (indexNames[newKey] != nil || [key isEqualToString:@"testPositiveRate"]) ad[nd ++] = newKey;
+			if (indexNames[newKey] != nil || [key isEqualToString:@"testPositiveRate"])
+				ad[nd ++] = newKey;
 		} if ([distributionNames containsObject:key]) aD[nD ++] = key;
 	}
 	output_n = [NSArray arrayWithObjects:an count:nn];
@@ -233,8 +212,26 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 #endif
 	return self;
 }
-- (void)makeDataFileWith:(NSNumber *)number type:(NSString *)type
-	dir:(NSString *)bjDir names:(NSArray *)names
+- (BOOL)saveInfoData:(NSData *)infoData {
+	@try {
+		BOOL isDir;
+		NSError *error;
+		NSFileManager *fm = NSFileManager.defaultManager;
+		if (![fm fileExistsAtPath:jobDirPath isDirectory:&isDir]) {
+			if (![fm createDirectoryAtPath:jobDirPath withIntermediateDirectories:YES
+				attributes:@{NSFilePosixPermissions:@(0755)} error:&error])
+				@throw error;
+		} else if (!isDir) @throw @"exists but not a directory";
+		NSString *infoPath = [jobDirPath stringByAppendingPathComponent:batchJobInfoFileName];
+		if (![infoData writeToFile:infoPath options:0 error:&error]) @throw error;
+	} @catch (NSString *msg) {
+		MY_LOG("Data strage %@ %@.", dataDirectory, msg); return NO;
+	} @catch (NSError *error) {
+		MY_LOG("%@", error.localizedDescription); return NO;
+	}
+	return YES;
+}
+- (void)makeDataFileWith:(NSNumber *)number type:(NSString *)type names:(NSArray *)names
 	makeObj:(NSObject * (^)(StatInfo *, NSArray *))makeObj {
 	if (names.count <= 0) return;
 	NSError *error;
@@ -243,7 +240,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 			makeObj(runningTrials[number].statInfo, names)}
 		options:0 error:&error];
 	if (data == nil) @throw error;
-	NSString *path = [bjDir stringByAppendingPathComponent:
+	NSString *path = [jobDirPath stringByAppendingPathComponent:
 		[NSString stringWithFormat:@"%@_%@", type, number]];
 	if (![data writeToFile:path options:0 error:&error]) @throw error;
 }
@@ -256,26 +253,15 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 		(mode == LoopEndAsDaysPassed)? @"specified days passed" :
 		(mode == LoopEndByTimeLimit)? @"time limit reached" : @"unknown reason");
 	@try {
-		BOOL isDir;
-		NSError *error;
-		NSFileManager *fm = NSFileManager.defaultManager;
-		NSString *bjDir = [batch_job_dir() stringByAppendingPathComponent:_ID];
-		if (![fm fileExistsAtPath:bjDir isDirectory:&isDir]) {
-			if (![fm createDirectoryAtPath:bjDir withIntermediateDirectories:YES
-				attributes:@{NSFilePosixPermissions:@(0755)} error:&error])
-				@throw error;
-		} else if (!isDir) @throw @"exists but not a directory";
-		[self makeDataFileWith:number type:@"indexes" dir:bjDir names:output_n
+		[self makeDataFileWith:number type:@"indexes" names:output_n
 			makeObj:^(StatInfo *stInfo, NSArray *names)
 				{ return [stInfo objectOfTimeEvoTableWithNames:names]; }];
-		[self makeDataFileWith:number type:@"daily" dir:bjDir names:output_d
+		[self makeDataFileWith:number type:@"daily" names:output_d
 			makeObj:^(StatInfo *stInfo, NSArray *names)
 				{ return [stInfo objectOfTransitTableWithNames:names]; }];
-		[self makeDataFileWith:number type:@"distribution" dir:bjDir names:output_D
+		[self makeDataFileWith:number type:@"distribution" names:output_D
 			makeObj:^(StatInfo *stInfo, NSArray *names)
 				{ return [stInfo objectOfHistgramTableWithNames:names]; }];
-	} @catch (NSString *msg) {
-		MY_LOG("Data strage %@ %@.", dataDirectory, msg);
 	} @catch (NSError *error) {
 		MY_LOG("%@", error.localizedDescription);
 	}
@@ -283,12 +269,14 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	[lock lock];
 	[availableWorlds addObject:runningTrials[number]];
 	[runningTrials removeObjectForKey:number];
-	if (nextTrialNumber >= _nIteration) {
+	if (nextTrialNumber >= _nIteration && runningTrials.count == 0) {
+	// Job completed.
 		for (Document *doc in availableWorlds) [doc discardMemory];
 		[availableWorlds removeAllObjects];
+		[the_job_controller() finishJobID:_ID];
 	}
 	[lock unlock];
-	[theJobController tryNewTrial:YES];
+	[the_job_controller() tryNewTrial:YES];
 }
 - (void)runNextTrial {
 	Document *doc = nil;
@@ -306,7 +294,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	NSNumber *trialNumb = @(++ nextTrialNumber);
 	runningTrials[trialNumb] = doc;
 	if (nextTrialNumber >= _nIteration)
-		[theJobController removeJobFromQueue:self shouldLock:NO];
+		[the_job_controller() removeJobFromQueue:self shouldLock:NO];
 	doc.stopCallBack = ^(LoopMode mode){
 		[self trialDidFinish:trialNumb mode:mode];
 	};
@@ -314,6 +302,9 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	[lock unlock];
 	MY_LOG("Trial %@/%ld of job %@ started on world %@.",
 		trialNumb, _nIteration, _ID, doc.ID);
+}
+- (void)setNextTrialNumber:(NSInteger)number {
+	nextTrialNumber = number;
 }
 - (NSDictionary *)jobStatus {
 	[lock lock];
@@ -340,9 +331,10 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	for (Document *doc in runningTrials.objectEnumerator)
 		[doc stop:LoopEndByUser];
 	if (nextTrialNumber < _nIteration) {
-		[theJobController removeJobFromQueue:self shouldLock:YES];
+		[the_job_controller() removeJobFromQueue:self shouldLock:YES];
 		_nIteration = nextTrialNumber;
 	}
+	[the_job_controller() finishJobID:_ID];
 	[lock unlock];
 }
 - (void)forAllLiveDocuments:(void (^)(Document *))block {
@@ -355,7 +347,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 
 @implementation ProcContext (BatchJobExtension)
 - (void)submitJob {
-	if (theJobController != nil && theJobController.queueLength >= maxJobsInQueue)
+	if (the_job_controller().queueLength >= maxJobsInQueue)
 		@throw [NSString stringWithFormat:
 			@"500 The job queue is full (%ld jobs).", maxJobsInQueue];
 	NSString *jobStr = query[@"JSON"];
@@ -367,11 +359,11 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 		jobData options:0 error:&error];
 	if (jobInfo == nil)
 		@throw [NSString stringWithFormat:@"417 %@", error.localizedDescription];
-	BatchJob *job = [BatchJob.alloc initWithInfo:jobInfo];
+	BatchJob *job = [BatchJob.alloc initWithInfo:jobInfo ID:nil];
 	if (job == nil) @throw @"500 Couldn't make a batch job.";
-	if (theJobController == nil) theJobController = JobController.new;
 	MY_LOG("%@ Job %@ was submitted.", ip4_string(ip4addr), job.ID);
-	[theJobController submitJob:job];
+	[job saveInfoData:jobData];
+	[the_job_controller() submitJob:job];
 	content = job.ID;
 	type = @"text/plain";
 	code = 200;
@@ -379,7 +371,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 - (BatchJob *)targetJob {
 	NSString *jobID = query[@"job"];
 	if (jobID == nil) @throw @"500 Job ID is missing.";
-	BatchJob *job = [theJobController jobFromID:jobID];
+	BatchJob *job = [the_job_controller() jobFromID:jobID];
 	if (job == nil) @throw [NSString stringWithFormat:
 		@"500 Job %@ doesn't exist.", jobID];
 	return job;
@@ -389,12 +381,12 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 }
 - (void)getJobQueueStatus {
 	NSMutableDictionary *md = NSMutableDictionary.new;
-	md[@"length"] = @(theJobController.queueLength);
+	md[@"length"] = @(the_job_controller().queueLength);
 	for (NSString *jobID in query) {
 		if (query[jobID].integerValue != 1) continue;
-		BatchJob *job = [theJobController jobFromID:jobID];
+		BatchJob *job = [the_job_controller() jobFromID:jobID];
 		if (job == nil) continue;
-		NSInteger index = [theJobController indexOfJobInQueue:job];
+		NSInteger index = [the_job_controller() indexOfJobInQueue:job];
 		if (index != NSNotFound) md[jobID] = @(index);
 	}
 	[self setJSONDataAsResponse:md];
@@ -408,7 +400,8 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	@try {
 		NSString *jobDir = [batch_job_dir() stringByAppendingPathComponent:jobID];
 		for (NSString *fname in
-			[NSFileManager.defaultManager enumeratorAtPath:jobDir]) {
+			[NSFileManager.defaultManager enumeratorAtPath:jobDir])
+		if (![fname isEqualToString:@"info.json"]) {
 			NSData *data = [NSData dataWithContentsOfFile:
 				[jobDir stringByAppendingPathComponent:fname]];
 			if (data == nil) @throw [NSString stringWithFormat:
@@ -501,3 +494,85 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	}
 }
 @end
+
+void check_batch_jobs_to_restart(void) {
+#define RESTART_BATCH_JOB
+#ifdef RESTART_BATCH_JOB
+	NSFileManager *fm = NSFileManager.defaultManager;
+	BOOL isDirectory;
+	if (![fm fileExistsAtPath:batch_job_dir() isDirectory:&isDirectory]) return;
+	if (!isDirectory) return;
+	NSString *IDsStr = [NSString stringWithContentsOfFile:
+		[batch_job_dir() stringByAppendingPathComponent:unfinishedJobListFileName]
+		encoding:NSUTF8StringEncoding error:NULL];
+	if (IDsStr == nil || IDsStr.length == 0) return;
+	NSScanner *scan = [NSScanner scannerWithString:IDsStr];
+	NSString *ID;
+	NSCharacterSet *chSet = NSCharacterSet.newlineCharacterSet;
+	NSError *error;
+	NSArray<NSString *> *filePrefixes = @[@"indexes", @"daily", @"distribution"];
+	while ([scan scanUpToCharactersFromSet:chSet intoString:&ID]) {
+		NSString *jobDir = [batch_job_dir() stringByAppendingPathComponent:ID];
+		if (![fm fileExistsAtPath:jobDir isDirectory:&isDirectory]) continue;
+		if (!isDirectory) continue;
+		NSString *infoPath = [jobDir stringByAppendingPathComponent:batchJobInfoFileName];
+		NSData *infoData = [NSData dataWithContentsOfFile:infoPath options:0 error:&error];
+		if (infoData == nil) { MY_LOG("%@ %@.", infoPath, error.localizedDescription); continue; }
+		NSDictionary *info = [NSJSONSerialization JSONObjectWithData:infoData options:0 error:&error];
+		if (info == nil) { MY_LOG("%@ %@.", infoPath, error.localizedDescription); continue; }
+		NSMutableArray<NSNumber *> *nums[filePrefixes.count];
+		for (NSInteger i = 0; i < filePrefixes.count; i ++) nums[i] = NSMutableArray.new;
+		for (NSString *fname in [fm contentsOfDirectoryAtPath:jobDir error:NULL]) {
+			NSArray<NSString *> *arr = [fname componentsSeparatedByString:@"_"];
+			if (arr.count < 2) continue;
+			NSInteger idx = [filePrefixes indexOfObject:arr[0]];
+			if (idx == NSNotFound) continue;
+			[nums[idx] addObject:@(arr[1].integerValue)];
+		}
+		NSInteger k = 0, nFinished = 0, idxes[filePrefixes.count];
+		for (NSInteger i = 0; i < filePrefixes.count; i ++) if (nums[i].count > 0) {
+			[nums[i] sortUsingSelector:@selector(compare:)];
+			idxes[k ++] = i;
+		}
+		if (k > 0) {
+			nFinished = nums[idxes[0]].count;
+			for (NSInteger i = 0; i < nFinished; i ++) {
+				NSNumber *num = nums[idxes[0]][i];
+				for (NSInteger j = 1; j < k; j ++)
+					if (nums[idxes[j]].count <= i || ![nums[idxes[j]][i] isEqualTo:num])
+						{ nFinished = i; break; }
+			}
+			NSNumber *num = info[@"n"];
+			NSInteger nTrials = num? num.integerValue : 1;
+			if (nTrials < 1) nTrials = 1;
+			if (nTrials <= nFinished)
+				{ [the_job_controller() finishJobID:ID]; continue; }
+			@try { for (NSInteger i = 0; i < k; i ++) {
+				NSInteger idx = idxes[i];
+				if (nums[idx].count > nFinished)
+				for (NSInteger j = nFinished; j < nums[idx].count; j ++) {
+					NSString *path = [jobDir stringByAppendingPathComponent:
+						[NSString stringWithFormat:@"%@_%@", filePrefixes[idx], nums[idx][j]]];
+					if (![fm removeItemAtPath:path error:&error]) @throw path;
+				}}
+				for (NSInteger i = 0; i < nFinished; i ++)
+				if (nums[idxes[0]][i].integerValue > i + 1) for (NSInteger j = 0; j < k; j ++) {
+					NSInteger idx = idxes[j];
+					NSString *pathOrg = [jobDir stringByAppendingPathComponent:
+						[NSString stringWithFormat:@"%@_%@", filePrefixes[idx], nums[idx][i]]];
+					NSString *pathNew = [jobDir stringByAppendingPathComponent:
+						[NSString stringWithFormat:@"%@_%ld", filePrefixes[idx], i + 1]];
+					if (![fm moveItemAtPath:pathOrg toPath:pathNew error:&error])
+						@throw [NSString stringWithFormat:@"mv %@ %@.", pathOrg, pathNew];
+				}
+			} @catch (NSString *path)
+				{ MY_LOG("%@ %@.", path, error.localizedDescription); continue; }
+		}
+		BatchJob *job = [BatchJob.alloc initWithInfo:info ID:ID];
+		if (job == nil) { MY_LOG("Couldn't make a batch job %@.", ID); continue; }
+		if (nFinished > 0) [job setNextTrialNumber:nFinished];
+		[the_job_controller() submitJob:job];
+		MY_LOG("Job %@ restarted.", ID);
+	}
+#endif
+}

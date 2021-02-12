@@ -17,6 +17,7 @@
 #import "noGUIInfo.h"
 #import "ProcContext.h"
 #import "BatchJob.h"
+#import "SaveState.h"
 #import "BlockingInfo.h"
 #define SERVER_PORT 8000U
 
@@ -36,7 +37,7 @@ NSUInteger JSONOptions = 0;
 uint32 BCA4Contract = INADDR_BROADCAST;
 NSInteger maxPopSize = 1000000, maxNDocuments = 128, maxRuntime = 48*3600,
 	documentTimeout = 20*60, maxJobsInQueue = 64, maxTrialsAtSameTime = 4,
-	jobRecExpirationHours = 24*7;
+	jobRecExpirationHours = 24*7, stateRecExpirationHours = 24*7;
 NSString *fileDirectory = nil, *dataDirectory = nil, *logFilePath = nil;
 NSDictionary *extToMime, *codeMeaning, *indexNames;
 NSArray *distributionNames;
@@ -169,6 +170,7 @@ static NSDictionary *ext_mime_map(void) {
 static NSDictionary *index_name_map(void) {
 	static NSString *names[] = {
 		@"susceptible", @"asymptomatic", @"symptomatic", @"recovered", @"died",
+		@"vaccinated",
 		@"quarantineAsymptomatic", @"quarantineSymptomatic",
 		@"tests", @"testAsSymptom", @"testAsContact", @"testAsSuspected",
 		@"testPositive", @"testNegative",
@@ -185,6 +187,7 @@ static NSDictionary *index_name_to_index(void) {
 	@"symptomatic":@(Symptomatic),
 	@"recovered":@(Recovered),
 	@"died":@(Died),
+	@"vaccinated":@(Vaccinated),
 	@"quarantineAsym":@(QuarantineAsym),
 	@"quarantineSymp":@(QuarantineSymp)};
 }
@@ -339,6 +342,56 @@ void catch_signal(int sig) {
 	MY_LOG("Quit.");
 	terminateApp(EXIT_NORMAL);
 }
+static void expiration_check(NSString *dirPath, NSInteger hours) {
+	@try {
+		NSFileManager *fm = NSFileManager.defaultManager;
+		NSDirectoryEnumerator *dirEnum = [fm enumeratorAtPath:dirPath];
+		NSDate *pastDate = [NSDate dateWithTimeIntervalSinceNow:hours * -3600.];
+		NSMutableArray<NSString *> *dirsTobeRemoved = NSMutableArray.new;
+		for (NSString *path in dirEnum) {
+			NSDictionary *attr = dirEnum.fileAttributes;
+			if (attr == nil) {
+				MY_LOG("Record %@ failed to get attributes", path);
+				continue;
+			}
+			if (![attr[NSFileType] isEqualTo:NSFileTypeDirectory]) continue;
+			NSDate *modDate = attr[NSFileModificationDate];
+			if (modDate == nil) MY_LOG(
+				"Record %@ failed to get the content modification date.", path)
+			else if ([pastDate compare:modDate] == NSOrderedDescending)
+				[dirsTobeRemoved addObject:path];
+			[dirEnum skipDescendents];
+		}
+		if (dirsTobeRemoved.count > 0) {
+			NSMutableString *ms = NSMutableString.new;
+			NSString *pnc = @"";
+			for (NSString *name in dirsTobeRemoved)
+				{ [ms appendFormat:@"%@%@", pnc, name]; pnc = @", "; }
+			MY_LOG("Records %@ are going to be removed.", ms);
+		}
+		NSError *error;
+		for (NSString *path in dirsTobeRemoved)
+			if (![fm removeItemAtPath:
+				[dirPath stringByAppendingPathComponent:path] error:&error])
+				MY_LOG("Record %@ couldn't be removed. %@",
+					path, error.localizedDescription);
+	} @catch (NSException *excp) {
+		MY_LOG("Record expiration check: %@", excp.reason);
+	}
+}
+static void schedule_record_expiration_check(void) {
+#ifdef DEBUG
+	CGFloat interval = 1.; BOOL repeats = NO;
+#else
+	CGFloat interval = 3600.; BOOL repeats = YES;
+#endif
+	[NSTimer scheduledTimerWithTimeInterval:interval repeats:repeats
+	block:^(NSTimer * _Nonnull timer) {
+		expiration_check(batch_job_dir(), jobRecExpirationHours);
+		expiration_check(save_state_dir(), stateRecExpirationHours);
+	}];
+}
+
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
 	BOOL contractMode = NO;
@@ -366,6 +419,8 @@ int main(int argc, const char * argv[]) {
 			if (i + 1 < argc) maxTrialsAtSameTime = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--jobExprHours") == 0) {
 			if (i + 1 < argc) jobRecExpirationHours = atoi(argv[++ i]);
+		} else if (strcmp(argv[i], "-E") == 0 || strcmp(argv[i], "--stateExprHours") == 0) {
+			if (i + 1 < argc) stateRecExpirationHours = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--contract") == 0) {
 			if (i + 1 < argc) BCA4Contract = inet_addr(argv[++ i]);
 		} else if (strcmp(argv[i], "--version") == 0) {
@@ -436,8 +491,9 @@ int main(int argc, const char * argv[]) {
 	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
 // for debugging, (lldb) process handle -s0 -p1 SIGTERM
 	schedule_clean_up_blocking_info(); // defined in BlockingInfo.m
-	schedule_job_expiration_check(); // defined in BatchJob.m
+	schedule_record_expiration_check();
 	MY_LOG("%s launched by %@.", version, NSProcessInfo.processInfo.userName);
+	check_batch_jobs_to_restart(); // defined in BatchJob.m
 //	[NSRunLoop.currentRunLoop run];
 	NSRunLoop *theRL = NSRunLoop.currentRunLoop;
 	while (shouldKeepRunning)

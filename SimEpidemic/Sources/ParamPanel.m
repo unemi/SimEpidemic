@@ -164,14 +164,16 @@ static NSNumberFormatter *distDgtFmt = nil;
 		contagDDgt, contagPDgt, infecDgt, infecDstDgt,
 		dstSTDgt, dstOBDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
-		tstSbjAsyDgt, tstSbjSymDgt];
+		tstSbjAsyDgt, tstSbjSymDgt,
+		vcnPRateDgt, vcn1stEffDgt, vcnMaxEffDgt, vcnEDelayDgt, vcnEPeriodDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, recovActSld, immueActSld,
 		contagDSld, contagPSld, infecSld, infecDstSld,
 		dstSTSld, dstOBSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
-		tstSbjAsySld, tstSbjSymSld];
+		tstSbjAsySld, tstSbjSymSld,
+		vcnPRateSld, vcn1stEffSld, vcnMaxEffSld, vcnEDelaySld, vcnEPeriodSld];
 	ParamPanel __weak *pp = self;
 	void (^proc)(void) = ^{ [pp checkUpdate]; };
 	dDigits = @[
@@ -184,7 +186,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		DDGT(gatDRMinDgt, gatDRMaxDgt, gatDRModeDgt),
 		DDGT(gatSTMinDgt, gatSTMaxDgt, gatSTModeDgt),
 		DDGT(mobFreqMinDgt, mobFreqMaxDgt, mobFreqModeDgt),
-		DDGT(gatFreqMinDgt, gatFreqMaxDgt, gatFreqModeDgt) ];
+		DDGT(gatFreqMinDgt, gatFreqMaxDgt, gatFreqModeDgt)];
 	iDigits = @[initPopDgt, worldSizeDgt, meshDgt];
 	iSteppers = @[initPopStp, worldSizeStp, meshStp];
 	rDigits = @[initInfcDgt, initRecvDgt, initQAsymDgt, initQSympDgt];

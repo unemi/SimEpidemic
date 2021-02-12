@@ -39,7 +39,6 @@
 - (NSData *)zippedData {
 	return [self zippedDataWithLevel:Z_BEST_COMPRESSION];
 }
-#ifndef NOGUI
 - (NSData *)unzippedData {
 	z_stream strm;
     strm.zalloc = Z_NULL;
@@ -68,5 +67,4 @@
 	free(outBuf);
 	return data;
 }
-#endif
 @end

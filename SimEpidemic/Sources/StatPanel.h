@@ -67,21 +67,19 @@ typedef struct {
 	CGFloat minReproRate, maxReproRate;
 }
 @property (readonly) NSMutableArray<MyCounter *> *IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
+@property StatData *statistics, *transit;
+@property TestResultCount testResultCnt;	// weekly total
 - (Document *)doc;
 - (void)reset:(PopulationHConf)popConf;
 - (void)cummulateHistgrm:(HistogramType)type days:(CGFloat)d;
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects;
 #ifdef NOGUI
-@property (readonly) StatData *statistics, *transit;
-@property (readonly) TestResultCount testResultCnt;	// weekly total
 - (NSInteger)skipSteps;
 - (NSInteger)skipDays;
 - (void)setDoc:(Document *)doc;
 - (void)discardMemory;
 #else
-@property StatData *statistics, *transit;
-@property TestResultCount testResultCnt;	// weekly total
 @property (readonly) NSMutableArray<StatPanel *> *statPanels;
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info;
 - (void)setLabelInfo:(NSArray<NSString *> *)info;
@@ -107,6 +105,7 @@ typedef enum {
 	MskSymptomatic = (1<<Symptomatic),
 	MskRecovered = (1<<Recovered),
 	MskDied = (1<<Died),
+	MskVaccinated = (1<<Vaccinated),
 	MskQrtnA = (1<<QuarantineAsym),
 	MskQrtnS = (1<<QuarantineSymp),
 	MskTestTotal = (1<<(TestTotal+NStateIndexes)),

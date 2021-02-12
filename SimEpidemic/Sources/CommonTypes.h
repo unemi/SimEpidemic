@@ -6,9 +6,11 @@
 //  Copyright © 2020 Tatsuo Unemi. All rights reserved.
 //
 #define VER_1_8
+#define VER_1_8_3
 
 typedef enum {
 	Susceptible, Asymptomatic, Symptomatic, Recovered, Died,
+	Vaccinated,	// added in ver.1.8.3
 	QuarantineAsym, QuarantineSymp,
 	NStateIndexes,
 	NHealthTypes = QuarantineAsym,
@@ -57,6 +59,7 @@ typedef struct {
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
+	CGFloat vcnPRate, vcn1stEff, vcnMaxEff, vcnEDelay, vcnEPeriod;	// vaccination
 	DistInfo mobDist; // mass and warp distance
 	DistInfo incub, fatal, recov, immun; // contagiousness, incubation, fatality, recovery, immunity
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
@@ -134,5 +137,8 @@ typedef struct AgentRec {
 	struct AgentRec *best;
 	CGFloat bestDist, gatDist;
 	CGFloat daysToCompleteRecov;
-	BOOL gotAtHospital;
+	BOOL gotAtHospital, vaccineTicket;
 } Agent;
+
+#define daysVaccinated daysInfected
+#define agentImmunity daysDiseased

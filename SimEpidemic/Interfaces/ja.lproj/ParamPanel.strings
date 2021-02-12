@@ -12,7 +12,7 @@
 "9NK-Ij-sAU.title" = "潜伏期間の日数";
 "AHT-ki-ztX.title" = "日";
 "AdB-cs-9q4.title" = "最小";
-"BYt-ZJ-NiV.label" = "検査";
+"BYt-ZJ-NiV.label" = "検査とワクチン";
 "CF3-8Q-9Bs.title" = "世界を初期化したときに有効となります。";
 "DEN-sA-mOs.title" = "最小:";
 "De7-Z6-8tT.title" = "最頻値:";
@@ -35,7 +35,7 @@
 "OPu-FU-IUH.title" = "頻度:";
 "Oyf-nO-GPf.title" = "距離:";
 "Pcl-6Q-nFq.title" = "最頻値:";
-"R99-1k-BG8.title" = "接触者追跡";
+"R99-1k-BG8.title" = "接触者追跡:";
 "RYb-Hj-kyT.title" = "発症から死亡までの日数";
 "RiG-bK-K7h.title" = "ピーク:";
 "Uot-Jo-WIx.title" = "最頻値:";
@@ -104,3 +104,11 @@
 "KJJ-wj-hSL.title" = "初期状態での隔離の割り合い";
 "Lfn-bP-MQt.title" = "無症状者:";
 "6EB-qD-hom.title" = "有症状者:";
+"jpX-vM-u69.title" = "ワクチン接種";
+"bne-4m-dhC.title" = "1日当たり実施率:";
+"46e-IK-av4.title" = "1回目接種の効果:";
+"EpL-j9-s8L.title" = "最大効果:";
+"alg-pP-nuG.title" = "効果の遅れ:";
+"RF4-ZL-eOm.title" = "有効期間:";
+"nBH-IA-0Vb.title" = "日";
+"67e-Rc-MOg.title" = "日";

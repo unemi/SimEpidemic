@@ -54,7 +54,6 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 	IBOutlet NSButton *startBtn, *stepBtn, *scnBtn, *prmBtn, *sttBtn, *datBtn,
 		*stopAtNDaysCBox, *showGatheringsCBox;
 	IBOutlet NSStepper *animeStepper;
-	IBOutlet LegendView *lvSuc, *lvAsy, *lvSym, *lvRec, *lvDea; 
 	NSArray<LegendView *> *lvViews;
 	IBOutlet NSView *savePanelAccView;
 	IBOutlet NSButton *savePopCBox, *saveGUICBox;
@@ -63,12 +62,13 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 	Scenario *scenarioPanel;
 	ParamPanel *paramPanel;
 	DataPanel *dataPanel;
+	NSInteger animeSteps;
 #else
 @interface Document : NSObject {
 #endif
 	RuntimeParams runtimeParams, initParams;
 	WorldParams worldParams, tmpWorldParams;
-	NSInteger animeSteps, stopAtNDays;
+	NSInteger stopAtNDays;
 	NSLock *popLock;
 	NSArray *scenario;
 	NSInteger scenarioIndex;
@@ -77,6 +77,8 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
 	TestEntry *testQueHead, *testQueTail;
 	Gathering *gatherings;
+	NSInteger *vaccineList, vcnListIndex;
+	CGFloat vcnSubjectsRem;
 }
 @property (readonly) Agent *agents, **Pop, *QList, *CList;
 @property (readonly) NSMutableDictionary<NSNumber *, NSValue *> *WarpList;

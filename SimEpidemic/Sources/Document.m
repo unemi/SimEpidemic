@@ -439,6 +439,7 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 		nPop = worldParams.initPop;
 		pop = realloc(pop, sizeof(void *) * nPop);
 		_agents = realloc(_agents, sizeof(Agent) * nPop);
+		vaccineList = realloc(vaccineList, sizeof(NSInteger) * nPop);
 	}
 	memset(_agents, 0, sizeof(Agent) * nPop);
 	if (testQueTail != nil) {
@@ -476,7 +477,19 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 		reset_agent(a, &runtimeParams, &worldParams);
 		a->ID = i;
 		a->distancing = (i < nDist);
+		a->vaccineTicket = NO;
+		vaccineList[i] = i;
 	}
+	for (NSInteger i = 0; i < nPop - 1; i ++) {
+		NSInteger j = random() % (nPop - i) + i;
+		if (i != j) {
+			NSInteger k = vaccineList[i];
+			vaccineList[i] = vaccineList[j];
+			vaccineList[j] = k;
+		}
+	}
+	vcnListIndex = 0;
+	vcnSubjectsRem = 0.;
 	PopulationHConf pconf = { 0,
 		worldParams.initPop * worldParams.infected / 100, 0,
 		worldParams.initPop * worldParams.recovered / 100, 0,
@@ -564,7 +577,6 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	_WarpList = NSMutableDictionary.new;
 	testees = NSMutableDictionary.new;
 	testeesLock = NSLock.new;
-	animeSteps = defaultAnimeSteps;
 	stopAtNDays = -365;
 	memcpy(&runtimeParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
 	memcpy(&initParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
@@ -577,6 +589,7 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	statInfo.doc = self;
 	[self resetPop];
 #else
+	animeSteps = defaultAnimeSteps;
 	self.undoManager = NSUndoManager.new;
 #endif
 	return self;
@@ -609,9 +622,17 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 - (NSString *)windowNibName { return @"Document"; }
 - (void)windowControllerDidLoadNib:(NSWindowController *)windowController {
 	static NSString *lvNames[] = {
-		@"Susceptible", @"Asymptomatic", @"Symptomatic", @"Recovered", @"Dead"
+		@"Susceptible", @"Asymptomatic", @"Symptomatic", @"Recovered", @"Dead",
+		@"Vaccinated"
 	};
-	lvViews = @[lvSuc, lvAsy, lvSym, lvRec, lvDea];
+	LegendView *lviews[NHealthTypes];
+	NSInteger k = 0;
+	for (NSView *subv in windowController.window.contentView.subviews)
+		if ([subv isKindOfClass:LegendView.class]) {
+			lviews[k ++] = (LegendView *)subv;
+			if (k >= NHealthTypes) break;
+	}
+	lvViews = [NSArray arrayWithObjects:lviews count:k];
 	for (NSInteger i = 0; i < lvViews.count; i ++) {
 		lvViews[i].color = stateColors[i];
 		lvViews[i].name = NSLocalizedString(lvNames[i], nil);
@@ -947,6 +968,19 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 	WorldParams *wp = &worldParams;
 	Agent **popMap = _Pop;
 	gatherings = manage_gatherings(gatherings, popMap, wp, rp);
+	if (rp->vcnPRate > 0) {
+		vcnSubjectsRem += wp->initPop * rp->vcnPRate / 1000. / wp->stepsPerDay;
+		NSInteger n = vcnSubjectsRem;
+		vcnSubjectsRem -= n;
+		for (NSInteger i = 0; i < wp->initPop && n > 0; i ++) {
+			Agent *a = _agents + vaccineList[vcnListIndex];
+			if (a->health == Susceptible || (a->health == Asymptomatic && !a->isOutOfField)) {
+				a->vaccineTicket = YES;
+				n --;
+			}
+			vcnListIndex = (vcnListIndex + 1) % wp->initPop;
+		}
+	}
 	[self waitAllOperations];
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
@@ -1049,6 +1083,10 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 // Step
 	INC_PHASE
 	unitJ = 8;
+	CGFloat vcnPRateOrg = runtimeParams.vcnPRate;
+	NSUInteger *stCnt = statInfo.statistics->cnt,
+		nSusc = stCnt[Susceptible] + stCnt[Asymptomatic] - stCnt[QuarantineAsym];
+	if (nSusc > 0) runtimeParams.vcnPRate *= (CGFloat)worldParams.initPop / nSusc;
 	NSMutableArray<NSValue *> *infectors[unitJ];
 	NSMutableArray<NSValue *> *movers[unitJ];
 	NSMutableArray<NSValue *> *warps[unitJ];
@@ -1092,6 +1130,7 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 		else block();
 	}
 	[self waitAllOperations];
+	runtimeParams.vcnPRate = vcnPRateOrg;
 	NSArray<NSArray <NSValue *> *> *histArray = [NSArray arrayWithObjects:hists count:unitJ];
 	__weak StatInfo *weakStatInfo = statInfo;
 	[self addOperation: ^{ for (NSInteger i = 0; i < unitJ; i ++)

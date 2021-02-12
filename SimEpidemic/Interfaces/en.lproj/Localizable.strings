@@ -26,6 +26,7 @@
 "testProcess" = "test process";
 "subjectAsymptomatic" = "subject asymptomatic";
 "subjectSymptomatic" = "subject symptomatic";
+"vaccinePerformRate" = "vaccine perform rate per day";
 
 "PreConditionWord" = "";
 "AnimeStepsFormat" = "Draw in each %ld steps.";
