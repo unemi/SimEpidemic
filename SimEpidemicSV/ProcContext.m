@@ -437,16 +437,19 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	type = @"application/json";
 	code = 200;
 }
-- (void)getInfo:(NSObject *)plist {
-	[self checkDocument];
+- (BOOL)setupLocalFileToSave:(NSString *)extension {
 	NSString *savePath = query[@"save"];
 	if (savePath != nil) {
-		NSString *extension = @"json";
 		moreHeader = [NSString stringWithFormat:
 			@"Content-Disposition: attachment; filename=\"%@\"\n",
 			[[savePath pathExtension] isEqualToString:extension]? savePath :
 			[savePath stringByAppendingPathExtension:extension]];
-	}
+		return YES;
+	} else return NO;
+}
+- (void)getInfo:(NSObject *)plist {
+	[self checkDocument];
+	[self setupLocalFileToSave:@"json"];
 	[self setJSONDataAsResponse:plist];
 }
 - (void)setWorldIDAsResponse {

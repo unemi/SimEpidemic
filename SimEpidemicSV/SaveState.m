@@ -28,7 +28,7 @@ static NSString *save_state_file_path(NSString *fname) {
 	if (![fm createDirectoryAtPath:stateDirPath withIntermediateDirectories:YES
 		attributes:nil error:&error]) @throw error;
 	NSFileWrapper *fw = [self fileWrapperOfType:@"" error:&error];
-	if (fw != nil) @throw error;
+	if (fw == nil) @throw error;
 	NSString *filePath = [stateDirPath stringByAppendingFormat:@"/%@.sEpi", fname];
 	if (![fw writeToURL:[NSURL fileURLWithPath:filePath] options:NSFileWrapperWritingAtomic
 		originalContentsURL:nil error:&error]) @throw error;
@@ -70,6 +70,16 @@ static NSString *save_state_file_path(NSString *fname) {
 		@throw error;
 }
 - (void)getState {
+	NSError *error;
+	NSString *filePath = save_state_file_path([self stateID]);
+	NSFileWrapper *fw = [NSFileWrapper.alloc initWithURL:
+		[NSURL fileURLWithPath:filePath] options:0 error:&error];
+	if (fw == nil) @throw error;
+	NSData *data = [fw serializedRepresentation];
+	if (data == nil) @throw @"500 Error in state serialization.";
+	[self setupLocalFileToSave:@"sEpi"];
+	content = data;
+	code = 200;
 }
 - (void)putState {
 }

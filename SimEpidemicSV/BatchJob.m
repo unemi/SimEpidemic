@@ -8,6 +8,7 @@
 
 #import "BatchJob.h"
 #import "noGUI.h"
+#import "SaveState.h"
 #import "../SimEpidemic/Sources/Document.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
 #import <os/log.h>
@@ -185,6 +186,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	NSNumber *num;
 	_stopAt = ((num = info[@"stopAt"]) == nil)? 0 : num.integerValue;
 	_nIteration = ((num = info[@"n"]) == nil)? 1 : num.integerValue;
+	loadState = info[@"loadState"];
 	if (_nIteration <= 1) _nIteration = 1;
 	NSArray<NSString *> *output = info[@"out"];
 	NSInteger n = output.count, nn = 0, nd = 0, nD = 0;
@@ -197,7 +199,8 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 			NSString *newKey = key.stringByRemovingFirstWord;
 			if (indexNames[newKey] != nil || [key isEqualToString:@"testPositiveRate"])
 				ad[nd ++] = newKey;
-		} if ([distributionNames containsObject:key]) aD[nD ++] = key;
+		} else if ([distributionNames containsObject:key]) aD[nD ++] = key;
+		else if ([key isEqualToString:@"saveState"]) shouldSaveState = YES;
 	}
 	output_n = [NSArray arrayWithObjects:an count:nn];
 	output_d = [NSArray arrayWithObjects:ad count:nd];
@@ -262,6 +265,9 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 		[self makeDataFileWith:number type:@"distribution" names:output_D
 			makeObj:^(StatInfo *stInfo, NSArray *names)
 				{ return [stInfo objectOfHistgramTableWithNames:names]; }];
+		if (shouldSaveState)
+			[runningTrials[number] saveStateTo:
+				[NSString stringWithFormat:@"%@_%@", _ID, number]];
 	} @catch (NSError *error) {
 		MY_LOG("%@", error.localizedDescription);
 	}
@@ -281,27 +287,45 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 - (void)runNextTrial {
 	Document *doc = nil;
 	[lock lock];
-	if (availableWorlds.count <= 0) {
-		doc = make_new_world(@"Job", nil);
-		set_params_from_dict(doc.runtimeParamsP, doc.worldParamsP, _parameters);
-		set_params_from_dict(doc.initParamsP, doc.tmpWorldParamsP, _parameters);
-		[doc setScenarioWithPList:_scenario];
-	} else {
-		doc = [availableWorlds lastObject];
-		[availableWorlds removeLastObject];
+	@try {
+		if (loadState == nil) {
+			if (availableWorlds.count <= 0) {
+				doc = make_new_world(@"Job", nil);
+				set_params_from_dict(doc.runtimeParamsP, doc.worldParamsP, _parameters);
+				set_params_from_dict(doc.initParamsP, doc.tmpWorldParamsP, _parameters);
+				[doc setScenarioWithPList:_scenario];
+			} else {
+				doc = [availableWorlds lastObject];
+				[availableWorlds removeLastObject];
+			}
+			[doc resetPop];
+		} else {
+			if (availableWorlds.count <= 0) doc = make_new_world(@"Job", nil);
+			else {
+				doc = [availableWorlds lastObject];
+				[availableWorlds removeLastObject];
+			}
+			[doc loadStateFrom:loadState];
+			if (_parameters != nil) set_params_from_dict(doc.runtimeParamsP, NULL, _parameters);
+		}
+		NSNumber *trialNumb = @(++ nextTrialNumber);
+		runningTrials[trialNumb] = doc;
+		if (nextTrialNumber >= _nIteration)
+			[the_job_controller() removeJobFromQueue:self shouldLock:NO];
+		doc.stopCallBack = ^(LoopMode mode){
+			[self trialDidFinish:trialNumb mode:mode];
+		};
+		[doc start:_stopAt maxSPS:0 priority:-.2];
+		MY_LOG("Trial %@/%ld of job %@ started on world %@.",
+			trialNumb, _nIteration, _ID, doc.ID);
+	} @catch (NSError *error) {
+		MY_LOG("Trial %ld/%ld of job %@ could not start. %@",
+			nextTrialNumber + 1, _nIteration, _ID, error.localizedDescription);
+	} @catch (NSException *excp) {
+		MY_LOG("Trial %ld/%ld of job %@ could not start. %@",
+			nextTrialNumber + 1, _nIteration, _ID, excp.reason);
 	}
-	[doc resetPop];
-	NSNumber *trialNumb = @(++ nextTrialNumber);
-	runningTrials[trialNumb] = doc;
-	if (nextTrialNumber >= _nIteration)
-		[the_job_controller() removeJobFromQueue:self shouldLock:NO];
-	doc.stopCallBack = ^(LoopMode mode){
-		[self trialDidFinish:trialNumb mode:mode];
-	};
-	[doc start:_stopAt maxSPS:0 priority:-.2];
 	[lock unlock];
-	MY_LOG("Trial %@/%ld of job %@ started on world %@.",
-		trialNumb, _nIteration, _ID, doc.ID);
 }
 - (void)setNextTrialNumber:(NSInteger)number {
 	nextTrialNumber = number;

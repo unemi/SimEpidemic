@@ -29,6 +29,7 @@ static NSString *keyFormatVersion = @"formatVersion", *keyIncubation = @"incubat
 	*keyPRateInfo = @"pRateInfo", *keyMaxValues = @"maxValues", *keyStepsAndSkips = @"stepsAndSkips",
 	*keyScenarioPhases = @"scenarioPhases",
 	*keyStatCnt = @"cnt", *keyStatPRate = @"pRate", *keyStatRRate = @"rRate",
+	*keyInfecInfo = @"infecInfo",
 	*keyStatType = @"statType", *keyWantDblDay = @"wantDoublingDay",
 	*keyTimeEvoBits = @"timeEvoBits";
 
@@ -181,6 +182,7 @@ static NSDictionary *statData_plist(StatData *stat) {
 	}
 	NSString *keys[] = {keyStatCumm, keyTransDaily, keyTransCumm,
 		keyTestCumm, keyTestResults, keyPRateInfo, keyMaxValues, keyStepsAndSkips,
+		keyInfecInfo,
 #ifndef NOGUI 
 		keyScenarioPhases,
 #endif
@@ -191,7 +193,10 @@ static NSDictionary *statData_plist(StatData *stat) {
 		[NSArray arrayWithObjects:trNums count:16],
 		@[@(maxStepPRate), @(maxDailyPRate), @(minReproRate), @(maxReproRate)],
 		@[counter_array(maxCounts), counter_array(maxTransit)],
-		@[@(steps), @(skip), @(days), @(skipDays)]
+		@[@(steps), @(skip), @(days), @(skipDays)],
+		@{@"len":@(infectedSeq.len), @"n":@(infectedSeq.n), @"tail":@(infectedSeq.tail),
+			@"rec":[NSData dataWithBytes:infectedSeq.rec length:sizeof(CGFloat) * infectedSeq.len]
+		}
 #ifndef NOGUI
 		, scenarioPhases
 #endif
@@ -240,6 +245,16 @@ static void statData_from_plist(NSDictionary *plist, StatData *stat) {
 		skip = arr[1].integerValue;
 		days = arr[2].integerValue;
 		skipDays = arr[3].integerValue;
+	}
+	if ((dct = plist[keyInfecInfo]) != nil) {
+		infectedSeq.len = [dct[@"len"] integerValue];
+		infectedSeq.n = [dct[@"n"] integerValue];
+		infectedSeq.tail = [dct[@"tail"] integerValue];
+		NSInteger recLen = sizeof(CGFloat) * infectedSeq.len;
+		infectedSeq.rec = realloc(infectedSeq.rec, recLen);
+		NSData *data = dct[@"rec"];
+		if (data != nil && data.length == recLen)
+			memcpy(infectedSeq.rec, data.bytes, recLen);
 	}
 #ifndef NOGUI
 	if ((arr = plist[keyScenarioPhases]) != nil)
@@ -752,7 +767,9 @@ static NSDictionary *plist_from_data(NSData *data) {
 #endif
 	NSInteger popSize = worldParams.initPop;
 	[statProcs addObject:^(StatInfo *st) { st.popsize = popSize; }];
-#ifndef NOGUI
+#ifdef NOGUI
+	for (void (^block)(StatInfo *) in statProcs) block(statInfo);
+#else
 	void (^panelBlock)(Document *) = ((fw = dict[fnUIInfo]) == nil)? nil : ^(Document *doc){
 		[doc setupPanelsWithInfo:plist_from_data(fw.regularFileContents)];
 	};

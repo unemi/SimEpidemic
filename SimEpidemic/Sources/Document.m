@@ -34,13 +34,17 @@ t *n(void) {\
 	t *a = f; f = f->next; a->next = NULL; return a;\
 }
 DYNAMIC_STRUCT(TestEntry, freeTestEntries, new_testEntry)
-DYNAMIC_STRUCT(ContactInfo, freeCInfo, new_cinfo)
+DYNAMIC_STRUCT(ContactInfo, freeCInfo, new_cinfo_0)
 DYNAMIC_STRUCT(Gathering, freeGatherings, new_gathering)
 static NSLock *gatheringLock = nil, *cInfoLock = nil;
-void add_new_cinfo(Agent *a, Agent *b, NSInteger tm) {
+ContactInfo *new_cinfo(void) {
 	[cInfoLock lock];
-	ContactInfo *c = new_cinfo();
+	ContactInfo *c = new_cinfo_0();
 	[cInfoLock unlock];
+	return c;
+}
+void add_new_cinfo(Agent *a, Agent *b, NSInteger tm) {
+	ContactInfo *c = new_cinfo();
 	c->agent = b; c->timeStamp = tm;
 	c->prev = NULL;
 	if (a->contactInfoHead == NULL) {

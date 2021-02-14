@@ -52,6 +52,7 @@ extern NSData *JSON_pop2(Document *doc);
 - (void)notImplementedYet;
 - (int)makeResponse;
 - (void)setJSONDataAsResponse:(NSObject *)object;
+- (BOOL)setupLocalFileToSave:(NSString *)extension;
 - (void)checkDocument;
 - (void)connectionWillClose;
 @end

@@ -7,10 +7,16 @@
 //
 
 #import <AppKit/AppKit.h>
+#import "../SimEpidemic/Sources/Document.h"
 #import "ProcContext.h"
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *save_state_dir(void);
+
+@interface Document (SaveStateExpension)
+- (void)saveStateTo:(NSString *)fname;
+- (void)loadStateFrom:(NSString *)fname;
+@end
 
 @interface ProcContext (SaveStateExtension)
 - (void)saveState;
