@@ -520,8 +520,6 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 @end
 
 void check_batch_jobs_to_restart(void) {
-#define RESTART_BATCH_JOB
-#ifdef RESTART_BATCH_JOB
 	NSFileManager *fm = NSFileManager.defaultManager;
 	BOOL isDirectory;
 	if (![fm fileExistsAtPath:batch_job_dir() isDirectory:&isDirectory]) return;
@@ -598,5 +596,4 @@ void check_batch_jobs_to_restart(void) {
 		[the_job_controller() submitJob:job];
 		MY_LOG("Job %@ restarted.", ID);
 	}
-#endif
 }

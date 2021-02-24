@@ -59,7 +59,14 @@ static void set_params(ComSetParams *c) {
 	NSDictionary *plist = (NSDictionary *)object_from_JSON(c);
 	if (plist == nil) return;
 	[document popLock];
-	set_params_from_dict(document.runtimeParamsP, document.tmpWorldParamsP, plist);
+	RuntimeParams *rp = document.runtimeParamsP;
+	VaccinePriority orgVcnPri = rp->vcnPri;
+	set_params_from_dict(rp, document.tmpWorldParamsP, plist);
+	VaccinePriority newVcnPri = rp->vcnPri;
+	if (newVcnPri != orgVcnPri) {
+		rp->vcnPri = orgVcnPri;
+		[document setVaccinePriority:newVcnPri toInit:NO];
+	}
 	[document popUnlock];
 	respond_ok();
 }

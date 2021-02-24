@@ -18,7 +18,7 @@ enum { ColBackground = NHealthTypes,
 	ColHospital, ColCemetery, ColText, ColGathering };
 typedef enum {
 	ParamTypeNone, ParamTypeFloat, ParamTypeDist,
-	ParamTypeInteger, ParamTypeRate
+	ParamTypeInteger, ParamTypeRate, ParamTypeEnum
 } ParamType;
 typedef struct {
 	ParamType type;
@@ -27,6 +27,7 @@ typedef struct {
 		struct { CGFloat defaultValue, minValue, maxValue; } f;
 		struct { CGFloat defMin, defMode, defMax; } d;
 		struct { NSInteger defaultValue, minValue, maxValue; } i;
+		struct { sint32 defaultValue, maxValue; } e;	// enumeration
 	} v;
 } ParamInfo;
 
@@ -41,10 +42,13 @@ extern NSDictionary<NSString *, NSString *> *paramKeyFromName;
 extern NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
 extern NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp);
 extern void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *d);
-extern NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg);
+extern NSMutableDictionary *param_diff_dict(
+	RuntimeParams *rpNew, RuntimeParams *rpOrg, WorldParams *wpNew, WorldParams *wpOrg);
 #ifdef NOGUI
 extern void applicationSetups(void);
+#define ERROR_MSG(m) MY_LOG("%@",m)
 #else
+#define ERROR_MSG(m) error_msg(m, nil, NO)
 extern void error_msg(NSObject *obj, NSWindow *window, BOOL critical);
 extern NSObject *get_propertyList_from_url(NSURL *url, Class class, NSWindow *window);
 extern void load_property_data(NSArray<NSString *> *fileTypes, NSWindow *window,

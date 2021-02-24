@@ -171,7 +171,7 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
 	{ ParamTypeFloat, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
 	{ ParamTypeFloat, @"vaccinePerformRate", {.f = { 10., 0., 100.}}},
-	{ ParamTypeFloat, @"vaccineFistDoseEfficacy", {.f = { 30., 0., 100.}}},
+	{ ParamTypeFloat, @"vaccineFirstDoseEfficacy", {.f = { 30., 0., 100.}}},
 	{ ParamTypeFloat, @"vaccineMaxEfficacy", {.f = { 95., 0., 100.}}},
 	{ ParamTypeFloat, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
 	{ ParamTypeFloat, @"vaccineEffectPeriod", {.f = { 200., 0., 500.}}},
@@ -198,6 +198,8 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"quarantineAsymptomatic", {.f = { 20., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineSymptomatic", {.f = { 50., 0., 100.}}},
 
+	{ ParamTypeEnum, @"vaccinePriority", {.e = {0, 2}}},
+
 	{ ParamTypeNone, nil }
 };
 NSInteger defaultAnimeSteps = 1;
@@ -214,6 +216,7 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
 	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
 	CGFloat *tp = (wp != NULL)? &wp->PARAM_R1 : NULL;
+	sint32 *ep = (wp != NULL)? (sint32 *)&rp->PARAM_E1 : NULL;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat:
 			if (fp != NULL) md[p->key] = @(*(fp ++)); break;
@@ -222,7 +225,8 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 			dp ++;
 		} break;
 		case ParamTypeInteger: if (ip != NULL) md[p->key] = @(*(ip ++)); break;
-		case ParamTypeRate: if (tp != NULL) md[p->key] = @(*(tp ++));
+		case ParamTypeRate: if (tp != NULL) md[p->key] = @(*(tp ++)); break;
+		case ParamTypeEnum: if (ep != NULL) md[p->key] = @(*(ep ++));
 		default: break;
 	}
 	return md;
@@ -232,6 +236,7 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
 	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
 	CGFloat *tp = (wp != NULL)? &wp->PARAM_R1 : NULL;
+	sint32 *ep = (wp != NULL)? (sint32 *)&rp->PARAM_E1 : NULL;
 	NSInteger initInfected = -1;
 	for (NSString *key in dict.keyEnumerator) {
 		NSNumber *idxNum = paramIndexFromKey[key];
@@ -260,15 +265,24 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 			}
 		}} else if (index < IDX_R) {
 			if (ip != NULL) ip[index - IDX_I] = [dict[key] integerValue];
-		} else if (tp != NULL) tp[index - IDX_R] = [dict[key] doubleValue];
+		} else if (index < IDX_E) {
+			if (tp != NULL) tp[index - IDX_R] = [dict[key] doubleValue];
+		} else if (ep != NULL) ep[index - IDX_E] = [dict[key] intValue];
 	}
 	// for upper compatibility.
 	if (initInfected >= 0) wp->infected = initInfected * 100. / wp->initPop;
 }
-NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg) {
+NSMutableDictionary *param_diff_dict(
+	RuntimeParams *rpNew, RuntimeParams *rpOrg, WorldParams *wpNew, WorldParams *wpOrg) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	CGFloat *fpNew = &rpNew->PARAM_F1, *fpOrg = &rpOrg->PARAM_F1;
 	DistInfo *dpNew = &rpNew->PARAM_D1, *dpOrg = &rpOrg->PARAM_D1;
+	NSInteger *ipNew = (wpNew != NULL)? &wpNew->PARAM_I1 : NULL,
+		*ipOrg = (wpOrg != NULL)? &wpOrg->PARAM_I1 : NULL;
+	CGFloat *tpNew = (wpNew != NULL)? &wpNew->PARAM_R1 : NULL,
+		*tpOrg = (wpOrg != NULL)? &wpOrg->PARAM_R1 : NULL;
+	sint32 *epNew = (rpNew != NULL)? (sint32 *)&rpNew->PARAM_E1 : NULL,
+		*epOrg = (rpOrg != NULL)? (sint32 *)&rpOrg->PARAM_E1 : NULL;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat: if (*fpNew != *fpOrg) md[p->key] = @(*fpNew);
 			fpNew ++; fpOrg ++; break;
@@ -276,6 +290,18 @@ NSMutableDictionary *param_diff_dict(RuntimeParams *rpNew, RuntimeParams *rpOrg)
 			dpNew->max != dpOrg->max || dpNew->mode != dpOrg->mode)
 			md[p->key] = @[@(dpNew->min), @(dpNew->max), @(dpNew->mode)];
 			dpNew ++; dpOrg ++; break;
+		case ParamTypeInteger: if (wpNew != NULL && wpOrg != NULL) {
+			if (*ipNew != *ipOrg) md[p->key] = @(*ipNew);
+			ipNew ++; ipOrg ++;
+		} break;
+		case ParamTypeRate: if (wpNew != NULL && wpOrg != NULL) {
+		   if (*tpNew != *tpOrg) md[p->key] = @(*tpNew);
+		   tpNew ++; tpOrg ++;
+		} break;
+		case ParamTypeEnum: if (wpNew != NULL && wpOrg != NULL) {
+			if (*epNew != *epOrg) md[p->key] = @(*epNew);
+			epNew ++; epOrg ++;
+		} break;
 		default: break;
 	}
 	return md;
@@ -333,7 +359,7 @@ static NSInteger
 	}
 	isARM = strcmp(archName, "x86_64") != 0;
 	nCores = NSProcessInfo.processInfo.processorCount;
-	NSInteger nF = 0, nD = 0, nI = 0, nR = 0;
+	NSInteger nF = 0, nD = 0, nI = 0, nR = 0, nE = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat:
 			(&defaultRuntimeParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
@@ -342,9 +368,11 @@ static NSInteger
 		case ParamTypeInteger: (&defaultWorldParams.PARAM_I1)[nI ++] = p->v.i.defaultValue;
 			break;
 		case ParamTypeRate: (&defaultWorldParams.PARAM_R1)[nR ++] = p->v.f.defaultValue;
+			break;
+		case ParamTypeEnum: (&defaultRuntimeParams.PARAM_E1)[nE ++] = p->v.e.defaultValue;
 		default: break;
 	}
-	NSInteger nn = nF + nD + nI + nR;
+	NSInteger nn = nF + nD + nI + nR + nE;
 	NSString *keys[nn], *names[nF];
 	NSNumber *indexes[nn];
 	for (NSInteger i = 0; i < nn; i ++) {
@@ -357,7 +385,8 @@ static NSInteger
 			break;
 			case ParamTypeDist: indexes[i] = @(i - nF + IDX_D); break;
 			case ParamTypeInteger: indexes[i] = @(i - nF - nD + IDX_I); break;
-			case ParamTypeRate: indexes[i] = @(i - nF - nD - nI + IDX_R);
+			case ParamTypeRate: indexes[i] = @(i - nF - nD - nI + IDX_R); break;
+			case ParamTypeEnum: indexes[i] = @(i - nF - nD - nI - nR + IDX_E);
 			default: break;
 		}
 	}
@@ -407,7 +436,7 @@ static NSInteger
 	if ((num = [ud objectForKey:keyAnimeSteps])) defaultAnimeSteps = num.integerValue;
 	for (NSInteger i = 0; i < N_COLORS; i ++)
 		if ((num = [ud objectForKey:colKeys[i]])) stateRGB[i] = num.integerValue;
-	NSInteger kF = 0, kD = 0, kI = 0, kR = 0;
+	NSInteger kF = 0, kD = 0, kI = 0, kR = 0, eR = 0;
 	for (ParamInfo *p = paramInfo; p->type != ParamTypeNone; p ++)
 	if ((obj = [ud objectForKey:p->key])) switch (p->type) {
 		case ParamTypeFloat: {
@@ -426,6 +455,9 @@ static NSInteger
 		break;
 		case ParamTypeRate: if ([obj isKindOfClass:NSNumber.class])
 			(&userDefaultWorldParams.PARAM_R1)[kR ++] = ((NSNumber *)obj).doubleValue;
+		break;
+		case ParamTypeEnum: if ([obj isKindOfClass:NSNumber.class])
+			(&userDefaultRuntimeParams.PARAM_E1)[eR ++] = ((NSNumber *)obj).intValue;
 		default: break;
 	}
 	if ((num = [ud objectForKey:keyWarpOpacity])) warpOpacity = num.doubleValue;

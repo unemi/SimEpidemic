@@ -68,6 +68,7 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 #endif
 	RuntimeParams runtimeParams, initParams;
 	WorldParams worldParams, tmpWorldParams;
+	LoopMode loopMode;
 	NSInteger stopAtNDays;
 	NSLock *popLock;
 	NSArray *scenario;
@@ -101,6 +102,8 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 - (void)waitAllOperations;
 - (NSArray *)scenario;
 - (void)allocateMemory;
+- (void)setVaccinePriority:(VaccinePriority)newValue toInit:(BOOL)isInit;
+- (void)resetVaccineList;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
 #ifdef NOGUI
 @property (readonly) NSString *ID;

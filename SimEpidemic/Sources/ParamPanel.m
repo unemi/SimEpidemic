@@ -123,6 +123,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	stepsPerDayStp.integerValue = round(log2(wp->stepsPerDay));
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 	[dDigitW adjustDigitsToCurrentValue];
+	[vcnPriPopUp selectItemAtIndex:targetParams->vcnPri];
 }
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
 	if (targetParams == doc.runtimeParamsP) for (NSString *key in paramNames) {
@@ -249,14 +250,32 @@ static NSNumberFormatter *distDgtFmt = nil;
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 	[self checkUpdate];
 }
+- (IBAction)chooseVaccinePriority:(id)sender {
+	VaccinePriority orgValue = targetParams->vcnPri,
+		newValue = (VaccinePriority)vcnPriPopUp.indexOfSelectedItem;
+	if (orgValue == newValue) return;
+	NSTabView *tabV = tabView;
+	[undoManager registerUndoWithTarget:vcnPriPopUp handler:^(NSPopUpButton *target) {
+		reveal_me_in_tabview(target, tabV);
+		[target selectItemAtIndex:orgValue];
+		[target sendAction:target.action to:target.target];
+	}];
+	[doc setVaccinePriority:newValue toInit:targetParams == doc.initParamsP];
+	[self checkUpdate];
+}
 - (void)setParamsOfRuntime:(const RuntimeParams *)rp world:(const WorldParams *)wp {
 	RuntimeParams rtPr = *targetParams;
 	WorldParams wlPr = *(doc.tmpWorldParamsP);
 	[undoManager registerUndoWithTarget:self handler:^(ParamPanel *panel) {
 		[panel setParamsOfRuntime:&rtPr world:&wlPr];
 	}];
+	VaccinePriority orgVcnPri = targetParams->vcnPri;
 	*targetParams = *rp;
 	*(doc.tmpWorldParamsP) = *wp;
+	if (rp->vcnPri != orgVcnPri) {
+		targetParams->vcnPri = orgVcnPri;
+		[doc setVaccinePriority:rp->vcnPri toInit:targetParams == doc.initParamsP];
+	}
 	[self adjustControls];
 	[self checkUpdate];
 }
@@ -324,6 +343,9 @@ static NSNumberFormatter *distDgtFmt = nil;
 }
 - (IBAction)copyAsJSON:(id)sender {
 	copy_plist_as_JSON_text(
+		(NSEvent.modifierFlags & NSEventModifierFlagShift)?
+		param_diff_dict(targetParams, &userDefaultRuntimeParams,
+			doc.tmpWorldParamsP, &userDefaultWorldParams) :
 		param_dict(targetParams, doc.tmpWorldParamsP),
 		self.window);
 }

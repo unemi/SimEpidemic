@@ -34,14 +34,21 @@ static NSString *save_state_file_path(NSString *fname) {
 		originalContentsURL:nil error:&error]) @throw error;
 }
 - (void)loadStateFrom:(NSString *)fname {
-	NSError *error;
+	static NSLock *fwLock = nil;
+	if (fwLock == nil) fwLock = NSLock.new;
+	NSError *error = nil;
 	NSString *filePath = save_state_file_path(fname);
-	NSFileWrapper *fw = [NSFileWrapper.alloc initWithURL:
-		[NSURL fileURLWithPath:filePath] options:0 error:&error];
-	if (fw == nil) @throw error;
-	if (![self readFromFileWrapper:fw ofType:@"" error:&error]) @throw error;
-	if (![NSFileManager.defaultManager setAttributes:@{NSFileModificationDate:NSDate.date}
-		ofItemAtPath:filePath error:&error]) @throw error;
+	[fwLock lock];
+	@try {
+		NSFileWrapper *fw = [NSFileWrapper.alloc initWithURL:
+			[NSURL fileURLWithPath:filePath] options:0 error:&error];
+		if (fw == nil) @throw error;
+		if (![self readFromFileWrapper:fw ofType:@"" error:&error]) @throw error;
+		if (![NSFileManager.defaultManager setAttributes:@{NSFileModificationDate:NSDate.date}
+			ofItemAtPath:filePath error:&error]) @throw error;
+	} @catch (id _) { }
+	[fwLock unlock];
+	if (error != nil) @throw error;
 }
 @end
 

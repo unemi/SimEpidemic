@@ -149,7 +149,6 @@ NSInteger nQueues = 10;
 	unsigned long mtime[N_MTIME];
 	NSInteger mCount, mCount2;
 #endif
-	LoopMode loopMode;
 	NSInteger nPop, nMesh;
 	Agent **pop;
 	NSRange *pRange;
@@ -462,6 +461,57 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 		(d_random() * .248 + 1.001) * worldSize,
 		(d_random() * .458 + 0.501) * worldSize};
 }
+- (void)sortVaccineList:(int)order {
+	Agent *amem = _agents;
+	qsort_b(vaccineList + vcnListIndex, nPop - vcnListIndex, sizeof(NSInteger),
+		^int(const void *p1, const void *p2) {
+			Agent *a1 = amem + *((NSInteger *)p1), *a2 = amem + *((NSInteger *)p2);
+			return (a1->activeness > a2->activeness)? -order :
+				(a1->activeness < a2->activeness)? order : 0;
+	});
+}
+- (void)reconfigureVaccineList {
+	switch (runtimeParams.vcnPri) {
+		case VcnPrRandom:
+		for (NSInteger i = vcnListIndex; i < nPop - 1; i ++) {
+			NSInteger j = random() % (nPop - i) + i;
+			if (i != j) {
+				NSInteger k = vaccineList[i];
+				vaccineList[i] = vaccineList[j];
+				vaccineList[j] = k;
+			}
+		} break;
+		case VcnPrActive: [self sortVaccineList:1]; break;
+		case VcnPrInactive: [self sortVaccineList:-1]; break;
+		default: break;
+	}
+#ifdef DEBUG
+	NSLog(@"reconfigureVaccineList index = %ld", vcnListIndex);
+	for (NSInteger i = 0; i < 5; i ++)
+		printf("%ld %ld %.5f\n", i + vcnListIndex,
+			vaccineList[i + vcnListIndex],
+			_agents[vaccineList[i + vcnListIndex]].activeness);
+#endif
+}
+- (void)setVaccinePriority:(VaccinePriority)newValue toInit:(BOOL)isInit {
+	RuntimeParams *rp = isInit? &initParams : &runtimeParams;
+	if (rp->vcnPri == newValue) return;
+	rp->vcnPri = newValue;
+	if (isInit) {
+		if (runtimeParams.step == 0) {
+			runtimeParams.vcnPri = newValue;
+			[self reconfigureVaccineList];
+	}} else [self reconfigureVaccineList];
+}
+- (void)resetVaccineList {
+	for (NSInteger i = 0; i < nPop; i ++) {
+		vaccineList[i] = i;
+		_agents[i].vaccineTicket = NO;
+	}
+	vcnListIndex = 0;
+	vcnSubjectsRem = 0.;
+	[self reconfigureVaccineList];
+}
 - (void)resetPop {
 	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
 		memcpy(&worldParams, &tmpWorldParams, sizeof(WorldParams));
@@ -481,19 +531,8 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 		reset_agent(a, &runtimeParams, &worldParams);
 		a->ID = i;
 		a->distancing = (i < nDist);
-		a->vaccineTicket = NO;
-		vaccineList[i] = i;
 	}
-	for (NSInteger i = 0; i < nPop - 1; i ++) {
-		NSInteger j = random() % (nPop - i) + i;
-		if (i != j) {
-			NSInteger k = vaccineList[i];
-			vaccineList[i] = vaccineList[j];
-			vaccineList[j] = k;
-		}
-	}
-	vcnListIndex = 0;
-	vcnSubjectsRem = 0.;
+	[self resetVaccineList];
 	PopulationHConf pconf = { 0,
 		worldParams.initPop * worldParams.infected / 100, 0,
 		worldParams.initPop * worldParams.recovered / 100, 0,
@@ -761,9 +800,6 @@ static NSObject *element_from_property(NSObject *prop) {
 		}
 		newScen = [NSArray arrayWithObjects:items count:plist.count];
 	}
-#ifndef NOGUI
-	NSArray *orgScen = scenario;
-#endif
 	scenario = newScen;
 	scenarioIndex = 0;
 	if (statInfo != nil) {
@@ -772,10 +808,6 @@ static NSObject *element_from_property(NSObject *prop) {
 #endif
 		if (runtimeParams.step == 0) [self execScenario];
 	}
-#ifndef NOGUI
-	if (orgScen == nil)
-#endif
-		memcpy(&initParams, &runtimeParams, sizeof(RuntimeParams));
 }
 #ifndef NOGUI
 void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {

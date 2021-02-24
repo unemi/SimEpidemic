@@ -871,7 +871,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 @implementation Document (ScenarioExtension)
 - (void)setScenario:(NSArray *)newScen index:(NSInteger)index {
 	if (index == 0) { self.scenario = newScen; return; }
-	scenario = newScen;
+	self.scenario = newScen;
 	scenarioIndex = index;
 	if (index > 0 && index <= newScen.count)
 		predicateToStop = predicate_in_item(newScen[index - 1], NULL);

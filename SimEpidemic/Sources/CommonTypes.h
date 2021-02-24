@@ -43,6 +43,11 @@ typedef enum {
 	LoopEndByCondition, LoopEndAsDaysPassed, LoopEndByTimeLimit
 } LoopMode;
 
+typedef enum {
+	VcnPrRandom, VcnPrActive, VcnPrInactive,
+	VcnPrNumber
+} VaccinePriority;
+
 typedef struct {
 	CGFloat min, max, mode;
 } DistInfo;
@@ -65,6 +70,7 @@ typedef struct {
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
 	DistInfo mobFreq; // Participation frequency in long travel
 	DistInfo gatFreq; // Participation frequency in gathering
+	VaccinePriority vcnPri;	// vaccination priority
 	NSInteger step;
 } RuntimeParams;
 typedef struct {
@@ -77,9 +83,11 @@ typedef struct {
 #define PARAM_D1 mobDist
 #define PARAM_I1 initPop
 #define PARAM_R1 infected
+#define PARAM_E1 vcnPri
 #define IDX_D 1000
 #define IDX_I 2000
 #define IDX_R 3000
+#define IDX_E 4000
 
 typedef struct {
 	NSInteger susc, asym, symp, recv, died;

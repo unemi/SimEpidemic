@@ -377,7 +377,7 @@ static void setup_with_saved_data(Gathering *gat, const GatheringSave *sv, Agent
 NSString *fnParamsPList = @"initParams.plist";
 static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*fnTestees = @"testees.gz", *fnWarps = @"warps.gz", *fnGatherings = @"gatherings.gz",
-	*fnVaccineList = @"vaccone.gz",
+	*fnVaccineList = @"vaccine.gz",
 	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
 	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
 	*keyCurrentParams = @"currentParams",
@@ -583,7 +583,7 @@ z(inTestQueue); z(lastTested);
 		NSMutableDictionary *dict = NSMutableDictionary.new;
 		if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
 		dict[keyParameters] = param_dict(&initParams, &worldParams);
-		NSDictionary *dif = param_diff_dict(&runtimeParams, &initParams);
+		NSDictionary *dif = param_diff_dict(&runtimeParams, &initParams, NULL, NULL);
 		if (dif.count > 0) dict[keyCurrentParams] = dif;
 		if (scenario != nil) dict[keyScenario] = [self scenarioPList];
 #ifndef NOGUI
@@ -627,25 +627,18 @@ static NSDictionary *plist_from_data(NSData *data) {
 	}
 	if ((pDict = dict[keyCurrentParams]) != nil)
 		set_params_from_dict(&runtimeParams, NULL, pDict);
-	if ((num = dict[keyStep]) != nil) runtimeParams.step = num.integerValue;
+	if ((num = dict[keyStep]) != nil) {
+		runtimeParams.step = num.integerValue;
+		loopMode = LoopNone;
+	}
 //
 	if ((seq = dict[keyScenario]) != nil) [self setScenarioWithPList:seq];
 	if (scenario != nil && (num = dict[keyScenarioIndex]) != nil) {
-		@try {
-			NSInteger sIdx = num.integerValue;
-			if (sIdx < 1 || sIdx > scenario.count) @throw @"Invalid scenario index.";
-			NSObject *item = scenario[sIdx - 1];
-			NSPredicate *pred = predicate_in_item(item, NULL);
-			if (pred == nil) @throw @"Indexed scenario item is not a predicate.";
-			predicateToStop = pred;
-			scenarioIndex = sIdx;
-		} @catch (NSString *msg) {
-#ifdef NOGUI
-			MY_LOG("%@", msg);
-#else
-			error_msg(msg, nil, NO);
-#endif
-		}
+		scenarioIndex = num.integerValue;
+		if (scenarioIndex > 0 && scenarioIndex <= scenario.count) {
+			predicateToStop = predicate_in_item(scenario[scenarioIndex - 1], NULL);
+			if (predicateToStop == nil) ERROR_MSG(@"Indexed scenario item is not a predicate.");
+		} else predicateToStop = nil;
 	}
 	if ((pDict = dict[keyParamChangers]) != nil) paramChangers =
 		[NSMutableDictionary dictionaryWithDictionary:pDict];
@@ -655,8 +648,11 @@ static NSDictionary *plist_from_data(NSData *data) {
 - (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper
 	ofType:(NSString *)typeName error:(NSError **)outError {
 	@try {
-	if (fileWrapper.regularFile) return [self readParamsFromFileWrapper:fileWrapper] != nil;
-	if (!fileWrapper.directory) return NO;
+	if (fileWrapper.regularFile) {
+		if ([self readParamsFromFileWrapper:fileWrapper] == nil) return NO;
+		[self resetVaccineList];
+		return YES;
+	} else if (!fileWrapper.directory) return NO;
 	NSDictionary *dict = fileWrapper.fileWrappers;
 	NSFileWrapper *fw = dict[fnParamsPList];
 	if (fw == nil) @throw @"Parameters are missing.";
@@ -751,7 +747,7 @@ static NSDictionary *plist_from_data(NSData *data) {
 				if (sv->list[i] >= 0) { vaccineList[i] = sv->list[i]; ticket = NO; }
 				else { vaccineList[i] = - sv->list[i]; ticket = YES; }
 				self.agents[vaccineList[i]].vaccineTicket = ticket;
-	}}}
+	}}} else [self resetVaccineList];
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st setStatInfoFromPList:plist_from_data(fw.regularFileContents)]; }];

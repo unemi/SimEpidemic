@@ -500,7 +500,13 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	[document popLock];
 	RuntimeParams *rp = document.runtimeParamsP;
 	WorldParams *wp = document.tmpWorldParamsP;
+	VaccinePriority orgVcnPri = rp->vcnPri;
 	set_params_from_dict(rp, wp, dict);
+	VaccinePriority newVcnPri = rp->vcnPri;
+	if (newVcnPri != orgVcnPri) {
+		rp->vcnPri = orgVcnPri;
+		[document setVaccinePriority:newVcnPri toInit:NO];
+	}
 	NSInteger popSize = wp->initPop;
 	if (popSize > maxPopSize) wp->initPop = maxPopSize;
 	[document popUnlock];

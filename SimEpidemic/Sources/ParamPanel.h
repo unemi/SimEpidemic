@@ -58,6 +58,7 @@ NS_ASSUME_NONNULL_BEGIN
 		*tstSbjAsySld, *tstSbjSymSld;
 	IBOutlet NSTextField *vcnPRateDgt, *vcn1stEffDgt, *vcnMaxEffDgt, *vcnEDelayDgt, *vcnEPeriodDgt;
 	IBOutlet NSSlider *vcnPRateSld, *vcn1stEffSld, *vcnMaxEffSld, *vcnEDelaySld, *vcnEPeriodSld;
+	IBOutlet NSPopUpButton *vcnPriPopUp;
 	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn, *saveAsUDBtn;
 	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn; 
 }
