@@ -95,7 +95,7 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 		COM(periodicReport), COM(quitReport), COM(changeReport),
 		COM(getScenario), COM(setScenario),
 		COM(submitJob), COM(getJobStatus), COM(getJobQueueStatus),
-		COM(stopJob), COM(getJobResults),
+		COM(stopJob), COM(getJobResults), COM(deleteJob),
 		COM(saveState), COM(loadState), COM(removeState),
 		COM(getState), COM(putState),
 		COM(version) };
@@ -483,6 +483,16 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	[document popUnlock];
 	[self getInfo:plist];
 }
+void load_params_from_dict(Document *doc, WorldParams  * _Nullable wp, NSDictionary *dict) {
+	RuntimeParams *rp = doc.runtimeParamsP;
+	VaccinePriority orgVcnPri = rp->vcnPri;
+	set_params_from_dict(rp, wp, dict);
+	VaccinePriority newVcnPri = rp->vcnPri;
+	if (newVcnPri != orgVcnPri) {
+		rp->vcnPri = orgVcnPri;
+		[doc setVaccinePriority:newVcnPri toInit:NO];
+	}
+}
 - (void)setParams {
 	[self checkDocument];
 	NSDictionary *dict = nil;
@@ -498,21 +508,15 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	} else dict = query;
 	MY_LOG_DEBUG("--- parameters\n%s\n", dict.description.UTF8String);
 	[document popLock];
-	RuntimeParams *rp = document.runtimeParamsP;
 	WorldParams *wp = document.tmpWorldParamsP;
-	VaccinePriority orgVcnPri = rp->vcnPri;
-	set_params_from_dict(rp, wp, dict);
-	VaccinePriority newVcnPri = rp->vcnPri;
-	if (newVcnPri != orgVcnPri) {
-		rp->vcnPri = orgVcnPri;
-		[document setVaccinePriority:newVcnPri toInit:NO];
-	}
+	load_params_from_dict(document, wp, dict);
 	NSInteger popSize = wp->initPop;
 	if (popSize > maxPopSize) wp->initPop = maxPopSize;
 	[document popUnlock];
 	if (popSize > maxPopSize) @throw [NSString stringWithFormat:
 		@"200 The specified population size %ld is too large.\
 It was adjusted to maxmimum value: %ld.", popSize, maxPopSize];
+	RuntimeParams *rp = document.runtimeParamsP;
 	if (rp->step == 0 && memcmp(document.worldParamsP, wp, sizeof(WorldParams))) {
 		memcpy(document.worldParamsP, wp, sizeof(WorldParams));
 		[document resetPop];

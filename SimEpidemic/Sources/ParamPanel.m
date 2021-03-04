@@ -166,7 +166,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		dstSTDgt, dstOBDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt,
-		vcnPRateDgt, vcn1stEffDgt, vcnMaxEffDgt, vcnEDelayDgt, vcnEPeriodDgt];
+		vcnPRateDgt, vcn1stEffDgt, vcnMaxEffDgt, vcnEDelayDgt, vcnEPeriodDgt, vcnAntiRateDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, recovActSld, immueActSld,
@@ -174,7 +174,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		dstSTSld, dstOBSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld,
-		vcnPRateSld, vcn1stEffSld, vcnMaxEffSld, vcnEDelaySld, vcnEPeriodSld];
+		vcnPRateSld, vcn1stEffSld, vcnMaxEffSld, vcnEDelaySld, vcnEPeriodSld, vcnAntiRateSld];
 	ParamPanel __weak *pp = self;
 	void (^proc)(void) = ^{ [pp checkUpdate]; };
 	dDigits = @[
@@ -341,13 +341,35 @@ static NSNumberFormatter *distDgtFmt = nil;
 		}
 	});
 }
-- (IBAction)copyAsJSON:(id)sender {
+- (IBAction)copy:(id)sender {
 	copy_plist_as_JSON_text(
 		(NSEvent.modifierFlags & NSEventModifierFlagShift)?
 		param_diff_dict(targetParams, &userDefaultRuntimeParams,
 			doc.tmpWorldParamsP, &userDefaultWorldParams) :
 		param_dict(targetParams, doc.tmpWorldParamsP),
 		self.window);
+}
+- (void)copyParamsFromDict:(NSDictionary *)dict {
+	RuntimeParams *rp = targetParams, orgRp = *rp;
+	WorldParams *wp = doc.tmpWorldParamsP, orgWp = *wp;
+	set_params_from_dict(targetParams, wp, dict);
+	NSDictionary *pDiff = param_diff_dict(&orgRp, targetParams, &orgWp, wp);
+#ifdef DEBUG
+	NSLog(@"copyParamsFromDict");
+	for (NSString *key in pDiff.keyEnumerator)
+		printf("%s <- %s\n", key.UTF8String, [dict[key] description].UTF8String);
+#endif
+	[undoManager registerUndoWithTarget:self handler:
+		^(ParamPanel *target) { [target copyParamsFromDict:pDiff]; }];
+}
+- (IBAction)paste:(id)sender {
+	NSString *str = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
+	if (str == nil) return;
+	NSData *data = [str dataUsingEncoding:NSUTF8StringEncoding];
+	NSError *err;
+	NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&err];
+	if (dict != nil) [self copyParamsFromDict:dict];
+	else error_msg(err, self.window, NO);
 }
 - (void)fValueChanged:(NSControl *)sender {
 	RuntimeParams *p = targetParams;

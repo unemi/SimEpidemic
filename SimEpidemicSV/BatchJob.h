@@ -50,6 +50,7 @@ extern void check_batch_jobs_to_restart(void);
 - (void)getJobQueueStatus;
 - (void)stopJob;
 - (void)getJobResults;
+- (void)deleteJob;
 @end
 
 NS_ASSUME_NONNULL_END

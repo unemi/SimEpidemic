@@ -175,6 +175,7 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"vaccineMaxEfficacy", {.f = { 95., 0., 100.}}},
 	{ ParamTypeFloat, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
 	{ ParamTypeFloat, @"vaccineEffectPeriod", {.f = { 200., 0., 500.}}},
+	{ ParamTypeFloat, @"vaccineAntiRate", {.f = { 0., 0., 100.}}},
 
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
@@ -236,7 +237,7 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 	DistInfo *dp = (rp != NULL)? &rp->PARAM_D1 : NULL;
 	NSInteger *ip = (wp != NULL)? &wp->PARAM_I1 : NULL;
 	CGFloat *tp = (wp != NULL)? &wp->PARAM_R1 : NULL;
-	sint32 *ep = (wp != NULL)? (sint32 *)&rp->PARAM_E1 : NULL;
+	sint32 *ep = (rp != NULL)? (sint32 *)&rp->PARAM_E1 : NULL;
 	NSInteger initInfected = -1;
 	for (NSString *key in dict.keyEnumerator) {
 		NSNumber *idxNum = paramIndexFromKey[key];

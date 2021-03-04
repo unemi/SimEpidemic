@@ -491,6 +491,12 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 		printf("%ld %ld %.5f\n", i + vcnListIndex,
 			vaccineList[i + vcnListIndex],
 			_agents[vaccineList[i + vcnListIndex]].activeness);
+#elif defined NOGUI
+	MY_LOG("Doc %@: Vcn list(%d) idx=%ld: %.3f,%.3f.%.3f...",
+		_ID, runtimeParams.vcnPri, vcnListIndex,
+		_agents[vaccineList[vcnListIndex]].activeness,
+		_agents[vaccineList[vcnListIndex + 1]].activeness,
+		_agents[vaccineList[vcnListIndex + 2]].activeness);
 #endif
 }
 - (void)setVaccinePriority:(VaccinePriority)newValue toInit:(BOOL)isInit {
@@ -1004,17 +1010,18 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 	WorldParams *wp = &worldParams;
 	Agent **popMap = _Pop;
 	gatherings = manage_gatherings(gatherings, popMap, wp, rp);
-	if (rp->vcnPRate > 0) {
+	if (rp->vcnPRate > 0 && vcnListIndex < wp->initPop) {
 		vcnSubjectsRem += wp->initPop * rp->vcnPRate / 1000. / wp->stepsPerDay;
 		NSInteger n = vcnSubjectsRem;
 		vcnSubjectsRem -= n;
-		for (NSInteger i = 0; i < wp->initPop && n > 0; i ++) {
+		for (NSInteger i = 0; i < wp->initPop && n > 0 && vcnListIndex < wp->initPop; i ++) {
 			Agent *a = _agents + vaccineList[vcnListIndex];
-			if (a->health == Susceptible || (a->health == Asymptomatic && !a->isOutOfField)) {
+			if (a->health == Susceptible || (a->health == Asymptomatic && !a->isOutOfField))
+			if (d_random() > rp->vcnAntiRate / 100.) {
 				a->vaccineTicket = YES;
 				n --;
 			}
-			vcnListIndex = (vcnListIndex + 1) % wp->initPop;
+			vcnListIndex ++;
 		}
 	}
 	[self waitAllOperations];

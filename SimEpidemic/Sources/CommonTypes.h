@@ -64,7 +64,7 @@ typedef struct {
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
-	CGFloat vcnPRate, vcn1stEff, vcnMaxEff, vcnEDelay, vcnEPeriod;	// vaccination
+	CGFloat vcnPRate, vcn1stEff, vcnMaxEff, vcnEDelay, vcnEPeriod, vcnAntiRate;	// vaccination
 	DistInfo mobDist; // mass and warp distance
 	DistInfo incub, fatal, recov, immun; // contagiousness, incubation, fatality, recovery, immunity
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength

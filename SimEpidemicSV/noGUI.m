@@ -36,7 +36,7 @@ NSMutableDictionary<NSString *, Document *> *theDocuments = nil;
 NSUInteger JSONOptions = 0;
 uint32 BCA4Contract = INADDR_BROADCAST;
 NSInteger maxPopSize = 1000000, maxNDocuments = 128, maxRuntime = 48*3600,
-	documentTimeout = 20*60, maxJobsInQueue = 64, maxTrialsAtSameTime = 4,
+	documentTimeout = 20*60, maxJobsInQueue = 256, maxTrialsAtSameTime = 4,
 	jobRecExpirationHours = 24*7, stateRecExpirationHours = 24*7;
 NSString *fileDirectory = nil, *dataDirectory = nil, *logFilePath = nil;
 NSDictionary *extToMime, *codeMeaning, *indexNames;
@@ -415,6 +415,8 @@ int main(int argc, const char * argv[]) {
 			if (i + 1 < argc) maxRuntime = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--documentTimeout") == 0) {
 			if (i + 1 < argc) documentTimeout = atoi(argv[++ i]);
+		} else if (strcmp(argv[i], "-Q") == 0 || strcmp(argv[i], "--maxQueuedJobs") == 0) {
+			if (i + 1 < argc) maxJobsInQueue = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-T") == 0 || strcmp(argv[i], "--maxTrials") == 0) {
 			if (i + 1 < argc) maxTrialsAtSameTime = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--jobExprHours") == 0) {
