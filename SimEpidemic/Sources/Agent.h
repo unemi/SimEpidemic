@@ -29,6 +29,7 @@ extern CGFloat modified_prob(CGFloat x, DistInfo *p);
 extern CGFloat my_random(DistInfo *p);
 extern BOOL was_hit(WorldParams *wp, CGFloat prob);
 extern BOOL is_infected(Agent *a);
+extern CGFloat centered_bias(CGPoint p);
 extern void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp);
 extern void reset_for_step(Agent *a);
 extern void add_to_list(Agent *a, Agent **list);
@@ -36,7 +37,8 @@ extern void remove_from_list(Agent *a, Agent **list);
 extern void add_agent(Agent *a, WorldParams *wp, Agent **Pop);
 extern void remove_agent(Agent *a, WorldParams *p, Agent **Pop);
 extern void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp);
-extern void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info);
+extern void going_back_home(Agent *a);
+extern void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, StepInfo *info);
 extern BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, NSPoint goal);
 extern void step_agent_in_quarantine(Agent *a, WorldParams *p, StepInfo *info);
 extern void warp_show(Agent *a, WarpType mode, NSPoint goal,

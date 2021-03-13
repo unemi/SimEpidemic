@@ -124,6 +124,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 	[dDigitW adjustDigitsToCurrentValue];
 	[vcnPriPopUp selectItemAtIndex:targetParams->vcnPri];
+	[homeModePopUp selectItemAtIndex:wp->homeMode];
 }
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
 	if (targetParams == doc.runtimeParamsP) for (NSString *key in paramNames) {
@@ -248,6 +249,19 @@ static NSNumberFormatter *distDgtFmt = nil;
 	}];
 	wp->stepsPerDay = round(pow(2., stepsPerDayStp.integerValue));
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
+	[self checkUpdate];
+}
+- (IBAction)chooseHomeMode:(id)sender {
+	WorldParams *wp = doc.tmpWorldParamsP;
+	HomeMode orgValue = wp->homeMode, newValue = (HomeMode)homeModePopUp.indexOfSelectedItem;
+	if (orgValue == newValue) return;
+	NSTabView *tabV = tabView;
+	[undoManager registerUndoWithTarget:homeModePopUp handler:^(NSPopUpButton *target) {
+		reveal_me_in_tabview(target, tabV);
+		[target selectItemAtIndex:orgValue];
+		[target sendAction:target.action to:target.target];
+	}];
+	wp->homeMode = newValue;
 	[self checkUpdate];
 }
 - (IBAction)chooseVaccinePriority:(id)sender {

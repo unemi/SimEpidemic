@@ -37,7 +37,8 @@
 	return data;
 }
 - (NSData *)zippedData {
-	return [self zippedDataWithLevel:Z_BEST_COMPRESSION];
+//	return [self zippedDataWithLevel:Z_BEST_COMPRESSION];
+	return [self zippedDataWithLevel:Z_DEFAULT_COMPRESSION];
 }
 - (NSData *)unzippedData {
 	z_stream strm;

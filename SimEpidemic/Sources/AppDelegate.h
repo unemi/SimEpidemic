@@ -18,7 +18,7 @@ enum { ColBackground = NHealthTypes,
 	ColHospital, ColCemetery, ColText, ColGathering };
 typedef enum {
 	ParamTypeNone, ParamTypeFloat, ParamTypeDist,
-	ParamTypeInteger, ParamTypeRate, ParamTypeEnum
+	ParamTypeInteger, ParamTypeRate, ParamTypeEnum, ParamTypeWEnum
 } ParamType;
 typedef struct {
 	ParamType type;

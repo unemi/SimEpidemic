@@ -60,7 +60,7 @@ NS_ASSUME_NONNULL_BEGIN
 		*vcnEPeriodDgt, *vcnAntiRateDgt;
 	IBOutlet NSSlider *vcnPRateSld, *vcn1stEffSld, *vcnMaxEffSld, *vcnEDelaySld,
 		*vcnEPeriodSld, *vcnAntiRateSld;
-	IBOutlet NSPopUpButton *vcnPriPopUp;
+	IBOutlet NSPopUpButton *homeModePopUp, *vcnPriPopUp;
 	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn, *saveAsUDBtn;
 	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn; 
 }

@@ -7,7 +7,7 @@
 //
 
 #import <AppKit/AppKit.h>
-#import "CommonTypes.h"
+#import "Document.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -16,7 +16,8 @@ extern void affect_to_agent(Gathering *gat, Agent *a);
 extern void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect);
 #endif
 
-extern Gathering *manage_gatherings(Gathering *gatherings,
-	Agent *_Nonnull*_Nullable popmap, WorldParams *wp, RuntimeParams *rp);
+@interface Document (GatheringExtantion)
+- (void)manageGatherings;
+@end
 
 NS_ASSUME_NONNULL_END

@@ -183,6 +183,13 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	jobDirPath = [batch_job_dir() stringByAppendingPathComponent:_ID];
 	_parameters = info[@"params"];
 	_scenario = info[@"scenario"];
+	if (_scenario != nil && ![_scenario isKindOfClass:NSArray.class])
+		@throw @"417 Scenario is not an array.";
+	for (NSObject *elm in _scenario) {
+		NSString *errMsg = check_scenario_element_from_property(elm);
+		if (errMsg != nil)
+			@throw [NSString stringWithFormat:@"417 Invalid element in scenatio: %@", errMsg];
+	}
 	NSNumber *num;
 	_stopAt = ((num = info[@"stopAt"]) == nil)? 0 : num.integerValue;
 	_nIteration = ((num = info[@"n"]) == nil)? 1 : num.integerValue;
@@ -284,8 +291,9 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	[lock unlock];
 	[the_job_controller() tryNewTrial:YES];
 }
-- (void)runNextTrial {
+- (void)runNextTrial {	// called only from JobController's tryNewTrial:
 	Document *doc = nil;
+	NSString *failedReason = nil;
 	[lock lock];
 	@try {
 		if (loadState == nil) {
@@ -316,15 +324,20 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 		doc.stopCallBack = ^(LoopMode mode){
 			[self trialDidFinish:trialNumb mode:mode];
 		};
-		[doc start:_stopAt maxSPS:0 priority:-.2];
-		MY_LOG("Trial %@/%ld of job %@ started on world %@.",
-			trialNumb, _nIteration, _ID, doc.ID);
-	} @catch (NSError *error) {
+		NSInteger stopAt = _stopAt, nIte = _nIteration;
+		NSString *jobID = _ID;
+		in_main_thread(^{
+			[doc start:stopAt maxSPS:0 priority:-.2];
+			MY_LOG("Trial %@/%ld of job %@ started on world %@.",
+				trialNumb, nIte, jobID, doc.ID);
+		});
+	} @catch (NSError *error) { failedReason = error.localizedDescription;
+	} @catch (NSException *excp) { failedReason = excp.reason;
+	} @catch (NSString *msg) { failedReason = msg; }
+	if (failedReason != nil) {
 		MY_LOG("Trial %ld/%ld of job %@ could not start. %@",
-			nextTrialNumber + 1, _nIteration, _ID, error.localizedDescription);
-	} @catch (NSException *excp) {
-		MY_LOG("Trial %ld/%ld of job %@ could not start. %@",
-			nextTrialNumber + 1, _nIteration, _ID, excp.reason);
+			nextTrialNumber + 1, _nIteration, _ID, failedReason);
+		[the_job_controller() removeJobFromQueue:self shouldLock:NO];
 	}
 	[lock unlock];
 }
@@ -547,7 +560,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 }
 @end
 
-void check_batch_jobs_to_restart(void) {
+void check_batch_jobs_to_restart(void) {	// called from main()
 	NSFileManager *fm = NSFileManager.defaultManager;
 	BOOL isDirectory;
 	if (![fm fileExistsAtPath:batch_job_dir() isDirectory:&isDirectory]) return;

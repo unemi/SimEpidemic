@@ -210,8 +210,7 @@ static NSString *adjust_dir_path(NSString *path) {
 	if (path == nil) path = NSFileManager.defaultManager.currentDirectoryPath;
 	return [path hasSuffix:@"/"]? path : [path stringByAppendingString:@"/"];
 }
-static void interaction_thread(int desc, uint32 ipaddr) {
-@autoreleasepool {
+static void interaction_thread(int desc, uint32 ipaddr) { @autoreleasepool {
 	NSThread.currentThread.name = @"Network interaction";
 	MY_LOG_DEBUG("Receiving thread started %@ (%d).", ip4_string(ipaddr), desc);
 	ProcContext *context = [ProcContext.alloc initWithSocket:desc ip:ipaddr];
@@ -231,7 +230,7 @@ static void interaction_thread(int desc, uint32 ipaddr) {
 		close(desc);
 	});
 	MY_LOG_DEBUG( "Receiving thread ended (%d).", desc);
-}}
+} }
 void connection_thread(void) {
 	uint32 addrlen;
 	int desc = -1;
@@ -323,7 +322,7 @@ BOOL shouldKeepRunning = YES;
 int resultCode = 0;
 void terminateApp(int code) {
 	BOOL isMain = NSThread.isMainThread;
-	MY_LOG_DEBUG("terminateApp called in %s thread.", isMain? "main" : "sub");
+	MY_LOG("terminateApp called in %s thread (%d).", isMain? "main" : "sub", code);
 	infoDictionary[keyBlockList] = block_list();
 	save_info_dict();
 	[loggingLock lockWhenCondition:0];
@@ -489,6 +488,7 @@ int main(int argc, const char * argv[]) {
 //
 	defaultDocuments = NSMutableDictionary.new;
 	theDocuments = NSMutableDictionary.new;
+	init_context();
 	applicationSetups();	// defined in AppDelegate.m
 	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];
 // for debugging, (lldb) process handle -s0 -p1 SIGTERM

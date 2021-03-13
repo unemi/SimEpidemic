@@ -8,6 +8,9 @@
 
 #import <sys/socket.h>
 #import <os/log.h>
+#import <sys/sysctl.h>
+#import <sys/resource.h>
+
 #import "ProcContext.h"
 #import "noGUI.h"
 #import "PeriodicReporter.h"
@@ -79,26 +82,12 @@ Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
 	} else MY_LOG("%@ world %@ was created.", type, doc.ID);
 	return doc;
 }
-#define COM(c)	@#c:^(ProcContext *ctx){[ctx c];}
 @implementation ProcContext
 - (instancetype)initWithSocket:(int)dsc ip:(uint32)ipaddr {
 	if (!(self = [super init])) return nil;
 	desc = dsc;
 	bufData = [NSMutableData dataWithLength:BUFFER_SIZE];
 	ip4addr = ipaddr;
-	if (commandDict == nil) commandDict = @{
-		COM(getWorldID), COM(closeWorld), COM(newWorld),
-		COM(getParams), COM(setParams),
-		COM(start), COM(step), COM(stop), COM(reset),
-		COM(getIndexes), COM(getDistribution),
-		COM(getPopulation), COM(getPopulation2),
-		COM(periodicReport), COM(quitReport), COM(changeReport),
-		COM(getScenario), COM(setScenario),
-		COM(submitJob), COM(getJobStatus), COM(getJobQueueStatus),
-		COM(stopJob), COM(getJobResults), COM(deleteJob),
-		COM(saveState), COM(loadState), COM(removeState),
-		COM(getState), COM(putState),
-		COM(version) };
 	return self;
 }
 #define RECV_WAIT 200000
@@ -278,7 +267,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	content = moreHeader = nil;
 	code = 0;
 	@try {
-		if (bufData.length <= 4) {
+		if (dataLength <= 4) {
 			_requestString = @" ";
 			@throw @"400 Lack of method name.";
 		}
@@ -382,7 +371,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 								[opArray[i] substringFromIndex:scan.scanLocation + 1];
 						}
 					}
-					if (JSONStr != nil) { keys[n] = @"JSON"; objs[n] = JSONStr; }
+					if (JSONStr != nil) { keys[k] = @"JSON"; objs[k ++] = JSONStr; }
 					query = [NSDictionary dictionaryWithObjects:objs forKeys:keys count:k];
 				} else query = nil;
 			}
@@ -779,4 +768,42 @@ NSData *JSON_pop2(Document *doc) {
 	type = @"text/plain";
 	content = [NSString stringWithUTF8String:version];
 }
+- (void)sysInfo {
+	NSMutableDictionary *dict = NSMutableDictionary.new;
+	int mib[2] = { CTL_HW, HW_MODEL };
+	char modelName[64];
+	size_t dataSize = 64;
+	if (sysctl(mib, 2, modelName, &dataSize, NULL, 0) >= 0)
+		dict[@"model"] = [NSString stringWithUTF8String:modelName];
+	double loadavg[3];
+	getloadavg(loadavg, 3);
+	dict[@"loadaverage"] = @[@(loadavg[0]),@(loadavg[1]),@(loadavg[2])];
+	struct rusage ru = {0};
+	getrusage(RUSAGE_SELF, &ru);
+	dict[@"rss"] = @(ru.ru_maxrss);
+	NSProcessInfo *pInfo = NSProcessInfo.processInfo;
+	dict[@"os"] = pInfo.operatingSystemVersionString;
+	dict[@"ncpu"] = @(pInfo.processorCount);
+	dict[@"memsize"] = @(pInfo.physicalMemory);
+	dict[@"uptime"] = @(pInfo.systemUptime);
+	dict[@"thermalState"] = @(pInfo.thermalState);
+	[self setJSONDataAsResponse:dict];
+}
 @end
+
+#define COM(c)	@#c:^(ProcContext *ctx){[ctx c];}
+void init_context(void) {
+	commandDict = @{
+		COM(getWorldID), COM(closeWorld), COM(newWorld),
+		COM(getParams), COM(setParams),
+		COM(start), COM(step), COM(stop), COM(reset),
+		COM(getIndexes), COM(getDistribution),
+		COM(getPopulation), COM(getPopulation2),
+		COM(periodicReport), COM(quitReport), COM(changeReport),
+		COM(getScenario), COM(setScenario),
+		COM(submitJob), COM(getJobStatus), COM(getJobQueueStatus),
+		COM(stopJob), COM(getJobResults), COM(deleteJob),
+		COM(saveState), COM(loadState), COM(removeState),
+		COM(getState), COM(putState),
+		COM(version), COM(sysInfo) };
+}

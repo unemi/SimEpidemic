@@ -44,8 +44,11 @@ typedef enum {
 } LoopMode;
 
 typedef enum {
-	VcnPrRandom, VcnPrActive, VcnPrInactive,
-	VcnPrNumber
+	HomeNone, HomeUniform, HomeCentered
+} HomeMode;
+
+typedef enum {
+	VcnPrRandom, VcnPrActive, VcnPrInactive, VcnPrCentral
 } VaccinePriority;
 
 typedef struct {
@@ -77,6 +80,7 @@ typedef struct {
 	NSInteger initPop, worldSize, mesh, stepsPerDay;
 	CGFloat infected, recovered;	// initial ratio in population
 	CGFloat qAsymp, qSymp;	// initial ratio of separation for each health state
+	HomeMode homeMode;
 } WorldParams;
 
 #define PARAM_F1 mass
@@ -84,10 +88,12 @@ typedef struct {
 #define PARAM_I1 initPop
 #define PARAM_R1 infected
 #define PARAM_E1 vcnPri
+#define PARAM_H1 homeMode
 #define IDX_D 1000
 #define IDX_I 2000
 #define IDX_R 3000
 #define IDX_E 4000
+#define IDX_H 5000
 
 typedef struct {
 	NSInteger susc, asym, symp, recv, died;

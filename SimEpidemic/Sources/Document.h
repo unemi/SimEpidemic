@@ -15,11 +15,14 @@
 extern NSString *keyParameters, *keyScenario, *keyDaysToStop;
 extern void add_new_cinfo(Agent *a, Agent *b, NSInteger tm);
 extern void in_main_thread(dispatch_block_t block);
+extern void init_global_locks(void);
 extern TestEntry *new_testEntry(void);
 extern ContactInfo *new_cinfo(void);
 extern void free_gatherings(Gathering *gats);
 extern Gathering *new_n_gatherings(NSInteger n);
 extern NSPredicate *predicate_in_item(NSObject *item, NSString **comment);
+extern NSObject *scenario_element_from_property(NSObject *prop);
+extern NSString *check_scenario_element_from_property(NSObject *prop);
 #ifndef NOGUI
 extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
 #endif
@@ -32,7 +35,7 @@ typedef struct { Agent *agent; WarpType mode; NSPoint goal; } WarpInfo;
 typedef struct { Agent *agent; HistogramType type; CGFloat days; } HistInfo;
 typedef struct { Agent *agent; TestType reason; } TestInfo;
 
-@interface NSValue (WoldExtension)
+@interface NSValue (WorldExtension)
 #define DEC_VAL(t,b,g) + (NSValue *)b:(t)info; -(t)g;
 DEC_VAL(MoveToIdxInfo, valueWithMoveToIdxInfo, moveToIdxInfoValue)
 DEC_VAL(WarpInfo, valueWithWarpInfo, warpInfoValue)
@@ -105,6 +108,7 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 - (void)setVaccinePriority:(VaccinePriority)newValue toInit:(BOOL)isInit;
 - (void)resetVaccineList;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
+- (void)setScenarioWithPList:(NSArray *)plist;
 #ifdef NOGUI
 @property (readonly) NSString *ID;
 @property (readonly) NSLock *lastTLock;
@@ -123,7 +127,6 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 - (void)discardMemory;
 - (StatInfo *)statInfo;
 - (NSArray *)scenarioPList;
-- (void)setScenarioWithPList:(NSArray *)plist;
 #else
 - (Gathering *)gatherings;
 - (void)adjustScenarioText;
@@ -135,7 +138,6 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 - (void)revisePanelsAlpha;
 - (void)revisePanelChildhood;
 - (NSArray *)scenarioPList;
-- (void)setScenarioWithPList:(NSArray *)plist;
 - (IBAction)openScenarioPanel:(id)sender;
 - (IBAction)openParamPanel:(id)sender;
 - (IBAction)openDataPanel:(id)sender;

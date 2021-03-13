@@ -73,6 +73,22 @@ BOOL was_hit(WorldParams *wp, CGFloat prob) {
 BOOL is_infected(Agent *a) {
 	return a->health == Asymptomatic || a->health == Symptomatic;
 }
+static CGFloat random_coord(WorldParams *wp) {
+	return d_random() * (wp->worldSize - 6.) + 3.;
+}
+#define CENTERED_BIAS .25
+CGFloat centered_bias(CGPoint p) {	// p.x and p.y are in [-1,1]
+//	if p = (0, 0) then return a. if p = (1, 1) then return 1.
+	CGFloat a = CENTERED_BIAS / (1. - CENTERED_BIAS);
+	return a / (1. - (1. - a) * fmax(fabs(p.x), fabs(p.y)));
+}
+static CGPoint centered_point(WorldParams *wp) {
+	CGPoint p = {d_random() * 2. - 1., d_random() * 2. - 1.};
+	CGFloat v = centered_bias(p);
+	p.x = (p.x * v + 1.) * .5 * (wp->worldSize - 6.) + 3.;
+	p.y = (p.y * v + 1.) * .5 * (wp->worldSize - 6.) + 3.;
+	return p;
+}
 static void reset_days(Agent *a, RuntimeParams *p) {
 	struct ActivenessEffect ae = {a->activeness, p->actMode/100.};
 	a->daysToRecover = random_with_corr(&p->recov, ae, p->recovAct/100.);
@@ -93,8 +109,19 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	memset(a, 0, sizeof(Agent));
 	a->app = d_random();
 	a->prf = d_random();
-	a->x = d_random() * (wp->worldSize - 6.) + 3.;
-	a->y = d_random() * (wp->worldSize - 6.) + 3.;
+	switch (wp->homeMode) {
+		case HomeNone:
+		a->x = random_coord(wp);
+		a->y = random_coord(wp);
+		break;
+		case HomeUniform:
+		a->orgPt = (CGPoint){(a->x = random_coord(wp)), (a->y = random_coord(wp))};
+		break;
+		case HomeCentered:
+		a->orgPt = centered_point(wp);
+		a->x = a->orgPt.x; a->y = a->orgPt.y;
+		break;
+	}
 	CGFloat th = d_random() * M_PI * 2.;
 	a->vx = cos(th);
 	a->vy = sin(th);
@@ -179,7 +206,9 @@ static void infects(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFl
 			(fmin(rp->contagPeak, b->daysToOnset) - rp->contagDelay)) :
 		(b->daysToCompleteRecov - b->daysInfected) / (b->daysToCompleteRecov - b->daysToRecover);
 	CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
-	if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor)) {
+	CGFloat immuneFactor = (a->health == Susceptible)? 1. :
+		(a->health == Vaccinated)? 1. - a->agentImmunity : 0.;
+	if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor * immuneFactor)) {
 		a->newHealth = Asymptomatic;
 		a->daysInfected = a->daysDiseased = 0;
 		if (a->nInfects < 0) a->newNInfects = 1;
@@ -190,10 +219,8 @@ static void check_infection(Agent *a, Agent *b,
 	RuntimeParams *rp, WorldParams *wp, CGFloat d) {
 	if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
 	if (a->newHealth != a->health) return;
-	CGFloat aImn = (a->health == Susceptible)? 0. :
-		(a->health == Vaccinated)? exp(log(a->agentImmunity) / 7.) : 1.;
-	if (aImn < 1. && is_infected(b) && b->daysInfected > rp->contagDelay
-		&& (aImn == 0. || was_hit(wp, 1. - aImn)))
+	if ((a->health == Susceptible || a->health == Vaccinated)
+		&& is_infected(b) && b->daysInfected > rp->contagDelay)
 		infects(a, b, rp, wp, d);
 }
 void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp) {
@@ -260,8 +287,33 @@ static void expire_immunity(Agent *a, RuntimeParams *rp) {
 	a->daysInfected = a->daysDiseased = 0;
 	alter_days(a, rp);
 }
+static void go_warp(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
+	CGFloat dst = my_random(&rp->mobDist) * wp->worldSize / 100.;
+	CGFloat th = d_random() * M_PI * 2.;
+	NSPoint newPt = {a->x + cos(th) * dst, a->y + sin(th) * dst};
+	if (newPt.x < 3.) newPt.x = 3. - newPt.x;
+	else if (newPt.x > wp->worldSize - 3.) newPt.x = (wp->worldSize - 3.) * 2. - newPt.x;
+	if (newPt.y < 3.) newPt.y = 3. - newPt.y;
+	else if (newPt.y > wp->worldSize - 3.) newPt.y = (wp->worldSize - 3.) * 2. - newPt.y;
+	info->warpTo = newPt;
+	info->warpType = WarpInside;
+}
+#define HOMING_FORCE .2
+#define MAX_HOMING_FORCE 2.
+#define MIN_AWAY_TO_HOME 50.
+void going_back_home(Agent *a) {
+	CGPoint f = {(a->orgPt.x - a->x) * HOMING_FORCE, (a->orgPt.y - a->y) * HOMING_FORCE};
+	CGFloat fa = hypot(f.x, f.y);
+	if (fa > MIN_AWAY_TO_HOME * HOMING_FORCE) return;
+	if (fa > MAX_HOMING_FORCE) {
+		f.x *= MAX_HOMING_FORCE / fa;
+		f.y *= MAX_HOMING_FORCE / fa;
+	}
+	a->fx += f.x;
+	a->fy += f.y;
+}
 #define VCN_1_2_SPAN 21.
-void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
+void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, StepInfo *info) {
 	switch (a->health) {
 		case Susceptible: if (a->vaccineTicket) {
 			a->newHealth = Vaccinated;
@@ -294,57 +346,53 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	}
 	if (a->health != Symptomatic && was_hit(wp, rp->tstSbjAsy / 100.))
 		info->testType = TestAsSuspected;
-	NSInteger orgIdx = index_in_pop(a, wp);
 	if (a->health != Symptomatic &&
 		was_hit(wp, modified_prob(a->mobFreq, &rp->mobFreq) / 1000.)) {
-		CGFloat dst = my_random(&rp->mobDist) * wp->worldSize / 100.;
-		CGFloat th = d_random() * M_PI * 2.;
-		NSPoint newPt = {a->x + cos(th) * dst, a->y + sin(th) * dst};
-		if (newPt.x < 3.) newPt.x = 3. - newPt.x;
-		else if (newPt.x > wp->worldSize - 3.) newPt.x = (wp->worldSize - 3.) * 2. - newPt.x;
-		if (newPt.y < 3.) newPt.y = 3. - newPt.y;
-		else if (newPt.y > wp->worldSize - 3.) newPt.y = (wp->worldSize - 3.) * 2. - newPt.y;
-		info->warpType = WarpInside;
-		info->warpTo = newPt;
+		if (!goHomeBack) go_warp(a, rp, wp, info);
+		else if (hypot(a->x - a->orgPt.x, a->y - a->orgPt.y)
+			> fmax(rp->mobDist.min, MIN_AWAY_TO_HOME)) {
+			info->warpTo = a->orgPt;
+			info->warpType = WarpInside;
+		} else go_warp(a, rp, wp, info);
 		return;
-	} else {
-		if (a->distancing) {
-			CGFloat dst = 1.0 + rp->dstST / 5.0;
-			a->fx *= dst;
-			a->fy *= dst;
-		}
-		a->fx += wall(a->x) - wall(wp->worldSize - a->x);
-		a->fy += wall(a->y) - wall(wp->worldSize - a->y);
-		CGFloat mass = a->mass / 100.;
-		if (a->health == Symptomatic) mass *= 20.; 
-		if (a->best != NULL && !a->distancing) {
-			CGFloat dx = a->best->x - a->x;
-			CGFloat dy = a->best->y - a->y;
-			CGFloat d = fmax(.01, hypot(dx, dy)) * 20.;
-			a->fx += dx / d;
-			a->fy += dy / d;
-		}
-		CGFloat fric = pow(.99 * (1. - rp->friction / 100.), 1. / wp->stepsPerDay);
-		if (a->gatDist < 1.) fric *= a->gatDist * .5 + .5;
-		a->vx = a->vx * fric + a->fx / mass / wp->stepsPerDay;
-		a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
-		CGFloat v = hypot(a->vx, a->vy);
-		CGFloat maxV = rp->maxSpeed * 20. / wp->stepsPerDay;
-		if (v > maxV) { 
-			a->vx *= maxV / v; 
-			a->vy *= maxV / v;
-		}
-		a->x += a->vx / wp->stepsPerDay;
-		a->y += a->vy / wp->stepsPerDay;
-		if (a->x < AGENT_RADIUS)
-			{ a->x = AGENT_RADIUS * 2 - a->x; a->vx = - a->vx; }
-		else if (a->x > wp->worldSize - AGENT_RADIUS)
-			{ a->x = (wp->worldSize - AGENT_RADIUS) * 2 - a->x; a->vx = - a->vx; }
-		if (a->y < AGENT_RADIUS)
-			{ a->y = AGENT_RADIUS * 2 - a->y; a->vy = - a->vy; }
-		else if (a->y > wp->worldSize - AGENT_RADIUS)
-			{ a->y = (wp->worldSize - AGENT_RADIUS) * 2 - a->y; a->vy = - a->vy; }
 	}
+	NSInteger orgIdx = index_in_pop(a, wp);
+	if (a->distancing) {
+		CGFloat dst = 1.0 + rp->dstST / 5.0;
+		a->fx *= dst;
+		a->fy *= dst;
+	}
+	a->fx += wall(a->x) - wall(wp->worldSize - a->x);
+	a->fy += wall(a->y) - wall(wp->worldSize - a->y);
+	CGFloat mass = a->mass / 100.;
+	if (a->health == Symptomatic) mass *= 20.; 
+	if (a->best != NULL && !a->distancing) {
+		CGFloat dx = a->best->x - a->x;
+		CGFloat dy = a->best->y - a->y;
+		CGFloat d = fmax(.01, hypot(dx, dy)) * 20.;
+		a->fx += dx / d;
+		a->fy += dy / d;
+	}
+	CGFloat fric = pow(.99 * (1. - rp->friction / 100.), 1. / wp->stepsPerDay);
+	if (a->gatDist < 1.) fric *= a->gatDist * .5 + .5;
+	a->vx = a->vx * fric + a->fx / mass / wp->stepsPerDay;
+	a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
+	CGFloat v = hypot(a->vx, a->vy);
+	CGFloat maxV = rp->maxSpeed * 20. / wp->stepsPerDay;
+	if (v > maxV) { 
+		a->vx *= maxV / v; 
+		a->vy *= maxV / v;
+	}
+	a->x += a->vx / wp->stepsPerDay;
+	a->y += a->vy / wp->stepsPerDay;
+	if (a->x < AGENT_RADIUS)
+		{ a->x = AGENT_RADIUS * 2 - a->x; a->vx = - a->vx; }
+	else if (a->x > wp->worldSize - AGENT_RADIUS)
+		{ a->x = (wp->worldSize - AGENT_RADIUS) * 2 - a->x; a->vx = - a->vx; }
+	if (a->y < AGENT_RADIUS)
+		{ a->y = AGENT_RADIUS * 2 - a->y; a->vy = - a->vy; }
+	else if (a->y > wp->worldSize - AGENT_RADIUS)
+		{ a->y = (wp->worldSize - AGENT_RADIUS) * 2 - a->y; a->vy = - a->vy; }
 	NSInteger newIdx = index_in_pop(a, wp);
 	if (newIdx != orgIdx) { info->moveFrom = orgIdx; info->moveTo = newIdx; }
 }

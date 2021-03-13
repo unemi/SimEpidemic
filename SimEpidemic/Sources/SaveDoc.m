@@ -466,7 +466,7 @@ z(inTestQueue); z(lastTested);
 		void (^block)(void) = ^{ for (NSInteger i = start; i < end; i ++) {
 			Agent *a = agents + i;
 			SAVE_AGENT_PROP(CP_S)
-			for (ContactInfo *p = a->contactInfoHead; p; p = p->next) np[0] ++;
+			for (ContactInfo *p = a->contactInfoHead; p; p = p->next) np[0] ++; // count contancts
 		}};
 		if (j < unitJ - 1) [self addOperation:block]; else block();
 	}
@@ -474,7 +474,7 @@ z(inTestQueue); z(lastTested);
 	md[fnPopulation] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	for (NSInteger j = 0; j < unitJ; j ++) n += nn[j];
 
-	if (n > 0) {
+	if (n > 0) {	// save contacts
 		mdata = [NSMutableData dataWithLength:sizeof(ContactInfoSave) * n + sizeof(NSInteger) * nPop];
 		NSInteger *saveP = mdata.mutableBytes, kStart = 0;
 		for (NSInteger j = 0; j < unitJ; j ++) {
@@ -551,6 +551,7 @@ z(inTestQueue); z(lastTested);
 	vcnMem->index = vcnListIndex;
 	for (NSInteger i = 0; i < nPop; i ++) vcnMem->list[i] =
 		self.agents[vaccineList[i]].vaccineTicket? -vaccineList[i] : vaccineList[i];
+//		self.agents[vaccineList[i]].vaccineTicket? -vaccineList[i] - 1 : vaccineList[i];
 	md[fnVaccineList] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	
 	md[fnStatInfo] = fileWrapper_from_plist([statInfo statiInfoPList]);
@@ -632,7 +633,10 @@ static NSDictionary *plist_from_data(NSData *data) {
 		loopMode = LoopNone;
 	}
 //
-	if ((seq = dict[keyScenario]) != nil) [self setScenarioWithPList:seq];
+	if ((seq = dict[keyScenario]) != nil) {
+		@try { [self setScenarioWithPList:seq]; }
+		@catch (NSString *msg) { ERROR_MSG(msg); }
+	}
 	if (scenario != nil && (num = dict[keyScenarioIndex]) != nil) {
 		scenarioIndex = num.integerValue;
 		if (scenarioIndex > 0 && scenarioIndex <= scenario.count) {
@@ -650,7 +654,7 @@ static NSDictionary *plist_from_data(NSData *data) {
 	@try {
 	if (fileWrapper.regularFile) {
 		if ([self readParamsFromFileWrapper:fileWrapper] == nil) return NO;
-		[self resetVaccineList];
+		if (vaccineList != NULL) [self resetVaccineList];
 		return YES;
 	} else if (!fileWrapper.directory) return NO;
 	NSDictionary *dict = fileWrapper.fileWrappers;
@@ -743,11 +747,15 @@ static NSDictionary *plist_from_data(NSData *data) {
 			vcnSubjectsRem = sv->subjRem;
 			vcnListIndex = sv->index;
 			for (NSInteger i = 0; i < worldParams.initPop; i ++) {
-				BOOL ticket;
-				if (sv->list[i] >= 0) { vaccineList[i] = sv->list[i]; ticket = NO; }
-				else { vaccineList[i] = - sv->list[i]; ticket = YES; }
-				self.agents[vaccineList[i]].vaccineTicket = ticket;
-	}}} else [self resetVaccineList];
+				NSInteger k; BOOL ticket;
+				if (sv->list[i] >= 0) { k = sv->list[i]; ticket = NO; }
+				else { k = - sv->list[i]; ticket = YES; }
+//	@@@			else { k = - sv->list[i] - 1; ticket = YES; }
+				if (k < worldParams.initPop) {
+					vaccineList[i] = k;
+					self.agents[k].vaccineTicket = ticket;
+				} else @throw @"Invalid agent index in the vaccine list.";
+	}}} else if (vaccineList != NULL) [self resetVaccineList];
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st setStatInfoFromPList:plist_from_data(fw.regularFileContents)]; }];

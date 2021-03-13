@@ -24,6 +24,7 @@ extern NSArray *dist_cnt_array(NSArray<MyCounter *> *hist);
 extern NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document *doc);
 extern NSData *JSON_pop(Document *doc);
 extern NSData *JSON_pop2(Document *doc);
+extern void init_context(void);
 
 @interface NSString (IndexNameExtension)
 - (NSString *)stringByRemovingFirstWord;
