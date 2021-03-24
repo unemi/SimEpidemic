@@ -15,7 +15,8 @@ static __weak NSColorWell *colWells[N_COLORS];
 - (NSString *)windowNibName { return @"Preferences"; }
 - (void)windowDidLoad {
 	show_anime_steps(animeStepTxt, defaultAnimeSteps);
-	NSArray<NSColorWell *> *cws = @[susColWell, asyColWell, symColWell, recColWell, dieColWell,
+	NSArray<NSColorWell *> *cws = @[
+		susColWell, asyColWell, symColWell, recColWell, dieColWell, vcnColWell,
 		bgColWell, hospitalColWell, cemeteryColWell, textColWell, gatherColWell];
 	for (NSInteger i = 0; i < N_COLORS; i ++) {
 		colWells[i] = cws[i];

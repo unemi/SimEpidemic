@@ -521,6 +521,16 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 			[self sortVaccineList:(worldParams.homeMode == HomeNone)?
 				^(Agent *a) { return hypot(a->x - cx, a->y - cx); } :
 				^(Agent *a) { return hypot(a->orgPt.x - cx, a->orgPt.y - cx); }];
+		} break;
+		case VcnPrActAndCntr: {
+			CGFloat cx = worldParams.worldSize / 2.;
+			NSPoint (^dist)(Agent *a) = (worldParams.homeMode == HomeNone)?
+				^(Agent *a) { return (NSPoint){a->x, a->y}; } :
+				^(Agent *a) { return a->orgPt; };
+			[self sortVaccineList:^(Agent *a) {
+				NSPoint p = dist(a);
+				return fmax(hypot(p.x - cx, p.y - cx) / cx / M_SQRT2, 1. - a->activeness);
+			}];
 		}
 		default: break;
 	}
@@ -823,14 +833,15 @@ NSObject *scenario_element_from_property(NSObject *prop) {
 	return (pred != nil)? @[((NSArray *)prop)[0], pred] : nil;
 }
 NSString *check_scenario_element_from_property(NSObject *prop) {
+// returns nil when it looks OK, otherwise return a string of error message
 	NSString *predForm = nil;
 	if ([prop isKindOfClass:NSString.class]) predForm = (NSString *)prop;
 	else if (![prop isKindOfClass:NSArray.class]) return nil;
 	else if (((NSArray *)prop).count != 2) return nil;
 	else if (![((NSArray *)prop)[1] isKindOfClass:NSString.class]) return nil;
-	predForm = (NSString *)((NSArray *)prop)[1];
-	if (predForm == nil || predForm.length == 0) return @"Null";
-	@try { if ([NSPredicate predicateWithFormat:predForm] == nil) return @"Null"; }
+	else predForm = (NSString *)((NSArray *)prop)[1];
+	if (predForm == nil || predForm.length == 0) return @"Null predicate";
+	@try { return ([NSPredicate predicateWithFormat:predForm] == nil)? @"Null" : nil; }
 	@catch (NSException *e) { return e.reason; }
 }
 - (NSArray *)scenarioPList {

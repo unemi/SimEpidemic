@@ -110,8 +110,8 @@ NSString *batch_job_dir(void) {
 	[lock lock];
 	if (trialFinished) nRunningTrials --;
 	while (jobQueue.count > 0 && nRunningTrials < maxTrialsAtSameTime) {
-		[jobQueue[0] runNextTrial];
-		nRunningTrials ++;
+		if ([jobQueue[0] runNextTrial]) nRunningTrials ++;
+		else [jobQueue removeObjectAtIndex:0];
 	}
 	[lock unlock];
 }
@@ -261,6 +261,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 		(mode == LoopFinished)? @"no more infected individuals" :
 		(mode == LoopEndByCondition)? @"condition in scenario" :
 		(mode == LoopEndAsDaysPassed)? @"specified days passed" :
+		(mode == LoopEndByUser)? @"user's request" :
 		(mode == LoopEndByTimeLimit)? @"time limit reached" : @"unknown reason");
 	@try {
 		[self makeDataFileWith:number type:@"indexes" names:output_n
@@ -291,7 +292,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	[lock unlock];
 	[the_job_controller() tryNewTrial:YES];
 }
-- (void)runNextTrial {	// called only from JobController's tryNewTrial:
+- (BOOL)runNextTrial {	// called only from JobController's tryNewTrial:
 	Document *doc = nil;
 	NSString *failedReason = nil;
 	[lock lock];
@@ -337,9 +338,9 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	if (failedReason != nil) {
 		MY_LOG("Trial %ld/%ld of job %@ could not start. %@",
 			nextTrialNumber + 1, _nIteration, _ID, failedReason);
-		[the_job_controller() removeJobFromQueue:self shouldLock:NO];
 	}
 	[lock unlock];
+	return (failedReason == nil);
 }
 - (void)setNextTrialNumber:(NSInteger)number {
 	nextTrialNumber = number;

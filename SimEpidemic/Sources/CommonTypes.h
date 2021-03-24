@@ -48,7 +48,7 @@ typedef enum {
 } HomeMode;
 
 typedef enum {
-	VcnPrRandom, VcnPrActive, VcnPrInactive, VcnPrCentral
+	VcnPrRandom, VcnPrActive, VcnPrInactive, VcnPrCentral, VcnPrActAndCntr
 } VaccinePriority;
 
 typedef struct {
@@ -63,6 +63,7 @@ typedef struct {
 	CGFloat contagDelay, contagPeak; // contagion delay and peak;
 	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat dstST, dstOB; // Distancing strength and obedience
+	CGFloat backHmRt; // probability per day for travelers to go back home
 	CGFloat gatFr;	// Gathering's frequency
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity

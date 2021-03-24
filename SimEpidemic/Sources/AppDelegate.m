@@ -161,6 +161,7 @@ static ParamInfo paramInfo[] = {
 
 	{ ParamTypeFloat, @"distancingStrength", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
+	{ ParamTypeFloat, @"backHomeRate", {.f = { 75., 0., 100.}}},
 	{ ParamTypeFloat, @"gatheringFrequency", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"contactTracing", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"testDelay", {.f = { 1., 0., 10.}}},
@@ -199,7 +200,7 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"quarantineAsymptomatic", {.f = { 20., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineSymptomatic", {.f = { 50., 0., 100.}}},
 
-	{ ParamTypeEnum, @"vaccinePriority", {.e = {0, 3}}},
+	{ ParamTypeEnum, @"vaccinePriority", {.e = {0, 4}}},
 	{ ParamTypeWEnum, @"homeMode", {.e = {0, 2}}},
 
 	{ ParamTypeNone, nil }
@@ -321,7 +322,8 @@ NSMutableDictionary *param_diff_dict(
 #define RGB3(r,g,b) ((r<<16)|(g<<8)|b)
 NSInteger defaultStateRGB[N_COLORS] = {
 	RGB3(39,85,154), RGB3(246,214,0), RGB3(250,48,46), RGB3(32,120,100), RGB3(182,182,182),
-	RGB3(16,160,50),	// vaccinated
+//	RGB3(16,160,50),	// vaccinated
+	RGB3(255,255,255),	// vaccinated
 	RGB3(0,0,0), RGB3(64,0,0), RGB3(51,51,51), RGB3(255,255,255), RGB3(64,64,0)
 }, stateRGB[N_COLORS];
 NSColor *stateColors[N_COLORS] = {nil}, *warpColors[NHealthTypes];

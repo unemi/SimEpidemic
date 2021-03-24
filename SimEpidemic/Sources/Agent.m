@@ -67,8 +67,8 @@ static CGFloat random_with_corr(DistInfo *p, struct ActivenessEffect a, CGFloat 
 	if (c < 0.) y = 1. - y;
 	return y * (p->max - p->min) + p->min;
 }
-BOOL was_hit(WorldParams *wp, CGFloat prob) {
-	return (d_random() > pow(1. - prob, 1. / wp->stepsPerDay));
+BOOL was_hit(NSInteger stepsPerDay, CGFloat prob) {
+	return (d_random() > pow(1. - prob, 1. / stepsPerDay));
 }
 BOOL is_infected(Agent *a) {
 	return a->health == Asymptomatic || a->health == Symptomatic;
@@ -208,7 +208,7 @@ static void infects(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFl
 	CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
 	CGFloat immuneFactor = (a->health == Susceptible)? 1. :
 		(a->health == Vaccinated)? 1. - a->agentImmunity : 0.;
-	if (was_hit(wp, rp->infec / 100. * timeFactor * distanceFactor * immuneFactor)) {
+	if (was_hit(wp->stepsPerDay, rp->infec / 100. * timeFactor * distanceFactor * immuneFactor)) {
 		a->newHealth = Asymptomatic;
 		a->daysInfected = a->daysDiseased = 0;
 		if (a->nInfects < 0) a->newNInfects = 1;
@@ -217,7 +217,7 @@ static void infects(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFl
 }
 static void check_infection(Agent *a, Agent *b,
 	RuntimeParams *rp, WorldParams *wp, CGFloat d) {
-	if (was_hit(wp, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
+	if (was_hit(wp->stepsPerDay, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
 	if (a->newHealth != a->health) return;
 	if ((a->health == Susceptible || a->health == Vaccinated)
 		&& is_infected(b) && b->daysInfected > rp->contagDelay)
@@ -322,7 +322,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, S
 		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
 		a->daysDiseased += 1. / wp->stepsPerDay;
 		if (patient_step(a, wp, NO, info)) return;
-		else if (a->daysDiseased >= rp->tstDelay && was_hit(wp, rp->tstSbjSym / 100.))
+		else if (a->daysDiseased >= rp->tstDelay && was_hit(wp->stepsPerDay, rp->tstSbjSym / 100.))
 			info->testType = TestAsSymptom;
 		break;
 		case Asymptomatic: a->daysInfected += 1. / wp->stepsPerDay;
@@ -344,10 +344,26 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, S
 		break;
 		default: break;
 	}
-	if (a->health != Symptomatic && was_hit(wp, rp->tstSbjAsy / 100.))
+	if (a->health != Symptomatic && was_hit(wp->stepsPerDay, rp->tstSbjAsy / 100.))
 		info->testType = TestAsSuspected;
+#define BACK_HOME_RATE_ON
+#ifdef BACK_HOME_RATE_ON
+	if (a->health != Symptomatic) {
+		if (goHomeBack &&
+			hypot(a->x - a->orgPt.x, a->y - a->orgPt.y) > fmax(rp->mobDist.min, MIN_AWAY_TO_HOME) &&
+			was_hit(wp->stepsPerDay / 3, rp->backHmRt / 100.)) {
+			info->warpTo = a->orgPt;
+			info->warpType = WarpInside;
+			return;
+		}
+		if (was_hit(wp->stepsPerDay, modified_prob(a->mobFreq, &rp->mobFreq) / 1000.)) {
+			go_warp(a, rp, wp, info);
+			return;
+		}
+	}
+#else
 	if (a->health != Symptomatic &&
-		was_hit(wp, modified_prob(a->mobFreq, &rp->mobFreq) / 1000.)) {
+		was_hit(wp->stepsPerDay, modified_prob(a->mobFreq, &rp->mobFreq) / 1000.)) {
 		if (!goHomeBack) go_warp(a, rp, wp, info);
 		else if (hypot(a->x - a->orgPt.x, a->y - a->orgPt.y)
 			> fmax(rp->mobDist.min, MIN_AWAY_TO_HOME)) {
@@ -356,6 +372,7 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, S
 		} else go_warp(a, rp, wp, info);
 		return;
 	}
+#endif
 	NSInteger orgIdx = index_in_pop(a, wp);
 	if (a->distancing) {
 		CGFloat dst = 1.0 + rp->dstST / 5.0;

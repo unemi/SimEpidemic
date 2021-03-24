@@ -164,7 +164,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		actModeDgt, actKurtDgt, massActDgt, mobActDgt, gatActDgt,
 		incubActDgt, fatalActDgt, recovActDgt, immueActDgt,
 		contagDDgt, contagPDgt, infecDgt, infecDstDgt,
-		dstSTDgt, dstOBDgt, gatFrDgt, cntctTrcDgt,
+		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt,
 		vcnPRateDgt, vcn1stEffDgt, vcnMaxEffDgt, vcnEDelayDgt, vcnEPeriodDgt, vcnAntiRateDgt];
@@ -172,7 +172,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, recovActSld, immueActSld,
 		contagDSld, contagPSld, infecSld, infecDstSld,
-		dstSTSld, dstOBSld, gatFrSld, cntctTrcSld,
+		dstSTSld, dstOBSld, backHmSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld,
 		vcnPRateSld, vcn1stEffSld, vcnMaxEffSld, vcnEDelaySld, vcnEPeriodSld, vcnAntiRateSld];

@@ -176,27 +176,27 @@
                         </textFieldCell>
                     </textField>
                     <customView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="9Fp-4R-Hnw" customClass="LegendView">
-                        <rect key="frame" x="263" y="588" width="114" height="14"/>
+                        <rect key="frame" x="248" y="588" width="119" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </customView>
                     <customView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="78G-0k-MHr" customClass="LegendView">
-                        <rect key="frame" x="384" y="588" width="114" height="14"/>
+                        <rect key="frame" x="374" y="588" width="119" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </customView>
                     <customView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Ixf-mQ-Aeb" customClass="LegendView">
-                        <rect key="frame" x="505" y="588" width="114" height="14"/>
+                        <rect key="frame" x="500" y="588" width="119" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </customView>
                     <customView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="v9P-jT-Kc5" customClass="LegendView">
-                        <rect key="frame" x="385" y="566" width="114" height="14"/>
+                        <rect key="frame" x="374" y="566" width="119" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </customView>
                     <customView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Hcw-5G-Xy9" customClass="LegendView">
-                        <rect key="frame" x="505" y="566" width="114" height="14"/>
+                        <rect key="frame" x="500" y="566" width="119" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </customView>
                     <customView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="P5n-64-lRt" customClass="LegendView">
-                        <rect key="frame" x="263" y="566" width="114" height="14"/>
+                        <rect key="frame" x="248" y="566" width="119" height="14"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </customView>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="uPW-ug-3V2">

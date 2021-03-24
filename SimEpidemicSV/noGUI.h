@@ -28,7 +28,6 @@ enum {
 extern NSMutableDictionary<NSString *, Document *> *defaultDocuments;
 extern NSMutableDictionary<NSString *, Document *> *theDocuments;
 extern NSUInteger JSONOptions;
-extern uint32 BCA4Contract;
 extern NSInteger maxPopSize, maxNDocuments, maxRuntime,
 	documentTimeout, maxJobsInQueue, maxTrialsAtSameTime;
 extern NSString *fileDirectory, *dataDirectory;

@@ -31,7 +31,7 @@ extern void check_batch_jobs_to_restart(void);
 @property (readonly) NSDictionary<NSString *, NSNumber *> *parameters;
 @property (readonly) NSArray *scenario;
 @property (readonly) NSInteger stopAt, nIteration;
-- (void)runNextTrial;
+- (BOOL)runNextTrial;
 - (void)forAllLiveDocuments:(void (^)(Document *))block;
 @end
 

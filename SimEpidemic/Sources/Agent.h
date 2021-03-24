@@ -27,7 +27,6 @@ typedef struct {
 extern CGFloat d_random(void);
 extern CGFloat modified_prob(CGFloat x, DistInfo *p);
 extern CGFloat my_random(DistInfo *p);
-extern BOOL was_hit(WorldParams *wp, CGFloat prob);
 extern BOOL is_infected(Agent *a);
 extern CGFloat centered_bias(CGPoint p);
 extern void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp);

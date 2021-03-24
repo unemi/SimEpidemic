@@ -393,7 +393,6 @@ static void schedule_record_expiration_check(void) {
 
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
-	BOOL contractMode = NO;
 	short err;
 	uint16 port = SERVER_PORT;
 // Check command options
@@ -422,23 +421,12 @@ int main(int argc, const char * argv[]) {
 			if (i + 1 < argc) jobRecExpirationHours = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-E") == 0 || strcmp(argv[i], "--stateExprHours") == 0) {
 			if (i + 1 < argc) stateRecExpirationHours = atoi(argv[++ i]);
-		} else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--contract") == 0) {
-			if (i + 1 < argc) BCA4Contract = inet_addr(argv[++ i]);
 		} else if (strcmp(argv[i], "--version") == 0) {
 			printf("%s\n", version); exit(EXIT_NORMAL);
 		} else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
 			printf("\n"); exit(EXIT_NORMAL);
 		}
 	}
-	if (BCA4Contract != 0 && contractMode) {
-		fprintf(stderr, "Cannot be both consigner and consignee.\n");
-		exit(EXIT_INVALID_ARGS);
-	}
-//#define TEST
-#ifdef TEST
-	find_contractor();
-	return 0;
-#else
 	fileDirectory = adjust_dir_path(fileDirectory);
 	dataDirectory = adjust_dir_path(dataDirectory);
 	logFilePath = [dataDirectory stringByAppendingPathComponent:
@@ -502,7 +490,6 @@ int main(int argc, const char * argv[]) {
 		if (![theRL runMode:NSDefaultRunLoopMode beforeDate:
 			[NSDate dateWithTimeIntervalSinceNow:10.]])
 			{ resultCode = -4; break; }
-	#endif
-}
+	}
 	return resultCode;
 }
