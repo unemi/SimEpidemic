@@ -382,7 +382,8 @@ static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
 	*keyCurrentParams = @"currentParams",
 	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex",
-	*keyParamChangers = @"paramChangers"
+	*keyParamChangers = @"paramChangers",
+	*fnPopDensMap = @"populationDesityMap.gz"
 #ifndef NOGUI
 	,*fnStatImageBM = @"statImageBitmap.gz",
 	*fnUIInfo = @"UIInfo.plist",
@@ -394,6 +395,7 @@ static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	;
 #ifndef NOGUI
 - (BOOL)prepareSavePanel:(NSSavePanel *)savePanel {
+	savePMapCBox.enabled = (self.popDistImage != nil);
 	savePanel.accessoryView = savePanelAccView;
 	return YES;
 }
@@ -549,6 +551,7 @@ z(inTestQueue); z(lastTested);
 	VaccineListSave *vcnMem = mdata.mutableBytes;
 	vcnMem->subjRem = vcnSubjectsRem;
 	vcnMem->index = vcnListIndex;
+	vcnMem->lateIdx = -1 - vcnLateIdx;
 	for (NSInteger i = 0; i < nPop; i ++) vcnMem->list[i] =
 		self.agents[vaccineList[i]].vaccineTicket? -vaccineList[i] : vaccineList[i];
 //		self.agents[vaccineList[i]].vaccineTicket? -vaccineList[i] - 1 : vaccineList[i];
@@ -579,6 +582,12 @@ z(inTestQueue); z(lastTested);
 	md[fnUIInfo] = fileWrapper_from_plist(dict);
 }
 #endif
+- (void)addSavePopDens:(NSMutableDictionary *)md {
+	NSBitmapImageRep *imgRep = make_bm_with_image(self.popDistImage);
+	md[fnPopDensMap] = [NSFileWrapper.alloc initRegularFileWithContents:
+		[[NSData dataWithBytes:imgRep.bitmapData
+			length:imgRep.bytesPerRow * imgRep.pixelsHigh] zippedData]];
+}
 - (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError {
 	@try {
 		NSMutableDictionary *dict = NSMutableDictionary.new;
@@ -591,15 +600,18 @@ z(inTestQueue); z(lastTested);
 		dict[keyAnimeSteps] = @(animeSteps);
 		BOOL savePop = (savePopCBox.state == NSControlStateValueOn && runtimeParams.step > 0);
 		BOOL saveGUI = saveGUICBox.state == NSControlStateValueOn;
-		if (!saveGUI && !savePop) return fileWrapper_from_plist(dict);
+		BOOL savePMap = savePMapCBox.state == NSControlStateValueOn;
+		if (!saveGUI && !savePop && !savePMap) return fileWrapper_from_plist(dict);
 #endif
 		NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
 		dict[keyFormatVersion] = @(FORMAT_VER);
 #ifdef NOGUI
 		[self addSavePop:md info:dict];
+		if (self.popDistImage != nil) [self addSavePopDens:md];
 #else
 		if (savePop) [self addSavePop:md info:dict];
 		if (saveGUI) [self addSaveGUI:md];
+		if (savePMap) [self addSavePopDens:md];
 #endif
 		md[fnParamsPList] = fileWrapper_from_plist(dict);
 		return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];
@@ -694,7 +706,7 @@ static NSDictionary *plist_from_data(NSData *data) {
 			ContactInfoSave *sv = (ContactInfoSave *)(vp + 1);
 			ContactInfo **cInfoP = &self.agents[i].contactInfoHead;
 			for (NSInteger j = 0; j < n; j ++, sv ++) {
-				ContactInfo *ci = self.agents[i].contactInfoTail = new_cinfo();
+				ContactInfo *ci = self.agents[i].contactInfoTail = [self newCInfo];
 				ci->agent = self.agents + sv->agentID;
 				ci->timeStamp = sv->timeStamp;
 				ci->prev = *cInfoP; ci->next = NULL;
@@ -709,7 +721,7 @@ static NSDictionary *plist_from_data(NSData *data) {
 		NSInteger n = data.length / sizeof(TestEntrySave);
 		TestEntry **tP = &testQueHead;
 		for (NSInteger i = 0; i < n; i ++, vp ++) {
-			TestEntry *te = testQueTail = new_testEntry();
+			TestEntry *te = testQueTail = [self newTestEntry];
 			te->agent = self.agents + vp->agentID;
 			te->timeStamp = vp->timeStamp;
 			te->isPositive = vp->isPositive;
@@ -730,7 +742,7 @@ static NSDictionary *plist_from_data(NSData *data) {
 		NSData *data = [fw.regularFileContents unzippedData];
 		const GatheringSave *sv = data.bytes;
 		for (NSInteger nBytes = 0; nBytes < data.length; ) {
-			Gathering *gat = new_n_gatherings(1);
+			Gathering *gat = [self newNGatherings:1];
 			setup_with_saved_data(gat, sv, self.agents);
 			gat->next = gatherings; gat->prev = NULL;
 			if (gatherings) gatherings->prev = gat;
@@ -742,15 +754,24 @@ static NSDictionary *plist_from_data(NSData *data) {
 	}
 	if ((fw = dict[fnVaccineList]) != nil) {
 		NSData *data = [fw.regularFileContents unzippedData];
-		if (data.length >= sizeof(VaccineListSave) + sizeof(NSInteger) * (worldParams.initPop - 1)) {
+		NSInteger dtSz = sizeof(NSInteger) * (worldParams.initPop - 1);
+		if (data.length >= sizeof(VaccineListSaveOld1) + dtSz) {
 			const VaccineListSave *sv = data.bytes;
 			vcnSubjectsRem = sv->subjRem;
 			vcnListIndex = sv->index;
+			const NSInteger *list;
+//			if (sv->lateIdx < 0) {	// for version identification
+//				vcnLateIdx = - sv->lateIdx - 1;
+//				list = sv->list;
+//			} else {
+				vcnLateIdx = vcnListIndex;
+				list = ((VaccineListSaveOld1 *)sv)->list;
+//			}
 			for (NSInteger i = 0; i < worldParams.initPop; i ++) {
 				NSInteger k; BOOL ticket;
-				if (sv->list[i] >= 0) { k = sv->list[i]; ticket = NO; }
-				else { k = - sv->list[i]; ticket = YES; }
-//	@@@			else { k = - sv->list[i] - 1; ticket = YES; }
+				if (list[i] >= 0) { k = list[i]; ticket = NO; }
+				else { k = - list[i]; ticket = YES; }
+//	@@@			else { k = - list[i] - 1; ticket = YES; }
 				if (k < worldParams.initPop) {
 					vaccineList[i] = k;
 					self.agents[k].vaccineTicket = ticket;
@@ -769,6 +790,15 @@ static NSDictionary *plist_from_data(NSData *data) {
 	if ((fw = dict[fnStatImageBM]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st copyImageBitmapFromData:[fw.regularFileContents unzippedData]]; }];
 #endif
+	if ((fw = dict[fnPopDensMap]) != nil && fw.regularFile) {
+		NSData *data = [fw.regularFileContents unzippedData];
+		NSBitmapImageRep *imgRep = make_pop_dist_bm();
+		if (data.length == imgRep.bytesPerRow * imgRep.pixelsHigh) {
+			memcpy(imgRep.bitmapData, data.bytes, data.length);
+			NSImage *img = [NSImage.alloc initWithSize:imgRep.size];
+			[img addRepresentation:imgRep];
+			self.popDistImage = img;
+	}}
 	NSInteger popSize = worldParams.initPop;
 	[statProcs addObject:^(StatInfo *st) { st.popsize = popSize; }];
 #ifdef NOGUI

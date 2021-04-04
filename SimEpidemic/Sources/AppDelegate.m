@@ -26,6 +26,7 @@ unsigned long current_time_us(void) {
 	if (startTime < 0) startTime = tv.tv_sec;
 	return (tv.tv_sec - startTime) * 1000000L + tv.tv_usec;
 }
+#ifndef NOGUI
 void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
 	NSString *message = [obj isKindOfClass:NSString.class]? (NSString *)obj :
 		[obj isKindOfClass:NSError.class]? [NSString stringWithFormat:
@@ -43,7 +44,6 @@ void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
 		if (critical) [NSApp terminate:nil];
 	}
 }
-#ifndef NOGUI
 void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void)) {
 	NSAlert *alt = NSAlert.new;
 	alt.alertStyle = NSAlertStyleWarning;
@@ -193,15 +193,16 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeInteger, @"worldSize", {.i = { 360, 10, 999999}}},
 	{ ParamTypeInteger, @"mesh", {.i = { 18, 1, 999}}},
 //	{ ParamTypeInteger, @"initialInfected", {.i = { 20, 1, 999}}},
-	{ ParamTypeInteger, @"stepsPerDay", {.i = { 16, 1, 999}}},
+	{ ParamTypeInteger, @"stepsPerDay", {.i = { 12, 1, 999}}},
 	
 	{ ParamTypeRate, @"initialInfectedRate", {.f = { .1, 0., 100.}}},
 	{ ParamTypeRate, @"initialRecovered", {.f = { 0., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineAsymptomatic", {.f = { 20., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineSymptomatic", {.f = { 50., 0., 100.}}},
 
-	{ ParamTypeEnum, @"vaccinePriority", {.e = {0, 4}}},
-	{ ParamTypeWEnum, @"homeMode", {.e = {0, 2}}},
+	{ ParamTypeEnum, @"vaccinePriority", {.e = {0, 5}}},
+	{ ParamTypeEnum, @"tracingOperation", {.e = {0, 2}}},
+	{ ParamTypeWEnum, @"workPlaceMode", {.e = {0, 3}}},
 
 	{ ParamTypeNone, nil }
 };
@@ -372,7 +373,6 @@ static NSInteger
 	}
 	isARM = strcmp(archName, "x86_64") != 0;
 	nCores = NSProcessInfo.processInfo.processorCount;
-	init_global_locks();
 	NSInteger nF = 0, nD = 0, nI = 0, nR = 0, nE = 0, nH = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat:
@@ -446,6 +446,9 @@ static NSInteger
 	}
 	paramFormatters = [NSArray arrayWithObjects:formatters count:nFmt];
 	NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;
+#ifdef DEBUG
+	[ud setBool:YES forKey:@"NSConstraintBasedLayoutVisualizeMutuallyExclusiveConstraints"];
+#endif
 
 	NSNumber *num;
 	NSObject *obj;
@@ -517,6 +520,9 @@ static NSInteger
 	if (makePanelChildWindow == DEFAULT_CHILD_WIN)
 		[ud removeObjectForKey:keyChildWindow];
 	else [ud setBool:makePanelChildWindow forKey:keyChildWindow];
+#ifdef DEBUG
+	[ud removeObjectForKey:@"NSConstraintBasedLayoutVisualizeMutuallyExclusiveConstraints"];
+#endif
 }
 - (IBAction)orderFrontMyAboutPanel:(id)sender {
 	NSURL *url = [NSBundle.mainBundle URLForResource:@"Credits" withExtension:@"rtf"];

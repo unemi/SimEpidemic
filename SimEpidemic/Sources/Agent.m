@@ -7,7 +7,6 @@
 //
 
 #import "Agent.h"
-#import "Document.h"
 #import "StatPanel.h"
 #define AVOIDANCE .2
 
@@ -109,18 +108,19 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	memset(a, 0, sizeof(Agent));
 	a->app = d_random();
 	a->prf = d_random();
-	switch (wp->homeMode) {
-		case HomeNone:
+	switch (wp->wrkPlcMode) {
+		case WrkPlcNone:
 		a->x = random_coord(wp);
 		a->y = random_coord(wp);
 		break;
-		case HomeUniform:
+		case WrkPlcUniform:
 		a->orgPt = (CGPoint){(a->x = random_coord(wp)), (a->y = random_coord(wp))};
 		break;
-		case HomeCentered:
+		case WrkPlcCentered:
 		a->orgPt = centered_point(wp);
 		a->x = a->orgPt.x; a->y = a->orgPt.y;
 		break;
+		case WrkPlcPopDistImg: break;
 	}
 	CGFloat th = d_random() * M_PI * 2.;
 	a->vx = cos(th);
@@ -138,6 +138,78 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	DistInfo dInfo = {0., 1., .5};
 	a->mobFreq = random_with_corr(&dInfo, ae, rp->mobAct/100.);
 	a->gatFreq = random_with_corr(&dInfo, ae, rp->gatAct/100.);
+}
+static float pop_dist_sum(NSInteger x, NSInteger y, NSInteger w, float *pd) {
+	float s = 0;
+	for (int i = 0; i < w; i ++) for (int j = 0; j < w; j ++)
+		s += pd[(y + i) * PopDistMapRes + x + j];
+	return s;
+}
+static void pop_dist_alloc(NSInteger x, NSInteger y, NSInteger w,
+	NSPoint *pts, NSInteger n, float *pd) {
+	if (n <= 1) {
+		pts[0] = (NSPoint){x + d_random() * w, y + d_random() * w};
+	} else if (w <= 2) {
+		for (NSInteger i = 0; i < n; i ++)
+			pts[i] = (NSPoint){x + d_random() * w, y + d_random() * w};
+	} else {
+		NSInteger v = w / 2, m = 0;
+		NSInteger xx[] = {x, x, x + v, x + v}, yy[] = {y, y + v, y, y + v}, nn[4];
+		struct AAndIdx { float a; NSInteger idx; } aa[4];
+		float s = 0.;
+		for (NSInteger i = 0; i < 4; i ++)
+			s += aa[i].a = pop_dist_sum(xx[i], yy[i], v, pd);
+		for (NSInteger i = 0; i < 4; i ++) {
+			aa[i].a = n * aa[i].a / s;
+			m += nn[i] = aa[i].a;
+			aa[i].a -= nn[i];
+			aa[i].idx = i;
+		}
+		qsort_b(aa, 4, sizeof(struct AAndIdx), ^int(const void *a, const void *b) {
+			struct AAndIdx *c = (struct AAndIdx *)a, *d = (struct AAndIdx *)b;
+			return (c->a > d->a)? -1 : (c->a < d->a)? 1 : 0;
+		});
+		for (NSInteger i = 0; m < n; m ++, i = (i + 1) % 4) nn[aa[i].idx] ++;
+		NSPoint *pt = pts;
+		for (NSInteger i = 0; i < 4; i ++) if (nn[i] > 0) {
+			pop_dist_alloc(xx[i], yy[i], v, pt, nn[i], pd);
+			pt += nn[i];
+		}
+	}
+}
+NSBitmapImageRep *make_pop_dist_bm(void) {
+	return [NSBitmapImageRep.alloc initWithBitmapDataPlanes:NULL
+		pixelsWide:PopDistMapRes pixelsHigh:PopDistMapRes bitsPerSample:sizeof(float)*8
+		samplesPerPixel:1 hasAlpha:NO isPlanar:NO colorSpaceName:NSCalibratedWhiteColorSpace
+		bitmapFormat:NSBitmapFormatFloatingPointSamples
+		bytesPerRow:sizeof(float) * PopDistMapRes bitsPerPixel:sizeof(float)*8];
+}
+NSBitmapImageRep *make_bm_with_image(NSImage *image) {
+	NSBitmapImageRep *imgRep = make_pop_dist_bm();
+	NSGraphicsContext *orgCtx = NSGraphicsContext.currentContext;
+	NSGraphicsContext.currentContext = [NSGraphicsContext graphicsContextWithBitmapImageRep:imgRep];
+	NSRect rct = {NSZeroPoint, imgRep.size};
+	if (image != nil) [image drawInRect:rct];
+	else { [NSColor.grayColor setFill]; [NSBezierPath fillRect:rct]; }
+	NSGraphicsContext.currentContext = orgCtx;
+	return imgRep;
+}
+void setup_home_with_map(Agent *agents, WorldParams *wp, NSImage *image) {
+	NSBitmapImageRep *imgRep = make_bm_with_image(image);
+	float *pd = (float *)imgRep.bitmapData;
+	NSPoint *pts = malloc(sizeof(NSPoint) * wp->initPop);
+	pop_dist_alloc(0, 0, PopDistMapRes, pts, wp->initPop, pd);
+	for (NSInteger i = 0; i < wp->initPop - 1; i ++) {
+		NSInteger j = random() % (wp->initPop - i) + i;
+		if (i != j) { NSPoint p = pts[i]; pts[i] = pts[j]; pts[j] = p; }
+	}
+	CGFloat a = (CGFloat)wp->worldSize / PopDistMapRes;
+	for (NSInteger i = 0; i < wp->initPop; i ++) {
+		NSPoint *pt = &agents[i].orgPt;
+		agents[i].x = pt->x = pts[i].x * a;
+		agents[i].y = pt->y = wp->worldSize - 1 - pts[i].y * a;
+	}
+	free(pts);
 }
 void reset_for_step(Agent *a) {
 	a->fx = a->fy = 0.;
@@ -189,7 +261,8 @@ if (a->isOutOfField) {
 	a->isOutOfField = YES;
 	remove_from_list(a, Pop + index_in_pop(a, wp));
 }
-static void attracted(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFloat d) {
+@implementation Document (AgentExtension)
+static void attracted(Agent *a, Agent *b) {
 	CGFloat x = fabs(b->app - a->prf);
 	x = ((x < 0.5)? x : 1.0 - x) * 2.0;
 	if (a->bestDist > x) {
@@ -197,40 +270,36 @@ static void attracted(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CG
 		a->best = b;
 	}
 }
-static void infects(Agent *a, Agent *b, RuntimeParams *rp, WorldParams *wp, CGFloat d) {
-	// b infects a
-//	CGFloat timeFactor = fmin(1., (b->daysInfected - rp->contagDelay) /
-//		(b->daysInfected - fmin(rp->contagPeak, b->daysToOnset)));
-	CGFloat timeFactor = (b->daysToCompleteRecov <= 0.)?
-		fmin(1., (b->daysInfected - rp->contagDelay) /
-			(fmin(rp->contagPeak, b->daysToOnset) - rp->contagDelay)) :
-		(b->daysToCompleteRecov - b->daysInfected) / (b->daysToCompleteRecov - b->daysToRecover);
-	CGFloat distanceFactor = fmin(1., pow((rp->infecDst - d) / 2., 2.));
-	CGFloat immuneFactor = (a->health == Susceptible)? 1. :
-		(a->health == Vaccinated)? 1. - a->agentImmunity : 0.;
-	if (was_hit(wp->stepsPerDay, rp->infec / 100. * timeFactor * distanceFactor * immuneFactor)) {
-		a->newHealth = Asymptomatic;
-		a->daysInfected = a->daysDiseased = 0;
-		if (a->nInfects < 0) a->newNInfects = 1;
-		b->newNInfects ++;
-	}
-}
-static void check_infection(Agent *a, Agent *b,
-	RuntimeParams *rp, WorldParams *wp, CGFloat d) {
-	if (was_hit(wp->stepsPerDay, rp->cntctTrc / 100.)) add_new_cinfo(a, b, rp->step);
+- (void)checkInfectionA:(Agent *)a B:(Agent *)b dist:(CGFloat)d {
+	if (was_hit(worldParams.stepsPerDay, runtimeParams.cntctTrc / 100.))
+		[self addNewCInfoA:a B:b tm:runtimeParams.step];
 	if (a->newHealth != a->health) return;
 	if ((a->health == Susceptible || a->health == Vaccinated)
-		&& is_infected(b) && b->daysInfected > rp->contagDelay)
-		infects(a, b, rp, wp, d);
+		&& is_infected(b) && b->daysInfected > runtimeParams.contagDelay) {
+		CGFloat timeFactor = (b->daysToCompleteRecov <= 0.)?
+			fmin(1., (b->daysInfected - runtimeParams.contagDelay) /
+				(fmin(runtimeParams.contagPeak, b->daysToOnset) - runtimeParams.contagDelay)) :
+			(b->daysToCompleteRecov - b->daysInfected) / (b->daysToCompleteRecov - b->daysToRecover);
+		CGFloat distanceFactor = fmin(1., pow((runtimeParams.infecDst - d) / 2., 2.));
+		CGFloat immuneFactor = (a->health == Susceptible)? 1. :
+			(a->health == Vaccinated)? 1. - a->agentImmunity : 0.;
+		if (was_hit(worldParams.stepsPerDay,
+			runtimeParams.infec / 100. * timeFactor * distanceFactor * immuneFactor)) {
+			a->newHealth = Asymptomatic;
+			a->daysInfected = a->daysDiseased = 0;
+			if (a->nInfects < 0) a->newNInfects = 1;
+			b->newNInfects ++;
+		}
+	}
 }
-void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp) {
+- (void)interactsA:(Agent *)a Bs:(Agent **)b n:(NSInteger)n {
 	CGFloat dx[n], dy[n], d2[n], d[n];
 	Agent *bb[n];
 	for (NSInteger i = 0; i < n; i ++) {
 		dx[i] = b[i]->x - a->x; dy[i] = b[i]->y - a->y;
 		d[i] = sqrt((d2[i] = fmax(1e-4, dx[i] * dx[i] + dy[i] * dy[i])));
 	}
-	CGFloat viewRange = wp->worldSize / wp->mesh;
+	CGFloat viewRange = worldParams.worldSize / worldParams.mesh;
 	NSInteger j = 0;
 	for (NSInteger i = 0; i < n; i ++) if (d[i] < viewRange) {
 		if (i > j) { dx[j] = dx[i]; dy[j] = dy[i]; d2[j] = d2[i]; d[j] = d[i]; }
@@ -240,20 +309,22 @@ void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams 
 	if (j <= 0) return;
 	CGFloat dd[j], ax[j], ay[j];
 	for (NSInteger i = 0; i < j; i ++) dd[i] = ((d[i] < viewRange * 0.8)? 1.0 :
-		(1 - d[i] / viewRange) / 0.2) / d[i] / d2[i] * AVOIDANCE * rp->avoidance / 50.;
+		(1 - d[i] / viewRange) / 0.2) / d[i] / d2[i] * AVOIDANCE * runtimeParams.avoidance / 50.;
 	for (NSInteger i = 0; i < j; i ++)
 		{ ax[i] = dx[i] * dd[i]; ay[i] = dy[i] * dd[i]; }
 	for (NSInteger i = 0; i < j; i ++) {
 		a->fx -= ax[i]; a->fy -= ay[i];
 		bb[i]->fx += ax[i]; bb[i]->fy += ay[i];
-		attracted(a, bb[i], rp, wp, d[i]);
-		attracted(bb[i], a, rp, wp, d[i]);
-		if (d[i] < rp->infecDst) {
-			check_infection(a, bb[i], rp, wp, d[i]);
-			check_infection(bb[i], a, rp, wp, d[i]);
+		attracted(a, bb[i]);
+		attracted(bb[i], a);
+		if (d[i] < runtimeParams.infecDst) {
+			[self checkInfectionA:a B:bb[i] dist:d[i]];
+			[self checkInfectionA:bb[i] B:a dist:d[i]];
 		}
 	}
 }
+@end
+
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
 static BOOL patient_step(Agent *a, WorldParams *p, BOOL inQuarantine, StepInfo *info) {
 	if (a->daysToCompleteRecov > 0.) { // in the recovery phase

@@ -9,6 +9,7 @@
 #import "ParamPanel.h"
 #import "AppDelegate.h"
 #import "Document.h"
+#import "PopDist.h"
 
 static void reveal_me_in_tabview(NSControl *me, NSTabView *tabView) {
 	NSView *parent = me.superview;
@@ -91,6 +92,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	NSArray<DistDigits *> *dDigits;
 	NSArray<NSSlider *> *fSliders, *rSliders;
 	NSArray<NSStepper *> *iSteppers;
+	PopDist *popDist;
 	DistDigits *dDigitW;
 	NSUndoManager *undoManager;
 	BOOL hasUserDefaults;
@@ -111,6 +113,12 @@ static NSNumberFormatter *distDgtFmt = nil;
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
 	return undoManager;
 }
+static NSInteger spd_to_stpInt(NSInteger stepsPerDay) {
+	return (stepsPerDay < 3)? 0 : round(log2(stepsPerDay / 3)) + 1;
+}
+static NSInteger stpInt_to_spd(NSInteger stpExp) {
+	return (stpExp <= 0)? 1 : round(pow(2., stpExp - 1)) * 3;
+}
 - (void)adjustControls {
 	WorldParams *wp = doc.tmpWorldParamsP;
 	for (NSInteger i = 0; i < fDigits.count; i ++)
@@ -120,11 +128,11 @@ static NSNumberFormatter *distDgtFmt = nil;
 		iDigits[i].integerValue = iSteppers[i].integerValue = (&wp->PARAM_I1)[i];
 	for (NSInteger i = 0; i < rDigits.count; i ++)
 		rDigits[i].doubleValue = rSliders[i].doubleValue = (&wp->PARAM_R1)[i];
-	stepsPerDayStp.integerValue = round(log2(wp->stepsPerDay));
+	stepsPerDayStp.integerValue = spd_to_stpInt(wp->stepsPerDay);
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 	[dDigitW adjustDigitsToCurrentValue];
 	[vcnPriPopUp selectItemAtIndex:targetParams->vcnPri];
-	[homeModePopUp selectItemAtIndex:wp->homeMode];
+	[wrkPlcModePopUp selectItemAtIndex:wp->wrkPlcMode];
 }
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
 	if (targetParams == doc.runtimeParamsP) for (NSString *key in paramNames) {
@@ -239,29 +247,44 @@ static NSNumberFormatter *distDgtFmt = nil;
     [doc setPanelTitle:self.window];
 }
 - (IBAction)changeStepsPerDay:(id)sender {
+// steps/day's possible values = {1, 3, 6, 12, 24, 48, ... }, changed at ver.1.8.4
 	WorldParams *wp = doc.tmpWorldParamsP;
-	NSInteger orgExp = round(log2(wp->stepsPerDay));
+	NSInteger orgExp = spd_to_stpInt(wp->stepsPerDay);
 	NSTabView *tabV = tabView;
 	[undoManager registerUndoWithTarget:stepsPerDayStp handler:^(NSStepper *target) {
 		reveal_me_in_tabview(target, tabV);
 		target.integerValue = orgExp;
 		[target sendAction:target.action to:target.target];
 	}];
-	wp->stepsPerDay = round(pow(2., stepsPerDayStp.integerValue));
+	NSInteger newExp =  stepsPerDayStp.integerValue;
+	wp->stepsPerDay = stpInt_to_spd(newExp);
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 	[self checkUpdate];
 }
 - (IBAction)chooseHomeMode:(id)sender {
 	WorldParams *wp = doc.tmpWorldParamsP;
-	HomeMode orgValue = wp->homeMode, newValue = (HomeMode)homeModePopUp.indexOfSelectedItem;
+	WrkPlcMode orgValue = wp->wrkPlcMode, newValue = (WrkPlcMode)wrkPlcModePopUp.indexOfSelectedItem;
 	if (orgValue == newValue) return;
 	NSTabView *tabV = tabView;
-	[undoManager registerUndoWithTarget:homeModePopUp handler:^(NSPopUpButton *target) {
+	[undoManager registerUndoWithTarget:wrkPlcModePopUp handler:^(NSPopUpButton *target) {
 		reveal_me_in_tabview(target, tabV);
 		[target selectItemAtIndex:orgValue];
 		[target sendAction:target.action to:target.target];
 	}];
-	wp->homeMode = newValue;
+	wp->wrkPlcMode = newValue;
+	[self checkUpdate];
+}
+- (IBAction)chooseTracingOperation:(id)sender {
+	TracingOperation orgValue = targetParams->trcOpe,
+		newValue = (TracingOperation)trcOpePopUp.indexOfSelectedItem;
+	if (orgValue == newValue) return;
+	NSTabView *tabV = tabView;
+	[undoManager registerUndoWithTarget:trcOpePopUp handler:^(NSPopUpButton *target) {
+		reveal_me_in_tabview(target, tabV);
+		[target selectItemAtIndex:orgValue];
+		[target sendAction:target.action to:target.target];
+	}];
+	targetParams->trcOpe = newValue;
 	[self checkUpdate];
 }
 - (IBAction)chooseVaccinePriority:(id)sender {
@@ -438,6 +461,23 @@ static NSNumberFormatter *distDgtFmt = nil;
 	[doc updateChangeCount:undoManager.isUndoing? NSChangeUndone :
 		undoManager.isRedoing? NSChangeRedone : NSChangeDone];
 	[self checkUpdate];
+}
+- (void)setPopDistImage:(NSImage *)image {
+	NSImage *orgImage = doc.popDistImage;
+	[undoManager registerUndoWithTarget:self handler:^(ParamPanel *pp) {
+		[pp setPopDistImage:orgImage];
+	}];
+	doc.popDistImage = image;
+}
+- (IBAction)setupPopDistMap:(id)sender {
+	if (popDist == nil) {
+		popDist = PopDist.new;
+		popDist.image = doc.popDistImage;
+	}
+	PopDist *ppdst = popDist;
+	[self.window beginSheet:popDist.window completionHandler:^(NSModalResponse returnCode) {
+		if (returnCode == NSModalResponseOK) [self setPopDistImage:ppdst.image];
+	}];
 }
 // tabview delegate
 - (void)tabView:(NSTabView *)tabView willSelectTabViewItem:(NSTabViewItem *)tabViewItem {

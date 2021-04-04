@@ -16,6 +16,7 @@ extern NSString *save_state_dir(void);
 @interface Document (SaveStateExpension)
 - (void)saveStateTo:(NSString *)fname;
 - (void)loadStateFrom:(NSString *)fname;
+- (void)loadPopDistMapFrom:(NSString *)fname;
 @end
 
 @interface ProcContext (SaveStateExtension)

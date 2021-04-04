@@ -194,6 +194,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	_stopAt = ((num = info[@"stopAt"]) == nil)? 0 : num.integerValue;
 	_nIteration = ((num = info[@"n"]) == nil)? 1 : num.integerValue;
 	loadState = info[@"loadState"];
+	popDistMap = info[@"popDistMap"];
 	if (_nIteration <= 1) _nIteration = 1;
 	NSArray<NSString *> *output = info[@"out"];
 	NSInteger n = output.count, nn = 0, nd = 0, nD = 0;
@@ -303,19 +304,21 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 				set_params_from_dict(doc.runtimeParamsP, doc.worldParamsP, _parameters);
 				set_params_from_dict(doc.initParamsP, doc.tmpWorldParamsP, _parameters);
 				[doc setScenarioWithPList:_scenario];
+				if (popDistMap != nil) [doc loadPopDistMapFrom:popDistMap];
 			} else {
 				doc = [availableWorlds lastObject];
 				[availableWorlds removeLastObject];
 			}
 			[doc resetPop];
 		} else {
-			if (availableWorlds.count <= 0) doc = make_new_world(@"Job", nil);
-			else {
+			if (availableWorlds.count <= 0) {
+				doc = make_new_world(@"Job", nil);
+				if (popDistMap != nil) [doc loadPopDistMapFrom:popDistMap];
+			} else {
 				doc = [availableWorlds lastObject];
 				[availableWorlds removeLastObject];
 			}
 			[doc loadStateFrom:loadState];
-			MY_LOG("Doc %@ load state %@.", doc.ID, loadState);
 			if (_parameters != nil) load_params_from_dict(doc, NULL, _parameters);
 		}
 		NSNumber *trialNumb = @(++ nextTrialNumber);
@@ -557,7 +560,7 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 		(cnt == 0)? @"No saved state was found" :
 		(cnt == 1)? @"One saved state was deleted" : 
 		[NSString stringWithFormat:@"%ld job states were deleted", cnt]];
-	code = (jInfo || cnt > 0)? 200 : 417;
+	code = (jInfo || cnt > 0)? 200 : 500;
 }
 @end
 

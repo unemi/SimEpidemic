@@ -7,10 +7,12 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import "Document.h"
 #import "CommonTypes.h"
 #define AGENT_RADIUS .75
 #define AGENT_SIZE .665
 #define BIG_NUM 1e10
+#define PopDistMapRes 512
 
 typedef enum {
 	AgntDrwCircle, AgntDrwOctagon, AgntDrwSquire, AgntDrwPoint
@@ -23,13 +25,19 @@ typedef struct {
 	TestType testType;
 } StepInfo;
 
-@class Document;
+@interface Document (AgentExtension)
+- (void)interactsA:(Agent *)a Bs:(Agent **)b n:(NSInteger)n;
+@end
+
 extern CGFloat d_random(void);
 extern CGFloat modified_prob(CGFloat x, DistInfo *p);
 extern CGFloat my_random(DistInfo *p);
 extern BOOL is_infected(Agent *a);
 extern CGFloat centered_bias(CGPoint p);
 extern void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp);
+extern NSBitmapImageRep *make_pop_dist_bm(void);
+extern NSBitmapImageRep *make_bm_with_image(NSImage *image);
+extern void setup_home_with_map(Agent *agents, WorldParams *wp, NSImage *image);
 extern void reset_for_step(Agent *a);
 extern void add_to_list(Agent *a, Agent **list);
 extern void remove_from_list(Agent *a, Agent **list);

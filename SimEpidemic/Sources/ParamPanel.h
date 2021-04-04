@@ -60,9 +60,9 @@ NS_ASSUME_NONNULL_BEGIN
 		*vcnEPeriodDgt, *vcnAntiRateDgt;
 	IBOutlet NSSlider *vcnPRateSld, *vcn1stEffSld, *vcnMaxEffSld, *vcnEDelaySld,
 		*vcnEPeriodSld, *vcnAntiRateSld;
-	IBOutlet NSPopUpButton *homeModePopUp, *vcnPriPopUp;
+	IBOutlet NSPopUpButton *wrkPlcModePopUp, *trcOpePopUp, *vcnPriPopUp;
 	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn, *saveAsUDBtn;
-	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn; 
+	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn;
 }
 @property BOOL byUser;
 - (instancetype)initWithDoc:(Document *)dc;

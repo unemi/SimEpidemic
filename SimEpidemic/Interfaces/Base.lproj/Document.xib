@@ -392,27 +392,54 @@
             </connections>
         </customObject>
         <customView id="X9U-U8-xMN">
-            <rect key="frame" x="0.0" y="0.0" width="350" height="25"/>
-            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+            <rect key="frame" x="0.0" y="0.0" width="497" height="25"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
             <subviews>
-                <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="gEb-89-QHE">
-                    <rect key="frame" x="8" y="4" width="169" height="18"/>
-                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <buttonCell key="cell" type="check" title="Save Current Population" bezelStyle="regularSquare" imagePosition="left" inset="2" id="XsK-yp-42R">
+                <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="gEb-89-QHE">
+                    <rect key="frame" x="90" y="4" width="136" height="18"/>
+                    <buttonCell key="cell" type="check" title="Current population" bezelStyle="regularSquare" imagePosition="left" inset="2" id="XsK-yp-42R">
                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
                 </button>
-                <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="7Jg-8L-tfU">
-                    <rect key="frame" x="183" y="4" width="162" height="18"/>
-                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                    <buttonCell key="cell" type="check" title="Save GUI Configulation" bezelStyle="regularSquare" imagePosition="left" inset="2" id="ivl-1w-jl0">
+                <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="7Jg-8L-tfU">
+                    <rect key="frame" x="230" y="4" width="127" height="18"/>
+                    <buttonCell key="cell" type="check" title="GUI configulation" bezelStyle="regularSquare" imagePosition="left" inset="2" id="ivl-1w-jl0">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                </button>
+                <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="90R-te-42n">
+                    <rect key="frame" x="10" y="5" width="76" height="16"/>
+                    <textFieldCell key="cell" lineBreakMode="clipping" title="Save option" id="kLe-Ys-Faa">
+                        <font key="font" metaFont="system"/>
+                        <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                        <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                    </textFieldCell>
+                </textField>
+                <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="wr9-NP-KMl">
+                    <rect key="frame" x="363" y="4" width="116" height="18"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="112" id="bNq-G6-Qfg"/>
+                    </constraints>
+                    <buttonCell key="cell" type="check" title="Population map" bezelStyle="regularSquare" imagePosition="left" inset="2" id="2Tg-eB-eCS">
                         <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                         <font key="font" metaFont="system"/>
                     </buttonCell>
                 </button>
             </subviews>
-            <point key="canvasLocation" x="587" y="109.5"/>
+            <constraints>
+                <constraint firstAttribute="bottom" secondItem="90R-te-42n" secondAttribute="bottom" constant="5" id="4NG-Yb-8lw"/>
+                <constraint firstItem="gEb-89-QHE" firstAttribute="leading" secondItem="90R-te-42n" secondAttribute="trailing" constant="8" id="5Hx-Um-aD1"/>
+                <constraint firstItem="wr9-NP-KMl" firstAttribute="top" secondItem="X9U-U8-xMN" secondAttribute="top" constant="5" id="9ca-8y-mp0"/>
+                <constraint firstItem="gEb-89-QHE" firstAttribute="top" secondItem="X9U-U8-xMN" secondAttribute="top" constant="5" id="QWL-wW-j0Z"/>
+                <constraint firstItem="7Jg-8L-tfU" firstAttribute="top" secondItem="X9U-U8-xMN" secondAttribute="top" constant="5" id="Yb5-7g-oYe"/>
+                <constraint firstItem="7Jg-8L-tfU" firstAttribute="leading" secondItem="gEb-89-QHE" secondAttribute="trailing" constant="8" id="fe0-fZ-cNF"/>
+                <constraint firstItem="90R-te-42n" firstAttribute="top" secondItem="X9U-U8-xMN" secondAttribute="top" constant="4" id="jeb-gX-2HI"/>
+                <constraint firstItem="90R-te-42n" firstAttribute="leading" secondItem="X9U-U8-xMN" secondAttribute="leading" constant="12" id="oNM-Yx-rir"/>
+                <constraint firstItem="wr9-NP-KMl" firstAttribute="leading" secondItem="7Jg-8L-tfU" secondAttribute="trailing" constant="10" id="sJ3-wE-eRx"/>
+            </constraints>
+            <point key="canvasLocation" x="660.5" y="109.5"/>
         </customView>
     </objects>
     <resources>

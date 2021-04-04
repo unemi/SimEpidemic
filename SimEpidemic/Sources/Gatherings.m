@@ -59,10 +59,10 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 	gat->duration = my_random(&rp->gatDR);
 	gat->strength = my_random(&rp->gatST);
 	NSInteger wSize = wp->worldSize;
-	gat->p = (wp->homeMode == HomeNone)?
+	gat->p = (wp->wrkPlcMode == WrkPlcNone)?
 		(NSPoint){ d_random() * wSize, d_random() * wSize } :
 		self.agents[random() % wp->initPop].orgPt;
-	if (wp->homeMode == HomeCentered) gat->size *= centered_bias((CGPoint){
+	if (wp->wrkPlcMode == WrkPlcCentered) gat->size *= centered_bias((CGPoint){
 		gat->p.x / wSize * 2. - 1., gat->p.y / wSize * 2. - 1. }) * M_SQRT2;
 	CGFloat grid = (CGFloat)wSize / wp->mesh, r = gat->size + SURROUND;
 	NSInteger bottom = floor(fmax(0., gat->p.y - r) / grid),
@@ -127,13 +127,13 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 //	if (rp->step % 32 == 31) printf("%ld %ld\n", rp->step / 16, nNewGat);
 	Gathering *newGats;
 	if (nNewGat < nFree) {
-		if (nNewGat <= 0) { free_gatherings(gatToFree); return; }
+		if (nNewGat <= 0) { [self freeGatherings:gatToFree]; return; }
 		newGats = gatToFree;
 		for (NSInteger i = nNewGat - 1; i > 0; i --) gatToFree = gatToFree->next;
-		free_gatherings(gatToFree->next);
+		[self freeGatherings:gatToFree->next];
 		gatToFree->next = NULL;
 	} else if (nNewGat > nFree) {
-		newGats = new_n_gatherings(nNewGat - nFree);
+		newGats = [self newNGatherings:nNewGat - nFree];
 		if (nFree > 0) {
 			freeTail->next = newGats;
 			newGats->prev = freeTail;

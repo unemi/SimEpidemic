@@ -44,12 +44,17 @@ typedef enum {
 } LoopMode;
 
 typedef enum {
-	HomeNone, HomeUniform, HomeCentered
-} HomeMode;
+	WrkPlcNone, WrkPlcUniform, WrkPlcCentered, WrkPlcPopDistImg
+} WrkPlcMode;
 
 typedef enum {
-	VcnPrRandom, VcnPrActive, VcnPrInactive, VcnPrCentral, VcnPrActAndCntr
+	VcnPrRandom, VcnPrActive, VcnPrInactive, VcnPrCentral,
+	VcnPrPopDens, VcnPrActAndCntr
 } VaccinePriority;
+
+typedef enum {
+	TrcTst, TrcVcn, TrcBoth
+} TracingOperation;
 
 typedef struct {
 	CGFloat min, max, mode;
@@ -75,13 +80,15 @@ typedef struct {
 	DistInfo mobFreq; // Participation frequency in long travel
 	DistInfo gatFreq; // Participation frequency in gathering
 	VaccinePriority vcnPri;	// vaccination priority
+	TracingOperation trcOpe; // How to treat the contacts, tests or vaccination, or both
 	NSInteger step;
 } RuntimeParams;
+
 typedef struct {
 	NSInteger initPop, worldSize, mesh, stepsPerDay;
 	CGFloat infected, recovered;	// initial ratio in population
 	CGFloat qAsymp, qSymp;	// initial ratio of separation for each health state
-	HomeMode homeMode;
+	WrkPlcMode wrkPlcMode;
 } WorldParams;
 
 #define PARAM_F1 mass
@@ -89,7 +96,7 @@ typedef struct {
 #define PARAM_I1 initPop
 #define PARAM_R1 infected
 #define PARAM_E1 vcnPri
-#define PARAM_H1 homeMode
+#define PARAM_H1 wrkPlcMode
 #define IDX_D 1000
 #define IDX_I 2000
 #define IDX_R 3000

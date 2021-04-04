@@ -13,13 +13,7 @@
 #endif
 
 extern NSString *keyParameters, *keyScenario, *keyDaysToStop;
-extern void add_new_cinfo(Agent *a, Agent *b, NSInteger tm);
 extern void in_main_thread(dispatch_block_t block);
-extern void init_global_locks(void);
-extern TestEntry *new_testEntry(void);
-extern ContactInfo *new_cinfo(void);
-extern void free_gatherings(Gathering *gats);
-extern Gathering *new_n_gatherings(NSInteger n);
 extern NSPredicate *predicate_in_item(NSObject *item, NSString **comment);
 extern NSObject *scenario_element_from_property(NSObject *prop);
 extern NSString *check_scenario_element_from_property(NSObject *prop);
@@ -59,7 +53,7 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 	IBOutlet NSStepper *animeStepper;
 	NSArray<LegendView *> *lvViews;
 	IBOutlet NSView *savePanelAccView;
-	IBOutlet NSButton *savePopCBox, *saveGUICBox;
+	IBOutlet NSButton *savePopCBox, *saveGUICBox, *savePMapCBox;
 	NSMutableArray<void (^)(StatInfo *)> *statPanelInitializer;
 	void (^panelInitializer)(Document *);
 	Scenario *scenarioPanel;
@@ -81,11 +75,12 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
 	TestEntry *testQueHead, *testQueTail;
 	Gathering *gatherings;
-	NSInteger *vaccineList, vcnListIndex;
+	NSInteger *vaccineList, vcnListIndex, vcnLateIdx;
 	CGFloat vcnSubjectsRem;
 }
 @property (readonly) Agent *agents, **Pop, *QList, *CList;
 @property (readonly) NSMutableDictionary<NSNumber *, NSValue *> *WarpList;
+@property NSImage *popDistImage;
 #ifdef DEBUGz
 @property NSInteger phaseInStep;
 #endif
@@ -103,6 +98,11 @@ DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
 - (NSMutableArray<MyCounter *> *)DeathPHist;
 - (void)addOperation:(void (^)(void))block;
 - (void)waitAllOperations;
+- (TestEntry *)newTestEntry;
+- (ContactInfo *)newCInfo;
+- (void)addNewCInfoA:(Agent *)a B:(Agent *)b tm:(NSInteger)tm;
+- (void)freeGatherings:(Gathering *)gats;
+- (Gathering *)newNGatherings:(NSInteger)n;
 - (NSArray *)scenario;
 - (void)allocateMemory;
 - (void)setVaccinePriority:(VaccinePriority)newValue toInit:(BOOL)isInit;

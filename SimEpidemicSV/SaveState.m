@@ -19,6 +19,10 @@ NSString *save_state_dir(void) {
 static NSString *save_state_file_path(NSString *fname) {
 	return [save_state_dir() stringByAppendingFormat:@"/%@.sEpi", fname];
 }
+static NSString *pop_dist_map_file_path(NSString *fname) {
+	return [[dataDirectory stringByAppendingPathComponent:@"PopDistMap"]
+		stringByAppendingPathComponent:fname];
+}
 
 @implementation Document (SaveStateExpension)
 - (void)saveStateTo:(NSString *)fname {
@@ -49,6 +53,12 @@ static NSString *save_state_file_path(NSString *fname) {
 	} @catch (id _) { }
 	[fwLock unlock];
 	if (error != nil) @throw error;
+}
+- (void)loadPopDistMapFrom:(NSString *)fname {
+	NSString *filePath = pop_dist_map_file_path(fname);
+	NSImage *image = [NSImage.alloc initWithContentsOfFile:filePath];
+	if (image != nil) self.popDistImage = image;
+	else @throw [NSString stringWithFormat:@"Couldn't make an image from \"%@\".", fname];
 }
 @end
 

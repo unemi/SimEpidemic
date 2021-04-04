@@ -43,6 +43,12 @@ typedef struct {
 	CGFloat subjRem;
 	NSInteger index;
 	NSInteger list[1];
+} VaccineListSaveOld1;
+
+typedef struct {
+	CGFloat subjRem;
+	NSInteger index, lateIdx;
+	NSInteger list[1];
 } VaccineListSave;
 
 typedef struct {
