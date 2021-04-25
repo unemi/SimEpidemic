@@ -7,7 +7,7 @@
 //
 
 #import <Cocoa/Cocoa.h>
-#import "Document.h"
+#import "World.h"
 #import "CommonTypes.h"
 #define AGENT_RADIUS .75
 #define AGENT_SIZE .665
@@ -25,7 +25,7 @@ typedef struct {
 	TestType testType;
 } StepInfo;
 
-@interface Document (AgentExtension)
+@interface World (AgentExtension)
 - (void)interactsA:(Agent *)a Bs:(Agent **)b n:(NSInteger)n;
 @end
 
@@ -46,9 +46,7 @@ extern void remove_agent(Agent *a, WorldParams *p, Agent **Pop);
 extern void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp);
 extern void going_back_home(Agent *a);
 extern void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, StepInfo *info);
-extern BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, NSPoint goal);
+extern BOOL warp_step(Agent *a, WorldParams *wp, World *world, WarpType mode, NSPoint goal);
 extern void step_agent_in_quarantine(Agent *a, WorldParams *p, StepInfo *info);
-extern void warp_show(Agent *a, WarpType mode, NSPoint goal,
-	NSRect dirtyRect, NSArray<NSBezierPath *> *paths);
-extern void show_agent(Agent *a, AgentDrawType type,
-	NSRect dirtyRect, NSArray<NSBezierPath *> *paths);
+extern void warp_show(Agent *a, WarpType mode, NSPoint goal, NSRect dirtyRect, NSBezierPath *path);
+extern void show_agent(Agent *a, AgentDrawType type, NSRect dirtyRect, NSBezierPath *path);

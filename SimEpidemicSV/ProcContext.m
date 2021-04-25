@@ -16,7 +16,7 @@
 #import "PeriodicReporter.h"
 #import "SaveState.h"
 #import "BatchJob.h"
-#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/World.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
 #import "DataCompress.h"
 #define MAX_INT32 0x7fffffff
@@ -47,10 +47,10 @@ static NSString *headerFormat = @"HTTP/1.1 %03d %@\nDate: %@\nServer: simepidemi
 }
 @end
 
-@implementation Document (TimeOutExtension)
+@implementation World (TimeOutExtension)
 - (void)expirationCheck:(NSTimer *)timer {
-	if (theDocuments[self.ID] != self) return;
-	NSTimeInterval nextCheck = documentTimeout;
+	if (theWorlds[self.ID] != self) return;
+	NSTimeInterval nextCheck = worldTimeout;
 	[self.lastTLock lock];
 	if (!self.running) {
 		NSDate *lastT = self.lastTouch;
@@ -62,25 +62,25 @@ static NSString *headerFormat = @"HTTP/1.1 %03d %@\nDate: %@\nServer: simepidemi
 		selector:@selector(expirationCheck:) userInfo:nil repeats:NO];
 	else {
 		MY_LOG("World %@ closed by timeout.", self.ID);
-		[theDocuments removeObjectForKey:self.ID];
-		if (self.docKey != nil) [defaultDocuments removeObjectForKey:self.docKey];
+		[theWorlds removeObjectForKey:self.ID];
+		if (self.worldKey != nil) [defaultWorlds removeObjectForKey:self.worldKey];
 	}
 	[self.lastTLock unlock];
 }
 @end
 
-Document *make_new_world(NSString *type, NSString * _Nullable browserID) {
-	if (theDocuments.count >= maxNDocuments) @throw [NSString stringWithFormat:
-		@"500 This server already have too many (%ld) worlds.", maxNDocuments];
-	Document *doc = Document.new;
+World *make_new_world(NSString *type, NSString * _Nullable browserID) {
+	if (theWorlds.count >= maxNWorlds) @throw [NSString stringWithFormat:
+		@"500 This server already have too many (%ld) worlds.", maxNWorlds];
+	World *world = World.new;
 	if (browserID != nil) {
-		theDocuments[doc.ID] = doc;
-		[NSTimer scheduledTimerWithTimeInterval:documentTimeout target:doc
+		theWorlds[world.ID] = world;
+		[NSTimer scheduledTimerWithTimeInterval:worldTimeout target:world
 			selector:@selector(expirationCheck:) userInfo:nil repeats:NO];
 		MY_LOG("%@ world %@ was created for %@. %ld world(s) in total.",
-			type, doc.ID, browserID, theDocuments.count);
-	} else MY_LOG("%@ world %@ was created.", type, doc.ID);
-	return doc;
+			type, world.ID, browserID, theWorlds.count);
+	} else MY_LOG("%@ world %@ was created.", type, world.ID);
+	return world;
 }
 @implementation ProcContext
 - (instancetype)initWithSocket:(int)dsc ip:(uint32)ipaddr {
@@ -395,26 +395,26 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	}
 	return code;
 }
-- (void)checkDocument {
+- (void)checkWorld {
 	NSString *brwsID = query[@"me"], *worldID = query[@"world"];
 	if (brwsID != nil) browserID = brwsID;
 	if (worldID == nil) worldID = query[@"name"];
 	if (worldID == nil || [worldID isEqualToString:@"default"]) {
 		if (browserID == nil) browserID = ip4_string(ip4addr);
-		document = defaultDocuments[browserID];
-		if (document == nil || ![document touch]) {
-			document = make_new_world(@"Default", browserID);
-			defaultDocuments[browserID] = document;
-			document.docKey = browserID;
+		world = defaultWorlds[browserID];
+		if (world == nil || ![world touch]) {
+			world = make_new_world(@"Default", browserID);
+			defaultWorlds[browserID] = world;
+			world.worldKey = browserID;
 		}
 	} else {
-		document = theDocuments[worldID];
-		if (document == nil) @throw [NSString stringWithFormat:
+		world = theWorlds[worldID];
+		if (world == nil) @throw [NSString stringWithFormat:
 			@"500 World of ID %@ doesn't exist.", worldID];
 	}
 }
 - (void)connectionWillClose {
-	[document reporterConnectionWillClose:desc];
+	[world reporterConnectionWillClose:desc];
 }
 - (void)setJSONDataAsResponse:(NSObject *)object {
 	NSString *valueStr = query[@"format"];
@@ -437,53 +437,53 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	} else return NO;
 }
 - (void)getInfo:(NSObject *)plist {
-	[self checkDocument];
+	[self checkWorld];
 	[self setupLocalFileToSave:@"json"];
 	[self setJSONDataAsResponse:plist];
 }
 - (void)setWorldIDAsResponse {
-	content = document.ID;
+	content = world.ID;
 	type = @"text/plain";
 	code = 200;
 }
 - (void)getWorldID {
-	[self checkDocument];
+	[self checkWorld];
 	[self setWorldIDAsResponse];
 }
 - (void)newWorld {
-	document = make_new_world(@"New",
+	world = make_new_world(@"New",
 		(browserID == nil)? ip4_string(ip4addr) : browserID);
 	[self setWorldIDAsResponse];
 }
 - (void)closeWorld {
 	NSString *worldID = query[@"world"];
 	if (worldID == nil) @throw @"417 World ID is missing.";
-	Document *doc = theDocuments[worldID];
-	if (doc == nil) @throw [NSString stringWithFormat:
+	World *world = theWorlds[worldID];
+	if (world == nil) @throw [NSString stringWithFormat:
 		@"500 World of ID %@ doesn't exist.", worldID];
-	else if (doc.docKey != nil)
+	else if (world.worldKey != nil)
 		@throw @"500 It's not allowed to close a default world.";
-	else [theDocuments removeObjectForKey:worldID];
+	else [theWorlds removeObjectForKey:worldID];
 }
 - (void)getParams {
-	[self checkDocument];
-	[document popLock];
-	NSObject *plist = param_dict(document.runtimeParamsP, document.worldParamsP);
-	[document popUnlock];
+	[self checkWorld];
+	[world popLock];
+	NSObject *plist = param_dict(world.runtimeParamsP, world.worldParamsP);
+	[world popUnlock];
 	[self getInfo:plist];
 }
-void load_params_from_dict(Document *doc, WorldParams  * _Nullable wp, NSDictionary *dict) {
-	RuntimeParams *rp = doc.runtimeParamsP;
+void load_params_from_dict(World *world, WorldParams  * _Nullable wp, NSDictionary *dict) {
+	RuntimeParams *rp = world.runtimeParamsP;
 	VaccinePriority orgVcnPri = rp->vcnPri;
 	set_params_from_dict(rp, wp, dict);
 	VaccinePriority newVcnPri = rp->vcnPri;
 	if (newVcnPri != orgVcnPri) {
 		rp->vcnPri = orgVcnPri;
-		[doc setVaccinePriority:newVcnPri toInit:NO];
+		[world setVaccinePriority:newVcnPri toInit:NO];
 	}
 }
 - (void)setParams {
-	[self checkDocument];
+	[self checkWorld];
 	NSDictionary *dict = nil;
 	NSString *JSONstr = query[@"JSON"];
 	if (JSONstr != nil) {
@@ -496,19 +496,19 @@ void load_params_from_dict(Document *doc, WorldParams  * _Nullable wp, NSDiction
 			@throw @"417 JSON data doesn't represent a dictionary.";
 	} else dict = query;
 	MY_LOG_DEBUG("--- parameters\n%s\n", dict.description.UTF8String);
-	[document popLock];
-	WorldParams *wp = document.tmpWorldParamsP;
-	load_params_from_dict(document, wp, dict);
+	[world popLock];
+	WorldParams *wp = world.tmpWorldParamsP;
+	load_params_from_dict(world, wp, dict);
 	NSInteger popSize = wp->initPop;
 	if (popSize > maxPopSize) wp->initPop = maxPopSize;
-	[document popUnlock];
+	[world popUnlock];
 	if (popSize > maxPopSize) @throw [NSString stringWithFormat:
 		@"200 The specified population size %ld is too large.\
 It was adjusted to maxmimum value: %ld.", popSize, maxPopSize];
-	RuntimeParams *rp = document.runtimeParamsP;
-	if (rp->step == 0 && memcmp(document.worldParamsP, wp, sizeof(WorldParams))) {
-		memcpy(document.worldParamsP, wp, sizeof(WorldParams));
-		[document resetPop];
+	RuntimeParams *rp = world.runtimeParamsP;
+	if (rp->step == 0 && memcmp(world.worldParamsP, wp, sizeof(WorldParams))) {
+		memcpy(world.worldParamsP, wp, sizeof(WorldParams));
+		[world resetPop];
 	}
 }
 //
@@ -531,35 +531,35 @@ NSArray *dist_cnt_array(NSArray<MyCounter *> *hist) {
 	}
 	return ma;
 }
-NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document *doc) {
-	StatInfo *statInfo = doc.statInfo;
+NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(World *world) {
+	StatInfo *statInfo = world.statInfo;
 	return [NSDictionary dictionaryWithObjects:
 			@[statInfo.IncubPHist, statInfo.RecovPHist,
 			statInfo.DeathPHist, statInfo.NInfectsHist] forKeys:distributionNames];
 }
 //
 - (void)start {
-	[self checkDocument];
+	[self checkWorld];
 	NSString *opStr = query[@"stopAt"], *maxSPSStr = query[@"maxSPS"];
 	NSInteger stopAt = (opStr == nil)? 0 : opStr.integerValue;
 	CGFloat maxSps = (maxSPSStr == nil)? 0 : maxSPSStr.doubleValue;
-	Document *doc = document;
-	in_main_thread(^{ [doc start:stopAt maxSPS:maxSps priority:-.1]; });
+	World *wd = world;
+	in_main_thread(^{ [wd start:stopAt maxSPS:maxSps priority:-.1]; });
 }
 - (void)step {
-	[self checkDocument];
-	Document *doc = document;
-	in_main_thread(^{ [doc step]; });
+	[self checkWorld];
+	World *wd = world;
+	in_main_thread(^{ [wd step]; });
 }
 - (void)stop {
-	[self checkDocument];
-	Document *doc = document;
-	in_main_thread(^{ [doc stop:LoopEndByUser]; });
+	[self checkWorld];
+	World *wd = world;
+	in_main_thread(^{ [wd stop:LoopEndByUser]; });
 }
 - (void)reset {
-	[self checkDocument];
-	Document *doc = document;
-	in_main_thread(^{ [doc resetPop]; });
+	[self checkWorld];
+	World *wd = world;
+	in_main_thread(^{ [wd resetPop]; });
 }
 - (void)collectNamesInto:(NSMutableSet *)nameSet {
 	NSError *error;
@@ -574,7 +574,7 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document
 	[nameSet addObjectsFromArray:array];
 }
 - (void)getIndexes {
-	[self checkDocument];
+	[self checkWorld];
 	NSInteger fromDay = MAX_INT32, fromStep = MAX_INT32, daysWindow = 0;
 	NSMutableSet *idxNames = NSMutableSet.new;
 	for (NSString *key in query.keyEnumerator) {
@@ -591,8 +591,8 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document
 	}
 	if (idxNames.count == 0) @throw @"417 Index name is not sepcified.";
 
-	RuntimeParams *rp = document.runtimeParamsP;
-	WorldParams *wp = document.worldParamsP;
+	RuntimeParams *rp = world.runtimeParamsP;
+	WorldParams *wp = world.worldParamsP;
 	if (fromDay != MAX_INT32) fromStep = fromDay * wp->stepsPerDay;
 	else if (fromStep != MAX_INT32) fromDay = fromStep / wp->stepsPerDay;
 	NSInteger nDays, nSteps;
@@ -600,14 +600,14 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document
 		(rp->step < fromStep)? 1 : rp->step - fromStep + 1;
 	nDays = (fromDay == MAX_INT32)? 1 : (nSteps + wp->stepsPerDay - 1) / wp->stepsPerDay;
 	NSMutableDictionary *md = NSMutableDictionary.new;
-	StatInfo *statInfo = document.statInfo;
+	StatInfo *statInfo = world.statInfo;
 	StatData *statData = (daysWindow == 0)? statInfo.statistics : statInfo.transit;
 	NSInteger nItems = (daysWindow == 0)?
 		(nSteps - 1) / statInfo.skipSteps + 1 : (nDays - 1) / statInfo.skipDays + 1;
-	[document popLock];
+	[world popLock];
 	for (NSString *idxName in idxNames) {
 		if ([idxName isEqualToString:@"isRunning"])
-			md[idxName] = @(document.running);
+			md[idxName] = @(world.running);
 		else if ([idxName isEqualToString:@"step"]) md[idxName] = @(rp->step);
 		else if ([idxName isEqualToString:@"days"])
 			md[idxName] = @((CGFloat)rp->step / wp->stepsPerDay);
@@ -624,12 +624,12 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document
 				md[idxName] = make_history(statData, nItems,
 					^(StatData *st) { return @(st->cnt[idx]); });
 	}}}
-	[document popUnlock];
+	[world popUnlock];
 	if (md.count == 0) @throw @"417 No valid index names are specified.";
 	[self setJSONDataAsResponse:md];
 }
 - (void)getDistribution {
-	[self checkDocument];
+	[self checkWorld];
 	NSMutableSet *distNames = NSMutableSet.new;
 	for (NSString *key in query.keyEnumerator) {
 		if ([key isEqualToString:@"names"])
@@ -640,13 +640,13 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document
 	if (distNames.count == 0) @throw @"417 Distribution name is not sepcified.";
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	NSDictionary<NSString *, NSArray<MyCounter *> *>
-		*nameMap = distribution_name_map(document);
-	[document popLock];
+		*nameMap = distribution_name_map(world);
+	[world popLock];
 	for (NSString *distName in distNames) {
 		NSArray<MyCounter *> *hist = nameMap[distName];
 		if (hist != nil) md[distName] = dist_cnt_array(hist);
 	}
-	[document popUnlock];
+	[world popUnlock];
 	if (md.count == 0) @throw @"417 No valid distribution names are specified.";
 	[self setJSONDataAsResponse:md];
 }
@@ -661,20 +661,20 @@ static int store_agent_xyh(Agent *a, uint8 *buf, NSInteger worldSize) {
 	return sprintf((char *)buf, "[%d,%d,%d],",
 		int_coord(a->x, worldSize), int_coord(a->y, worldSize), a->health);
 }
-NSData *JSON_pop(Document *doc) {
-	WorldParams *wp = doc.worldParamsP;
-	Agent **pop = doc.Pop;
+NSData *JSON_pop(World *world) {
+	WorldParams *wp = world.worldParamsP;
+	Agent **pop = world.Pop;
 	uint8 *buf = malloc(wp->initPop * 16 + 4), *p = buf + 1;
 	buf[0] = '[';
 	uint32 nAgents = 0;
 	for (NSInteger i = 0; i < wp->mesh * wp->mesh; i ++)
 		for (Agent *a = pop[i]; a != NULL; a = a->next, nAgents ++)
 			p += store_agent_xyh(a, p, wp->worldSize);
-	for (Agent *a = doc.QList; a != NULL; a = a->next, nAgents ++)
+	for (Agent *a = world.QList; a != NULL; a = a->next, nAgents ++)
 		p += store_agent_xyh(a, p, wp->worldSize);
-	for (Agent *a = doc.CList; a != NULL; a = a->next, nAgents ++)
+	for (Agent *a = world.CList; a != NULL; a = a->next, nAgents ++)
 		p += store_agent_xyh(a, p, wp->worldSize);
-	for (NSValue *value in doc.WarpList.objectEnumerator) {
+	for (NSValue *value in world.WarpList.objectEnumerator) {
 		WarpInfo info = value.warpInfoValue;
 		Agent *a = info.agent;
 		p += sprintf((char *)p, "[%d,%d,%d,%d,%d,%d],",
@@ -688,11 +688,11 @@ NSData *JSON_pop(Document *doc) {
 	else { buf[1] = ']'; srcSize = 2; }
 	return [NSData dataWithBytesNoCopy:buf length:srcSize freeWhenDone:YES];
 }
-- (void)getPop:(NSData *(Document *))dataFunc {
-	[self checkDocument];
-	[document popLock];
-	NSData *srcData = dataFunc(document);
-	[document popUnlock];
+- (void)getPop:(NSData *(World *))dataFunc {
+	[self checkWorld];
+	[world popLock];
+	NSData *srcData = dataFunc(world);
+	[world popUnlock];
 	@try {
 		NSData *dstData = [srcData zippedData];
 		MY_LOG_DEBUG("agents -> %ld bytes\n", dstData.length);
@@ -710,19 +710,19 @@ NSData *JSON_pop(Document *doc) {
 static NSArray *agent_cood(Agent *a, WorldParams *wp) {
 	return @[@(int_coord(a->x, wp->worldSize)), @(int_coord(a->y, wp->worldSize))];
 }
-NSData *JSON_pop2(Document *doc) {
-	WorldParams *wp = doc.worldParamsP;
-	Agent **pop = doc.Pop;
+NSData *JSON_pop2(World *world) {
+	WorldParams *wp = world.worldParamsP;
+	Agent **pop = world.Pop;
 	NSMutableArray *posts[NHealthTypes];
 	for (NSInteger i = 0; i < NHealthTypes; i ++) posts[i] = NSMutableArray.new;
 	for (NSInteger i = 0; i < wp->mesh * wp->mesh; i ++)
 		for (Agent *a = pop[i]; a != NULL; a = a->next)
 			[posts[a->health] addObject:agent_cood(a, wp)];
-	for (Agent *a = doc.QList; a != NULL; a = a->next)
+	for (Agent *a = world.QList; a != NULL; a = a->next)
 		[posts[a->health] addObject:agent_cood(a, wp)];
-	for (Agent *a = doc.CList; a != NULL; a = a->next)
+	for (Agent *a = world.CList; a != NULL; a = a->next)
 		[posts[a->health] addObject:agent_cood(a, wp)];
-	for (NSValue *value in doc.WarpList.objectEnumerator) {
+	for (NSValue *value in world.WarpList.objectEnumerator) {
 		WarpInfo info = value.warpInfoValue;
 		Agent *a = info.agent;
 		[posts[a->health] addObject:@[
@@ -737,15 +737,15 @@ NSData *JSON_pop2(Document *doc) {
 - (void)getPopulation2 { [self getPop:JSON_pop2]; }
 
 - (void)getScenario {
-	[self checkDocument];
-	[document popLock];
-	NSObject *plist = [document scenarioPList];
-	[document popUnlock];
+	[self checkWorld];
+	[world popLock];
+	NSObject *plist = [world scenarioPList];
+	[world popUnlock];
 	[self getInfo:plist];
 }
 - (void)setScenario {
-	[self checkDocument];
-	if (document.runtimeParamsP->step > 0 || document.running)
+	[self checkWorld];
+	if (world.runtimeParamsP->step > 0 || world.running)
 		@throw @"500 setScenario command can be issued only before starting the simulation.";
 	NSString *source = query[@"scenario"];
 	if (source == nil) source = query[@"JSON"];
@@ -758,7 +758,7 @@ NSData *JSON_pop2(Document *doc) {
 		@"417 Failed to interprete JSON data: %@", error.localizedDescription];
 	if (![plist isKindOfClass:NSArray.class])
 		@throw @"417 JSON data doesn't represent an array form.";
-	@try { [document setScenarioWithPList:plist]; }
+	@try { [world setScenarioWithPList:plist]; }
 	@catch (NSString *msg) { @throw [@"500 " stringByAppendingString:msg]; }
 }
 // utility command

@@ -7,7 +7,7 @@
 //
 
 #import "Parameters.h"
-#import "Document.h"
+#import "World.h"
 
 @implementation NSApplication (ScriptingExtension)
 - (NSDictionary *)factoryDefaultsRuntime { return param_dict(&defaultRuntimeParams, NULL); }
@@ -16,7 +16,7 @@
 - (NSDictionary *)userDefaultsWorld { return param_dict(NULL, &userDefaultWorldParams); }
 @end
 
-@implementation Document (ScriptingExtension)
+@implementation World (ScriptingExtension)
 - (NSDictionary *)runtimeParameter { return param_dict(&runtimeParams, NULL); }
 - (NSDictionary *)initialRuntimeParameter { return param_dict(&initParams, NULL); }
 - (NSDictionary *)worldParameter { return param_dict(NULL, &worldParams); }

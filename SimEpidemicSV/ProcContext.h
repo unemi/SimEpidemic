@@ -14,16 +14,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 typedef enum { IdxTypeIndex, IdxTypeTestI, IdxTypePRate, IdxTypeRRate, IdxTypeUnknown } IndexType;
 typedef enum { MethodHEAD, MethodGET, MethodPOST, MethodNone = NSNotFound } MethodType;
-@class Document, MyCounter, DeflaterStream;
-extern Document *make_new_world(NSString *type, NSString * _Nullable browserID);
+@class World, MyCounter, DeflaterStream;
+extern World *make_new_world(NSString *type, NSString * _Nullable browserID);
 extern void send_bytes(int desc, const char *bytes, NSInteger size);
-extern void load_params_from_dict(Document *doc, WorldParams * _Nullable wp, NSDictionary *dict);
+extern void load_params_from_dict(World *wd, WorldParams * _Nullable wp, NSDictionary *dict);
 extern NSArray *make_history(StatData *stat, NSInteger nItems,
 	NSNumber *(^getter)(StatData *));
 extern NSArray *dist_cnt_array(NSArray<MyCounter *> *hist);
-extern NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(Document *doc);
-extern NSData *JSON_pop(Document *doc);
-extern NSData *JSON_pop2(Document *doc);
+extern NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(World *world);
+extern NSData *JSON_pop(World *world);
+extern NSData *JSON_pop2(World *world);
 extern void init_context(void);
 
 @interface NSString (IndexNameExtension)
@@ -35,7 +35,7 @@ extern void init_context(void);
 	int desc, code;
 	uint32 ip4addr;
 	NSString *browserID;
-	Document *document;
+	World *world;
 	NSMutableData *bufData;	// buffer to receive
 	long dataLength;
 	MethodType method;
@@ -55,7 +55,7 @@ extern void init_context(void);
 - (int)makeResponse;
 - (void)setJSONDataAsResponse:(NSObject *)object;
 - (BOOL)setupLocalFileToSave:(NSString *)extension;
-- (void)checkDocument;
+- (void)checkWorld;
 - (void)connectionWillClose;
 @end
 

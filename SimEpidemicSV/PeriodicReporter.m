@@ -8,7 +8,7 @@
 
 #import "PeriodicReporter.h"
 #import "noGUI.h"
-#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/World.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
 #import "DataCompress.h"
 #import <os/log.h>
@@ -19,7 +19,7 @@
 static NSMutableDictionary<NSString *, PeriodicReporter *> *theReporters = nil;
 
 @interface PeriodicReporter () {
-	Document * __weak document;
+	World * __weak world;
 	int desc;
 	uint32 ip4addr;
 	z_stream strm;
@@ -27,7 +27,7 @@ static NSMutableDictionary<NSString *, PeriodicReporter *> *theReporters = nil;
 	NSDate *workBegin;
 	NSArray<NSString *> *repItemsIdx, *repItemsDly, *repItemsDst, *repItemsExt;
 	BOOL repPopulation;
-	NSData *(*dataOfPopInfo)(Document *);
+	NSData *(*dataOfPopInfo)(World *);
 	unsigned long lastReportTime, lastCommentTime;
 	CGFloat repInterval;
 	NSTimer *idlingTimer;
@@ -114,7 +114,7 @@ static NSArray<NSString *> *valid_report_item_names(void) {
 		(fmtStr.integerValue != 2)? JSON_pop : JSON_pop2;
 	[configLock unlock];
 }
-- (instancetype)initWithDocument:(Document *)doc addr:(uint32)addr desc:(int)dsc {
+- (instancetype)initWithWorld:(World *)wd addr:(uint32)addr desc:(int)dsc {
 	if (!(self = [super init])) return nil;
 	strm.data_type = Z_TEXT;
 	int ret = deflateInit(&strm, Z_BEST_COMPRESSION);
@@ -122,7 +122,7 @@ static NSArray<NSString *> *valid_report_item_names(void) {
 		MY_LOG("Couldn't initialize a data compresser (%d).", ret);
 		exit(EXIT_FAILED_DEFLATER);	// this is a fatal error!
 	}
-	document = doc;
+	world = wd;
 	ip4addr = addr;
     desc = dsc;
     _ID = new_uniq_string();
@@ -131,7 +131,7 @@ static NSArray<NSString *> *valid_report_item_names(void) {
     theReporters[_ID] = self;
     prevRepStep = -1;
     dataOfPopInfo = JSON_pop;	// default format
-	MY_LOG_DEBUG("Repoter %@(%d) was created for world %@.", _ID, desc, doc.ID);
+	MY_LOG_DEBUG("Repoter %@(%d) was created for world %@.", _ID, desc, wd.ID);
  	return self;
 }
 - (void)sendBytes:(const void *)bytes length:(uint32)dataLen {
@@ -172,19 +172,19 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 }
 - (BOOL)sendReport {
 	@autoreleasepool {
-	[document popLock];
-	NSInteger step = document.runtimeParamsP->step,
-		stepsPerDay = document.worldParamsP->stepsPerDay;
-	StatInfo *statInfo = document.statInfo;
+	[world popLock];
+	NSInteger step = world.runtimeParamsP->step,
+		stepsPerDay = world.worldParamsP->stepsPerDay;
+	StatInfo *statInfo = world.statInfo;
 	NSInteger skp = statInfo.skipSteps, n = step / skp - prevRepStep / skp;
-	if (n <= 0) { [document popUnlock]; return NO; }
+	if (n <= 0) { [world popUnlock]; return NO; }
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	StatData *stat = statInfo.statistics;
 	[configLock lock];
 	NSArray<NSString *> *Idx = repItemsIdx, *Dly = repItemsDly,
 		*Dst = repItemsDst, *Ext = repItemsExt;
 	BOOL repPop = repPopulation;
-	NSData *(*popProc)(Document *) = dataOfPopInfo;
+	NSData *(*popProc)(World *) = dataOfPopInfo;
 	[configLock unlock];
 	for (NSString *name in Idx) md[name] = index_array(stat, n, name);
 	stat = statInfo.transit;
@@ -192,7 +192,7 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 	n = step / stepsPerDay / skp - prevRepStep / stepsPerDay / skp;
 	if (n > 0) for (NSString *name in Dly) md[name] = index_array(stat, n, name);
 	NSDictionary<NSString *, NSArray<MyCounter *> *>
-		*nameMap = distribution_name_map(document);
+		*nameMap = distribution_name_map(world);
 	for (NSString *name in Dst) {
 		NSArray<MyCounter *> *hist = nameMap[name];
 		if (hist != nil) md[name] = dist_cnt_array(hist);
@@ -205,8 +205,8 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 		else if ([name isEqualToString:@"reproductionRate"])
 			md[name] = make_history(statInfo.statistics, n, ^(StatData *st) { return @(st->reproRate); });
 	}
-	NSData *popData = repPop? popProc(document) : nil;
-	[document popUnlock];
+	NSData *popData = repPop? popProc(world) : nil;
+	[world popUnlock];
 	prevRepStep = step;
 	NSError *error;
 	NSData *data = [NSJSONSerialization dataWithJSONObject:md options:0 error:&error];
@@ -284,25 +284,25 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 	else { [self quit]; return YES; }
 }
 - (void)removeFromDoc {
-	[document removeReporter:self];
+	[world removeReporter:self];
 }
 @end
 
 @implementation ProcContext (PeriodicReportExtension)
 - (void)periodicReport {
-	[self checkDocument];
+	[self checkWorld];
 	PeriodicReporter *rep = [PeriodicReporter.alloc
-		initWithDocument:document addr:ip4addr desc:desc];
+		initWithWorld:world addr:ip4addr desc:desc];
 	[rep setupWithQuery:query init:YES];
 	nReporters ++;
-	Document *doc = document;
+	World *wd = world;
 	postProc = ^{
 		NSString *idInfo = [NSString stringWithFormat:
 			@"event: process\r\ndata: %@\r\n\r\n", rep.ID];
 		[rep sendBytes:idInfo.UTF8String length:(uint32)idInfo.length];
-		if (doc.running) [rep sendReport];
+		if (wd.running) [rep sendReport];
 		else [rep pause];
-		[doc addReporter:rep];
+		[wd addReporter:rep];
 	};
 	fileSize = 0;
 	content = nil;

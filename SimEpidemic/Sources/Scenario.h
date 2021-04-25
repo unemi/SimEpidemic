@@ -12,7 +12,7 @@
 NS_ASSUME_NONNULL_BEGIN
 typedef enum { CondTypeRunUntil, CondTypeMoveWhen } CondType;
 typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
-@class Document, Scenario, ButtonsCellView, ParamItem;
+@class Document, World, Scenario, ButtonsCellView, ParamItem;
 
 @interface ParameterCellView : NSTableCellView
 @property (readonly) NSPopUpButton *namePopUp;
@@ -61,6 +61,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 }
 @property IBOutlet NSOutlineView *outlineView;
 @property (readonly) Document *doc;
+@property (readonly) World *world;
 @property (readonly) NSUndoManager *undoManager;
 @property (readonly) NSNumberFormatter *intFormatter;
 - (instancetype)initWithDoc:(Document *)dc;

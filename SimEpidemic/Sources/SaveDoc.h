@@ -7,7 +7,10 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "Document.h"
+#import "CommonTypes.h"
+#ifdef NOGUI
+#import "World.h"
+#endif
 
 NS_ASSUME_NONNULL_BEGIN
 typedef struct {
@@ -66,10 +69,19 @@ typedef struct {
 } AgentSave;
 
 extern NSString *fnParamsPList;
-@interface Document (SaveDocExtension)
-- (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError;
-- (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper
-	ofType:(NSString *)typeName error:(NSError **)outError;
+
+typedef enum {
+	SaveOnlyParams = 0,
+	SavePopulation = 1,
+	SaveGUI = 2,
+	SavePMap = 4
+} SavePopFlags;
+
+#ifdef NOGUI
+@interface World (SaveDocExtension)
+- (NSFileWrapper *)fileWrapperOfWorld;
+- (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper error:(NSError **)outError;
 @end
+#endif
 
 NS_ASSUME_NONNULL_END

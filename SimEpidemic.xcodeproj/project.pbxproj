@@ -37,7 +37,6 @@
 		2364494B25A1741600C67E18 /* Document.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2364494925A1741600C67E18 /* Document.xib */; };
 		2365DEC525061537006C2A95 /* noGUI.m in Sources */ = {isa = PBXBuildFile; fileRef = 2365DEC325061537006C2A95 /* noGUI.m */; };
 		2365DEC72506159A006C2A95 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F02457D2C6005ADCCF /* AppDelegate.m */; };
-		2365DEC82506159A006C2A95 /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F32457D2C6005ADCCF /* Document.m */; };
 		2365DEC92506159A006C2A95 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
 		2365DECA2506159A006C2A95 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
 		23673364252EFA8E00284D91 /* PeriodicReporter.m in Sources */ = {isa = PBXBuildFile; fileRef = 23673363252EFA8E00284D91 /* PeriodicReporter.m */; };
@@ -47,6 +46,8 @@
 		23A53E9625D178360072552E /* SaveState.m in Sources */ = {isa = PBXBuildFile; fileRef = 23A53E9525D178360072552E /* SaveState.m */; };
 		23A9176C260B1EFF00755061 /* DropImageHere.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 23A9176A260B1EFF00755061 /* DropImageHere.pdf */; };
 		23AF0269250F98840074EF87 /* BatchJob.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AF0268250F98840074EF87 /* BatchJob.m */; };
+		23B4E4E3262E8F3B0058BCCC /* World.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B4E4E2262E8F3B0058BCCC /* World.m */; };
+		23B4E4E4262E8F3B0058BCCC /* World.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B4E4E2262E8F3B0058BCCC /* World.m */; };
 		23B89E4F255BD61000A95360 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B89E4E255BD61000A95360 /* main.m */; };
 		23B89E53255BD66500A95360 /* Document.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F32457D2C6005ADCCF /* Document.m */; };
 		23B89E54255BD6DB00A95360 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 232055F02457D2C6005ADCCF /* AppDelegate.m */; };
@@ -173,6 +174,8 @@
 		23A9176D260B1F1000755061 /* ja */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; name = ja; path = ja.lproj/DropImageHere.pdf; sourceTree = "<group>"; };
 		23AF0267250F98840074EF87 /* BatchJob.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BatchJob.h; sourceTree = "<group>"; };
 		23AF0268250F98840074EF87 /* BatchJob.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BatchJob.m; sourceTree = "<group>"; };
+		23B4E4E1262E8F3B0058BCCC /* World.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = World.h; sourceTree = "<group>"; };
+		23B4E4E2262E8F3B0058BCCC /* World.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = World.m; sourceTree = "<group>"; };
 		23B89E4C255BD61000A95360 /* simepiWorld */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiWorld; sourceTree = BUILT_PRODUCTS_DIR; };
 		23B89E4E255BD61000A95360 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		23BE9B3E25592A440005D1FF /* backend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = backend.h; sourceTree = "<group>"; };
@@ -303,6 +306,8 @@
 				233420D02468156200C93F8E /* DataPanel.m */,
 				232055F22457D2C6005ADCCF /* Document.h */,
 				232055F32457D2C6005ADCCF /* Document.m */,
+				23B4E4E1262E8F3B0058BCCC /* World.h */,
+				23B4E4E2262E8F3B0058BCCC /* World.m */,
 				23DAF066251737FB00C41E76 /* Gatherings.h */,
 				23DAF067251737FB00C41E76 /* Gatherings.m */,
 				231E000E2461497000BFBE9E /* MyView.h */,
@@ -596,6 +601,7 @@
 				23D6E02D24D59DDD00A5D604 /* Parameters.m in Sources */,
 				232055FF2457D2C7005ADCCF /* main.m in Sources */,
 				23D6EAE7260C562D00D48F7E /* PopDist.m in Sources */,
+				23B4E4E3262E8F3B0058BCCC /* World.m in Sources */,
 				232055F12457D2C6005ADCCF /* AppDelegate.m in Sources */,
 				235639CD247111A200F941A6 /* Scenario.m in Sources */,
 				231E00102461497000BFBE9E /* MyView.m in Sources */,
@@ -608,8 +614,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				23B4E4E4262E8F3B0058BCCC /* World.m in Sources */,
 				2365DEC72506159A006C2A95 /* AppDelegate.m in Sources */,
-				2365DEC82506159A006C2A95 /* Document.m in Sources */,
 				232683BD25D0FB390023E10C /* SaveDoc.m in Sources */,
 				23AF0269250F98840074EF87 /* BatchJob.m in Sources */,
 				23DAF069251737FB00C41E76 /* Gatherings.m in Sources */,

@@ -7,9 +7,11 @@
 //
 
 #import "SaveDoc.h"
+#import "World.h"
 #ifdef NOGUI
 #import "noGUI.h"
 #else
+#import "Document.h"
 #import "MyView.h"
 #import "ParamPanel.h"
 #import "Scenario.h"
@@ -32,7 +34,26 @@ static NSString *keyFormatVersion = @"formatVersion", *keyIncubation = @"incubat
 	*keyInfecInfo = @"infecInfo",
 	*keyStatType = @"statType", *keyWantDblDay = @"wantDoublingDay",
 	*keyTimeEvoBits = @"timeEvoBits";
-
+NSString *fnParamsPList = @"initParams.plist";
+static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
+	*fnTestees = @"testees.gz", *fnWarps = @"warps.gz", *fnGatherings = @"gatherings.gz",
+	*fnVaccineList = @"vaccine.gz",
+	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
+	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
+	*keyCurrentParams = @"currentParams",
+	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex",
+	*keyParamChangers = @"paramChangers",
+	*fnPopDensMap = @"populationDesityMap.gz",
+	*fnForVaccine = @"forVaccine.gz"
+#ifndef NOGUI
+	,*fnStatImageBM = @"statImageBitmap.gz",
+	*fnUIInfo = @"UIInfo.plist",
+	*keyViewOffsetAndScale = @"viewOffsetAndScale",
+	*keyDocWindow = @"documentWindow",
+	*keyStatWindows = @"statWindows", *keyParamPanel = @"paramPanel",
+	*keyScenarioPanel = @"scenarioPanel", *keyDataPanel = @"dataPanel"
+#endif
+	;
 #ifndef NOGUI
 @implementation ParamPanel (SaveDocExtension)
 static NSString *keySelectedTabIndex = @"selectedTabIndex";
@@ -160,7 +181,6 @@ static NSString *keyTableType = @"tableType", *keyIntervalIdx = @"intervalIndex"
 }
 @end
 #endif
-
 @implementation StatInfo (SaveDocExtension)
 static NSArray *counter_array(NSUInteger cnt[NIntIndexes]) {
 	NSNumber *nums[NIntIndexes];
@@ -289,19 +309,6 @@ static void hist_from_array(NSArray<NSNumber *> *array,
 		if ((array = plist[keys[i]]) != nil) hist_from_array(array, hists[i]);
 	}
 }
-static NSData *data_from_stat(StatData *stat) {
-	NSInteger n = 0;
-	for (StatData *p = stat; p; p = p->next) n ++;
-	if (n <= 0) return nil;
-	NSMutableData *mdata = [NSMutableData dataWithLength:sizeof(StatDataSave) * n];
-	StatDataSave *sv = mdata.mutableBytes;
-	for (StatData *p = stat; p; p = p->next, sv ++) {
-		memcpy(sv->cnt, p->cnt, sizeof(sv->cnt));
-		sv->pRate = p->pRate;
-		sv->reproRate = p->reproRate;
-	}
-	return [mdata zippedData];
-}
 static StatData *stat_chain_from_data(NSData *data) {
 	data = [data unzippedData];
 	const StatDataSave *sv = data.bytes;
@@ -372,70 +379,6 @@ static void setup_with_saved_data(Gathering *gat, const GatheringSave *sv, Agent
 	for (NSInteger i = 0; i < sv->nAgents; i ++)
 		gat->agents[i] = agents + sv->agentIDs[i];
 }
-
-@implementation Document (SaveDocExtension)
-NSString *fnParamsPList = @"initParams.plist";
-static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
-	*fnTestees = @"testees.gz", *fnWarps = @"warps.gz", *fnGatherings = @"gatherings.gz",
-	*fnVaccineList = @"vaccine.gz",
-	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
-	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
-	*keyCurrentParams = @"currentParams",
-	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex",
-	*keyParamChangers = @"paramChangers",
-	*fnPopDensMap = @"populationDesityMap.gz"
-#ifndef NOGUI
-	,*fnStatImageBM = @"statImageBitmap.gz",
-	*fnUIInfo = @"UIInfo.plist",
-	*keyViewOffsetAndScale = @"viewOffsetAndScale",
-	*keyDocWindow = @"documentWindow",
-	*keyStatWindows = @"statWindows", *keyParamPanel = @"paramPanel",
-	*keyScenarioPanel = @"scenarioPanel", *keyDataPanel = @"dataPanel"
-#endif
-	;
-#ifndef NOGUI
-- (BOOL)prepareSavePanel:(NSSavePanel *)savePanel {
-	savePMapCBox.enabled = (self.popDistImage != nil);
-	savePanel.accessoryView = savePanelAccView;
-	return YES;
-}
-- (void)setupPanelsWithInfo:(NSDictionary *)info {
-	NSDictionary *dict;
-	NSMutableArray<NSArray *> *winList = NSMutableArray.new;
-	if ((dict = info[keyParamPanel]) != nil) {
-		[self openParamPanel:nil];
-		[paramPanel applyUIInfo:dict];
-		window_order_info(paramPanel.window, dict, winList);
-	}
-	if ((dict = info[keyScenarioPanel]) != nil) {
-		BOOL alreadyOpen = scenarioPanel != nil;
-		[self openScenarioPanel:nil];
-		if (alreadyOpen) [scenarioPanel makeDocItemList];
-		[scenarioPanel applyUIInfo:dict];
-		window_order_info(scenarioPanel.window, dict, winList);
-	}
-	if ((dict = info[keyDataPanel]) != nil) {
-		[self openDataPanel:nil];
-		[dataPanel applyUIInfo:dict];
-		window_order_info(dataPanel.window, dict, winList);
-	}
-	NSArray<NSDictionary *> *dArr;
-	if ((dArr = info[keyStatWindows]) != nil)
-		[statInfo setupPanelsWithPlist:dArr parent:view.window windowList:winList];
-	if ((dict = info[keyDocWindow]) != nil) {
-		NSRect frm = frame_rect_from_dict(dict);
-		if (frm.size.width > 0.) [view.window setFrame:frm display:YES];
-		window_order_info(view.window, dict, winList);
-	}
-	NSArray<NSNumber *> *nArr;
-	if ((nArr = info[keyViewOffsetAndScale]) != nil && nArr.count >= 3) {
-		view.offset = (NSPoint){nArr[0].doubleValue, nArr[1].doubleValue};
-		view.scale = nArr[2].doubleValue;
-		view.needsDisplay = YES;
-	}
-	rearrange_window_order(winList);
-}
-#endif
 static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 	if (plist == nil) return nil;
 	NSError *error;
@@ -443,6 +386,35 @@ static NSFileWrapper *fileWrapper_from_plist(NSObject *plist) {
 		format:NSPropertyListXMLFormat_v1_0 options:0 error:&error];
 	if (data == nil) @throw error;
 	return [NSFileWrapper.alloc initRegularFileWithContents:data];
+}
+static NSData *data_from_stat(StatData *stat) {
+	NSInteger n = 0;
+	for (StatData *p = stat; p; p = p->next) n ++;
+	if (n <= 0) return nil;
+	NSMutableData *mdata = [NSMutableData dataWithLength:sizeof(StatDataSave) * n];
+	StatDataSave *sv = mdata.mutableBytes;
+	for (StatData *p = stat; p; p = p->next, sv ++) {
+		memcpy(sv->cnt, p->cnt, sizeof(sv->cnt));
+		sv->pRate = p->pRate;
+		sv->reproRate = p->reproRate;
+	}
+	return [mdata zippedData];
+}
+static NSDictionary *plist_from_data(NSData *data) {
+	NSError *error;
+	NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:data
+		options:NSPropertyListImmutable format:NULL error:&error];
+	if (plist == nil) @throw error;
+	return plist;
+}
+
+@implementation World (SaveDocExtension)
+- (void)addParams:(NSMutableDictionary *)dict {
+	if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
+	dict[keyParameters] = param_dict(&initParams, &worldParams);
+	NSDictionary *dif = param_diff_dict(&runtimeParams, &initParams, NULL, NULL);
+	if (dif.count > 0) dict[keyCurrentParams] = dif;
+	if (scenario != nil) dict[keyScenario] = [self scenarioPList];
 }
 #define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
 z(orgPt); z(daysInfected); z(daysDiseased); z(daysToCompleteRecov);\
@@ -556,6 +528,14 @@ z(inTestQueue); z(lastTested);
 		self.agents[vaccineList[i]].vaccineTicket? -vaccineList[i] : vaccineList[i];
 //		self.agents[vaccineList[i]].vaccineTicket? -vaccineList[i] - 1 : vaccineList[i];
 	md[fnVaccineList] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
+
+	mdata.length = sizeof(ForVaccine) * nPop;
+	ForVaccine *vcnSv = mdata.mutableBytes;
+	BOOL isUseful = NO;
+	for (NSInteger i = 0; i < nPop; i ++)
+		if ((vcnSv[i] = self.agents[i].forVcn) != VcnAccept) isUseful = YES;
+	if (isUseful) md[fnForVaccine] =
+		[NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	
 	md[fnStatInfo] = fileWrapper_from_plist([statInfo statiInfoPList]);
 	md[fnHistograms] = fileWrapper_from_plist([statInfo dictOfHistograms]);
@@ -569,69 +549,16 @@ z(inTestQueue); z(lastTested);
 		[[statInfo dataOfImageBitmap] zippedData]];
 #endif
 }
-#ifndef NOGUI
-- (void)addSaveGUI:(NSMutableDictionary *)md {
-	NSMutableDictionary *dict = NSMutableDictionary.new;
-	dict[keyDocWindow] = dict_of_window_geom(view.window);
-	if (view.scale > 1.) dict[keyViewOffsetAndScale] =
-		@[@(view.offset.x), @(view.offset.y), @(view.scale)];
-	dict[keyStatWindows] = [statInfo UIInfoPlist];
-	if (paramPanel != nil) dict[keyParamPanel] = [paramPanel UIInfoPlist];
-	if (scenarioPanel != nil) dict[keyScenarioPanel] = [scenarioPanel UIInfoPlist];
-	if (dataPanel != nil) dict[keyDataPanel] = [dataPanel UIInfoPlist];	
-	md[fnUIInfo] = fileWrapper_from_plist(dict);
-}
-#endif
 - (void)addSavePopDens:(NSMutableDictionary *)md {
 	NSBitmapImageRep *imgRep = make_bm_with_image(self.popDistImage);
 	md[fnPopDensMap] = [NSFileWrapper.alloc initRegularFileWithContents:
 		[[NSData dataWithBytes:imgRep.bitmapData
 			length:imgRep.bytesPerRow * imgRep.pixelsHigh] zippedData]];
 }
-- (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError {
-	@try {
-		NSMutableDictionary *dict = NSMutableDictionary.new;
-		if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
-		dict[keyParameters] = param_dict(&initParams, &worldParams);
-		NSDictionary *dif = param_diff_dict(&runtimeParams, &initParams, NULL, NULL);
-		if (dif.count > 0) dict[keyCurrentParams] = dif;
-		if (scenario != nil) dict[keyScenario] = [self scenarioPList];
-#ifndef NOGUI
-		dict[keyAnimeSteps] = @(animeSteps);
-		BOOL savePop = (savePopCBox.state == NSControlStateValueOn && runtimeParams.step > 0);
-		BOOL saveGUI = saveGUICBox.state == NSControlStateValueOn;
-		BOOL savePMap = savePMapCBox.state == NSControlStateValueOn;
-		if (!saveGUI && !savePop && !savePMap) return fileWrapper_from_plist(dict);
-#endif
-		NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
-		dict[keyFormatVersion] = @(FORMAT_VER);
-#ifdef NOGUI
-		[self addSavePop:md info:dict];
-		if (self.popDistImage != nil) [self addSavePopDens:md];
-#else
-		if (savePop) [self addSavePop:md info:dict];
-		if (saveGUI) [self addSaveGUI:md];
-		if (savePMap) [self addSavePopDens:md];
-#endif
-		md[fnParamsPList] = fileWrapper_from_plist(dict);
-		return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];
-	} @catch (NSError *error) { if (outError != NULL) *outError = error; return nil; }
-}
-static NSDictionary *plist_from_data(NSData *data) {
-	NSError *error;
-	NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:data
-		options:NSPropertyListImmutable format:NULL error:&error];
-	if (plist == nil) @throw error;
-	return plist;
-}
-- (NSDictionary *)readParamsFromFileWrapper:(NSFileWrapper *)fw {
-	NSDictionary *dict = plist_from_data(fw.regularFileContents);
+- (NSDictionary *)readParamsFromDict:(NSDictionary *)dict {
 	NSNumber *num;
 	NSDictionary *pDict;
 	NSArray *seq;
-#ifndef NOGUI
-	if ((num = dict[keyAnimeSteps]) != nil) animeSteps = num.integerValue;
-#endif
 	if ((num = dict[keyDaysToStop]) != nil) stopAtNDays = num.integerValue;
 	if ((pDict = dict[keyParameters]) != nil) {
 		set_params_from_dict(&initParams, &worldParams, pDict);
@@ -661,122 +588,166 @@ static NSDictionary *plist_from_data(NSData *data) {
 	return dict;
 }
 #define CP_L(m) a->m = as[i].m
-- (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper
-	ofType:(NSString *)typeName error:(NSError **)outError {
-	@try {
-	if (fileWrapper.regularFile) {
-		if ([self readParamsFromFileWrapper:fileWrapper] == nil) return NO;
-		if (vaccineList != NULL) [self resetVaccineList];
-		return YES;
-	} else if (!fileWrapper.directory) return NO;
-	NSDictionary *dict = fileWrapper.fileWrappers;
-	NSFileWrapper *fw = dict[fnParamsPList];
-	if (fw == nil) @throw @"Parameters are missing.";
-	NSDictionary *pDict = [self readParamsFromFileWrapper:fw];
-	NSNumber *num = pDict[keyFormatVersion];
-	if (num == nil && dict[fnStatIndexes] != nil) @throw @"The file format seems to be old.";
-	else if (num.integerValue > FORMAT_VER) @throw @"The file format is too new.";
-	if ((fw = dict[fnPopulation]) != nil) {
-		[self allocateMemory];
-		NSData *data = [fw.regularFileContents unzippedData];
-		if (data.length != sizeof(AgentSave) * worldParams.initPop)
-			@throw @"Saved population data was short.";
-		const AgentSave *as = data.bytes;
-		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
-			Agent *a = self.agents + i;
-			SAVE_AGENT_PROP(CP_L)
-			a->ID = i;
-			a->prev = a->next = NULL;
-			a->contactInfoHead = a->contactInfoTail = NULL;
-			a->newHealth = a->health;
-			a->isOutOfField = YES;
-			if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
-			else if (!a->isWarping) {
-				if (a->health == Died) add_to_list(a, self.CListP);
-				else add_to_list(a, self.QListP);
-			}
+- (void)readPopFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	[self allocateMemory];
+	NSData *data = [fw.regularFileContents unzippedData];
+	if (data.length != sizeof(AgentSave) * worldParams.initPop)
+		@throw @"Saved population data was short.";
+	const AgentSave *as = data.bytes;
+	for (NSInteger i = 0; i < worldParams.initPop; i ++) {
+		Agent *a = self.agents + i;
+		SAVE_AGENT_PROP(CP_L)
+		a->ID = i;
+		a->prev = a->next = NULL;
+		a->contactInfoHead = a->contactInfoTail = NULL;
+		a->newHealth = a->health;
+		a->forVcn = VcnAccept;
+		a->isOutOfField = YES;
+		if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
+		else if (!a->isWarping) {
+			if (a->health == Died) add_to_list(a, self.CListP);
+			else add_to_list(a, self.QListP);
 		}
 	}
-
-	if ((fw = dict[fnContacts]) != nil) {
-		NSData *data = [fw.regularFileContents unzippedData];
-		const NSInteger *vp = data.bytes;
-		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
-			NSInteger n = vp[0];
-			ContactInfoSave *sv = (ContactInfoSave *)(vp + 1);
-			ContactInfo **cInfoP = &self.agents[i].contactInfoHead;
-			for (NSInteger j = 0; j < n; j ++, sv ++) {
-				ContactInfo *ci = self.agents[i].contactInfoTail = [self newCInfo];
-				ci->agent = self.agents + sv->agentID;
-				ci->timeStamp = sv->timeStamp;
-				ci->prev = *cInfoP; ci->next = NULL;
-				*cInfoP = ci; cInfoP = &ci->next;
-			}
-			vp = (NSInteger *)sv;
+}
+- (void)readContactsFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	NSData *data = [fw.regularFileContents unzippedData];
+	const NSInteger *vp = data.bytes;
+	for (NSInteger i = 0; i < worldParams.initPop; i ++) {
+		NSInteger n = vp[0];
+		ContactInfoSave *sv = (ContactInfoSave *)(vp + 1);
+		ContactInfo **cInfoP = &self.agents[i].contactInfoHead, *ciPre = NULL;
+		for (NSInteger j = 0; j < n; j ++, sv ++) {
+			ContactInfo *ci = self.agents[i].contactInfoTail = [self newCInfo];
+			ci->agent = self.agents + sv->agentID;
+			ci->timeStamp = sv->timeStamp;
+			ci->prev = ciPre; ciPre = ci; ci->next = NULL;
+			*cInfoP = ci; cInfoP = &ci->next;
 		}
+		vp = (NSInteger *)sv;
 	}
-	if ((fw = dict[fnTestees]) != nil) {
-		NSData *data = [fw.regularFileContents unzippedData];
-		const TestEntrySave *vp = data.bytes;
-		NSInteger n = data.length / sizeof(TestEntrySave);
-		TestEntry **tP = &testQueHead;
-		for (NSInteger i = 0; i < n; i ++, vp ++) {
-			TestEntry *te = testQueTail = [self newTestEntry];
-			te->agent = self.agents + vp->agentID;
-			te->timeStamp = vp->timeStamp;
-			te->isPositive = vp->isPositive;
-			te->prev = *tP; te->next = NULL;
-			*tP = te; tP = &te->next;
-		}
+}
+- (void)readTestsFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	NSData *data = [fw.regularFileContents unzippedData];
+	const TestEntrySave *vp = data.bytes;
+	NSInteger n = data.length / sizeof(TestEntrySave);
+	TestEntry **tP = &testQueHead, *tPre = NULL;
+	for (NSInteger i = 0; i < n; i ++, vp ++) {
+		TestEntry *te = testQueTail = [self newTestEntry];
+		te->agent = self.agents + vp->agentID;
+		te->timeStamp = vp->timeStamp;
+		te->isPositive = vp->isPositive;
+		te->prev = tPre; tPre = te; te->next = NULL;
+		*tP = te; tP = &te->next;
 	}
-	if ((fw = dict[fnWarps]) != nil) {
-		NSData *data = [fw.regularFileContents unzippedData];
-		const WarpInfoSave *vp = data.bytes;
-		NSInteger n = data.length / sizeof(WarpInfoSave);
-		for (NSInteger i = 0; i < n; i ++, vp ++) {
-			WarpInfo info = (WarpInfo){self.agents + vp->agentID, vp->mode, vp->goal};
-			self.WarpList[@(vp->agentID)] = [NSValue valueWithWarpInfo:info];
-		}
+}
+- (void)readWarpsFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	NSData *data = [fw.regularFileContents unzippedData];
+	const WarpInfoSave *vp = data.bytes;
+	NSInteger n = data.length / sizeof(WarpInfoSave);
+	for (NSInteger i = 0; i < n; i ++, vp ++) {
+		WarpInfo info = (WarpInfo){self.agents + vp->agentID, vp->mode, vp->goal};
+		self.WarpList[@(vp->agentID)] = [NSValue valueWithWarpInfo:info];
 	}
-	if ((fw = dict[fnGatherings]) != nil) {
-		NSData *data = [fw.regularFileContents unzippedData];
-		const GatheringSave *sv = data.bytes;
-		for (NSInteger nBytes = 0; nBytes < data.length; ) {
-			Gathering *gat = [self newNGatherings:1];
-			setup_with_saved_data(gat, sv, self.agents);
-			gat->next = gatherings; gat->prev = NULL;
-			if (gatherings) gatherings->prev = gat;
-			gatherings = gat;
-			NSInteger sz = sizeof(GatheringSave) + sizeof(NSInteger) * (sv->nAgents - 1);
-			sv = (GatheringSave *)((char *)sv + sz);
-			nBytes += sz;
-		}
+}
+- (void)readGatheringsFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	NSData *data = [fw.regularFileContents unzippedData];
+	const GatheringSave *sv = data.bytes;
+	for (NSInteger nBytes = 0; nBytes < data.length; ) {
+		Gathering *gat = [self newNGatherings:1];
+		setup_with_saved_data(gat, sv, self.agents);
+		gat->next = gatherings; gat->prev = NULL;
+		if (gatherings) gatherings->prev = gat;
+		gatherings = gat;
+		NSInteger sz = sizeof(GatheringSave) + sizeof(NSInteger) * (sv->nAgents - 1);
+		sv = (GatheringSave *)((char *)sv + sz);
+		nBytes += sz;
 	}
-	if ((fw = dict[fnVaccineList]) != nil) {
-		NSData *data = [fw.regularFileContents unzippedData];
-		NSInteger dtSz = sizeof(NSInteger) * (worldParams.initPop - 1);
-		if (data.length >= sizeof(VaccineListSaveOld1) + dtSz) {
-			const VaccineListSave *sv = data.bytes;
-			vcnSubjectsRem = sv->subjRem;
-			vcnListIndex = sv->index;
-			const NSInteger *list;
+}
+- (void)readVaccineListFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	NSData *data = [fw.regularFileContents unzippedData];
+	NSInteger dtSz = sizeof(NSInteger) * (worldParams.initPop - 1);
+	if (data.length >= sizeof(VaccineListSaveOld1) + dtSz) {
+		const VaccineListSave *sv = data.bytes;
+		vcnSubjectsRem = sv->subjRem;
+		vcnListIndex = sv->index;
+		const NSInteger *list;
 //			if (sv->lateIdx < 0) {	// for version identification
 //				vcnLateIdx = - sv->lateIdx - 1;
 //				list = sv->list;
 //			} else {
-				vcnLateIdx = vcnListIndex;
-				list = ((VaccineListSaveOld1 *)sv)->list;
+			vcnLateIdx = vcnListIndex;
+			list = ((VaccineListSaveOld1 *)sv)->list;
 //			}
-			for (NSInteger i = 0; i < worldParams.initPop; i ++) {
-				NSInteger k; BOOL ticket;
-				if (list[i] >= 0) { k = list[i]; ticket = NO; }
-				else { k = - list[i]; ticket = YES; }
+		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
+			NSInteger k; BOOL ticket;
+			if (list[i] >= 0) { k = list[i]; ticket = NO; }
+			else { k = - list[i]; ticket = YES; }
 //	@@@			else { k = - list[i] - 1; ticket = YES; }
-				if (k < worldParams.initPop) {
-					vaccineList[i] = k;
-					self.agents[k].vaccineTicket = ticket;
-				} else @throw @"Invalid agent index in the vaccine list.";
-	}}} else if (vaccineList != NULL) [self resetVaccineList];
+			if (k < worldParams.initPop) {
+				vaccineList[i] = k;
+				self.agents[k].vaccineTicket = ticket;
+			} else @throw @"Invalid agent index in the vaccine list.";
+		}
+	}
+}
+- (void)resetVaccineListIfNecessary {
+	if (vaccineList != NULL) [self resetVaccineList];
+}
+- (void)readAntiVaxFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	NSData *data = [fw.regularFileContents unzippedData];
+	if (data.length < sizeof(ForVaccine) * worldParams.initPop)
+		@throw @"Data for vaccination attitudes is short.";
+	const ForVaccine *vcnSv = data.bytes;
+	for (NSInteger i = 0; i < worldParams.initPop; i ++)
+		self.agents[i].forVcn = vcnSv[i];
+}
+- (void)readPopDensMapFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	NSData *data = [fw.regularFileContents unzippedData];
+	NSBitmapImageRep *imgRep = make_pop_dist_bm();
+	if (data.length == imgRep.bytesPerRow * imgRep.pixelsHigh) {
+		memcpy(imgRep.bitmapData, data.bytes, data.length);
+		NSImage *img = [NSImage.alloc initWithSize:imgRep.size];
+		[img addRepresentation:imgRep];
+		self.popDistImage = img;
+	}
+}
+- (NSMutableDictionary *)dictOfSaveDoc:(SavePopFlags)flag {
+	NSMutableDictionary *dict = [NSMutableDictionary
+		dictionaryWithObject:@(FORMAT_VER) forKey:keyFormatVersion];
+	[self addParams:dict];
+	if (flag == SaveOnlyParams) return dict;
+	NSMutableDictionary<NSString *,NSFileWrapper *> *md = [NSMutableDictionary
+		dictionaryWithObject:dict forKey:fnParamsPList];
+	if (flag & SavePopulation) [self addSavePop:md info:dict];
+	if (flag & SavePMap && self.popDistImage != nil) [self addSavePopDens:md];
+	return md;
+}
+- (BOOL)readFromDict:(NSDictionary *)dict error:(NSError **)outError {
+	@try {
+	NSFileWrapper *fw = dict[fnParamsPList];
+	if (fw == nil || !fw.regularFile) @throw @"Parameters are missing.";
+	NSDictionary *dict = plist_from_data(fw.regularFileContents);
+	NSDictionary *pDict = [self readParamsFromDict:dict];
+	NSNumber *num = pDict[keyFormatVersion];
+	if (num == nil && dict[fnStatIndexes] != nil) @throw @"The file format seems to be old.";
+	else if (num.integerValue > FORMAT_VER) @throw @"The file format is too new.";
+	if ((fw = dict[fnPopulation]) != nil) [self readPopFromFileWrapper:fw];
+	if ((fw = dict[fnContacts]) != nil) [self readContactsFromFileWrapper:fw];
+	if ((fw = dict[fnTestees]) != nil) [self readTestsFromFileWrapper:fw];
+	if ((fw = dict[fnWarps]) != nil) [self readWarpsFromFileWrapper:fw];
+	if ((fw = dict[fnGatherings]) != nil) [self readGatheringsFromFileWrapper:fw];
+	if ((fw = dict[fnVaccineList]) != nil) [self readVaccineListFromFileWrapper:fw];
+	else [self resetVaccineListIfNecessary];
+	if ((fw = dict[fnForVaccine]) != nil) [self readAntiVaxFromFileWrapper:fw];
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st setStatInfoFromPList:plist_from_data(fw.regularFileContents)]; }];
@@ -786,36 +757,135 @@ static NSDictionary *plist_from_data(NSData *data) {
 		st.statistics = stat_chain_from_data(fw.regularFileContents); }];
 	if ((fw = dict[fnStatTransit]) != nil) [statProcs addObject:^(StatInfo *st) {
 		st.transit = stat_chain_from_data(fw.regularFileContents); }];
-#ifndef NOGUI
-	if ((fw = dict[fnStatImageBM]) != nil) [statProcs addObject:^(StatInfo *st) {
-		[st copyImageBitmapFromData:[fw.regularFileContents unzippedData]]; }];
-#endif
-	if ((fw = dict[fnPopDensMap]) != nil && fw.regularFile) {
-		NSData *data = [fw.regularFileContents unzippedData];
-		NSBitmapImageRep *imgRep = make_pop_dist_bm();
-		if (data.length == imgRep.bytesPerRow * imgRep.pixelsHigh) {
-			memcpy(imgRep.bitmapData, data.bytes, data.length);
-			NSImage *img = [NSImage.alloc initWithSize:imgRep.size];
-			[img addRepresentation:imgRep];
-			self.popDistImage = img;
-	}}
+	if ((fw = dict[fnPopDensMap]) != nil) [self readPopDensMapFromFileWrapper:fw];
 	NSInteger popSize = worldParams.initPop;
 	[statProcs addObject:^(StatInfo *st) { st.popsize = popSize; }];
+	if (statInfo != nil) for (void (^block)(StatInfo *) in statProcs) block(statInfo);
+	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO;
+	} @catch (NSString *msg) {
+		if (outError != NULL) *outError = [NSError errorWithDomain:@"SimEpi" code:1
+			userInfo:@{NSLocalizedFailureReasonErrorKey:NSLocalizedString(msg, nil)}];
+		return NO;
+	}
+	return YES;
+}
 #ifdef NOGUI
-	for (void (^block)(StatInfo *) in statProcs) block(statInfo);
-#else
+- (NSFileWrapper *)fileWrapperOfWorld {
+	NSDictionary *dict = [self dictOfSaveDoc:SavePopulation | SavePMap];
+	return (dict == nil)? nil :
+		[NSFileWrapper.alloc initDirectoryWithFileWrappers:dict];
+}
+- (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper error:(NSError **)outError {
+	if (fileWrapper.regularFile) {
+		NSDictionary *dict = plist_from_data(fileWrapper.regularFileContents);
+		if ([self readParamsFromDict:dict] == nil) return NO;
+		[self resetVaccineListIfNecessary];
+		return YES;
+	} else if (!fileWrapper.directory) return NO;
+	NSDictionary *dict = fileWrapper.fileWrappers;
+	return [self readFromDict:dict error:outError];
+}
+#endif
+@end
+
+#ifndef NOGUI
+@implementation Document (SaveDocExtension)
+- (BOOL)prepareSavePanel:(NSSavePanel *)savePanel {
+	savePMapCBox.enabled = (world.popDistImage != nil);
+	savePanel.accessoryView = savePanelAccView;
+	return YES;
+}
+- (void)setupPanelsWithInfo:(NSDictionary *)info {
+	NSDictionary *dict;
+	NSMutableArray<NSArray *> *winList = NSMutableArray.new;
+	if ((dict = info[keyParamPanel]) != nil) {
+		[self openParamPanel:nil];
+		[paramPanel applyUIInfo:dict];
+		window_order_info(paramPanel.window, dict, winList);
+	}
+	if ((dict = info[keyScenarioPanel]) != nil) {
+		BOOL alreadyOpen = scenarioPanel != nil;
+		[self openScenarioPanel:nil];
+		if (alreadyOpen) [scenarioPanel makeDocItemList];
+		[scenarioPanel applyUIInfo:dict];
+		window_order_info(scenarioPanel.window, dict, winList);
+	}
+	if ((dict = info[keyDataPanel]) != nil) {
+		[self openDataPanel:nil];
+		[dataPanel applyUIInfo:dict];
+		window_order_info(dataPanel.window, dict, winList);
+	}
+	NSArray<NSDictionary *> *dArr;
+	if ((dArr = info[keyStatWindows]) != nil)
+		[world.statInfo setupPanelsWithPlist:dArr parent:view.window windowList:winList];
+	if ((dict = info[keyDocWindow]) != nil) {
+		NSRect frm = frame_rect_from_dict(dict);
+		if (frm.size.width > 0.) [view.window setFrame:frm display:YES];
+		window_order_info(view.window, dict, winList);
+	}
+	NSArray<NSNumber *> *nArr;
+	if ((nArr = info[keyViewOffsetAndScale]) != nil && nArr.count >= 3) {
+		view.offset = (NSPoint){nArr[0].doubleValue, nArr[1].doubleValue};
+		view.scale = nArr[2].doubleValue;
+		view.needsDisplay = YES;
+	}
+	rearrange_window_order(winList);
+}
+- (void)addSaveGUI:(NSMutableDictionary *)md {
+	NSMutableDictionary *dict = NSMutableDictionary.new;
+	dict[keyDocWindow] = dict_of_window_geom(view.window);
+	if (view.scale > 1.) dict[keyViewOffsetAndScale] =
+		@[@(view.offset.x), @(view.offset.y), @(view.scale)];
+	dict[keyStatWindows] = [world.statInfo UIInfoPlist];
+	if (paramPanel != nil) dict[keyParamPanel] = [paramPanel UIInfoPlist];
+	if (scenarioPanel != nil) dict[keyScenarioPanel] = [scenarioPanel UIInfoPlist];
+	if (dataPanel != nil) dict[keyDataPanel] = [dataPanel UIInfoPlist];	
+	md[fnUIInfo] = fileWrapper_from_plist(dict);
+}
+- (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError {
+	SavePopFlags flag = SaveOnlyParams;
+	if (savePopCBox.state == NSControlStateValueOn && world.runtimeParamsP->step > 0)
+		flag |= SavePopulation;
+	if (saveGUICBox.state == NSControlStateValueOn) flag |= SaveGUI;
+	if (savePMapCBox.state == NSControlStateValueOn) flag |= SavePMap;
+	NSMutableDictionary *dict = [world dictOfSaveDoc:flag];
+	dict[keyAnimeSteps] = @(animeSteps);
+	if (flag == SaveOnlyParams) return fileWrapper_from_plist(dict);
+	if (flag & SaveGUI) [self addSaveGUI:dict];
+	return [NSFileWrapper.alloc initDirectoryWithFileWrappers:dict];
+}
+- (NSDictionary *)readParamsFromFileWrapper:(NSFileWrapper *)fw {
+	NSDictionary *dict = plist_from_data(fw.regularFileContents);
+	NSNumber *num;
+	if ((num = dict[keyAnimeSteps]) != nil) animeSteps = num.integerValue;
+	return [world readParamsFromDict:dict];
+}
+- (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper
+	ofType:(NSString *)typeName error:(NSError **)outError {
+	@try {
+	if (fileWrapper.regularFile) {
+		if ([self readParamsFromFileWrapper:fileWrapper] == nil) return NO;
+		[world resetVaccineListIfNecessary];
+		return YES;
+	} else if (!fileWrapper.directory) return NO;
+	NSDictionary *dict = fileWrapper.fileWrappers;
+	[world readFromDict:dict error:outError];
+	NSFileWrapper *fw;
+	NSMutableArray *statProcs = NSMutableArray.new;
+	if ((fw = dict[fnStatImageBM]) != nil) [statProcs addObject:^(StatInfo *st) {
+		[st copyImageBitmapFromData:[fw.regularFileContents unzippedData]]; }];
+	for (void (^block)(StatInfo *) in statProcs) block(world.statInfo);
 	void (^panelBlock)(Document *) = ((fw = dict[fnUIInfo]) == nil)? nil : ^(Document *doc){
 		[doc setupPanelsWithInfo:plist_from_data(fw.regularFileContents)];
 	};
-	if (statInfo == nil) {
+	if (world.statInfo == nil) {
 		statPanelInitializer = statProcs;
 		if (panelBlock != nil) panelInitializer = panelBlock;
 	} else {
-		for (void (^block)(StatInfo *) in statProcs) block(statInfo);
+		for (void (^block)(StatInfo *) in statProcs) block(world.statInfo);
 		if (panelBlock != nil) panelBlock(self);
 		[self adjustScenarioText];
 	}
-#endif
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO;
 	} @catch (NSString *msg) {
 		if (outError != NULL) *outError = [NSError errorWithDomain:@"SimEpi" code:1
@@ -825,3 +895,4 @@ static NSDictionary *plist_from_data(NSData *data) {
 	return YES;
 }
 @end
+#endif

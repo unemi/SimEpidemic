@@ -73,7 +73,7 @@ typedef struct {
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
-	CGFloat vcnPRate, vcn1stEff, vcnMaxEff, vcnEDelay, vcnEPeriod, vcnAntiRate;	// vaccination
+	CGFloat vcnPRate, vcn1stEff, vcnMaxEff, vcnEDelay, vcnEPeriod;	// vaccination
 	DistInfo mobDist; // mass and warp distance
 	DistInfo incub, fatal, recov, immun; // contagiousness, incubation, fatality, recovery, immunity
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
@@ -88,6 +88,7 @@ typedef struct {
 	NSInteger initPop, worldSize, mesh, stepsPerDay;
 	CGFloat infected, recovered;	// initial ratio in population
 	CGFloat qAsymp, qSymp;	// initial ratio of separation for each health state
+	CGFloat vcnAntiRate, avClstrRate, avClstrGran, avTestRate;	// Anti-Vax
 	WrkPlcMode wrkPlcMode;
 } WorldParams;
 
@@ -136,6 +137,12 @@ typedef struct GatheringRec {
 	struct AgentRec **agents;
 } Gathering;
 
+typedef enum {
+	VcnAccept = 0,
+	VcnReject = 1,
+	VcnNoTest = 2
+} ForVaccine;
+
 typedef struct AgentRec {
 	NSInteger ID;
 	struct AgentRec *prev, *next;
@@ -147,11 +154,12 @@ typedef struct AgentRec {
 	CGFloat mobFreq, gatFreq;	// frequency of participation in travel & gathering
 	CGFloat activeness;
 	HealthType health;
-	int nInfects;
+	int nInfects; //, virusType;
 	BOOL distancing, isOutOfField, isWarping, inTestQueue;
 	NSInteger lastTested;
 	ContactInfo *contactInfoHead, *contactInfoTail;
 	Gathering *gathering;
+	ForVaccine forVcn;
 // working memory
 	CGFloat fx, fy;
 	HealthType newHealth;
@@ -164,3 +172,8 @@ typedef struct AgentRec {
 
 #define daysVaccinated daysInfected
 #define agentImmunity daysDiseased
+//
+//typedef struct {
+//	CGFloat infec, toxic;
+//	CGFloat vcnEficacy;
+//} VariantVirus;

@@ -176,7 +176,6 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"vaccineMaxEfficacy", {.f = { 95., 0., 100.}}},
 	{ ParamTypeFloat, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
 	{ ParamTypeFloat, @"vaccineEffectPeriod", {.f = { 200., 0., 500.}}},
-	{ ParamTypeFloat, @"vaccineAntiRate", {.f = { 0., 0., 100.}}},
 
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
@@ -199,6 +198,10 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"initialRecovered", {.f = { 0., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineAsymptomatic", {.f = { 20., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineSymptomatic", {.f = { 50., 0., 100.}}},
+	{ ParamTypeRate, @"vaccineAntiRate", {.f = { 30., 0., 100.}}},
+	{ ParamTypeRate, @"antiVaxClusterRate", {.f = { 60., 0., 100.}}},
+	{ ParamTypeRate, @"antiVaxClusterGranularity", {.f = { 50., 0., 100.}}},
+	{ ParamTypeRate, @"antiVaxTestRate", {.f = { 50., 0., 100.}}},
 
 	{ ParamTypeEnum, @"vaccinePriority", {.e = {0, 5}}},
 	{ ParamTypeEnum, @"tracingOperation", {.e = {0, 2}}},
@@ -322,10 +325,18 @@ NSMutableDictionary *param_diff_dict(
 #ifndef NOGUI
 #define RGB3(r,g,b) ((r<<16)|(g<<8)|b)
 NSInteger defaultStateRGB[N_COLORS] = {
-	RGB3(39,85,154), RGB3(246,214,0), RGB3(250,48,46), RGB3(32,120,100), RGB3(182,182,182),
+	RGB3(39,85,154),	// susceptible
+	RGB3(246,214,0),	// infected - asymptomatic
+	RGB3(250,48,46),	// infected - symptomatic
+	RGB3(32,120,100),	// recovered
+	RGB3(182,182,182),
 //	RGB3(16,160,50),	// vaccinated
 	RGB3(255,255,255),	// vaccinated
-	RGB3(0,0,0), RGB3(64,0,0), RGB3(51,51,51), RGB3(255,255,255), RGB3(64,64,0)
+	RGB3(0,0,0),		// background of field
+	RGB3(64,0,0),		// hospital
+	RGB3(51,51,51),		// cemetery
+	RGB3(255,255,255),	// text
+	RGB3(64,64,0)		// gatherings
 }, stateRGB[N_COLORS];
 NSColor *stateColors[N_COLORS] = {nil}, *warpColors[NHealthTypes];
 NSString *colKeys[] = {

@@ -7,7 +7,7 @@
 //
 
 #import <AppKit/AppKit.h>
-#import "Document.h"
+#import "World.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -16,7 +16,7 @@ extern void affect_to_agent(Gathering *gat, Agent *a);
 extern void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect);
 #endif
 
-@interface Document (GatheringExtantion)
+@interface World (GatheringExtantion)
 - (void)manageGatherings;
 @end
 

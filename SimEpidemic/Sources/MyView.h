@@ -9,10 +9,14 @@
 #import <Cocoa/Cocoa.h>
 
 NS_ASSUME_NONNULL_BEGIN
-@class Document;
+
+typedef enum {
+	ColNormal, ColAntiVax
+} ColorType;
+
+@class Document, World;
 
 @interface MyView : NSView {
-	IBOutlet Document *doc;
 	IBOutlet NSButton *magDownBtn;
 	NSBitmapImageRep *imgRep;
 	BOOL liveResizeEnded;
@@ -21,9 +25,11 @@ NS_ASSUME_NONNULL_BEGIN
 	CGFloat fontSize;
 	NSSize frameSize;
 }
+@property __weak World * __nullable world;
 @property CGFloat scale;
 @property NSPoint offset;
 @property BOOL showGatherings;
+@property ColorType colorType;
 - (void)enableMagDownButton;
 @end
 

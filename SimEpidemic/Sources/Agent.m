@@ -261,7 +261,7 @@ if (a->isOutOfField) {
 	a->isOutOfField = YES;
 	remove_from_list(a, Pop + index_in_pop(a, wp));
 }
-@implementation Document (AgentExtension)
+@implementation World (AgentExtension)
 static void attracted(Agent *a, Agent *b) {
 	CGFloat x = fabs(b->app - a->prf);
 	x = ((x < 0.5)? x : 1.0 - x) * 2.0;
@@ -495,17 +495,17 @@ void step_agent_in_quarantine(Agent *a, WorldParams *p, StepInfo *info) {
 	if (!patient_step(a, p, YES, info) && a->newHealth == Recovered)
 		{ info->warpType = WarpBack; info->warpTo = a->orgPt; }
 }
-BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, NSPoint goal) {
+BOOL warp_step(Agent *a, WorldParams *wp, World *world, WarpType mode, NSPoint goal) {
 	NSPoint dp = {goal.x - a->x, goal.y - a->y};
 	CGFloat d = hypot(dp.y, dp.x), v = wp->worldSize / 5. / wp->stepsPerDay;
 	if (d < v) {
 		a->x = goal.x; a->y = goal.y;
 		a->isWarping = NO;
 		switch (mode) {
-			case WarpInside: case WarpBack: add_agent(a, wp, doc.Pop); break;
+			case WarpInside: case WarpBack: add_agent(a, wp, world.Pop); break;
 			case WarpToHospital:
-				add_to_list(a, doc.QListP); a->gotAtHospital = YES; break;
-			case WarpToCemeteryF: case WarpToCemeteryH: add_to_list(a, doc.CListP);
+				add_to_list(a, world.QListP); a->gotAtHospital = YES; break;
+			case WarpToCemeteryF: case WarpToCemeteryH: add_to_list(a, world.CListP);
 			default: break;
 		}
 		return YES;
@@ -516,8 +516,7 @@ BOOL warp_step(Agent *a, WorldParams *wp, Document *doc, WarpType mode, NSPoint 
 		return NO;
 	}
 }
-void warp_show(Agent *a, WarpType mode, NSPoint goal,
-	NSRect dirtyRect, NSArray<NSBezierPath *> *paths) {
+void warp_show(Agent *a, WarpType mode, NSPoint goal, NSRect dirtyRect, NSBezierPath *path) {
 	NSPoint dp = {goal.x - a->x, goal.y - a->y};
 	CGFloat d = fmin(hypot(dp.x, dp.y), 30.), th = atan2(dp.y, dp.x);
 	CGFloat wx = .25 * cos(th + M_PI/2), wy = .25 * sin(th + M_PI/2);
@@ -536,7 +535,6 @@ void warp_show(Agent *a, WarpType mode, NSPoint goal,
 	bounds.size.width -= bounds.origin.x;
 	bounds.size.height -= bounds.origin.y;
 	if (NSIntersectsRect(bounds, dirtyRect)) {
-		NSBezierPath *path = paths[a->health];
 		[path moveToPoint:vertex[0]];
 		[path lineToPoint:vertex[1]];
 		[path lineToPoint:vertex[2]];
@@ -544,8 +542,7 @@ void warp_show(Agent *a, WarpType mode, NSPoint goal,
 	}
 }
 void show_agent(Agent *a, AgentDrawType type,
-	NSRect dirtyRect, NSArray<NSBezierPath *> *paths) {
-	NSBezierPath *path = paths[a->health];
+	NSRect dirtyRect, NSBezierPath *path) {
 	CGFloat r = (type == AgntDrwCircle)? AGENT_RADIUS : AGENT_SIZE;
 	NSRect aBounds = {a->x - r, a->y - r, r * 2, r * 2};
 	if (NSIntersectsRect(aBounds, dirtyRect)) switch (type) {

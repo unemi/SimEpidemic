@@ -9,7 +9,7 @@
 #import "BatchJob.h"
 #import "noGUI.h"
 #import "SaveState.h"
-#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/World.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
 #import <os/log.h>
 
@@ -150,17 +150,17 @@ NSString *batch_job_dir(void) {
 - (NSInteger)indexOfJobInQueue:(BatchJob *)job {
 	return [jobQueue indexOfObject:job];
 }
-- (void)forAllLiveDocuments:(void (^)(Document *))block {
+- (void)forAllLiveWorlds:(void (^)(World *))block {
 	[lock lock];
 	NSArray *jobs = theJobs.allValues;
 	[lock unlock];
 	for (BatchJob *job in jobs)
-		[job forAllLiveDocuments:block];
+		[job forAllLiveWorlds:block];
 }
 @end
 // to check how much this machine is busy now. called from Contract.m
-void for_all_bacth_job_documents(void (^block)(Document *)) {
-	[the_job_controller() forAllLiveDocuments:block];
+void for_all_bacth_job_documents(void (^block)(World *)) {
+	[the_job_controller() forAllLiveWorlds:block];
 }
 
 @implementation BatchJob
@@ -279,14 +279,14 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 				[NSString stringWithFormat:@"%@_%@", _ID, number]];
 	} @catch (NSError *error) {
 		MY_LOG("%@", error.localizedDescription);
-	}
+	} @catch (NSString *msg) { MY_LOG("%@", msg); }
 // check next trial
 	[lock lock];
 	[availableWorlds addObject:runningTrials[number]];
 	[runningTrials removeObjectForKey:number];
 	if (nextTrialNumber >= _nIteration && runningTrials.count == 0) {
 	// Job completed.
-		for (Document *doc in availableWorlds) [doc discardMemory];
+		for (World *world in availableWorlds) [world discardMemory];
 		[availableWorlds removeAllObjects];
 		[the_job_controller() finishJobID:_ID];
 	}
@@ -294,46 +294,50 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	[the_job_controller() tryNewTrial:YES];
 }
 - (BOOL)runNextTrial {	// called only from JobController's tryNewTrial:
-	Document *doc = nil;
+	World *world = nil;
 	NSString *failedReason = nil;
 	[lock lock];
 	@try {
 		if (loadState == nil) {
 			if (availableWorlds.count <= 0) {
-				doc = make_new_world(@"Job", nil);
-				set_params_from_dict(doc.runtimeParamsP, doc.worldParamsP, _parameters);
-				set_params_from_dict(doc.initParamsP, doc.tmpWorldParamsP, _parameters);
-				[doc setScenarioWithPList:_scenario];
-				if (popDistMap != nil) [doc loadPopDistMapFrom:popDistMap];
+				world = make_new_world(@"Job", nil);
+				set_params_from_dict(world.runtimeParamsP, world.worldParamsP, _parameters);
+				set_params_from_dict(world.initParamsP, world.tmpWorldParamsP, _parameters);
+				[world setScenarioWithPList:_scenario];
+				if (popDistMap != nil) [world loadPopDistMapFrom:popDistMap];
 			} else {
-				doc = [availableWorlds lastObject];
+				world = [availableWorlds lastObject];
 				[availableWorlds removeLastObject];
 			}
-			[doc resetPop];
+			[world resetPop];
 		} else {
 			if (availableWorlds.count <= 0) {
-				doc = make_new_world(@"Job", nil);
-				if (popDistMap != nil) [doc loadPopDistMapFrom:popDistMap];
+				world = make_new_world(@"Job", nil);
+				if (popDistMap != nil) [world loadPopDistMapFrom:popDistMap];
 			} else {
-				doc = [availableWorlds lastObject];
+				world = [availableWorlds lastObject];
 				[availableWorlds removeLastObject];
 			}
-			[doc loadStateFrom:loadState];
-			if (_parameters != nil) load_params_from_dict(doc, NULL, _parameters);
+			[world loadStateFrom:loadState];
+			if (_parameters != nil) load_params_from_dict(world, NULL, _parameters);
+			if (_scenario != nil) {
+				[world setScenarioWithPList:_scenario];
+				if (world.runtimeParamsP->step > 0) [world execScenario];
+			}
 		}
 		NSNumber *trialNumb = @(++ nextTrialNumber);
-		runningTrials[trialNumb] = doc;
+		runningTrials[trialNumb] = world;
 		if (nextTrialNumber >= _nIteration)
 			[the_job_controller() removeJobFromQueue:self shouldLock:NO];
-		doc.stopCallBack = ^(LoopMode mode){
+		world.stopCallBack = ^(LoopMode mode){
 			[self trialDidFinish:trialNumb mode:mode];
 		};
 		NSInteger stopAt = _stopAt, nIte = _nIteration;
 		NSString *jobID = _ID;
 		in_main_thread(^{
-			[doc start:stopAt maxSPS:0 priority:-.2];
+			[world start:stopAt maxSPS:0 priority:-.2];
 			MY_LOG("Trial %@/%ld of job %@ started on world %@.",
-				trialNumb, nIte, jobID, doc.ID);
+				trialNumb, nIte, jobID, world.ID);
 		});
 	} @catch (NSError *error) { failedReason = error.localizedDescription;
 	} @catch (NSException *excp) { failedReason = excp.reason;
@@ -357,10 +361,10 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	NSNumber *steps[nowProcessed];
 #endif
 	NSInteger n = 0;
-	for (Document *doc in runningTrials.objectEnumerator) {
-		steps[n ++] = @(doc.runtimeParamsP->step);
+	for (World *world in runningTrials.objectEnumerator) {
+		steps[n ++] = @(world.runtimeParamsP->step);
 #ifdef DEBUGz
-		steps[n ++] = @(doc.phaseInStep);
+		steps[n ++] = @(world.phaseInStep);
 #endif
 	}
 	[lock unlock];
@@ -370,8 +374,8 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 }
 - (void)stop {
 	[lock lock];
-	for (Document *doc in runningTrials.objectEnumerator)
-		[doc stop:LoopEndByUser];
+	for (World *world in runningTrials.objectEnumerator)
+		[world stop:LoopEndByUser];
 	if (nextTrialNumber < _nIteration) {
 		[the_job_controller() removeJobFromQueue:self shouldLock:YES];
 		_nIteration = nextTrialNumber;
@@ -379,11 +383,11 @@ void for_all_bacth_job_documents(void (^block)(Document *)) {
 	[the_job_controller() finishJobID:_ID];
 	[lock unlock];
 }
-- (void)forAllLiveDocuments:(void (^)(Document *))block {
+- (void)forAllLiveWorlds:(void (^)(World *))block {
 	[lock lock];
-	NSArray *docs = runningTrials.allValues;
+	NSArray *worlds = runningTrials.allValues;
 	[lock unlock];
-	for (Document *doc in docs) block(doc);
+	for (World *world in worlds) block(world);
 }
 @end
 

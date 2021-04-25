@@ -11,16 +11,16 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class Document;
+@class World;
 
 extern NSString *batch_job_dir(void);
-extern void for_all_bacth_job_documents(void (^block)(Document *));
+extern void for_all_bacth_job_documents(void (^block)(World *));
 extern void check_batch_jobs_to_restart(void);
 
 @interface BatchJob : NSObject {
 	NSLock *lock;
-	NSMutableDictionary<NSNumber *, Document *> *runningTrials;
-	NSMutableArray<Document *> *availableWorlds;
+	NSMutableDictionary<NSNumber *, World *> *runningTrials;
+	NSMutableArray<World *> *availableWorlds;
 	NSInteger nextTrialNumber;
 	NSArray<NSString *> *output_n, *output_d, *output_D;
 	NSString *jobDirPath;
@@ -32,7 +32,7 @@ extern void check_batch_jobs_to_restart(void);
 @property (readonly) NSArray *scenario;
 @property (readonly) NSInteger stopAt, nIteration;
 - (BOOL)runNextTrial;
-- (void)forAllLiveDocuments:(void (^)(Document *))block;
+- (void)forAllLiveWorlds:(void (^)(World *))block;
 @end
 
 @interface JobController : NSObject {

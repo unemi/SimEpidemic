@@ -10,11 +10,11 @@
 #import "ProcContext.h"
 
 NS_ASSUME_NONNULL_BEGIN
-@class Document;
+@class World;
 
 @interface PeriodicReporter : NSObject
 @property (readonly) NSString *ID;
-- (instancetype)initWithDocument:(Document *)doc addr:(uint32)addr desc:(int)dsc;
+- (instancetype)initWithWorld:(World *)wd addr:(uint32)addr desc:(int)dsc;
 - (BOOL)sendReport;
 - (void)sendReportPeriodic;
 - (void)reset;

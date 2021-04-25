@@ -7,13 +7,13 @@
 //
 
 #import <AppKit/AppKit.h>
-#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/World.h"
 #import "ProcContext.h"
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *save_state_dir(void);
 
-@interface Document (SaveStateExpension)
+@interface World (SaveStateExpension)
 - (void)saveStateTo:(NSString *)fname;
 - (void)loadStateFrom:(NSString *)fname;
 - (void)loadPopDistMapFrom:(NSString *)fname;

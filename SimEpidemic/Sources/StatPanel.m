@@ -7,7 +7,10 @@
 //
 
 #import "StatPanel.h"
+#import "World.h"
+#ifndef NOGUI
 #import "Document.h"
+#endif
 #define ALLOC_UNIT 512
 
 static NSLock *statLock = nil;
@@ -85,13 +88,11 @@ static void free_stat_mem(StatData **memp) {
 #endif
 	return self;
 }
-- (Document *)doc { return doc; }
 #ifdef NOGUI
 - (NSInteger)skipSteps { return skip; }
 - (NSInteger)skipDays { return skipDays; }
-- (void)setDoc:(Document *)docu { doc = docu; }
 - (void)discardMemory {
-	doc = nil;
+	_world = nil;
 	[statLock lock];
 	free_stat_mem(&_statistics);
 	free_stat_mem(&_transit);
@@ -136,7 +137,7 @@ static void free_stat_mem(StatData **memp) {
 	memset(maxCounts, 0, sizeof(maxCounts));
 	memset(maxTransit, 0, sizeof(maxTransit));
 	maxStepPRate = maxDailyPRate = 0.;
-	infectedSeq.len = doc.worldParamsP->stepsPerDay * 3;
+	infectedSeq.len = _world.worldParamsP->stepsPerDay * 3;
 	infectedSeq.rec = realloc(infectedSeq.rec, sizeof(CGFloat) * infectedSeq.len);
 	infectedSeq.n = infectedSeq.tail = 0;
 	minReproRate = maxReproRate = 1.;
@@ -242,10 +243,10 @@ static CGFloat calc_reproduct_rate(NSInteger nInfec, InfecQueInfo *info) {
 }
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects {
-	Agent *agents = doc.agents;
-	WorldParams *wp = doc.worldParamsP;
+	Agent *agents = _world.agents;
+	WorldParams *wp = _world.worldParamsP;
 	NSInteger nPop = wp->initPop;
-	Agent *qlist = doc.QList;
+	Agent *qlist = _world.QList;
 	NSInteger stepsPerDay = wp->stepsPerDay;
 
 	if (steps % stepsPerDay == 0) memset(&transDaily, 0, sizeof(StatData));
@@ -259,9 +260,9 @@ static CGFloat calc_reproduct_rate(NSInteger nInfec, InfecQueInfo *info) {
 		NSInteger start = j * nPop / unitJ, end = (j + 1) * nPop / unitJ;
 		void (^block)(void) = ^{ for (NSInteger i = start; i < end; i ++)
 			count_health(agents + i, tmpStats + j, tmpTrans + j); };
-		if (j < unitJ - 1) [doc addOperation:block]; else block();
+		if (j < unitJ - 1) [_world addOperation:block]; else block();
 	}
-	[doc waitAllOperations];
+	[_world waitAllOperations];
 	StatData tmpStat;
 	memset(&tmpStat, 0, sizeof(StatData));
 	for (NSInteger j = 0; j < unitJ; j ++) for (NSInteger i = 0; i < NIntIndexes; i ++) {
@@ -599,12 +600,12 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 			fromRect:(NSRect){0, 0, ((steps == 0)? 1 : steps) / skip, IMG_HEIGHT}
 			operation:NSCompositingOperationCopy fraction:1. respectFlipped:NO hints:nil];
 		[self drawLabels:labels y:NSMaxY(bounds)];
-		draw_tics(bounds, (CGFloat)steps/doc.worldParamsP->stepsPerDay);
+		draw_tics(bounds, (CGFloat)steps/_world.worldParamsP->stepsPerDay);
 		} break;
 		case StatTimeEvo: {
 		BOOL isTransit = (info->idxBits & MskTransit) != 0;
 		[self drawLabels:[self fillPhaseBackground:bounds.size xMax:
-			isTransit? days * doc.worldParamsP->stepsPerDay : steps] y:NSMaxY(bounds)];
+			isTransit? days * _world.worldParamsP->stepsPerDay : steps] y:NSMaxY(bounds)];
 		NSRect dRect = drawing_area(bounds);
 		TimeEvoMax teMax = isTransit?
 			show_time_evo(_transit, info, maxTransit, days, skipDays,
@@ -622,7 +623,7 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 		if (ms.length > 0) [ms
 			drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
 			withAttributes:textAttributes];
-		draw_tics(bounds, isTransit? days : (CGFloat)steps/doc.worldParamsP->stepsPerDay);
+		draw_tics(bounds, isTransit? days : (CGFloat)steps/_world.worldParamsP->stepsPerDay);
 		} break;
 		case StatPeriods:
 		show_period_hist(_IncubPHist, 0, bounds.size, @"Incubation Period");

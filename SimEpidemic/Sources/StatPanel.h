@@ -39,9 +39,9 @@ typedef struct { int orgV, newV; } InfectionCntInfo;
 - (InfectionCntInfo)infectValue;
 @end
 
-@class Document;
+@class World;
 #ifndef NOGUI
-@class StatPanel;
+@class Document, StatPanel;
 #endif
 
 typedef struct {
@@ -50,7 +50,6 @@ typedef struct {
 } InfecQueInfo;
 
 @interface StatInfo : NSObject {
-	IBOutlet Document *doc;
 	NSUInteger maxCounts[NIntIndexes], maxTransit[NIntIndexes];
 #ifndef NOGUI
 	unsigned char *imgBm;
@@ -66,10 +65,10 @@ typedef struct {
 	InfecQueInfo infectedSeq;	// record of the number of infected to calculate ReproRate
 	CGFloat minReproRate, maxReproRate;
 }
+@property __weak World * __nullable world;
 @property (readonly) NSMutableArray<MyCounter *> *IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
 @property StatData *statistics, *transit;
 @property TestResultCount testResultCnt;	// weekly total
-- (Document *)doc;
 - (void)reset:(PopulationHConf)popConf;
 - (void)cummulateHistgrm:(HistogramType)type days:(CGFloat)d;
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
@@ -77,9 +76,9 @@ typedef struct {
 #ifdef NOGUI
 - (NSInteger)skipSteps;
 - (NSInteger)skipDays;
-- (void)setDoc:(Document *)doc;
 - (void)discardMemory;
 #else
+@property __weak Document * __nullable doc;
 @property (readonly) NSMutableArray<StatPanel *> *statPanels;
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info;
 - (void)setLabelInfo:(NSArray<NSString *> *)info;

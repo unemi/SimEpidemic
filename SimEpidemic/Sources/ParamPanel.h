@@ -60,6 +60,8 @@ NS_ASSUME_NONNULL_BEGIN
 		*vcnEPeriodDgt, *vcnAntiRateDgt;
 	IBOutlet NSSlider *vcnPRateSld, *vcn1stEffSld, *vcnMaxEffSld, *vcnEDelaySld,
 		*vcnEPeriodSld, *vcnAntiRateSld;
+	IBOutlet NSTextField *vaClstrRtDgt, *vaClstrGrDgt, *vaTestRtDgt;
+	IBOutlet NSSlider *vaClstrRtSld, *vaClstrGrSld, *vaTestRtSld;
 	IBOutlet NSPopUpButton *wrkPlcModePopUp, *trcOpePopUp, *vcnPriPopUp;
 	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn, *saveAsUDBtn;
 	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn;

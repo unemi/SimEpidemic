@@ -24,15 +24,15 @@ static NSString *pop_dist_map_file_path(NSString *fname) {
 		stringByAppendingPathComponent:fname];
 }
 
-@implementation Document (SaveStateExpension)
+@implementation World (SaveStateExpension)
 - (void)saveStateTo:(NSString *)fname {
 	NSString *stateDirPath = save_state_dir();
 	NSFileManager *fm = NSFileManager.defaultManager;
 	NSError *error;
 	if (![fm createDirectoryAtPath:stateDirPath withIntermediateDirectories:YES
 		attributes:nil error:&error]) @throw error;
-	NSFileWrapper *fw = [self fileWrapperOfType:@"" error:&error];
-	if (fw == nil) @throw error;
+	NSFileWrapper *fw = [self fileWrapperOfWorld];
+	if (fw == nil) @throw @"Could not make a data of the world.";
 	NSString *filePath = [stateDirPath stringByAppendingFormat:@"/%@.sEpi", fname];
 	if (![fw writeToURL:[NSURL fileURLWithPath:filePath] options:NSFileWrapperWritingAtomic
 		originalContentsURL:nil error:&error]) @throw error;
@@ -47,7 +47,7 @@ static NSString *pop_dist_map_file_path(NSString *fname) {
 		NSFileWrapper *fw = [NSFileWrapper.alloc initWithURL:
 			[NSURL fileURLWithPath:filePath] options:0 error:&error];
 		if (fw == nil) @throw error;
-		if (![self readFromFileWrapper:fw ofType:@"" error:&error]) @throw error;
+		if (![self readFromFileWrapper:fw error:&error]) @throw error;
 		if (![NSFileManager.defaultManager setAttributes:@{NSFileModificationDate:NSDate.date}
 			ofItemAtPath:filePath error:&error]) @throw error;
 	} @catch (id _) { }
@@ -64,9 +64,9 @@ static NSString *pop_dist_map_file_path(NSString *fname) {
 
 @implementation ProcContext (SaveStateExtension)
 - (void)saveState {
-	[self checkDocument];
+	[self checkWorld];
 	NSString *ID = new_uniq_string();
-	[document saveStateTo:ID];
+	[world saveStateTo:ID];
 	content = ID;
 	type = @"text/plain";
 	code = 200;
@@ -77,8 +77,8 @@ static NSString *pop_dist_map_file_path(NSString *fname) {
 	return stateID;
 }
 - (void)loadState {
-	[self checkDocument];
-	[document loadStateFrom:[self stateID]];
+	[self checkWorld];
+	[world loadStateFrom:[self stateID]];
 }
 - (void)removeState {
 	NSError *error;

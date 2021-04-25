@@ -51,7 +51,7 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 	return (right <= mesh)? right : mesh;
 }
 
-@implementation Document (GatheringExtantion)
+@implementation World (GatheringExtantion)
 - (void)setupGathering:(Gathering *)gat {
 	WorldParams *wp = &worldParams;
 	RuntimeParams *rp = &runtimeParams;

@@ -9,6 +9,7 @@
 #import "Scenario.h"
 #import "AppDelegate.h"
 #import "Document.h"
+#import "World.h"
 #import "StatPanel.h"
 #import "ParamPanel.h"
 
@@ -381,7 +382,7 @@ static void check_images(void) {
 	distBtn.action = @selector(distParamBeginSheet:);
 	NSTextField *digits = ((ParameterCellView *)self.view).digits,
 		*days = ((ParameterCellView *)self.view).days;
-	digits.doubleValue = scen.doc.runtimeParamsP->PARAM_F1;
+	digits.doubleValue = scen.world.runtimeParamsP->PARAM_F1;
 	days.doubleValue = 0.;
 	days.delegate = digits.delegate = scen;
 	return self;
@@ -416,7 +417,7 @@ static void check_images(void) {
 	if (idx == _index) return;
 	NSInteger prmIdx = paramIndexFromKey[paramMenuInfo[idx]].integerValue;
 	ParameterCellView *view = (ParameterCellView *)self.view;
-	RuntimeParams *rp = scenario.doc.runtimeParamsP;
+	RuntimeParams *rp = scenario.world.runtimeParamsP;
 	if (prmIdx < IDX_D) {
 		[view adjustView:YES];
 		[self setParamUndoable:-1 value:(&rp->PARAM_F1)[prmIdx]];
@@ -867,18 +868,18 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	return @(((InfecCellView *)self.view).digits.integerValue);
 }
 @end
-
-@implementation Document (ScenarioExtension)
-- (void)setScenario:(NSArray *)newScen index:(NSInteger)index {
-	if (index == 0) { self.scenario = newScen; return; }
-	self.scenario = newScen;
-	scenarioIndex = index;
-	if (index > 0 && index <= newScen.count)
-		predicateToStop = predicate_in_item(newScen[index - 1], NULL);
-	[self adjustScenarioText];
-}
-- (NSInteger)scenarioIndex { return scenarioIndex; }
-@end
+//
+//@implementation World (ScenarioExtension)
+//- (void)setScenario:(NSArray *)newScen index:(NSInteger)index {
+//	if (index == 0) { self.scenario = newScen; return; }
+//	self.scenario = newScen;
+//	scenarioIndex = index;
+//	if (index > 0 && index <= newScen.count)
+//		predicateToStop = predicate_in_item(newScen[index - 1], NULL);
+//	[self adjustScenarioText];
+//}
+//- (NSInteger)scenarioIndex { return scenarioIndex; }
+//@end
 
 @interface Scenario () {
 	NSArray *savedPList;
@@ -893,10 +894,11 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	if (!(self = [super initWithWindowNibName:@"Scenario"])) return nil;
 	check_images();
 	_doc = dc;
+	_world = dc.world;
 	_undoManager = NSUndoManager.new;
 	_intFormatter = NSNumberFormatter.new;
 	_intFormatter.minimum = @0;
-	_intFormatter.maximum = @(dc.worldParamsP->initPop);
+	_intFormatter.maximum = @(_world.worldParamsP->initPop);
 	valueDict = NSMutableDictionary.new;
 	for (NSString *name in @[NSUndoManagerDidCloseUndoGroupNotification,
 		NSUndoManagerDidUndoChangeNotification, NSUndoManagerDidRedoChangeNotification])
@@ -915,8 +917,8 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 }
 - (void)adjustControls:(BOOL)undoOrRedo {
 	if (undoOrRedo) appliedCount = -1;
-	removeBtn.enabled = !_doc.running && (_doc.scenario != nil && _doc.scenario.count > 0);
-	applyBtn.enabled = !_doc.running && modificationCount != appliedCount;
+	removeBtn.enabled = !_world.running && (_world.scenario != nil && _world.scenario.count > 0);
+	applyBtn.enabled = !_world.running && modificationCount != appliedCount;
 }
 - (void)makeOrgIndexes {
 	NSInteger n = itemList.count, nn = 0;
@@ -931,8 +933,8 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 - (void)makeDocItemList {
 	appliedCount = modificationCount;
 	modificationCount --;	// for reload the saved file.
-    if (_doc.scenario != nil) {
-		[self setScenarioWithArray:_doc.scenario];
+    if (_world.scenario != nil) {
+		[self setScenarioWithArray:_world.scenario];
 		[self makeOrgIndexes];
 	} else {
 		itemList = NSMutableArray.new;
@@ -1213,7 +1215,7 @@ static NSArray *plist_of_all_items(NSArray *itemList) {
 	copy_plist_as_JSON_text(plist_of_all_items(itemList), self.window);
 }
 - (IBAction)remove:(id)sender {
-	_doc.scenario = @[];
+	[_world setScenario:@[] index:0];
 }
 - (IBAction)apply:(id)sender {
 	NSMutableArray *ma = NSMutableArray.new;
@@ -1223,12 +1225,12 @@ static NSArray *plist_of_all_items(NSArray *itemList) {
 	}
 	NSInteger scenIndex = 0;
 	if (orgIndexes != nil) {
-		CondItem *item = orgIndexes[@(_doc.scenarioIndex)];
+		CondItem *item = orgIndexes[@(_world.scenarioIndex)];
 		if (item != nil) {
 			NSInteger idx = [itemList indexOfObject:item];
 			if (idx != NSNotFound) scenIndex = idx + 1;
 	}}
-	[_doc setScenario:[NSArray arrayWithArray:ma] index:scenIndex];
+	[_world setScenario:[NSArray arrayWithArray:ma] index:scenIndex];
 	[self makeOrgIndexes];
 	appliedCount = modificationCount;
 	applyBtn.enabled = NO;

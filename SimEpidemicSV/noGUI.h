@@ -24,12 +24,12 @@ enum {
 	EXIT_FAILED_IDCNT, EXIT_SENDING,
 	EXIT_INVALID_ARGS
 };
-@class Document;
-extern NSMutableDictionary<NSString *, Document *> *defaultDocuments;
-extern NSMutableDictionary<NSString *, Document *> *theDocuments;
+@class World;
+extern NSMutableDictionary<NSString *, World *> *defaultWorlds;
+extern NSMutableDictionary<NSString *, World *> *theWorlds;
 extern NSUInteger JSONOptions;
-extern NSInteger maxPopSize, maxNDocuments, maxRuntime,
-	documentTimeout, maxJobsInQueue, maxTrialsAtSameTime;
+extern NSInteger maxPopSize, maxNWorlds, maxRuntime,
+	worldTimeout, maxJobsInQueue, maxTrialsAtSameTime;
 extern NSString *fileDirectory, *dataDirectory;
 extern NSDictionary *extToMime, *codeMeaning, *indexNames;
 extern NSArray *distributionNames;

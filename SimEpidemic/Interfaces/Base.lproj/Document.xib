@@ -10,12 +10,14 @@
             <connections>
                 <outlet property="animeStepper" destination="XKh-Mv-6xc" id="CI7-1Y-t3h"/>
                 <outlet property="animeStepsTxt" destination="E7P-hB-gL3" id="VUF-sf-yHW"/>
+                <outlet property="colTypePopUp" destination="MWW-l1-pzt" id="Bhp-jp-44w"/>
                 <outlet property="datBtn" destination="uEY-Nh-cys" id="v4U-cx-mvz"/>
                 <outlet property="daysNum" destination="eHC-1A-Ovl" id="eVN-UA-O2S"/>
                 <outlet property="prmBtn" destination="8oB-6Q-T7R" id="M7t-24-LAU"/>
                 <outlet property="qDSNum" destination="cdS-6l-yC3" id="QvI-2x-h4e"/>
                 <outlet property="qNSNum" destination="Tgb-tI-PQH" id="f23-il-ajI"/>
                 <outlet property="saveGUICBox" destination="7Jg-8L-tfU" id="svg-ui-CBx"/>
+                <outlet property="savePMapCBox" destination="wr9-NP-KMl" id="XCL-51-3U6"/>
                 <outlet property="savePanelAccView" destination="X9U-U8-xMN" id="zbE-yp-Pp4"/>
                 <outlet property="savePopCBox" destination="gEb-89-QHE" id="en8-Jk-uPu"/>
                 <outlet property="scenarioText" destination="Awo-S3-2Qp" id="FkL-Sa-7tC"/>
@@ -23,7 +25,6 @@
                 <outlet property="showGatheringsCBox" destination="IFU-W9-eTe" id="ugJ-zr-fPC"/>
                 <outlet property="spsNum" destination="AJg-mE-B4N" id="fVh-6g-Eue"/>
                 <outlet property="startBtn" destination="670-an-uJr" id="BhI-ME-hEo"/>
-                <outlet property="statInfo" destination="0WM-hT-GKX" id="qmJ-Dw-D8d"/>
                 <outlet property="stepBtn" destination="cgf-38-s44" id="TsO-JK-0lv"/>
                 <outlet property="stopAtNDaysCBox" destination="Z3d-He-dRF" id="bvY-pQ-Cda"/>
                 <outlet property="stopAtNDaysDgt" destination="qVE-iD-MXA" id="zRO-sz-Zsa"/>
@@ -277,7 +278,6 @@
                         <rect key="frame" x="-1" y="0.0" width="640" height="512"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxY="YES"/>
                         <connections>
-                            <outlet property="doc" destination="-2" id="rzJ-Nb-zBR"/>
                             <outlet property="magDownBtn" destination="6be-Mi-PFr" id="FCA-LP-hlF"/>
                         </connections>
                     </customView>
@@ -363,6 +363,23 @@
                             <action selector="switchShowGatherings:" target="-2" id="Fbc-RO-T1K"/>
                         </connections>
                     </button>
+                    <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="MWW-l1-pzt">
+                        <rect key="frame" x="196" y="607" width="78" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <popUpButtonCell key="cell" type="push" title="Normal" bezelStyle="rounded" alignment="left" controlSize="small" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="NiK-Ei-F7b" id="hpq-Qb-Nmb">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                            <menu key="menu" id="c3k-kr-IgZ">
+                                <items>
+                                    <menuItem title="Normal" state="on" id="NiK-Ei-F7b"/>
+                                    <menuItem title="Vax type" id="Ih2-yf-Hec"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                        <connections>
+                            <action selector="chooseColorType:" target="-2" id="9Eo-Ri-a2D"/>
+                        </connections>
+                    </popUpButton>
                 </subviews>
                 <constraints>
                     <constraint firstItem="uPW-ug-3V2" firstAttribute="leading" secondItem="Tgb-tI-PQH" secondAttribute="trailing" constant="11" id="0hr-gI-iPy"/>
@@ -386,11 +403,6 @@
             </connections>
             <point key="canvasLocation" x="55.5" y="-28"/>
         </window>
-        <customObject id="0WM-hT-GKX" customClass="StatInfo">
-            <connections>
-                <outlet property="doc" destination="-2" id="TNt-yA-EHQ"/>
-            </connections>
-        </customObject>
         <customView id="X9U-U8-xMN">
             <rect key="frame" x="0.0" y="0.0" width="497" height="25"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
@@ -439,7 +451,7 @@
                 <constraint firstItem="90R-te-42n" firstAttribute="leading" secondItem="X9U-U8-xMN" secondAttribute="leading" constant="12" id="oNM-Yx-rir"/>
                 <constraint firstItem="wr9-NP-KMl" firstAttribute="leading" secondItem="7Jg-8L-tfU" secondAttribute="trailing" constant="10" id="sJ3-wE-eRx"/>
             </constraints>
-            <point key="canvasLocation" x="660.5" y="109.5"/>
+            <point key="canvasLocation" x="541" y="354"/>
         </customView>
     </objects>
     <resources>

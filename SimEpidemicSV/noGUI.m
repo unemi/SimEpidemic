@@ -12,7 +12,7 @@
 #import <signal.h>
 #import "noGUI.h"
 #import "../SimEpidemic/Sources/AppDelegate.h"
-#import "../SimEpidemic/Sources/Document.h"
+#import "../SimEpidemic/Sources/World.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
 #import "noGUIInfo.h"
 #import "ProcContext.h"
@@ -31,12 +31,12 @@ void unix_error_msg(NSString *msg, int code) {
 }
 
 NSMutableDictionary<NSString *, id> *infoDictionary = nil;
-NSMutableDictionary<NSString *, Document *> *defaultDocuments = nil;
-NSMutableDictionary<NSString *, Document *> *theDocuments = nil;
+NSMutableDictionary<NSString *, World *> *defaultWorlds = nil;
+NSMutableDictionary<NSString *, World *> *theWorlds = nil;
 NSUInteger JSONOptions = 0;
 uint32 BCA4Contract = INADDR_BROADCAST;
-NSInteger maxPopSize = 1000000, maxNDocuments = 128, maxRuntime = 48*3600,
-	documentTimeout = 20*60, maxJobsInQueue = 256, maxTrialsAtSameTime = 4,
+NSInteger maxPopSize = 1000000, maxNWorlds = 128, maxRuntime = 48*3600,
+	worldTimeout = 20*60, maxJobsInQueue = 256, maxTrialsAtSameTime = 4,
 	jobRecExpirationHours = 24*7, stateRecExpirationHours = 24*7;
 NSString *fileDirectory = nil, *dataDirectory = nil, *logFilePath = nil;
 NSDictionary *extToMime, *codeMeaning, *indexNames;
@@ -408,11 +408,11 @@ int main(int argc, const char * argv[]) {
 		} else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--maxPopSize") == 0) {
 			if (i + 1 < argc) maxPopSize = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--maxNWorlds") == 0) {
-			if (i + 1 < argc) maxNDocuments = atoi(argv[++ i]);
+			if (i + 1 < argc) maxNWorlds = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--maxRuntime") == 0) {
 			if (i + 1 < argc) maxRuntime = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--documentTimeout") == 0) {
-			if (i + 1 < argc) documentTimeout = atoi(argv[++ i]);
+			if (i + 1 < argc) worldTimeout = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-Q") == 0 || strcmp(argv[i], "--maxQueuedJobs") == 0) {
 			if (i + 1 < argc) maxJobsInQueue = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-T") == 0 || strcmp(argv[i], "--maxTrials") == 0) {
@@ -474,8 +474,8 @@ int main(int argc, const char * argv[]) {
 		MY_LOG("Couldn't write pid. %@", error.localizedDescription);
 		terminateApp(EXIT_PID_FILE); }
 //
-	defaultDocuments = NSMutableDictionary.new;
-	theDocuments = NSMutableDictionary.new;
+	defaultWorlds = NSMutableDictionary.new;
+	theWorlds = NSMutableDictionary.new;
 	init_context();
 	applicationSetups();	// defined in AppDelegate.m
 	[NSThread detachNewThreadWithBlock:^{ connection_thread(); }];

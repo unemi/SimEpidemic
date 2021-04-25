@@ -9,6 +9,7 @@
 #import "ParamPanel.h"
 #import "AppDelegate.h"
 #import "Document.h"
+#import "World.h"
 #import "PopDist.h"
 
 static void reveal_me_in_tabview(NSControl *me, NSTabView *tabView) {
@@ -87,6 +88,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 #define N_SUBPANELS 5
 @interface ParamPanel () {
 	Document *doc;
+	World *world;
 	RuntimeParams *targetParams;
 	NSArray<NSTextField *> *fDigits, *iDigits, *rDigits;
 	NSArray<DistDigits *> *dDigits;
@@ -105,7 +107,8 @@ static NSNumberFormatter *distDgtFmt = nil;
 - (instancetype)initWithDoc:(Document *)dc {
 	if (!(self = [super initWithWindowNibName:@"ParamPanel"])) return nil;
 	doc = dc;
-	targetParams = dc.initParamsP;
+	world = dc.world;
+	targetParams = world.initParamsP;
 	undoManager = NSUndoManager.new;
 	_byUser = YES;
 	return self;
@@ -120,7 +123,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	return (stpExp <= 0)? 1 : round(pow(2., stpExp - 1)) * 3;
 }
 - (void)adjustControls {
-	WorldParams *wp = doc.tmpWorldParamsP;
+	WorldParams *wp = world.tmpWorldParamsP;
 	for (NSInteger i = 0; i < fDigits.count; i ++)
 		fDigits[i].doubleValue = fSliders[i].doubleValue = (&targetParams->PARAM_F1)[i];
 	for (DistDigits *d in dDigits) [d adjustDigitsToCurrentValue];
@@ -135,7 +138,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	[wrkPlcModePopUp selectItemAtIndex:wp->wrkPlcMode];
 }
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
-	if (targetParams == doc.runtimeParamsP) for (NSString *key in paramNames) {
+	if (targetParams == world.runtimeParamsP) for (NSString *key in paramNames) {
 		NSInteger idx = paramIndexFromKey[key].integerValue;
 		if (idx < IDX_D) fDigits[idx].doubleValue =
 			fSliders[idx].doubleValue = (&targetParams->PARAM_F1)[idx];
@@ -145,13 +148,13 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 - (void)checkUpdate {
 	revertUDBtn.enabled = hasUserDefaults &&
 		(memcmp(targetParams, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
-		memcmp(doc.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams)));
+		memcmp(world.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams)));
 	revertFDBtn.enabled =
 		memcmp(targetParams, &defaultRuntimeParams, sizeof(RuntimeParams)) ||
-		memcmp(doc.tmpWorldParamsP, &defaultWorldParams, sizeof(WorldParams));
+		memcmp(world.tmpWorldParamsP, &defaultWorldParams, sizeof(WorldParams));
 	saveAsUDBtn.enabled =
 		memcmp(targetParams, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
-		memcmp(doc.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams));
+		memcmp(world.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams));
 }
 #define DDGT(d1,d2,d3) [DistDigits.alloc initWithDigits:@[d1,d2,d3]\
  tabView:tabView callBack:proc]
@@ -175,7 +178,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt,
-		vcnPRateDgt, vcn1stEffDgt, vcnMaxEffDgt, vcnEDelayDgt, vcnEPeriodDgt, vcnAntiRateDgt];
+		vcnPRateDgt, vcn1stEffDgt, vcnMaxEffDgt, vcnEDelayDgt, vcnEPeriodDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, recovActSld, immueActSld,
@@ -183,7 +186,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		dstSTSld, dstOBSld, backHmSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld,
-		vcnPRateSld, vcn1stEffSld, vcnMaxEffSld, vcnEDelaySld, vcnEPeriodSld, vcnAntiRateSld];
+		vcnPRateSld, vcn1stEffSld, vcnMaxEffSld, vcnEDelaySld, vcnEPeriodSld];
 	ParamPanel __weak *pp = self;
 	void (^proc)(void) = ^{ [pp checkUpdate]; };
 	dDigits = @[
@@ -199,8 +202,10 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		DDGT(gatFreqMinDgt, gatFreqMaxDgt, gatFreqModeDgt)];
 	iDigits = @[initPopDgt, worldSizeDgt, meshDgt];
 	iSteppers = @[initPopStp, worldSizeStp, meshStp];
-	rDigits = @[initInfcDgt, initRecvDgt, initQAsymDgt, initQSympDgt];
-	rSliders = @[initInfcSld, initRecvSld, initQAsymSld, initQSympSld];
+	rDigits = @[initInfcDgt, initRecvDgt, initQAsymDgt, initQSympDgt,
+		vcnAntiRateDgt, vaClstrRtDgt, vaClstrGrDgt, vaTestRtDgt];
+	rSliders = @[initInfcSld, initRecvSld, initQAsymSld, initQSympSld,
+		vcnAntiRateSld, vaClstrRtSld, vaClstrGrSld, vaTestRtSld];
     for (NSInteger idx = 0; idx < fDigits.count; idx ++) {
 		NSTextField *d = fDigits[idx];
 		NSSlider *s = fSliders[idx];
@@ -248,7 +253,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 }
 - (IBAction)changeStepsPerDay:(id)sender {
 // steps/day's possible values = {1, 3, 6, 12, 24, 48, ... }, changed at ver.1.8.4
-	WorldParams *wp = doc.tmpWorldParamsP;
+	WorldParams *wp = world.tmpWorldParamsP;
 	NSInteger orgExp = spd_to_stpInt(wp->stepsPerDay);
 	NSTabView *tabV = tabView;
 	[undoManager registerUndoWithTarget:stepsPerDayStp handler:^(NSStepper *target) {
@@ -262,7 +267,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	[self checkUpdate];
 }
 - (IBAction)chooseHomeMode:(id)sender {
-	WorldParams *wp = doc.tmpWorldParamsP;
+	WorldParams *wp = world.tmpWorldParamsP;
 	WrkPlcMode orgValue = wp->wrkPlcMode, newValue = (WrkPlcMode)wrkPlcModePopUp.indexOfSelectedItem;
 	if (orgValue == newValue) return;
 	NSTabView *tabV = tabView;
@@ -297,21 +302,21 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		[target selectItemAtIndex:orgValue];
 		[target sendAction:target.action to:target.target];
 	}];
-	[doc setVaccinePriority:newValue toInit:targetParams == doc.initParamsP];
+	[world setVaccinePriority:newValue toInit:targetParams == world.initParamsP];
 	[self checkUpdate];
 }
 - (void)setParamsOfRuntime:(const RuntimeParams *)rp world:(const WorldParams *)wp {
 	RuntimeParams rtPr = *targetParams;
-	WorldParams wlPr = *(doc.tmpWorldParamsP);
+	WorldParams wlPr = *(world.tmpWorldParamsP);
 	[undoManager registerUndoWithTarget:self handler:^(ParamPanel *panel) {
 		[panel setParamsOfRuntime:&rtPr world:&wlPr];
 	}];
 	VaccinePriority orgVcnPri = targetParams->vcnPri;
 	*targetParams = *rp;
-	*(doc.tmpWorldParamsP) = *wp;
+	*(world.tmpWorldParamsP) = *wp;
 	if (rp->vcnPri != orgVcnPri) {
 		targetParams->vcnPri = orgVcnPri;
-		[doc setVaccinePriority:rp->vcnPri toInit:targetParams == doc.initParamsP];
+		[world setVaccinePriority:rp->vcnPri toInit:targetParams == world.initParamsP];
 	}
 	[self adjustControls];
 	[self checkUpdate];
@@ -324,7 +329,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 }
 - (IBAction)saveAsUserDefaults:(id)sender {
 	RuntimeParams *rp = targetParams;
-	WorldParams *wp = doc.tmpWorldParamsP;
+	WorldParams *wp = world.tmpWorldParamsP;
 	confirm_operation(@"Will overwrites the current user's defaults.", self.window, ^{
 		NSDictionary<NSString *, NSNumber *> *dict = param_dict(rp, wp);
 		NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;
@@ -344,7 +349,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	});
 }
 - (IBAction)switchInitOrCurrent:(id)sender {
-	RuntimeParams *newTarget = (sender == initPrmRdBtn)? doc.initParamsP : doc.runtimeParamsP;
+	RuntimeParams *newTarget = (sender == initPrmRdBtn)? world.initParamsP : world.runtimeParamsP;
 	if (newTarget != targetParams) {
 		[undoManager registerUndoWithTarget:(sender == initPrmRdBtn)? crntPrmRdBtn : initPrmRdBtn
 			handler:^(NSButton *target) {
@@ -358,7 +363,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	}
 }
 - (IBAction)saveDocument:(id)sender {
-	save_property_data(@"sEpP", self.window, param_dict(targetParams, doc.tmpWorldParamsP));
+	save_property_data(@"sEpP", self.window, param_dict(targetParams, world.tmpWorldParamsP));
 }
 - (IBAction)loadDocument:(id)sender {
 	NSWindow *window = self.window;
@@ -382,13 +387,13 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	copy_plist_as_JSON_text(
 		(NSEvent.modifierFlags & NSEventModifierFlagShift)?
 		param_diff_dict(targetParams, &userDefaultRuntimeParams,
-			doc.tmpWorldParamsP, &userDefaultWorldParams) :
-		param_dict(targetParams, doc.tmpWorldParamsP),
+			world.tmpWorldParamsP, &userDefaultWorldParams) :
+		param_dict(targetParams, world.tmpWorldParamsP),
 		self.window);
 }
 - (void)copyParamsFromDict:(NSDictionary *)dict {
 	RuntimeParams *rp = targetParams, orgRp = *rp;
-	WorldParams *wp = doc.tmpWorldParamsP, orgWp = *wp;
+	WorldParams *wp = world.tmpWorldParamsP, orgWp = *wp;
 	set_params_from_dict(targetParams, wp, dict);
 	NSDictionary *pDiff = param_diff_dict(&orgRp, targetParams, &orgWp, wp);
 #ifdef DEBUG
@@ -427,7 +432,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	[self checkUpdate];
 }
 - (void)iValueChanged:(NSControl *)sender {
-	WorldParams *p = doc.tmpWorldParamsP;
+	WorldParams *p = world.tmpWorldParamsP;
 	NSControl *d = iDigits[sender.tag], *s = iSteppers[sender.tag];
 	NSInteger orgValue = (&p->PARAM_I1)[sender.tag];
 	NSInteger newValue = sender.integerValue;
@@ -445,7 +450,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	[self checkUpdate];
 }
 - (void)rValueChanged:(NSControl *)sender {
-	WorldParams *p = doc.tmpWorldParamsP;
+	WorldParams *p = world.tmpWorldParamsP;
 	NSControl *d = rDigits[sender.tag], *s = rSliders[sender.tag];
 	CGFloat orgValue = (&p->PARAM_R1)[sender.tag];
 	CGFloat newValue = sender.doubleValue;
@@ -463,16 +468,16 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	[self checkUpdate];
 }
 - (void)setPopDistImage:(NSImage *)image {
-	NSImage *orgImage = doc.popDistImage;
+	NSImage *orgImage = world.popDistImage;
 	[undoManager registerUndoWithTarget:self handler:^(ParamPanel *pp) {
 		[pp setPopDistImage:orgImage];
 	}];
-	doc.popDistImage = image;
+	world.popDistImage = image;
 }
 - (IBAction)setupPopDistMap:(id)sender {
 	if (popDist == nil) {
 		popDist = PopDist.new;
-		popDist.image = doc.popDistImage;
+		popDist.image = world.popDistImage;
 	}
 	PopDist *ppdst = popDist;
 	[self.window beginSheet:popDist.window completionHandler:^(NSModalResponse returnCode) {
