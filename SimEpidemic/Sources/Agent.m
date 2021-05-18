@@ -149,7 +149,7 @@ static void pop_dist_alloc(NSInteger x, NSInteger y, NSInteger w,
 	NSPoint *pts, NSInteger n, float *pd) {
 	if (n <= 1) {
 		pts[0] = (NSPoint){x + d_random() * w, y + d_random() * w};
-	} else if (w <= 2) {
+	} else if (w <= 4) {
 		for (NSInteger i = 0; i < n; i ++)
 			pts[i] = (NSPoint){x + d_random() * w, y + d_random() * w};
 	} else {

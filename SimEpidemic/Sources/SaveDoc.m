@@ -9,7 +9,7 @@
 #import "SaveDoc.h"
 #import "World.h"
 #ifdef NOGUI
-#import "noGUI.h"
+#import "../../SimEpidemicSV/noGUI.h"
 #else
 #import "Document.h"
 #import "MyView.h"
@@ -20,7 +20,7 @@
 #import "Agent.h"
 #import "StatPanel.h"
 #import "Gatherings.h"
-#import "DataCompress.h"
+#import "../../SimEpidemicSV/DataCompress.h"
 #import <zlib.h>
 #define FORMAT_VER 1
 
@@ -720,23 +720,35 @@ z(inTestQueue); z(lastTested);
 		self.popDistImage = img;
 	}
 }
-- (NSMutableDictionary *)dictOfSaveDoc:(SavePopFlags)flag {
-	NSMutableDictionary *dict = [NSMutableDictionary
-		dictionaryWithObject:@(FORMAT_VER) forKey:keyFormatVersion];
+#ifdef NOGUI
+- (NSFileWrapper *)fileWrapperOfWorld {
+	NSMutableDictionary *dict = NSMutableDictionary.new;
+#else
+- (NSFileWrapper *)fileWrapperOfSaveDoc:(SavePopFlags)flag
+	paramDict:(NSDictionary *)pDict fileDict:(NSDictionary *)fDict {
+	NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithDictionary:pDict];
+#endif
+	dict[keyFormatVersion] = @(FORMAT_VER);
 	[self addParams:dict];
-	if (flag == SaveOnlyParams) return dict;
-	NSMutableDictionary<NSString *,NSFileWrapper *> *md = [NSMutableDictionary
-		dictionaryWithObject:dict forKey:fnParamsPList];
+#ifdef NOGUI
+	NSMutableDictionary<NSString *,NSFileWrapper *> *md = NSMutableDictionary.new;
+	[self addSavePop:md info:dict];
+	if (self.popDistImage != nil) [self addSavePopDens:md];
+#else
+	if (flag == SaveOnlyParams) return fileWrapper_from_plist(dict);
+	NSMutableDictionary<NSString *,NSFileWrapper *> *md =
+		[NSMutableDictionary dictionaryWithDictionary:fDict];
 	if (flag & SavePopulation) [self addSavePop:md info:dict];
 	if (flag & SavePMap && self.popDistImage != nil) [self addSavePopDens:md];
-	return md;
+#endif
+	md[fnParamsPList] = fileWrapper_from_plist(dict);
+	return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];;
 }
 - (BOOL)readFromDict:(NSDictionary *)dict error:(NSError **)outError {
 	@try {
 	NSFileWrapper *fw = dict[fnParamsPList];
 	if (fw == nil || !fw.regularFile) @throw @"Parameters are missing.";
-	NSDictionary *dict = plist_from_data(fw.regularFileContents);
-	NSDictionary *pDict = [self readParamsFromDict:dict];
+	NSDictionary *pDict = [self readParamsFromDict:plist_from_data(fw.regularFileContents)];
 	NSNumber *num = pDict[keyFormatVersion];
 	if (num == nil && dict[fnStatIndexes] != nil) @throw @"The file format seems to be old.";
 	else if (num.integerValue > FORMAT_VER) @throw @"The file format is too new.";
@@ -770,11 +782,6 @@ z(inTestQueue); z(lastTested);
 	return YES;
 }
 #ifdef NOGUI
-- (NSFileWrapper *)fileWrapperOfWorld {
-	NSDictionary *dict = [self dictOfSaveDoc:SavePopulation | SavePMap];
-	return (dict == nil)? nil :
-		[NSFileWrapper.alloc initDirectoryWithFileWrappers:dict];
-}
 - (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper error:(NSError **)outError {
 	if (fileWrapper.regularFile) {
 		NSDictionary *dict = plist_from_data(fileWrapper.regularFileContents);
@@ -831,7 +838,7 @@ z(inTestQueue); z(lastTested);
 	}
 	rearrange_window_order(winList);
 }
-- (void)addSaveGUI:(NSMutableDictionary *)md {
+- (NSMutableDictionary *)dictOfSaveGUI {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
 	dict[keyDocWindow] = dict_of_window_geom(view.window);
 	if (view.scale > 1.) dict[keyViewOffsetAndScale] =
@@ -839,8 +846,9 @@ z(inTestQueue); z(lastTested);
 	dict[keyStatWindows] = [world.statInfo UIInfoPlist];
 	if (paramPanel != nil) dict[keyParamPanel] = [paramPanel UIInfoPlist];
 	if (scenarioPanel != nil) dict[keyScenarioPanel] = [scenarioPanel UIInfoPlist];
-	if (dataPanel != nil) dict[keyDataPanel] = [dataPanel UIInfoPlist];	
-	md[fnUIInfo] = fileWrapper_from_plist(dict);
+	if (dataPanel != nil) dict[keyDataPanel] = [dataPanel UIInfoPlist];
+	return dict;
+//	md[fnUIInfo] = fileWrapper_from_plist(dict);
 }
 - (NSFileWrapper *)fileWrapperOfType:(NSString *)typeName error:(NSError **)outError {
 	SavePopFlags flag = SaveOnlyParams;
@@ -848,28 +856,31 @@ z(inTestQueue); z(lastTested);
 		flag |= SavePopulation;
 	if (saveGUICBox.state == NSControlStateValueOn) flag |= SaveGUI;
 	if (savePMapCBox.state == NSControlStateValueOn) flag |= SavePMap;
-	NSMutableDictionary *dict = [world dictOfSaveDoc:flag];
-	dict[keyAnimeSteps] = @(animeSteps);
-	if (flag == SaveOnlyParams) return fileWrapper_from_plist(dict);
-	if (flag & SaveGUI) [self addSaveGUI:dict];
-	return [NSFileWrapper.alloc initDirectoryWithFileWrappers:dict];
+	return [world fileWrapperOfSaveDoc:flag
+		paramDict:@{keyAnimeSteps:@(animeSteps)}
+		fileDict:((flag & SaveGUI) == 0)? nil :
+			@{fnUIInfo:fileWrapper_from_plist([self dictOfSaveGUI])}];
 }
 - (NSDictionary *)readParamsFromFileWrapper:(NSFileWrapper *)fw {
 	NSDictionary *dict = plist_from_data(fw.regularFileContents);
 	NSNumber *num;
 	if ((num = dict[keyAnimeSteps]) != nil) animeSteps = num.integerValue;
-	return [world readParamsFromDict:dict];
+	return (world == nil)? dict : [world readParamsFromDict:dict];
 }
 - (BOOL)readFromFileWrapper:(NSFileWrapper *)fileWrapper
 	ofType:(NSString *)typeName error:(NSError **)outError {
 	@try {
 	if (fileWrapper.regularFile) {
-		if ([self readParamsFromFileWrapper:fileWrapper] == nil) return NO;
-		[world resetVaccineListIfNecessary];
+		NSDictionary *dict = [self readParamsFromFileWrapper:fileWrapper];
+		if (dict == nil) return NO;
+		if (world == nil) worldInitializer = ^(World *wd, NSError **outError) {
+				[wd readParamsFromDict:dict];
+				[wd resetVaccineListIfNecessary]; return YES;
+			};
+		else [world resetVaccineListIfNecessary];
 		return YES;
 	} else if (!fileWrapper.directory) return NO;
 	NSDictionary *dict = fileWrapper.fileWrappers;
-	[world readFromDict:dict error:outError];
 	NSFileWrapper *fw;
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatImageBM]) != nil) [statProcs addObject:^(StatInfo *st) {
@@ -878,10 +889,13 @@ z(inTestQueue); z(lastTested);
 	void (^panelBlock)(Document *) = ((fw = dict[fnUIInfo]) == nil)? nil : ^(Document *doc){
 		[doc setupPanelsWithInfo:plist_from_data(fw.regularFileContents)];
 	};
-	if (world.statInfo == nil) {
+	if (world == nil) {
+		worldInitializer = ^(World *wd, NSError **outError) {
+			return [wd readFromDict:dict error:outError]; };
 		statPanelInitializer = statProcs;
 		if (panelBlock != nil) panelInitializer = panelBlock;
 	} else {
+		[world readFromDict:dict error:outError];
 		for (void (^block)(StatInfo *) in statProcs) block(world.statInfo);
 		if (panelBlock != nil) panelBlock(self);
 		[self adjustScenarioText];

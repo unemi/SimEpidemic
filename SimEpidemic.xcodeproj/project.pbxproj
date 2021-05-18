@@ -64,15 +64,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		2365DEB42506145A006C2A95 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 8;
-			dstPath = "";
-			dstSubfolderSpec = 0;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 1;
-		};
 		23B89E4A255BD61000A95360 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -433,7 +424,7 @@
 				2365DECB250616E5006C2A95 /* ShellScript */,
 				2365DEB22506145A006C2A95 /* Sources */,
 				2365DEB32506145A006C2A95 /* Frameworks */,
-				2365DEB42506145A006C2A95 /* CopyFiles */,
+				23AD673D264F9978008AAEAB /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -583,6 +574,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ ${CONFIGURATION} == Release ]; then /Users/unemi/Program/bin/incBuildVersion.csh; fi\n";
+		};
+		23AD673D264F9978008AAEAB /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n#env | sort > /tmp/x.txt\nif [ $CONFIGURATION != Debug ]; then\nfor m in simepi simepi2; do\nscp $BUILT_PRODUCTS_DIR/$EXECUTABLE_NAME admin@$m.intlab.soka.ac.jp:SimEpidemic/$EXECUTABLE_NAME.new\ndone\ncd $PROJECT_DIR\nCOPYFILE_DISABLE=1 tar -cf - --newer-than touch README.md SimEpidemic SimEpidemicSV | \\\nssh simepiM00.intlab.soka.ac.jp \"cd Program/SimEpidemic; tar -xpf -\"\ntouch touch\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

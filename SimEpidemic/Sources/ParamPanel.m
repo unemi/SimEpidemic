@@ -169,7 +169,8 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	}
 	NSRect wFrame = self.window.frame;
 	CGFloat dh = viewSize[0].height - tabs[0].view.frame.size.height;
-	wFrame.size.height += dh; wFrame.origin.y -= dh;
+	wFrame.size.height += dh;
+	if ((wFrame.origin.y -= dh) < 0.) wFrame.origin.y = 0.;
 	[self.window setFrame:wFrame display:NO];
     fDigits = @[massDgt, fricDgt, avoidDgt, maxSpdDgt,
 		actModeDgt, actKurtDgt, massActDgt, mobActDgt, gatActDgt,

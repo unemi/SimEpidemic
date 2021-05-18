@@ -47,7 +47,9 @@ static __weak NSColorWell *colWells[N_COLORS];
 		index = colWell.tag;
 	}
 	if (colWell == nil) return;
-	stateColors[index] = colWell.color;
+	NSColor *newCol = colWell.color;
+	stateColors[index] = (newCol.numberOfComponents > 2)? newCol :
+		[newCol colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
 	CGFloat r, g, b;
 	[stateColors[index] getRed:&r green:&g blue:&b alpha:NULL];
 	stateRGB[index] = ((NSInteger)(r * 255) << 16)

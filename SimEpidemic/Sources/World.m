@@ -530,8 +530,8 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 		NSInteger nAgents = (nAgentsInClstr - idx) / (nClstrs - i);
 		if (nAgents <= 0) continue;
 		NSPoint pt = {
-			(i % nClstrCols + 1) * worldParams.worldSize / (nClstrCols + 1),
-			(i / nClstrCols + 1) * worldParams.worldSize / (nClstrRows + 1)
+			(i % nClstrCols + .5) * worldParams.worldSize / nClstrCols,
+			(i / nClstrCols + .5) * worldParams.worldSize / nClstrRows
 		};
 		CGFloat ay = pt.y * p->mesh / p->worldSize, ax = pt.x * p->mesh / p->worldSize;
 		NSInteger iy = floor(ay), ix = floor(ax);

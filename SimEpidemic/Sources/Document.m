@@ -173,6 +173,11 @@ NSString *nnScenarioText = @"nnScenatioText",
 	world = World.new;
 	world.statInfo.doc = self;
 	view.world = world;
+	if (worldInitializer != nil) {
+		NSError *error;
+		if (!worldInitializer(world, &error))
+			error_msg(error, view.window, NO);
+	}
 	nnObjects = NSMutableDictionary.new;
 	NSNotificationCenter *ntfCenter = NSNotificationCenter.defaultCenter;
 	[ntfCenter addObserver:self
@@ -285,6 +290,17 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 	if (world.scenario != nil) dict[keyScenario] = [world scenarioPList];
 	dict[keyParameters] = param_dict(world.initParamsP, world.worldParamsP);
 	copy_plist_as_JSON_text(dict, view.window);
+}
+- (IBAction)copyImage:(id)sender {
+	NSRect area = view.bounds;
+	area.size.width = area.size.height;
+	NSBitmapImageRep *imgRep = [view bitmapImageRepForCachingDisplayInRect:area];
+	[view cacheDisplayInRect:area toBitmapImageRep:imgRep];
+	imgRep.size = (NSSize){imgRep.pixelsWide, imgRep.pixelsHigh};
+	NSPasteboard *pb = NSPasteboard.generalPasteboard;
+	[pb declareTypes:@[NSPasteboardTypePNG] owner:self];
+	[pb setData:[imgRep representationUsingType:NSBitmapImageFileTypePNG properties:@{}]
+		forType:NSPasteboardTypePNG];
 }
 - (void)showAllAfterStep {
 	[self showCurrentStatistics];

@@ -18,7 +18,6 @@ extern NSString *nnScenarioText, *nnParamChanged;
 @class Scenario, ParamPanel, DataPanel;
 
 @interface Document : NSDocument <NSWindowDelegate> {
-	IBOutlet World *world;
 	IBOutlet MyView *view;
 	IBOutlet NSTextField *daysNum, *qNSNum, *qDSNum, *spsNum,
 		*scenarioText, *animeStepsTxt, *stopAtNDaysDgt;
@@ -30,7 +29,9 @@ extern NSString *nnScenarioText, *nnParamChanged;
 	IBOutlet NSView *savePanelAccView;
 	IBOutlet NSButton *savePopCBox, *saveGUICBox, *savePMapCBox;
 	NSMutableArray<void (^)(StatInfo *)> *statPanelInitializer;
+	BOOL (^worldInitializer)(World *, NSError **);
 	void (^panelInitializer)(Document *);
+	World *world;
 	Scenario *scenarioPanel;
 	ParamPanel *paramPanel;
 	DataPanel *dataPanel;

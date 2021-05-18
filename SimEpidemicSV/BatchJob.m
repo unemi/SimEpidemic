@@ -245,15 +245,19 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 - (void)makeDataFileWith:(NSNumber *)number type:(NSString *)type names:(NSArray *)names
 	makeObj:(NSObject * (^)(StatInfo *, NSArray *))makeObj {
 	if (names.count <= 0) return;
-	NSError *error;
-	NSData *data = [NSJSONSerialization dataWithJSONObject:
-		@{@"jobID":_ID, @"n":number, @"type":type, @"table":
-			makeObj(runningTrials[number].statInfo, names)}
-		options:0 error:&error];
-	if (data == nil) @throw error;
-	NSString *path = [jobDirPath stringByAppendingPathComponent:
-		[NSString stringWithFormat:@"%@_%@", type, number]];
-	if (![data writeToFile:path options:0 error:&error]) @throw error;
+	NSError *error = nil;
+	@autoreleasepool {
+		NSData *data = [NSJSONSerialization dataWithJSONObject:
+			@{@"jobID":_ID, @"n":number, @"type":type, @"table":
+				makeObj(runningTrials[number].statInfo, names)}
+			options:0 error:&error];
+		if (data != nil) {
+			NSString *path = [jobDirPath stringByAppendingPathComponent:
+				[NSString stringWithFormat:@"%@_%@", type, number]];
+			[data writeToFile:path options:0 error:&error];
+		}
+	}
+	if (error != nil) @throw error;
 }
 - (void)trialDidFinish:(NSNumber *)number mode:(LoopMode)mode {
 // output the results
