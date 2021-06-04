@@ -60,7 +60,7 @@ void my_exit(void) {
 	unsigned long mtime[N_MTIME];
 	NSInteger mCount, mCount2;
 #endif
-	NSInteger nPop, nMesh, nVcnPop;
+	NSInteger nPop, nMesh;
 	Agent **pop;
 	NSRange *pRange;
 	CGFloat stepsPerSec;
@@ -299,9 +299,18 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 			NSObject *value = md[key];
 			if (idx < IDX_D)
 				(&runtimeParams.PARAM_F1)[idx] = ((NSNumber *)md[key]).doubleValue;
-			else if ([value isKindOfClass:NSArray.class] && ((NSArray *)value).count == 3)
-				set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
-					(NSArray<NSNumber *> *)value, 1.);
+			else if (idx < IDX_I) {
+				if ([value isKindOfClass:NSArray.class] && ((NSArray *)value).count == 3)
+					set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
+						(NSArray<NSNumber *> *)value, 1.);
+			} else if (idx < IDX_E || idx >= IDX_H) {
+			} else if ([key isEqualToString:@"vaccinePriority"]) {
+				VaccinePriority newValue = (VaccinePriority)((NSNumber *)md[key]).intValue;
+				if (newValue != runtimeParams.vcnPri) {
+					runtimeParams.vcnPri = newValue;
+					[self reconfigureVaccineList];
+				}
+			} else (&runtimeParams.PARAM_E1)[idx - IDX_E] = ((NSNumber *)md[key]).intValue;
 		}
 #ifndef NOGUI
 		[NSNotificationCenter.defaultCenter
@@ -391,7 +400,6 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 		[tmemLock unlock];
 		testQueTail = testQueHead = NULL;
 	}
-	paramChangers = NSMutableDictionary.new;
 	_QList = _CList = NULL;
 	[_WarpList removeAllObjects];
 }
@@ -486,7 +494,8 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 		ac[i] = a->activeness;
 		pt[i] = (worldParams.wrkPlcMode == WrkPlcNone)? (CGPoint){a->x, a->y} : a->orgPt;
 	}
-	MY_LOG("Vcn list (%d) %.6f(%.1f,%.1f),%.6f(%.1f,%.1f),%.6f(%.1f,%.1f)", runtimeParams.vcnPri,
+	MY_LOG("Vcn list (%d,%ld) %.6f(%.1f,%.1f),%.6f(%.1f,%.1f),%.6f(%.1f,%.1f)",
+		runtimeParams.vcnPri, vcnListIndex,
 		ac[0], pt[0].x, pt[0].y, ac[1], pt[1].x, pt[1].y, ac[2], pt[2].x, pt[2].y);
 #endif
 #endif
@@ -701,6 +710,7 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	[statInfo reset:pconf];
 	[popLock unlock];
 	scenarioIndex = 0;
+	paramChangers = NSMutableDictionary.new;
 	[self execScenario];
 #ifdef NOGUI
 	[self forAllReporters:^(PeriodicReporter *rep) { [rep reset]; }];
@@ -783,18 +793,32 @@ NSObject *scenario_element_from_property(NSObject *prop) {
 		[NSPredicate predicateWithFormat:(NSString *)((NSArray *)prop)[1]];
 	return (pred != nil)? @[((NSArray *)prop)[0], pred] : nil;
 }
+#ifdef NOGUI
+static NSString *check_paramname_in_chng_prm_elm(NSArray *prop) {
+	if (![prop[0] isKindOfClass:NSString.class]) return nil;
+	NSNumber *idxNum = paramIndexFromKey[(NSString *)prop[0]];
+	@try {
+		if (idxNum == nil) @throw @"unknown parameter name";
+		NSInteger idx = idxNum.integerValue;
+		if ((idx >= IDX_I && idx < IDX_E) || idx >= IDX_H)
+			@throw @"invalid to modify in scenario.";
+	} @catch (NSString *msg) { return [NSString stringWithFormat:@"\"%@\" is %@.", prop[0], msg]; }
+	return nil;
+}
 NSString *check_scenario_element_from_property(NSObject *prop) {
 // returns nil when it looks OK, otherwise return a string of error message
 	NSString *predForm = nil;
 	if ([prop isKindOfClass:NSString.class]) predForm = (NSString *)prop;
 	else if (![prop isKindOfClass:NSArray.class]) return nil;
-	else if (((NSArray *)prop).count != 2) return nil;
-	else if (![((NSArray *)prop)[1] isKindOfClass:NSString.class]) return nil;
+	else if (((NSArray *)prop).count != 2) return check_paramname_in_chng_prm_elm((NSArray *)prop);
+	else if (![((NSArray *)prop)[1] isKindOfClass:NSString.class])
+		return check_paramname_in_chng_prm_elm((NSArray *)prop);
 	else predForm = (NSString *)((NSArray *)prop)[1];
 	if (predForm == nil || predForm.length == 0) return @"Null predicate";
 	@try { return ([NSPredicate predicateWithFormat:predForm] == nil)? @"Null" : nil; }
 	@catch (NSException *e) { return e.reason; }
 }
+#endif
 - (NSArray *)scenarioPList {
 	if (scenario == nil || scenario.count == 0) return @[];
 	NSObject *items[scenario.count];

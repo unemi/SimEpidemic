@@ -20,6 +20,7 @@
 - (void)windowDidLoad {
     [super windowDidLoad];
     undoManager = NSUndoManager.new;
+    if (_image != nil) imgView.image = _image;
 }
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
 	return undoManager;

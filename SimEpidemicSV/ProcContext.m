@@ -7,6 +7,7 @@
 //
 
 #import <sys/socket.h>
+#import <sys/select.h>
 #import <os/log.h>
 #import <sys/sysctl.h>
 #import <sys/resource.h>
@@ -130,11 +131,32 @@ World *make_new_world(NSString *type, NSString * _Nullable browserID) {
 	}
 	return dataLength;
 }
+static NSString *unix_err_msg(void) {
+	return [NSString stringWithUTF8String:strerror(errno)];
+}
 void send_bytes(int desc, const char *bytes, NSInteger size) {
 	if (desc < 0) return;
-	ssize_t result = send(desc, bytes, size, 0);
-	if (result < 0) @throw @(errno);
-	else if (result < size) @throw @"send answer";
+#define CHECK_BY_SELECT
+#ifdef CHECK_BY_SELECT
+	fd_set fdSet;
+	FD_ZERO(&fdSet);
+	FD_SET(desc, &fdSet);
+	do {
+		int n = select(desc + 1, NULL, &fdSet, NULL, &(struct timeval){0,100000});
+		if (n == 0) @throw @"'select' got time out to send answer";
+		else if (n < 0) @throw unix_err_msg();
+	} while (!FD_ISSET(desc, &fdSet));
+#endif
+	NSInteger retry = 5;
+	do {
+		ssize_t result = send(desc, bytes, size, 0);
+		if (result < 0) @throw unix_err_msg();
+		else if (result >= size) break;
+		if (result == 0) retry --;
+		else { bytes += result; size -= result; }
+		usleep(100000);
+	} while (retry > 0);
+	if (retry <= 0) @throw @"send answer";
 #ifdef DEBUG
 	MY_LOG_DEBUG("(%d)<- %ld bytes.\n", desc, size);
 	if (size < 512) {
@@ -385,13 +407,18 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 		[self setErrorMessage:[@"500 " stringByAppendingString:error.localizedDescription]];
 	} @catch (NSNumber *num) { }
 //
-	if (content != nil) {
-		NSInteger length = [self sendData];
-		MY_LOG("%@ %d %ld bytes to %@", ip4_string(ip4addr),
-			code, length, (browserID == nil)? @"-" : browserID);
-	} else if (postProc != nil) {
-		[self sendHeader];
-		postProc();
+	@try {
+		if (content != nil) {
+			NSInteger length = [self sendData];
+			MY_LOG("%@ %d %ld bytes to %@", ip4_string(ip4addr),
+				code, length, (browserID == nil)? @"-" : browserID);
+		} else if (postProc != nil) {
+			[self sendHeader];
+			postProc();
+		}
+	} @catch (id msg) {
+		MY_LOG("%@ Error %@", ip4_string(ip4addr), msg);
+		@throw @2;
 	}
 	return code;
 }

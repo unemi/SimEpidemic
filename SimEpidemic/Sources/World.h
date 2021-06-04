@@ -16,8 +16,9 @@ extern NSString *keyParameters, *keyScenario, *keyDaysToStop;
 extern void in_main_thread(dispatch_block_t block);
 extern NSPredicate *predicate_in_item(NSObject *item, NSString **comment);
 extern NSObject *scenario_element_from_property(NSObject *prop);
+#ifdef NOGUI
 extern NSString *check_scenario_element_from_property(NSObject *prop);
-#ifndef NOGUI
+#else
 extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
 #endif
 #ifdef DEBUG
@@ -48,7 +49,7 @@ typedef struct { Agent *agent; CGFloat dist; } DistanceInfo;
 	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
 	TestEntry *testQueHead, *testQueTail;
 	Gathering *gatherings;
-	NSInteger *vaccineList, vcnListIndex, vcnLateIdx;
+	NSInteger *vaccineList, vcnListIndex, vcnLateIdx, nVcnPop;
 	CGFloat vcnSubjectsRem;
 }
 @property LoopMode loopMode;
@@ -84,6 +85,7 @@ typedef struct { Agent *agent; CGFloat dist; } DistanceInfo;
 - (NSInteger)scenarioIndex;
 - (void)setScenario:(NSArray *)newScen index:(NSInteger)idx;
 - (void)allocateMemory;
+- (void)reorganizeVcnInvList;
 - (void)setVaccinePriority:(VaccinePriority)newValue toInit:(BOOL)isInit;
 - (void)resetVaccineList;
 - (BOOL)resetPop;

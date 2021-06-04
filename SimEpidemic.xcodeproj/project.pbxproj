@@ -297,8 +297,6 @@
 				233420D02468156200C93F8E /* DataPanel.m */,
 				232055F22457D2C6005ADCCF /* Document.h */,
 				232055F32457D2C6005ADCCF /* Document.m */,
-				23B4E4E1262E8F3B0058BCCC /* World.h */,
-				23B4E4E2262E8F3B0058BCCC /* World.m */,
 				23DAF066251737FB00C41E76 /* Gatherings.h */,
 				23DAF067251737FB00C41E76 /* Gatherings.m */,
 				231E000E2461497000BFBE9E /* MyView.h */,
@@ -307,6 +305,8 @@
 				23D6E02C24D59DDD00A5D604 /* Parameters.m */,
 				235D65782462564600487784 /* ParamPanel.h */,
 				235D65792462564600487784 /* ParamPanel.m */,
+				23D6EAE5260C562D00D48F7E /* PopDist.h */,
+				23D6EAE6260C562D00D48F7E /* PopDist.m */,
 				2387B42324FCD2190039796A /* Preferences.h */,
 				2387B42424FCD2190039796A /* Preferences.m */,
 				2310A3122587486F00201F0C /* SaveDoc.h */,
@@ -315,8 +315,8 @@
 				235639CB247111A200F941A6 /* Scenario.m */,
 				238A8F27246694D300604BF4 /* StatPanel.h */,
 				238A8F28246694D300604BF4 /* StatPanel.m */,
-				23D6EAE5260C562D00D48F7E /* PopDist.h */,
-				23D6EAE6260C562D00D48F7E /* PopDist.m */,
+				23B4E4E1262E8F3B0058BCCC /* World.h */,
+				23B4E4E2262E8F3B0058BCCC /* World.m */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -590,7 +590,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n#env | sort > /tmp/x.txt\nif [ $CONFIGURATION != Debug ]; then\nfor m in simepi simepi2; do\nscp $BUILT_PRODUCTS_DIR/$EXECUTABLE_NAME admin@$m.intlab.soka.ac.jp:SimEpidemic/$EXECUTABLE_NAME.new\ndone\ncd $PROJECT_DIR\nCOPYFILE_DISABLE=1 tar -cf - --newer-than touch README.md SimEpidemic SimEpidemicSV | \\\nssh simepiM00.intlab.soka.ac.jp \"cd Program/SimEpidemic; tar -xpf -\"\ntouch touch\nfi\n";
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n#env | sort > /tmp/x.txt\nif [ $CONFIGURATION != Debug ]; then\nfor m in simepi simepi2; do\nscp $BUILT_PRODUCTS_DIR/$EXECUTABLE_NAME admin@$m.intlab.soka.ac.jp:SimEpidemic/$EXECUTABLE_NAME.new\ndone\ncd $PROJECT_DIR\nCOPYFILE_DISABLE=1 tar -cf - --newer-mtime-than touch README.md SimEpidemic SimEpidemicSV | \\\nssh simepiM00.intlab.soka.ac.jp \"cd Program/SimEpidemic; tar -xpf -\"\ntouch touch\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

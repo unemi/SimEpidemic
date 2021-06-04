@@ -432,6 +432,7 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 - (void)getJobQueueStatus {
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	md[@"length"] = @(the_job_controller().queueLength);
+	md[@"runningTrials"] = @(the_job_controller().nRunningTrials);
 	for (NSString *jobID in query) {
 		if (query[jobID].integerValue != 1) continue;
 		BatchJob *job = [the_job_controller() jobFromID:jobID];

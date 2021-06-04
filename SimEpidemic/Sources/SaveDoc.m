@@ -585,6 +585,8 @@ z(inTestQueue); z(lastTested);
 	}
 	if ((pDict = dict[keyParamChangers]) != nil) paramChangers =
 		[NSMutableDictionary dictionaryWithDictionary:pDict];
+	NSInteger nPop = worldParams.initPop;
+	nVcnPop = nPop - nPop * worldParams.vcnAntiRate / 100.;
 	return dict;
 }
 #define CP_L(m) a->m = as[i].m
@@ -678,13 +680,13 @@ z(inTestQueue); z(lastTested);
 		vcnSubjectsRem = sv->subjRem;
 		vcnListIndex = sv->index;
 		const NSInteger *list;
-//			if (sv->lateIdx < 0) {	// for version identification
-//				vcnLateIdx = - sv->lateIdx - 1;
-//				list = sv->list;
-//			} else {
+		if (sv->lateIdx < 0) {	// for version identification
+			vcnLateIdx = - sv->lateIdx - 1;
+			list = sv->list;
+		} else {
 			vcnLateIdx = vcnListIndex;
 			list = ((VaccineListSaveOld1 *)sv)->list;
-//			}
+		}
 		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
 			NSInteger k; BOOL ticket;
 			if (list[i] >= 0) { k = list[i]; ticket = NO; }
@@ -696,6 +698,7 @@ z(inTestQueue); z(lastTested);
 			} else @throw @"Invalid agent index in the vaccine list.";
 		}
 	}
+	[self reorganizeVcnInvList];
 }
 - (void)resetVaccineListIfNecessary {
 	if (vaccineList != NULL) [self resetVaccineList];
@@ -713,8 +716,9 @@ z(inTestQueue); z(lastTested);
 	if (!fw.regularFile) return;
 	NSData *data = [fw.regularFileContents unzippedData];
 	NSBitmapImageRep *imgRep = make_pop_dist_bm();
-	if (data.length == imgRep.bytesPerRow * imgRep.pixelsHigh) {
-		memcpy(imgRep.bitmapData, data.bytes, data.length);
+	NSInteger nBytes = imgRep.bytesPerRow * imgRep.pixelsHigh;
+	if (data.length >= nBytes) {
+		memcpy(imgRep.bitmapData, data.bytes, nBytes);
 		NSImage *img = [NSImage.alloc initWithSize:imgRep.size];
 		[img addRepresentation:imgRep];
 		self.popDistImage = img;
@@ -739,7 +743,7 @@ z(inTestQueue); z(lastTested);
 	NSMutableDictionary<NSString *,NSFileWrapper *> *md =
 		[NSMutableDictionary dictionaryWithDictionary:fDict];
 	if (flag & SavePopulation) [self addSavePop:md info:dict];
-	if (flag & SavePMap && self.popDistImage != nil) [self addSavePopDens:md];
+	if ((flag & SavePMap) && self.popDistImage != nil) [self addSavePopDens:md];
 #endif
 	md[fnParamsPList] = fileWrapper_from_plist(dict);
 	return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];;
