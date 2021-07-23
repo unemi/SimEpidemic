@@ -49,7 +49,7 @@ typedef enum {
 
 typedef enum {
 	VcnPrRandom, VcnPrActive, VcnPrInactive, VcnPrCentral,
-	VcnPrPopDens, VcnPrActAndCntr
+	VcnPrPopDens, VcnPrActAndCntr, VcnPrHiRisk
 } VaccinePriority;
 
 typedef enum {
@@ -73,9 +73,10 @@ typedef struct {
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
-	CGFloat vcnPRate, vcn1stEff, vcnMaxEff, vcnEDelay, vcnEPeriod;	// vaccination
+	CGFloat vcnPRate, vcn1stEffc, vcnMaxEffc, vcnEffcSymp, vcnEDelay, vcnEPeriod;	// vaccination
+	CGFloat imnMaxDur, imnMaxDurSv, imnMaxEffc, imnMaxEffcSv;	// acquired immunity by infection
 	DistInfo mobDist; // mass and warp distance
-	DistInfo incub, fatal, recov, immun; // contagiousness, incubation, fatality, recovery, immunity
+	DistInfo incub, fatal, recov; // contagiousness, incubation, fatality, recovery
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
 	DistInfo mobFreq; // Participation frequency in long travel
 	DistInfo gatFreq; // Participation frequency in gathering

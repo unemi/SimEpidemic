@@ -171,7 +171,7 @@ static NSDictionary *index_name_map(void) {
 	static NSString *names[] = {
 		@"susceptible", @"asymptomatic", @"symptomatic", @"recovered", @"died",
 		@"vaccinated",
-		@"quarantineAsymptomatic", @"quarantineSymptomatic",
+		@"quarantineAsym", @"quarantineSymp",
 		@"tests", @"testAsSymptom", @"testAsContact", @"testAsSuspected",
 		@"testPositive", @"testNegative",
 	nil};

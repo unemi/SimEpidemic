@@ -48,6 +48,7 @@ extern void check_batch_jobs_to_restart(void);
 - (void)submitJob;
 - (void)getJobStatus;
 - (void)getJobQueueStatus;
+- (void)getJobInfo;
 - (void)stopJob;
 - (void)getJobResults;
 - (void)deleteJob;

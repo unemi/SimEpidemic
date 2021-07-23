@@ -829,7 +829,7 @@ void init_context(void) {
 		COM(periodicReport), COM(quitReport), COM(changeReport),
 		COM(getScenario), COM(setScenario),
 		COM(submitJob), COM(getJobStatus), COM(getJobQueueStatus),
-		COM(stopJob), COM(getJobResults), COM(deleteJob),
+		COM(getJobInfo), COM(stopJob), COM(getJobResults), COM(deleteJob),
 		COM(saveState), COM(loadState), COM(removeState),
 		COM(getState), COM(putState),
 		COM(version), COM(sysInfo) };

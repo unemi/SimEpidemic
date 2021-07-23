@@ -47,6 +47,6 @@ extern void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, World
 extern void going_back_home(Agent *a);
 extern void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, StepInfo *info);
 extern BOOL warp_step(Agent *a, WorldParams *wp, World *world, WarpType mode, NSPoint goal);
-extern void step_agent_in_quarantine(Agent *a, WorldParams *p, StepInfo *info);
+extern void step_agent_in_quarantine(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info);
 extern void warp_show(Agent *a, WarpType mode, NSPoint goal, NSRect dirtyRect, NSBezierPath *path);
 extern void show_agent(Agent *a, AgentDrawType type, NSRect dirtyRect, NSBezierPath *path);

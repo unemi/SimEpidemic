@@ -35,12 +35,13 @@ NS_ASSUME_NONNULL_BEGIN
 	IBOutlet NSSlider *incubActSld, *fatalActSld, *recovActSld, *immueActSld;
 	IBOutlet NSTextField *infecDgt, *infecDstDgt, *contagDDgt, *contagPDgt;
 	IBOutlet NSSlider *infecSld, *infecDstSld, *contagDSld, *contagPSld;
+	IBOutlet NSTextField *imnMaxDurDgt, *imnMaxDurSvDgt, *imnMaxEffcDgt, *imnMaxEffcSvDgt;
+	IBOutlet NSSlider *imnMaxDurSld, *imnMaxDurSvSld, *imnMaxEffcSld, *imnMaxEffcSvSld;
 	IBOutlet NSTextField
 		*mobDistMinDgt, *mobDistMaxDgt, *mobDistModeDgt,
 		*incubMinDgt, *incubMaxDgt, *incubModeDgt,
 		*fatalMinDgt, *fatalMaxDgt, *fatalModeDgt,
 		*recovMinDgt, *recovMaxDgt, *recovModeDgt,
-		*immunMinDgt, *immunMaxDgt, *immunModeDgt,
 		*gatSZMinDgt, *gatSZMaxDgt, *gatSZModeDgt,
 		*gatDRMinDgt, *gatDRMaxDgt, *gatDRModeDgt,
 		*gatSTMinDgt, *gatSTMaxDgt, *gatSTModeDgt,
@@ -56,10 +57,10 @@ NS_ASSUME_NONNULL_BEGIN
 		*tstSbjAsyDgt, *tstSbjSymDgt;
 	IBOutlet NSSlider *tstDelaySld, *tstProcSld, *tstIntvlSld, *tstSensSld, *tstSpecSld,
 		*tstSbjAsySld, *tstSbjSymSld;
-	IBOutlet NSTextField *vcnPRateDgt, *vcn1stEffDgt, *vcnMaxEffDgt, *vcnEDelayDgt,
-		*vcnEPeriodDgt, *vcnAntiRateDgt;
-	IBOutlet NSSlider *vcnPRateSld, *vcn1stEffSld, *vcnMaxEffSld, *vcnEDelaySld,
-		*vcnEPeriodSld, *vcnAntiRateSld;
+	IBOutlet NSTextField *vcnPRateDgt, *vcn1stEffcDgt, *vcnMaxEffcDgt, *vcnMaxEffcSDgt,
+		*vcnEDelayDgt, *vcnEPeriodDgt, *vcnEDecayDgt, *vcnAntiRateDgt;
+	IBOutlet NSSlider *vcnPRateSld, *vcn1stEffcSld, *vcnMaxEffcSld, *vcnMaxEffcSSld,
+		*vcnEDelaySld, *vcnEPeriodSld, *vcnEDecaySld, *vcnAntiRateSld;
 	IBOutlet NSTextField *vaClstrRtDgt, *vaClstrGrDgt, *vaTestRtDgt;
 	IBOutlet NSSlider *vaClstrRtSld, *vaClstrGrSld, *vaTestRtSld;
 	IBOutlet NSPopUpButton *wrkPlcModePopUp, *trcOpePopUp, *vcnPriPopUp;

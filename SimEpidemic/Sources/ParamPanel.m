@@ -179,7 +179,9 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt,
-		vcnPRateDgt, vcn1stEffDgt, vcnMaxEffDgt, vcnEDelayDgt, vcnEPeriodDgt];
+		vcnPRateDgt, vcn1stEffcDgt, vcnMaxEffcDgt, vcnMaxEffcSDgt,
+		vcnEDelayDgt, vcnEPeriodDgt, vcnEDecayDgt,
+		imnMaxDurDgt, imnMaxDurSvDgt, imnMaxEffcDgt, imnMaxEffcSvDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, recovActSld, immueActSld,
@@ -187,7 +189,9 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		dstSTSld, dstOBSld, backHmSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld,
-		vcnPRateSld, vcn1stEffSld, vcnMaxEffSld, vcnEDelaySld, vcnEPeriodSld];
+		vcnPRateSld, vcn1stEffcSld, vcnMaxEffcSld, vcnMaxEffcSSld,
+		vcnEDelaySld, vcnEPeriodSld, vcnEDecaySld,
+		imnMaxDurSld, imnMaxDurSvSld, imnMaxEffcSld, imnMaxEffcSvSld];
 	ParamPanel __weak *pp = self;
 	void (^proc)(void) = ^{ [pp checkUpdate]; };
 	dDigits = @[
@@ -195,7 +199,6 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		DDGT(incubMinDgt, incubMaxDgt, incubModeDgt),
 		DDGT(fatalMinDgt, fatalMaxDgt, fatalModeDgt),
 		DDGT(recovMinDgt, recovMaxDgt, recovModeDgt),
-		DDGT(immunMinDgt, immunMaxDgt, immunModeDgt),
 		DDGT(gatSZMinDgt, gatSZMaxDgt, gatSZModeDgt),
 		DDGT(gatDRMinDgt, gatDRMaxDgt, gatDRModeDgt),
 		DDGT(gatSTMinDgt, gatSTMaxDgt, gatSTModeDgt),

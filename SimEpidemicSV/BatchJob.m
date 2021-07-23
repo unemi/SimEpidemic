@@ -442,6 +442,24 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 	}
 	[self setJSONDataAsResponse:md];
 }
+- (void)getJobInfo {
+	NSString *jobID = query[@"job"];
+	if (jobID == nil) @throw @"500 Job ID is missing.";
+	NSString *jobInfoPath = [[batch_job_dir() stringByAppendingPathComponent:jobID]
+		stringByAppendingPathComponent:@"info.json"];
+	NSError *error;
+	NSString *str = [NSString stringWithContentsOfFile:jobInfoPath
+		encoding:NSUTF8StringEncoding error:&error];
+	if (str == nil) @throw [NSString stringWithFormat:
+		@"500 Couldn't find job info for %@, because %@.", jobID, error.localizedDescription];
+	str = [str stringByRemovingPercentEncoding];
+	NSData *data = [NSData dataWithBytes:str.UTF8String length:
+		[str lengthOfBytesUsingEncoding:NSUTF8StringEncoding]];
+	NSObject *obj = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+	if (obj == nil) @throw [NSString stringWithFormat:
+		@"500 Job info for %@ is broken.", jobID];
+	[self setJSONDataAsResponse:obj];
+}
 - (void)stopJob {
 	[self.targetJob stop];
 	[self setOKMessage];

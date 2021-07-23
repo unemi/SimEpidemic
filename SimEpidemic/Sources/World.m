@@ -303,7 +303,14 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 				if ([value isKindOfClass:NSArray.class] && ((NSArray *)value).count == 3)
 					set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
 						(NSArray<NSNumber *> *)value, 1.);
-			} else if (idx < IDX_E || idx >= IDX_H) {
+			} else if (idx < IDX_R) {
+			} else if (idx < IDX_E) {
+				if ([key isEqualToString:@"vaccineAntiRate"]) {
+					NSInteger newNVcnPop = nPop * (1. - ((NSNumber *)md[key]).doubleValue / 100.);
+					if (newNVcnPop <= nPop && newNVcnPop > vcnListIndex)
+						nVcnPop = newNVcnPop;
+				}
+			} else if (idx >= IDX_H) {
 			} else if ([key isEqualToString:@"vaccinePriority"]) {
 				VaccinePriority newValue = (VaccinePriority)((NSNumber *)md[key]).intValue;
 				if (newValue != runtimeParams.vcnPri) {
@@ -483,7 +490,9 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 				NSPoint p = dist(a);
 				return fmax(hypot(p.x - cx, p.y - cx) / cx / M_SQRT2, 1. - a->activeness);
 			}];
-		}
+		} break;
+		case VcnPrHiRisk:
+			[self sortVaccineList:^(Agent *a) { return a->daysToRecover; }];
 		default: break;
 	}
 #ifdef DEBUG
@@ -800,8 +809,10 @@ static NSString *check_paramname_in_chng_prm_elm(NSArray *prop) {
 	@try {
 		if (idxNum == nil) @throw @"unknown parameter name";
 		NSInteger idx = idxNum.integerValue;
-		if ((idx >= IDX_I && idx < IDX_E) || idx >= IDX_H)
-			@throw @"invalid to modify in scenario.";
+		if ((idx >= IDX_I && idx < IDX_E) || idx >= IDX_H) {
+			if (![(NSString *)prop[0] isEqualToString:@"vaccineAntiRate"] || prop.count > 2)
+				@throw @"invalid to modify in scenario.";
+		}
 	} @catch (NSString *msg) { return [NSString stringWithFormat:@"\"%@\" is %@.", prop[0], msg]; }
 	return nil;
 }
@@ -1241,7 +1252,7 @@ static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat step
 	StepInfo info;
 	for (Agent *a = _QList; a; a = a->next) {
 		memset(&info, 0, sizeof(info));
-		step_agent_in_quarantine(a, &worldParams, &info);
+		step_agent_in_quarantine(a, &runtimeParams, &worldParams, &info);
 		if (info.warpType != WarpNone) [self addNewWarp:(WarpInfo){a, info.warpType, info.warpTo}];
 		if (info.histType != HistNone) [statInfo cummulateHistgrm:info.histType days:info.histDays];
 	}
