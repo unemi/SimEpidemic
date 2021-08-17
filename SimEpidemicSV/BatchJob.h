@@ -25,7 +25,7 @@ extern void check_batch_jobs_to_restart(void);
 	NSArray<NSString *> *output_n, *output_d, *output_D;
 	NSString *jobDirPath;
 	NSString *loadState, *popDistMap;
-	BOOL shouldSaveState;
+	BOOL shouldSaveSeverityStats, shouldSaveState;
 }
 @property (readonly) NSString *ID;
 @property (readonly) NSDictionary<NSString *, NSNumber *> *parameters;

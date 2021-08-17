@@ -492,7 +492,7 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 			}];
 		} break;
 		case VcnPrHiRisk:
-			[self sortVaccineList:^(Agent *a) { return a->daysToRecover; }];
+			[self sortVaccineList: ^(Agent *a) { return a->daysToDie / a->daysToRecover; }];
 		default: break;
 	}
 #ifdef DEBUG

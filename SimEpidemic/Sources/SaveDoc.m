@@ -44,7 +44,8 @@ static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex",
 	*keyParamChangers = @"paramChangers",
 	*fnPopDensMap = @"populationDesityMap.gz",
-	*fnForVaccine = @"forVaccine.gz"
+	*fnForVaccine = @"forVaccine.gz",
+	*fnSeverityStats = @"severityStats.gz"
 #ifndef NOGUI
 	,*fnStatImageBM = @"statImageBitmap.gz",
 	*fnUIInfo = @"UIInfo.plist",
@@ -325,6 +326,11 @@ static StatData *stat_chain_from_data(NSData *data) {
 	return stHead;
 }
 - (void)setPopsize:(NSInteger)psz { popSize = psz; }
+- (NSData *)dataOfSeverityStats {
+	NSInteger nSteps = days / skipDays;
+	return (nSteps <= 0)? nil : [NSData dataWithBytes:self.sspData.bytes
+		length:sizeof(NSInteger) * nSteps * SSP_NRanks];
+}
 #ifndef NOGUI
 - (NSData *)dataOfImageBitmap {
 	return [NSData dataWithBytes:imgBm length:IMG_WIDTH * IMG_HEIGHT * 4];
@@ -544,6 +550,8 @@ z(inTestQueue); z(lastTested);
 		md[fnStatIndexes] = [NSFileWrapper.alloc initRegularFileWithContents:data];
 	if ((data = data_from_stat(statInfo.transit)) != nil)
 		md[fnStatTransit] = [NSFileWrapper.alloc initRegularFileWithContents:data];
+	if ((data = [statInfo dataOfSeverityStats]) != nil)
+		md[fnSeverityStats] = [NSFileWrapper.alloc initRegularFileWithContents:[data zippedData]];
 #ifndef NOGUI
 	md[fnStatImageBM] = [NSFileWrapper.alloc initRegularFileWithContents:
 		[[statInfo dataOfImageBitmap] zippedData]];
@@ -764,6 +772,12 @@ z(inTestQueue); z(lastTested);
 	if ((fw = dict[fnVaccineList]) != nil) [self readVaccineListFromFileWrapper:fw];
 	else [self resetVaccineListIfNecessary];
 	if ((fw = dict[fnForVaccine]) != nil) [self readAntiVaxFromFileWrapper:fw];
+	if ((fw = dict[fnSeverityStats]) != nil && fw.regularFile) {
+		NSData *data = [fw.regularFileContents unzippedData];
+		NSInteger len = statInfo.sspData.length;
+		if (len > data.length) len = data.length;
+		memcpy(statInfo.sspData.mutableBytes, data.bytes, len);
+	}
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st setStatInfoFromPList:plist_from_data(fw.regularFileContents)]; }];

@@ -52,6 +52,9 @@
                                     <menuItem title="Time Evolution" id="8Ze-2j-ZQ8">
                                         <modifierMask key="keyEquivalentModifierMask"/>
                                     </menuItem>
+                                    <menuItem title="Severity" id="bLn-8I-oDn">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                    </menuItem>
                                     <menuItem title="Periods" id="Isv-8W-LbA">
                                         <modifierMask key="keyEquivalentModifierMask"/>
                                     </menuItem>

@@ -82,6 +82,17 @@
 	}
 	return rows;
 }
+- (NSArray *)objectOfSeverityStats {
+	NSInteger *sspStat = (NSInteger *)self.sspData.bytes, *p = sspStat;
+	NSInteger nSteps = days / skipDays;
+	NSMutableArray *rows = NSMutableArray.new;
+	for (NSInteger i = 0; i < nSteps; i ++, p += SSP_NRanks) {
+		NSNumber *row[SSP_NRanks + 1] = {@((i + 1) * skipDays)};
+		for (NSInteger j = 0; j < SSP_NRanks; j ++) row[j + 1] = @(p[j]);
+		[rows addObject:[NSArray arrayWithObjects:row count:SSP_NRanks + 1]];
+	}
+	return rows;
+}
 @end
 
 static NSString *batchJobInfoFileName = @"info.json";
@@ -208,6 +219,7 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 			if (indexNames[newKey] != nil || [key isEqualToString:@"testPositiveRate"])
 				ad[nd ++] = newKey;
 		} else if ([distributionNames containsObject:key]) aD[nD ++] = key;
+		else if ([key isEqualToString:@"severityStats"]) shouldSaveSeverityStats = YES;
 		else if ([key isEqualToString:@"saveState"]) shouldSaveState = YES;
 	}
 	output_n = [NSArray arrayWithObjects:an count:nn];
@@ -244,7 +256,7 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 }
 - (void)makeDataFileWith:(NSNumber *)number type:(NSString *)type names:(NSArray *)names
 	makeObj:(NSObject * (^)(StatInfo *, NSArray *))makeObj {
-	if (names.count <= 0) return;
+	if (names != nil && names.count <= 0) return;
 	NSError *error = nil;
 	@autoreleasepool {
 		NSData *data = [NSJSONSerialization dataWithJSONObject:
@@ -278,6 +290,10 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 		[self makeDataFileWith:number type:@"distribution" names:output_D
 			makeObj:^(StatInfo *stInfo, NSArray *names)
 				{ return [stInfo objectOfHistgramTableWithNames:names]; }];
+		if (shouldSaveSeverityStats)
+			[self makeDataFileWith:number type:@"severity" names:nil
+				makeObj:^(StatInfo *stInfo, NSArray *names)
+					{ return [stInfo objectOfSeverityStats]; }];
 		if (shouldSaveState)
 			[runningTrials[number] saveStateTo:
 				[NSString stringWithFormat:@"%@_%@", _ID, number]];

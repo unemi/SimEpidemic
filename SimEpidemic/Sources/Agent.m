@@ -413,13 +413,16 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, S
 			if (patient_step(a, rp, wp, NO, info)) return;
 		} break;
 		case Vaccinated: a->daysVaccinated += 1. / wp->stepsPerDay;
-		if (a->daysVaccinated < VCN_1_2_SPAN)
+		if (a->daysVaccinated < VCN_1_2_SPAN)	// only the first dose
 			a->agentImmunity = a->daysVaccinated * rp->vcn1stEffc / 100. / VCN_1_2_SPAN;
-		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN)
+		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN)	// not fully vaccinated yet
 			a->agentImmunity = ((a->daysVaccinated - VCN_1_2_SPAN)
 				* (rp->vcnMaxEffc - rp->vcn1stEffc) / rp->vcnEDelay + rp->vcn1stEffc) / 100.;
-		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN + rp->vcnEPeriod)
+		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN + rp->vcnEDecay) // full
 			a->agentImmunity = rp->vcnMaxEffc / 100.;
+		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN + rp->vcnEPeriod) // Decay
+			a->agentImmunity = (rp->vcnEDelay + VCN_1_2_SPAN + rp->vcnEPeriod - a->daysVaccinated)
+				/ (rp->vcnEPeriod - rp->vcnEDecay) * rp->vcnMaxEffc / 100.;
 		else expire_immunity(a, rp);
 		break;
 		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
