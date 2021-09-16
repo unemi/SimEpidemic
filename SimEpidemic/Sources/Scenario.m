@@ -12,6 +12,7 @@
 #import "World.h"
 #import "StatPanel.h"
 #import "ParamPanel.h"
+#import "VVPanel.h"
 
 @implementation StatInfo (PredicateExtension)
 - (NSInteger)days { return days; }
@@ -121,46 +122,94 @@ static NSTextField *label_field(NSString *message) {
 }
 @end
 
-NSString *paramMenuInfo[] = {
-	// move
-	@"mass", @"friction", @"avoidance", @"maxSpeed", @"",
-	// pathogenesis
-	@"infectionProberbility", @"infectionDistance",
-//	@"incubation", @"contagionDelay", @"contagionPeak",
-//	@"fatality", @"recovery", @"immunity",
-	@"",
-	// measures
-	@"distancingStrength", @"distancingObedience",
-	@"mobilityFrequency", @"mobilityDistance",
-	@"gatheringFrequency", @"gatheringSize", @"gatheringDuration", @"gatheringStrength",
-	@"contactTracing", @"",
-	// tests
-	@"testDelay", @"testProcess", @"testInterval",
-	@"testSensitivity", @"testSpecificity",
-	@"subjectAsymptomatic", @"subjectSymptomatic", @"",
-	@"vaccinePerformRate",
-nil };
+static NSArray<NSString *> *param_menu_info(void) {
+	static NSString *info[] = {
+		// move
+		@"mass", @"friction", @"avoidance", @"maxSpeed", @"",
+		// pathogenesis
+		@"infectionProberbility", @"infectionDistance",
+	//	@"incubation", @"contagionDelay", @"contagionPeak",
+	//	@"fatality", @"recovery", @"immunity",
+		@"",
+		// measures
+		@"distancingStrength", @"distancingObedience",
+		@"mobilityFrequency", @"mobilityDistance",
+		@"gatheringFrequency", @"gatheringSize", @"gatheringDuration", @"gatheringStrength",
+		@"contactTracing", @"",
+		// tests
+		@"testDelay", @"testProcess", @"testInterval",
+		@"testSensitivity", @"testSpecificity",
+		@"subjectAsymptomatic", @"subjectSymptomatic", @"",
+		@"vaccinePerformRate", @"vaccinePriority", @"vaccineRegularity",
+	nil };
+	static NSArray<NSString *> *array = nil;
+	if (array == nil) {
+		NSInteger cnt = 0;
+		while (info[cnt] != nil) cnt ++;
+		array = [NSArray arrayWithObjects:info count:cnt];
+	}
+	return array;
+}
+static NSArray<NSString *> *vcnPr_menu_info(void) {
+	static NSString *info[] = {
+		@"Random", @"Elder", @"Center", @"Density",
+	nil };
+	static NSArray<NSString *> *array = nil;
+	if (array == nil) {
+		NSInteger cnt = 0;
+		while (info[cnt] != nil) cnt ++;
+		array = [NSArray arrayWithObjects:info count:cnt];
+	}
+	return array;
+}
+static void make_popUpMenu(NSPopUpButton *popUp, NSArray<NSString *> *titles) {
+	for (NSString *title in titles) {
+		if (title.length == 0)
+			[popUp.menu addItem:NSMenuItem.separatorItem];
+		else [popUp addItemWithTitle:NSLocalizedString(title, nil)];
+	}
+}
+typedef enum {
+	SPTypeScalar, SPTypeDistribution, SPTypeVaxScalar, SPTypeVaxPriority
+} ScenParameterType;
+
+@interface ParamItem : ScenarioItem
+@property NSInteger index;
+@property DistInfo distInfo;
+@property NSInteger vcnType, priority;
+- (void)chooseVcnType:(NSPopUpButton *)sender;
+- (void)choosePriority:(NSPopUpButton *)sender;
+@end
+
+@interface ParameterCellView : NSTableCellView {
+	World * __weak world;
+	ParamItem * __weak item;
+	NSTextField *label, *transLabel, *daysUnitLabel;
+}
+@property (readonly) NSPopUpButton *namePopUp, *vcnTypePopUp, *vcnPriorityPopUp;
+@property (readonly) NSButton *distBtn;
+@property (readonly) NSTextField *digits, *days;
+@end
+
 @implementation ParameterCellView
-- (instancetype)init {
+- (instancetype)initWithWorld:(World *)wd item:(ParamItem *)itm {
 	NSSize fSize = CELL_SIZE;
 	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
-	set_subview(label_field(@"Parameters"), self, YES);
+	world = wd;
+	item = itm;
+	set_subview((label = label_field(@"Parameters")), self, YES);
 	_namePopUp = NSPopUpButton.new;
-	for (NSInteger i = 0; paramMenuInfo[i] != nil; i ++) {
-		if (paramMenuInfo[i].length == 0)
-			[_namePopUp.menu addItem:NSMenuItem.separatorItem];
-		else [_namePopUp addItemWithTitle:NSLocalizedString(paramMenuInfo[i], nil)];
-	}
+	make_popUpMenu(_namePopUp, param_menu_info());
 	set_subview(_namePopUp, self, YES);
 	set_subview(label_field(@"⇐"), self, YES);
 	_digits = NSTextField.new;
 	_digits.doubleValue = 999.9;
 	set_subview(_digits, self, YES);
-	set_subview(label_field(NSLocalizedString(@"ParamTransitionPre", nil)), self, YES);
+	set_subview((transLabel = label_field(NSLocalizedString(@"ParamTransitionPre", nil))), self, YES);
 	_days = NSTextField.new;
 	_days.doubleValue = 99.9;
 	set_subview(_days, self, YES);
-	set_subview(label_field(NSLocalizedString(@"days", nil)), self, YES);
+	set_subview((daysUnitLabel = label_field(NSLocalizedString(@"days", nil))), self, YES);
 	_distBtn = [NSButton.alloc initWithFrame:_digits.frame];
 	_distBtn.title = NSLocalizedString(@"Value...", nil);
 	_distBtn.controlSize = NSControlSizeMini;
@@ -168,16 +217,68 @@ nil };
 	[_namePopUp selectItemAtIndex:0];
 	return self;
 }
-- (void)adjustView:(BOOL)isScalar {
-	if (isScalar) {
-		if (_digits.superview == nil) {
-			[_distBtn removeFromSuperview];
-			[self addSubview:_digits];
+- (void)showControl:(NSControl *)ctrl among:(NSArray<NSControl *> *)ctrls{
+	if (ctrl.superview != nil) return;
+	for (NSControl *c in ctrls)
+		if (c != ctrl && c.superview != nil) [c removeFromSuperview];
+	[self addSubview:ctrl];
+}
+- (void)showArgControl:(NSControl *)ctrl {
+	[self showControl:ctrl among:(_vcnPriorityPopUp == nil)?
+		@[_digits, _distBtn] : @[_digits, _distBtn, _vcnPriorityPopUp]];
+}
+- (void)showLabelControl:(NSControl *)ctrl {
+	[self showControl:ctrl among:(_vcnTypePopUp == nil)?
+		@[label] : @[label, _vcnTypePopUp]];
+}
+static NSPopUpButton *make_mini_popup(NSRect xFrame, NSRect yFrame) {
+	NSPopUpButton *popup = [NSPopUpButton.alloc initWithFrame:
+		(NSRect){xFrame.origin.x, yFrame.origin.y, xFrame.size.width, yFrame.size.height}];
+	popup.bezelStyle = NSBezelStyleRoundRect;
+	popup.controlSize = NSControlSizeSmall;
+	popup.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
+	return popup;
+}
+- (void)adjustView:(ScenParameterType)pType {
+	switch (pType) {
+		case SPTypeScalar: case SPTypeDistribution:
+		[self showLabelControl:label];
+		break;
+		case SPTypeVaxScalar: case SPTypeVaxPriority:
+		if (_vcnTypePopUp == nil) {
+			_vcnTypePopUp = make_mini_popup(label.frame, _namePopUp.frame);
+			adjust_vcnType_popUps(@[_vcnTypePopUp], world);
+			[NSNotificationCenter.defaultCenter addObserver:self
+				selector:@selector(reviseVcnPopUp:) name:VaccineListChanged object:world];
+			_vcnTypePopUp.target = item;
+			_vcnTypePopUp.action = @selector(chooseVcnType:);
+			[_vcnTypePopUp selectItemAtIndex:item.vcnType];
 		}
-	} else if (_distBtn.superview == nil) {
-			[_digits removeFromSuperview];
-			[self addSubview:_distBtn];
+		[self showLabelControl:_vcnTypePopUp];
 	}
+	switch (pType) {
+		case SPTypeScalar: case SPTypeVaxScalar:
+		[self showArgControl:_digits];
+		break;
+		case SPTypeDistribution:
+		[self showArgControl:_distBtn];
+		break;
+		case SPTypeVaxPriority:
+		if (_vcnPriorityPopUp == nil) {
+			_vcnPriorityPopUp = make_mini_popup(
+				NSUnionRect(_digits.frame, _days.frame), _namePopUp.frame);
+			make_popUpMenu(_vcnPriorityPopUp, vcnPr_menu_info());
+			_vcnPriorityPopUp.target = item;
+			_vcnPriorityPopUp.action = @selector(choosePriority:);
+			[_vcnPriorityPopUp selectItemAtIndex:item.priority];
+		}
+		[self showArgControl:_vcnPriorityPopUp];
+	}
+	transLabel.hidden = _days.hidden = daysUnitLabel.hidden =
+		pType == SPTypeVaxPriority;
+}
+- (void)reviseVcnPopUp:(NSNotification *)note {
+	adjust_vcnType_popUps(@[_vcnTypePopUp], (World *)note.object);
 }
 @end
 @interface CondCellView : NSTableCellView
@@ -314,9 +415,10 @@ static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
 
 @interface InfecCellView : NSTableCellView
 @property (readonly) NSTextField *digits;
+@property (readonly) NSPopUpButton *variantPopUp;
 @end
 @implementation InfecCellView
-- (instancetype)init {
+- (instancetype)initWithWorld:(World *)world {
 	NSSize fSize = CELL_SIZE;
 	if (!(self = [super initWithFrame:(NSRect){0, 0, fSize}])) return nil;
 	set_subview(label_field(@"Infection"), self, YES);
@@ -324,7 +426,24 @@ static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
 	_digits.stringValue = @"99999";
 	set_subview(_digits, self, YES);
 	_digits.integerValue = 1;
+	_variantPopUp = NSPopUpButton.new;
+	for (NSDictionary *vr in world.variantList)
+		[_variantPopUp addItemWithTitle:vr[@"name"]];
+	[NSNotificationCenter.defaultCenter addObserver:self selector:@selector(variantListChanged:)
+		name:VariantListChanged object:world];
+	set_subview(_variantPopUp, self, YES);
 	return self;
+}
+- (void)variantListChanged:(NSNotification *)note {
+	World *world = note.object;
+	NSArray<NSMenuItem *> *items = _variantPopUp.itemArray;
+	NSInteger idx = 0;
+	for (; idx < items.count && idx < world.variantList.count; idx ++)
+		items[idx].title = world.variantList[idx][@"name"];
+	for (; idx < items.count; idx ++)
+		[_variantPopUp removeItemAtIndex:_variantPopUp.numberOfItems - 1];
+	for (; idx < world.variantList.count; idx ++)
+		[_variantPopUp addItemWithTitle:world.variantList[idx][@"name"]];
 }
 @end
 
@@ -365,15 +484,11 @@ static void check_images(void) {
 - (NSObject *)propertyObject { return self.scenarioElement; }
 @end
 
-@interface ParamItem : ScenarioItem
-@property NSInteger index;
-@property DistInfo distInfo;
-@end
 @implementation ParamItem
 - (instancetype)initWithScenario:(Scenario *)scen {
 	if (!(self = [super initWithScenario:scen])) return nil;
 	[super setupButtonView:@[removeImage]];
-	ParameterCellView *view = ParameterCellView.new;
+	ParameterCellView *view = [ParameterCellView.alloc initWithWorld:scen.world item:self];
 	self.view = view;
 	NSPopUpButton *namePopUp = view.namePopUp;
 	NSButton *distBtn = view.distBtn;
@@ -385,17 +500,40 @@ static void check_images(void) {
 	digits.doubleValue = scen.world.runtimeParamsP->PARAM_F1;
 	days.doubleValue = 0.;
 	days.delegate = digits.delegate = scen;
+	
 	return self;
 }
 - (CGFloat)value { return ((ParameterCellView *)self.view).digits.doubleValue; }
 - (CGFloat)days { return ((ParameterCellView *)self.view).days.doubleValue; }
+- (ScenParameterType)paramType:(NSInteger)index prmIdxReturn:(NSInteger *)prmIdxP {
+	NSString *prmName = param_menu_info()[index];
+	if ([prmName hasPrefix:@"vaccine"]) {
+		if ([prmName hasSuffix:@"Priority"]) return SPTypeVaxPriority;
+		else {
+			if (prmIdxP != NULL) *prmIdxP = [prmName hasSuffix:@"Rate"]? 0 : 1;
+			return SPTypeVaxScalar;
+		}
+	} else {
+		NSInteger prmIdx = paramIndexFromKey[prmName].integerValue;
+		if (prmIdxP != NULL) *prmIdxP = prmIdx;
+		return (prmIdx < IDX_D)? SPTypeScalar : SPTypeDistribution;
+	}
+}
+- (void)reviseNameMenuIfNeededTo:(NSInteger)newIndex {
+	NSUndoManager *ud = scenario.undoManager;
+	if (ud.undoing || ud.redoing) {
+		ParameterCellView *view = (ParameterCellView *)self.view;
+		[view.namePopUp selectItemAtIndex:newIndex];
+		[view adjustView:[self paramType:newIndex prmIdxReturn:NULL]];
+	}
+	_index = newIndex;
+}
 - (void)setParamUndoable:(NSInteger)newIndex value:(CGFloat)newValue {
 	NSInteger orgIndex = _index;
 	CGFloat orgValue = self.value;
 	[scenario.undoManager registerUndoWithTarget:self handler:
 		^(ParamItem *target) { [target setParamUndoable:orgIndex value:orgValue]; }];
-	if (newIndex >= 0) [((ParameterCellView *)self.view).namePopUp selectItemAtIndex:newIndex];
-	else _index = newIndex;
+	[self reviseNameMenuIfNeededTo:newIndex];
 	((ParameterCellView *)self.view).digits.doubleValue = newValue;
 }
 - (void)setToolTipForDistBtn {
@@ -407,35 +545,65 @@ static void check_images(void) {
 	DistInfo orgValue = _distInfo;
 	[scenario.undoManager registerUndoWithTarget:self handler:
 		^(ParamItem *target) { [target setDistUndoable:orgIndex value:orgValue]; }];
-	if (newIndex >= 0) [((ParameterCellView *)self.view).namePopUp selectItemAtIndex:newIndex];
-	else _index = newIndex;
+	[self reviseNameMenuIfNeededTo:newIndex];
 	_distInfo = newValue;
 	[self setToolTipForDistBtn];
 }
+- (void)setVaxPriorityUndoable:(NSInteger)newIndex {
+	NSInteger orgIndex = _index;
+	[scenario.undoManager registerUndoWithTarget:self handler:
+		^(ParamItem *target) { [target setVaxPriorityUndoable:orgIndex]; }];
+	[self reviseNameMenuIfNeededTo:newIndex];
+}
 - (void)chooseParameter:(NSPopUpButton *)sender {
-	NSInteger idx = sender.indexOfSelectedItem;
-	if (idx == _index) return;
-	NSInteger prmIdx = paramIndexFromKey[paramMenuInfo[idx]].integerValue;
-	ParameterCellView *view = (ParameterCellView *)self.view;
+	NSInteger newIndex = sender.indexOfSelectedItem;
+	if (newIndex == _index) return;
+	NSInteger prmIdx;
+	ScenParameterType pType = [self paramType:newIndex prmIdxReturn:&prmIdx];
+	[(ParameterCellView *)self.view adjustView:pType];
 	RuntimeParams *rp = scenario.world.runtimeParamsP;
-	if (prmIdx < IDX_D) {
-		[view adjustView:YES];
-		[self setParamUndoable:-1 value:(&rp->PARAM_F1)[prmIdx]];
-	} else {
-		[view adjustView:NO];
-		[self setDistUndoable:-1 value:(&rp->PARAM_D1)[prmIdx - IDX_D]];
+	switch (pType) {
+		case SPTypeScalar:
+		[self setParamUndoable:newIndex value:(&rp->PARAM_F1)[prmIdx]]; break;
+		case SPTypeDistribution:
+		[self setDistUndoable:newIndex value:(&rp->PARAM_D1)[prmIdx - IDX_D]]; break;
+		case SPTypeVaxPriority:
+		[self setVaxPriorityUndoable:newIndex]; break;
+		case SPTypeVaxScalar: {
+		VaccinationInfo *vInfo = &rp->vcnInfo[_vcnType];
+		[self setParamUndoable:newIndex value:
+			(prmIdx == 0)? vInfo->performRate : vInfo->regularity]; break;
+		}
 	}
-	_index = idx;
 }
 - (void)distParamBeginSheet:(id)sender {
 	[scenario distParamBySheetWithItem:self value:&_distInfo];
 }
+- (void)chooseVcnType:(NSPopUpButton *)sender {
+	NSInteger orgChoice = _vcnType;
+	[scenario.undoManager registerUndoWithTarget:self handler:^(ParamItem *target) {
+		[sender selectItemAtIndex:orgChoice];
+		[target chooseVcnType:sender]; }];
+	_vcnType = sender.indexOfSelectedItem;
+}
+- (void)choosePriority:(NSPopUpButton *)sender {
+	NSInteger orgChoice = _priority;
+	[scenario.undoManager registerUndoWithTarget:self handler:^(ParamItem *target) {
+		[sender selectItemAtIndex:orgChoice];
+		[target choosePriority:sender]; }];
+	_priority = sender.indexOfSelectedItem;
+}
 - (NSObject *)scenarioElement {
-	NSString *key =
-		paramMenuInfo[((ParameterCellView *)self.view).namePopUp.indexOfSelectedItem];
-	NSObject *value = (paramIndexFromKey[key].integerValue < IDX_D)? @(self.value) :
-		@[@(_distInfo.min), @(_distInfo.max), @(_distInfo.mode)];
+	ParameterCellView *view = (ParameterCellView *)self.view;
+	NSString *key = param_menu_info()[view.namePopUp.indexOfSelectedItem];
+	NSObject *value;
 	CGFloat days = self.days;
+	if ([key hasPrefix:@"vaccine"]) {
+		if ([key isEqualToString:@"vaccinePriority"]) { value = @(_priority); days = 0.; }
+		else value = @(self.value);
+		key = [key stringByAppendingFormat:@" %@", view.vcnTypePopUp.titleOfSelectedItem];
+	} else value = (paramIndexFromKey[key].integerValue < IDX_D)? @(self.value) :
+		@[@(_distInfo.min), @(_distInfo.max), @(_distInfo.mode)];
 	return (days == 0.)? @[key, value] : @[key, value, @(days)];
 }
 @end
@@ -861,11 +1029,13 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 - (instancetype)initWithScenario:(Scenario *)scen {
 	if (!(self = [super initWithScenario:scen])) return nil;
 	[super setupButtonView:@[removeImage]];
-	self.view = InfecCellView.new;
+	self.view = [InfecCellView.alloc initWithWorld:scen.world];
 	return self;
 }
 - (NSObject *)scenarioElement {
-	return @(((InfecCellView *)self.view).digits.integerValue);
+	InfecCellView *view = (InfecCellView *)self.view;
+	return @[@(view.digits.integerValue), @"variant",
+		view.variantPopUp.titleOfSelectedItem];
 }
 @end
 //
@@ -886,6 +1056,7 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 	NSInteger modificationCount, appliedCount;
 	NSDictionary<NSNumber *, CondItem *> *orgIndexes;
 	NSMutableDictionary<NSNumber *, NSNumber *> *valueDict;
+	NSMutableSet<NSString *> *unknownNames;
 	DistDigits *distDigits;
 }
 @end
@@ -1096,11 +1267,31 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 	ParamItem *item = [ParamItem.alloc initWithScenario:self];
 	ParameterCellView *cView = (ParameterCellView *)item.view;
 	NSPopUpButton *prmPopUp = cView.namePopUp;
+	NSString *vaxName = nil;
+	BOOL isVax = NO;
+	if ([key hasPrefix:@"vaccine"]) {
+		NSString *newKey;
+		NSScanner *scan = [NSScanner scannerWithString:key];
+		[scan scanUpToString:@" " intoString:&newKey];
+		if (!scan.atEnd) vaxName = [key substringFromIndex:scan.scanLocation + 1];
+		key = newKey;
+		isVax = YES;
+	}
 	NSInteger idx = [prmPopUp indexOfItemWithTitle:NSLocalizedString(key, nil)];
 	if (idx == -1) return nil;
 	item.index = idx;
 	[prmPopUp selectItemAtIndex:idx];
-	if ([value isKindOfClass:NSNumber.class])
+	if (isVax) {
+		if (vaxName != nil) {
+			NSArray<NSDictionary *> *list = _world.vaccineList;
+			int vt; for (vt = 0; vt < list.count; vt ++)
+				if ([list[vt][@"name"] isEqualToString:vaxName]) break;
+			if (vt < list.count) item.vcnType = vt;
+			else [unknownNames addObject:vaxName];
+		}
+		if ([key hasSuffix:@"Priority"]) item.priority = ((NSNumber *)value).intValue;
+		else cView.digits.doubleValue = ((NSNumber *)value).doubleValue;
+	} else if ([value isKindOfClass:NSNumber.class])
 		cView.digits.doubleValue = ((NSNumber *)value).doubleValue;
 	else if ([value isKindOfClass:NSArray.class]) {
 		NSArray<NSNumber *> *arr = (NSArray<NSNumber *> *)value;
@@ -1109,8 +1300,7 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 		[item setToolTipForDistBtn];
 	}
 	cView.days.doubleValue = (days == nil)? 0. : days.doubleValue;
-	NSInteger prmIdx = paramIndexFromKey[key].integerValue;
-	[cView adjustView:prmIdx < IDX_D];
+	[cView adjustView:[item paramType:idx prmIdxReturn:NULL]];
 	return item;
 }
 - (CondItem *)condItemFromObject:(NSObject *)elm label:(NSString *)label {
@@ -1127,22 +1317,35 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 	return item;
 }
 - (void)setScenarioWithArray:(NSArray *)array {
+	unknownNames = NSMutableSet.new;
 	NSMutableArray<ScenarioItem *> *ma = NSMutableArray.new;
 	for (NSObject *elm in array) {
 		ScenarioItem *item = nil;
 		if ([elm isKindOfClass:NSArray.class]) {
 			if (((NSArray *)elm).count == 0) continue;
-			else if ([((NSArray *)elm)[0] isKindOfClass:NSNumber.class]) {	// goto N when ...
-				item = [CondItem.alloc initWithScenario:self];
-				if (((NSArray *)elm).count > 1) ((CondItem *)item).element =
-					[self itemWithPredicate:
-						[((NSArray *)elm)[1] isKindOfClass:NSString.class]?
-							[NSPredicate predicateWithFormat:(NSString *)((NSArray *)elm)[1]] :
-							(NSPredicate *)((NSArray *)elm)[1]
-						parent:item];
-				((CondItem *)item).destination = [((NSArray *)elm)[0] integerValue];
-				[((CondCellView *)item.view).typePopUp selectItemAtIndex:CondTypeMoveWhen];
-				[(CondCellView *)item.view adjustViews:CondTypeMoveWhen];
+			else if ([((NSArray *)elm)[0] isKindOfClass:NSNumber.class]) {
+				if (((NSArray *)elm).count > 2) {	// add infected individuals
+					item = [InfecItem.alloc initWithScenario:self];
+					InfecCellView *view = (InfecCellView *)item.view;
+					view.digits.integerValue = [((NSArray *)elm)[0] integerValue];
+					NSString *varName = ((NSArray *)elm)[2];
+					NSArray<NSDictionary *> *list = _world.variantList;
+					NSInteger idx; for (idx = 0; idx < list.count; idx ++)
+						if ([list[idx][@"name"] isEqualToString:varName]) break;
+					if (idx < list.count) [view.variantPopUp selectItemAtIndex:idx];
+					else [unknownNames addObject:varName];
+				} else {	// goto N when ...
+					item = [CondItem.alloc initWithScenario:self];
+					if (((NSArray *)elm).count > 1) ((CondItem *)item).element =
+						[self itemWithPredicate:
+							[((NSArray *)elm)[1] isKindOfClass:NSString.class]?
+								[NSPredicate predicateWithFormat:(NSString *)((NSArray *)elm)[1]] :
+								(NSPredicate *)((NSArray *)elm)[1]
+							parent:item];
+					((CondItem *)item).destination = [((NSArray *)elm)[0] integerValue];
+					[((CondCellView *)item.view).typePopUp selectItemAtIndex:CondTypeMoveWhen];
+					[(CondCellView *)item.view adjustViews:CondTypeMoveWhen];
+				}
 			} else if (((NSArray *)elm).count < 2) continue;
 			else if (![((NSArray *)elm)[0] isKindOfClass:NSString.class]) continue;
 			else if ([((NSArray *)elm)[1] isKindOfClass:NSNumber.class] ||
@@ -1156,7 +1359,7 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 				[ma addObject:item];
 			}
 			item = nil;
-		} else if ([elm isKindOfClass:NSNumber.class]) {
+		} else if ([elm isKindOfClass:NSNumber.class]) { // for upper compatibility
 			item = [InfecItem.alloc initWithScenario:self];
 			((InfecCellView *)(item.view)).digits.integerValue = ((NSNumber *)elm).integerValue;
 		} else item = [self condItemFromObject:elm label:nil];
@@ -1176,6 +1379,14 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 		}
 	}
 	[self setScenarioWithUndo:ma];
+	if (unknownNames.count > 0) {
+		NSMutableString *msg = [NSMutableString stringWithString:
+			@"The following names of vaccines and variants were not in the current list."];
+		NSString *pre = @"\n";
+		for (NSString *name in unknownNames)
+			{ [msg appendFormat:@"%@%@", pre, name]; pre = @", "; }
+		error_msg(msg, self.window, NO);
+	}
 }
 - (IBAction)loadDocument:(id)sender {
 	NSWindow *window = self.window;
@@ -1231,6 +1442,7 @@ static NSArray *plist_of_all_items(NSArray *itemList) {
 			if (idx != NSNotFound) scenIndex = idx + 1;
 	}}
 	[_world setScenario:[NSArray arrayWithArray:ma] index:scenIndex];
+	[_world setupPhaseInfo];
 	[self makeOrgIndexes];
 	appliedCount = modificationCount;
 	applyBtn.enabled = NO;

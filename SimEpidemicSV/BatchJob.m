@@ -339,7 +339,8 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 				[availableWorlds removeLastObject];
 			}
 			[world loadStateFrom:loadState];
-			if (_parameters != nil) load_params_from_dict(world, NULL, _parameters);
+			if (_parameters != nil)
+				set_params_from_dict(world.runtimeParamsP, NULL, _parameters);
 			if (_scenario != nil) {
 				[world setScenarioWithPList:_scenario];
 				if (world.runtimeParamsP->step > 0) [world execScenario];

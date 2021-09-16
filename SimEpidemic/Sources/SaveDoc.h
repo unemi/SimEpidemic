@@ -43,32 +43,29 @@ typedef struct {
 } ContactInfoSave;
 
 typedef struct {
-	CGFloat subjRem;
-	NSInteger index;
-	NSInteger list[1];
-} VaccineListSaveOld1;
-
-typedef struct {
-	CGFloat subjRem;
-	NSInteger index, lateIdx;
-	NSInteger list[1];
-} VaccineListSave;
+	CGFloat subjRem[MAX_N_VAXEN];
+	NSInteger index[N_VCN_QUEQUE];
+	NSInteger queue[1];
+} VaccineQueueSave;
 
 typedef struct {
 	CGFloat app, prf, x, y, vx, vy;
 	NSPoint orgPt;
 	CGFloat daysInfected, daysDiseased, daysToCompleteRecov;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
+	CGFloat firstDoseDate, agentImmunity;
 	CGFloat mass, mobFreq, gatFreq;
-	CGFloat activeness;
+	CGFloat age, activeness;
 	HealthType health;
-	int nInfects;
+	int nInfects, virusVariant, vaccineType;
 	BOOL distancing, isOutOfField, isWarping, gotAtHospital,
 		inTestQueue;
 	NSInteger lastTested;
 } AgentSave;
 
 extern NSString *fnParamsPList;
+extern NSDictionary *plist_from_data(NSData *data);
+extern NSMutableArray *mutablized_array_of_dicts(NSArray<NSDictionary *> *list);
 
 typedef enum {
 	SaveOnlyParams = 0,

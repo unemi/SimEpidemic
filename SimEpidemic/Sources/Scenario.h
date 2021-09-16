@@ -14,11 +14,6 @@ typedef enum { CondTypeRunUntil, CondTypeMoveWhen } CondType;
 typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 @class Document, World, Scenario, ButtonsCellView, ParamItem;
 
-@interface ParameterCellView : NSTableCellView
-@property (readonly) NSPopUpButton *namePopUp;
-@property (readonly) NSButton *distBtn;
-@property (readonly) NSTextField *digits, *days;
-@end
 @interface ScenarioItem : NSObject {
 	Scenario *scenario;
 }

@@ -25,5 +25,10 @@ extern NSString *save_state_dir(void);
 - (void)removeState;
 - (void)getState;
 - (void)putState;
+- (void)loadVariantsAndVaccines;
+- (void)getVaccineList;
+- (void)setVaccineList;
+- (void)getVariantList;
+- (void)setVariantList;
 @end
 NS_ASSUME_NONNULL_END

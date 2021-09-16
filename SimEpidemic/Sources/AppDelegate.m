@@ -171,13 +171,6 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"testSpecificity", {.f = { 99.8, 0., 100.}}},
 	{ ParamTypeFloat, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
 	{ ParamTypeFloat, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
-	{ ParamTypeFloat, @"vaccinePerformRate", {.f = { 10., 0., 100.}}},
-	{ ParamTypeFloat, @"vaccineFirstDoseEfficacy", {.f = { 30., 0., 100.}}},
-	{ ParamTypeFloat, @"vaccineMaxEfficacy", {.f = { 90., 0., 100.}}},
-	{ ParamTypeFloat, @"vaccineEfficacySymp", {.f = { 95., 0., 100.}}},
-	{ ParamTypeFloat, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
-	{ ParamTypeFloat, @"vaccineEffectPeriod", {.f = { 200., 50., 500.}}},
-	{ ParamTypeFloat, @"vaccineEffectDecay", {.f = { 100., 0., 500.}}},
 	{ ParamTypeFloat, @"immuneMaxPeriod", {.f = { 200., 50., 500.}}},
 	{ ParamTypeFloat, @"immuneMaxPrdSeverity", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"immuneMaxEfficacy", {.f = { 90., 0., 100.}}},
@@ -208,13 +201,21 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"antiVaxClusterRate", {.f = { 60., 0., 100.}}},
 	{ ParamTypeRate, @"antiVaxClusterGranularity", {.f = { 50., 0., 100.}}},
 	{ ParamTypeRate, @"antiVaxTestRate", {.f = { 50., 0., 100.}}},
+	{ ParamTypeRate, @"vaccineFirstDoseEfficacy", {.f = { 30., 0., 100.}}},
+	{ ParamTypeRate, @"vaccineMaxEfficacy", {.f = { 90., 0., 100.}}},
+	{ ParamTypeRate, @"vaccineEfficacySymp", {.f = { 95., 0., 100.}}},
+	{ ParamTypeRate, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
+	{ ParamTypeRate, @"vaccineEffectPeriod", {.f = { 200., 50., 500.}}},
+	{ ParamTypeRate, @"vaccineEffectDecay", {.f = { 100., 0., 500.}}},
 
-	{ ParamTypeEnum, @"vaccinePriority", {.e = {0, 6}}},
 	{ ParamTypeEnum, @"tracingOperation", {.e = {0, 2}}},
+	{ ParamTypeEnum, @"vaccineTypeForTracingVaccination", {.e = {0, MAX_N_VAXEN - 1}}},
 	{ ParamTypeWEnum, @"workPlaceMode", {.e = {0, 3}}},
 
 	{ ParamTypeNone, nil }
 };
+NSString *keyVaxPerformRate = @"performRate", *keyVaxRegularity = @"regularity",
+	*keyVaxPriority = @"priority", *keyVaccinationInfo = @"vaccinationInfo";
 NSInteger defaultAnimeSteps = 1;
 RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
 WorldParams defaultWorldParams, userDefaultWorldParams;
@@ -239,6 +240,15 @@ static ParamPointers param_pointers(RuntimeParams *rp, WorldParams *wp) {
 		(wp != NULL)? (sint32 *)&wp->PARAM_H1 : NULL
 	};
 }
+static void add_vax_info(NSMutableDictionary *md, VaccinationInfo *vp) {
+	NSMutableArray *ma = NSMutableArray.new;
+	for (NSInteger idx = 0; idx < MAX_N_VAXEN; idx ++) {
+		if (vp[idx].priority == VcnPrNone) break;
+		[ma addObject:@{keyVaxPerformRate:@(vp[idx].performRate),
+			keyVaxRegularity:@(vp[idx].regularity), keyVaxPriority:@(vp[idx].priority)}];
+	}
+	if (ma.count > 0) md[keyVaccinationInfo] = ma;
+}
 NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	ParamPointers pp = param_pointers(rp, wp);
@@ -252,9 +262,10 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 		case ParamTypeInteger: if (pp.ip != NULL) md[p->key] = @(*(pp.ip ++)); break;
 		case ParamTypeRate: if (pp.tp != NULL) md[p->key] = @(*(pp.tp ++)); break;
 		case ParamTypeEnum: if (pp.ep != NULL) md[p->key] = @(*(pp.ep ++)); break;
-		case ParamTypeWEnum: if (pp.hp != NULL) md[p->key] = @(*(pp.hp ++));
+		case ParamTypeWEnum: if (pp.hp != NULL) md[p->key] = @(*(pp.hp ++)); break;
 		default: break;
 	}
+	add_vax_info(md, rp->vcnInfo);
 	return md;
 }
 void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict) {
@@ -262,9 +273,23 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 	NSInteger initInfected = -1;
 	for (NSString *key in dict.keyEnumerator) {
 		NSNumber *idxNum = paramIndexFromKey[key];
-		if (idxNum == nil) { // for upper compatibility.
-			if ([key isEqualToString:keyInitialInfected] && wp != NULL)
+		if (idxNum == nil) {
+			if ([key isEqualToString:keyInitialInfected] && wp != NULL) // for upper compatibility.
 				initInfected = [dict[key] integerValue];
+			else if ([key isEqualToString:keyVaccinationInfo] &&
+				[dict[key] isKindOfClass:NSArray.class]) {
+				NSArray<NSDictionary *> *vaxList = dict[key];
+				NSInteger nVaxen = vaxList.count;
+				if (nVaxen > MAX_N_VAXEN) nVaxen = MAX_N_VAXEN;
+				for (NSInteger idx = 0; idx < nVaxen; idx ++) {
+					NSDictionary *elm = vaxList[idx];
+					rp->vcnInfo[idx].performRate = [elm[keyVaxPerformRate] doubleValue];
+					rp->vcnInfo[idx].regularity = [elm[keyVaxRegularity] doubleValue];
+					rp->vcnInfo[idx].priority = [elm[keyVaxPriority] intValue];
+				}
+				for (NSInteger idx = nVaxen; idx < MAX_N_VAXEN; idx ++)
+					rp->vcnInfo[idx].priority = VcnPrNone;
+			}
 			continue;
 		}
 		NSInteger index = idxNum.integerValue;
@@ -326,6 +351,14 @@ NSMutableDictionary *param_diff_dict(
 		} break;
 		default: break;
 	}
+	BOOL vaxInfoSame = YES;
+	for (NSInteger idx = 0; idx < MAX_N_VAXEN; idx ++) {
+		if (rpNew->vcnInfo[idx].priority == VcnPrNone
+			&& rpOrg->vcnInfo[idx].priority == VcnPrNone) break;
+		if (memcmp(&rpNew->vcnInfo[idx], &rpOrg->vcnInfo[idx], sizeof(VaccinationInfo)))
+			{ vaxInfoSame = NO; break; }
+	}
+	if (!vaxInfoSame) add_vax_info(md, rpNew->vcnInfo);
 	return md;
 }
 #ifndef NOGUI
@@ -405,6 +438,11 @@ static NSInteger
 		case ParamTypeWEnum: (&defaultWorldParams.PARAM_H1)[nH ++] = p->v.e.defaultValue;
 		default: break;
 	}
+	defaultRuntimeParams.vcnInfo[0].performRate = 0.;
+	defaultRuntimeParams.vcnInfo[0].regularity = 100.;
+	defaultRuntimeParams.vcnInfo[0].priority = VcnPrRandom;
+	defaultRuntimeParams.vcnInfo[1].priority = VcnPrNone;
+	
 	NSInteger nn = nF + nD + nI + nR + nE + nH;
 	NSString *keys[nn], *names[nF];
 	NSNumber *indexes[nn];

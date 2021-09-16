@@ -8,11 +8,13 @@
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="Document">
             <connections>
+                <outlet property="addInfectedSheet" destination="yiQ-W0-G98" id="wBG-na-W8g"/>
                 <outlet property="animeStepper" destination="XKh-Mv-6xc" id="CI7-1Y-t3h"/>
                 <outlet property="animeStepsTxt" destination="E7P-hB-gL3" id="VUF-sf-yHW"/>
                 <outlet property="colTypePopUp" destination="MWW-l1-pzt" id="Bhp-jp-44w"/>
                 <outlet property="datBtn" destination="uEY-Nh-cys" id="v4U-cx-mvz"/>
                 <outlet property="daysNum" destination="eHC-1A-Ovl" id="eVN-UA-O2S"/>
+                <outlet property="patientsNumberDgt" destination="5Hl-bX-Exz" id="sS6-1K-nPW"/>
                 <outlet property="prmBtn" destination="8oB-6Q-T7R" id="M7t-24-LAU"/>
                 <outlet property="qDSNum" destination="cdS-6l-yC3" id="QvI-2x-h4e"/>
                 <outlet property="qNSNum" destination="Tgb-tI-PQH" id="f23-il-ajI"/>
@@ -29,6 +31,7 @@
                 <outlet property="stopAtNDaysCBox" destination="Z3d-He-dRF" id="bvY-pQ-Cda"/>
                 <outlet property="stopAtNDaysDgt" destination="qVE-iD-MXA" id="zRO-sz-Zsa"/>
                 <outlet property="sttBtn" destination="qhG-he-V7Q" id="bFh-48-fhq"/>
+                <outlet property="variantTypePopUp" destination="4d9-dw-PYR" id="9xR-1N-qji"/>
                 <outlet property="view" destination="qim-G4-87y" id="PQX-ho-i7h"/>
                 <outlet property="window" destination="xOd-HO-29H" id="JIz-fz-R2o"/>
             </connections>
@@ -79,14 +82,14 @@
                         </connections>
                     </button>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fCE-aV-qCh">
-                        <rect key="frame" x="93" y="570" width="94" height="27"/>
+                        <rect key="frame" x="93" y="570" width="108" height="27"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <buttonCell key="cell" type="push" title="Add Infected" bezelStyle="rounded" alignment="center" controlSize="small" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="zwd-r8-bbY">
+                        <buttonCell key="cell" type="push" title="Add Infected ..." bezelStyle="rounded" alignment="center" controlSize="small" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="zwd-r8-bbY">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                             <font key="font" metaFont="smallSystem"/>
                         </buttonCell>
                         <connections>
-                            <action selector="addOneInfected:" target="-2" id="fQQ-CA-ejM"/>
+                            <action selector="addInfectedPatients:" target="-2" id="M2o-gI-A4L"/>
                         </connections>
                     </button>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="bUt-Py-ffz">
@@ -364,7 +367,7 @@
                         </connections>
                     </button>
                     <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="MWW-l1-pzt">
-                        <rect key="frame" x="196" y="607" width="78" height="22"/>
+                        <rect key="frame" x="173" y="607" width="101" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <popUpButtonCell key="cell" type="push" title="Normal" bezelStyle="rounded" alignment="left" controlSize="small" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="NiK-Ei-F7b" id="hpq-Qb-Nmb">
                             <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
@@ -372,7 +375,8 @@
                             <menu key="menu" id="c3k-kr-IgZ">
                                 <items>
                                     <menuItem title="Normal" state="on" id="NiK-Ei-F7b"/>
-                                    <menuItem title="Vax type" id="Ih2-yf-Hec"/>
+                                    <menuItem title="Vax attitude" id="Ih2-yf-Hec"/>
+                                    <menuItem title="Vax &amp; variant" id="bSt-Vd-jQW"/>
                                 </items>
                             </menu>
                         </popUpButtonCell>
@@ -451,8 +455,123 @@
                 <constraint firstItem="90R-te-42n" firstAttribute="leading" secondItem="X9U-U8-xMN" secondAttribute="leading" constant="12" id="oNM-Yx-rir"/>
                 <constraint firstItem="wr9-NP-KMl" firstAttribute="leading" secondItem="7Jg-8L-tfU" secondAttribute="trailing" constant="10" id="sJ3-wE-eRx"/>
             </constraints>
-            <point key="canvasLocation" x="541" y="354"/>
+            <point key="canvasLocation" x="89" y="365"/>
         </customView>
+        <window title="Window" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" visibleAtLaunch="NO" frameAutosaveName="" animationBehavior="default" id="yiQ-W0-G98">
+            <windowStyleMask key="styleMask" titled="YES"/>
+            <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
+            <rect key="contentRect" x="196" y="207" width="244" height="145"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1057"/>
+            <view key="contentView" id="OZ2-7T-nK5">
+                <rect key="frame" x="0.0" y="0.0" width="244" height="145"/>
+                <autoresizingMask key="autoresizingMask"/>
+                <subviews>
+                    <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4d9-dw-PYR">
+                        <rect key="frame" x="75" y="77" width="152" height="25"/>
+                        <popUpButtonCell key="cell" type="push" title="Item 1" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="utM-aT-Adb" id="cWL-ew-qFL">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="menu"/>
+                            <menu key="menu" id="CTK-F2-2XV">
+                                <items>
+                                    <menuItem title="Item 1" state="on" id="utM-aT-Adb"/>
+                                    <menuItem title="Item 2" id="WEn-cX-xMU"/>
+                                    <menuItem title="Item 3" id="QEW-Ne-nht"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                    </popUpButton>
+                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="lCe-vd-rF6">
+                        <rect key="frame" x="18" y="83" width="51" height="16"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" title="Variant:" id="LW1-lL-G89">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4iN-OB-4Ed">
+                        <rect key="frame" x="18" y="52" width="125" height="16"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" title="Number of patients:" id="vy6-na-lS6">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="5Hl-bX-Exz">
+                        <rect key="frame" x="152" y="49" width="51" height="21"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" alignment="right" title="1" drawsBackground="YES" id="n7J-Ik-M3W">
+                            <numberFormatter key="formatter" formatterBehavior="custom10_4" numberStyle="decimal" allowsFloats="NO" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" id="OT5-6Q-gZ5">
+                                <real key="minimum" value="1"/>
+                            </numberFormatter>
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                        <connections>
+                            <action selector="takeIntegerValueFrom:" target="A66-pz-gEN" id="Hmg-jg-vjw"/>
+                        </connections>
+                    </textField>
+                    <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="A66-pz-gEN">
+                        <rect key="frame" x="208" y="47" width="19" height="27"/>
+                        <stepperCell key="cell" continuous="YES" alignment="left" minValue="1" maxValue="999999" doubleValue="1" id="o27-e2-vFN"/>
+                        <connections>
+                            <action selector="takeIntegerValueFrom:" target="5Hl-bX-Exz" id="kCe-Ag-SdL"/>
+                        </connections>
+                    </stepper>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="drV-gm-8QC">
+                        <rect key="frame" x="138" y="13" width="92" height="32"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Add" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="kYb-CW-zfG">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                            <string key="keyEquivalent" base64-UTF8="YES">
+DQ
+</string>
+                        </buttonCell>
+                        <connections>
+                            <action selector="addInfectedOK:" target="-2" id="mc1-lz-bUf"/>
+                        </connections>
+                    </button>
+                    <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="itp-fG-lVR">
+                        <rect key="frame" x="20" y="109" width="206" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" alignment="center" title="Adding infected patients" id="88U-Db-WPP">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                            <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="6Yv-Bu-yfB">
+                        <rect key="frame" x="14" y="13" width="92" height="32"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Cancel" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="zwN-jn-9oZ">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                            <string key="keyEquivalent" base64-UTF8="YES">
+Gw
+</string>
+                        </buttonCell>
+                        <connections>
+                            <action selector="addInfectedCancel:" target="-2" id="V4v-DJ-HW7"/>
+                        </connections>
+                    </button>
+                </subviews>
+                <constraints>
+                    <constraint firstItem="lCe-vd-rF6" firstAttribute="baseline" secondItem="4d9-dw-PYR" secondAttribute="baseline" id="0TG-PW-yzd"/>
+                    <constraint firstAttribute="trailing" secondItem="A66-pz-gEN" secondAttribute="trailing" constant="20" id="4Sg-El-WUR"/>
+                    <constraint firstItem="4d9-dw-PYR" firstAttribute="leading" secondItem="lCe-vd-rF6" secondAttribute="trailing" constant="10" id="EOa-Pg-cIH"/>
+                    <constraint firstItem="5Hl-bX-Exz" firstAttribute="baseline" secondItem="4iN-OB-4Ed" secondAttribute="baseline" id="Fcz-6E-Knt"/>
+                    <constraint firstItem="5Hl-bX-Exz" firstAttribute="bottom" secondItem="A66-pz-gEN" secondAttribute="bottom" id="RoP-ca-KZr"/>
+                    <constraint firstItem="5Hl-bX-Exz" firstAttribute="leading" secondItem="4iN-OB-4Ed" secondAttribute="trailing" constant="11" id="SUx-tS-lkp"/>
+                    <constraint firstItem="lCe-vd-rF6" firstAttribute="leading" secondItem="4iN-OB-4Ed" secondAttribute="leading" id="aR2-Vn-1jV"/>
+                    <constraint firstItem="4iN-OB-4Ed" firstAttribute="leading" secondItem="OZ2-7T-nK5" secondAttribute="leading" constant="20" symbolic="YES" id="anM-f0-BtL"/>
+                    <constraint firstItem="A66-pz-gEN" firstAttribute="leading" secondItem="5Hl-bX-Exz" secondAttribute="trailing" constant="8" id="gEN-aN-N4c"/>
+                    <constraint firstItem="4iN-OB-4Ed" firstAttribute="top" secondItem="OZ2-7T-nK5" secondAttribute="top" constant="77" id="gNj-MF-v1G"/>
+                    <constraint firstItem="4d9-dw-PYR" firstAttribute="top" secondItem="OZ2-7T-nK5" secondAttribute="top" constant="44" id="lNi-Up-5nS"/>
+                    <constraint firstAttribute="trailing" secondItem="4d9-dw-PYR" secondAttribute="trailing" constant="20" id="t3f-4S-q9a"/>
+                </constraints>
+            </view>
+            <point key="canvasLocation" x="534" y="133.5"/>
+        </window>
     </objects>
     <resources>
         <image name="loupeMinus" width="16" height="16"/>

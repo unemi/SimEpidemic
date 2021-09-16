@@ -222,7 +222,7 @@ CA
                             <menuItem isSeparatorItem="YES" id="7Cc-fm-TJ9"/>
                             <menuItem title="Add Infected" keyEquivalent="i" id="d2T-E2-Bc3">
                                 <connections>
-                                    <action selector="addOneInfected:" target="-1" id="Csa-0W-tQc"/>
+                                    <action selector="addInfectedPatients:" target="-1" id="8lr-if-89u"/>
                                 </connections>
                             </menuItem>
                         </items>
@@ -244,10 +244,10 @@ CA
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="eu3-7i-yIM"/>
-                            <menuItem title="Scenario ..." keyEquivalent="c" id="jQ1-EL-Jce">
+                            <menuItem title="Data Table ..." keyEquivalent="d" id="8p3-jo-rMw">
                                 <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
-                                    <action selector="openScenarioPanel:" target="-1" id="WJ2-T0-Hyc"/>
+                                    <action selector="openDataPanel:" target="-1" id="Ptj-oZ-Esm"/>
                                 </connections>
                             </menuItem>
                             <menuItem title="Parameters ..." keyEquivalent="p" id="1qG-kc-aBH">
@@ -256,16 +256,22 @@ CA
                                     <action selector="openParamPanel:" target="-1" id="2P9-nM-q5Z"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Scenario ..." keyEquivalent="c" id="jQ1-EL-Jce">
+                                <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                <connections>
+                                    <action selector="openScenarioPanel:" target="-1" id="WJ2-T0-Hyc"/>
+                                </connections>
+                            </menuItem>
                             <menuItem title="Statistics ..." keyEquivalent="s" id="EeL-vQ-HEs">
                                 <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
                                     <action selector="openStatPenel:" target="-1" id="G92-Fo-D9Z"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Data Table ..." keyEquivalent="d" id="8p3-jo-rMw">
+                            <menuItem title="Vax &amp; Variants ..." keyEquivalent="v" id="OZv-qF-IHL">
                                 <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
-                                    <action selector="openDataPanel:" target="-1" id="Ptj-oZ-Esm"/>
+                                    <action selector="openVaxAndVariantsPanel:" target="-1" id="f0V-nw-4KE"/>
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="LTg-3n-CLi"/>

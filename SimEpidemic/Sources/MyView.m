@@ -31,6 +31,12 @@
 //			rgb[i] = keyColor[idx][i] * (1. - a) + keyColor[idx + 1][i] * a;
 //	}
 //}
+@interface MyView () {
+	NSInteger nVaxen, nVariants;
+	NSArray<NSColor *> *vaxStColors, *varStColors, *vaxWpColors, *varWpColors;
+}
+@end
+
 @implementation MyView
 - (void)awakeFromNib {
 	frameSize = self.frame.size;
@@ -80,9 +86,20 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 	Agent **pop = _world.Pop;
 	AgentDrawType dType = (wSize / _scale < 250)? AgntDrwCircle : AgntDrwSquire;
 	NSMutableArray<NSBezierPath *> *pathsI = NSMutableArray.new, *pathsW = NSMutableArray.new;
-	NSInteger nColors = (_colorType == ColNormal)? NHealthTypes : 3;
-	NSInteger (^pathIdx)(Agent *) = (_colorType == ColNormal)?
-		^(Agent *a){ return (NSInteger)a->health; } : ^(Agent *a){ return (NSInteger)a->forVcn; };
+	NSInteger nColors, (^pathIdx)(Agent *);
+	switch (_colorType) {
+		case ColNormal: nColors = NHealthTypes;
+		pathIdx = ^(Agent *a){ return (NSInteger)a->health; }; break;
+		case ColAntiVax: nColors = 3;
+		pathIdx = ^(Agent *a){ return (NSInteger)a->forVcn; }; break;
+		case ColVaxVariant: nColors = _world.vaccineList.count + _world.variantList.count + 1;
+		NSInteger nVaxen = _world.vaccineList.count;
+		pathIdx = ^(Agent *a){
+			switch (a->health) {
+				case Susceptible: return 0L;
+				case Vaccinated: return (NSInteger)a->vaccineType + 1;
+				default: return nVaxen + 1 + a->virusVariant; }};
+	}
 	for (NSInteger i = 0; i < nColors; i ++)
 		{ [pathsI addObject:NSBezierPath.new]; [pathsW addObject:NSBezierPath.new]; }
 	NSRect cellRect = {0., 0., cellSize, cellSize};
@@ -124,9 +141,45 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 		warp_show(item.agent, item.mode, item.goal, dRect, pathsW[pathIdx(item.agent)]);
 	}
 	[_world popUnlock];
-	for (NSInteger i = 0; i < nColors; i ++) {
+	if (_colorType != ColVaxVariant) for (NSInteger i = 0; i < nColors; i ++) {
 		[stateColors[i] setFill]; [pathsI[i] fill];
 		[warpColors[i] setFill]; [pathsW[i] fill];
+	} else {
+		NSInteger nvx = _world.vaccineList.count, nvr = _world.variantList.count;
+		if (nvx != nVaxen) {
+			NSColor *stCols[nvx], *wpCols[nvx];
+			for (NSInteger i = 0; i < nvx; i ++) {
+				CGFloat hue = (nvx <= 1)? .667 : i * .333 / (nvx - 1) + .5; 
+				stCols[i] = [NSColor colorWithHue:hue saturation:0.75 brightness:0.75 alpha:1.];
+				wpCols[i] = [NSColor colorWithHue:hue
+					saturation:0.75 brightness:0.75 alpha:warpOpacity];
+			}
+			vaxStColors = [NSArray arrayWithObjects:stCols count:nvx];
+			vaxWpColors = [NSArray arrayWithObjects:wpCols count:nvx];
+			nVaxen = nvx;
+		}
+		if (nvr != nVariants) {
+			NSColor *stCols[nvr], *wpCols[nvr];
+			for (NSInteger i = 0; i < nvr; i ++) {
+				CGFloat hue = (nvr <= 1)? .0833 : i * .1667 / (nvr - 1); 
+				stCols[i] = [NSColor colorWithHue:hue saturation:0.75 brightness:0.75 alpha:1.];
+				wpCols[i] = [NSColor colorWithHue:hue
+					saturation:0.75 brightness:0.75 alpha:warpOpacity];
+			}
+			varStColors = [NSArray arrayWithObjects:stCols count:nvr];
+			varWpColors = [NSArray arrayWithObjects:wpCols count:nvr];
+			nVariants = nvr;
+		}
+		[stateColors[0] setFill]; [pathsI[0] fill];
+		[warpColors[0] setFill]; [pathsW[0] fill];
+		for (NSInteger i = 0; i < nvx; i ++) {
+			[vaxStColors[i] setFill]; [pathsI[i + 1] fill];
+			[vaxWpColors[i] setFill]; [pathsW[i + 1] fill];
+		}
+		for (NSInteger i = 0; i < nvr; i ++) {
+			[varStColors[i] setFill]; [pathsI[i + nvx + 1] fill];
+			[varWpColors[i] setFill]; [pathsW[i + nvx + 1] fill];
+		}
 	}
 	[NSGraphicsContext restoreGraphicsState];
 }

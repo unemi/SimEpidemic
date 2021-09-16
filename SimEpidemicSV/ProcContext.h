@@ -17,7 +17,6 @@ typedef enum { MethodHEAD, MethodGET, MethodPOST, MethodNone = NSNotFound } Meth
 @class World, MyCounter, DeflaterStream;
 extern World *make_new_world(NSString *type, NSString * _Nullable browserID);
 extern void send_bytes(int desc, const char *bytes, NSInteger size);
-extern void load_params_from_dict(World *wd, WorldParams * _Nullable wp, NSDictionary *dict);
 extern NSArray *make_history(StatData *stat, NSInteger nItems,
 	NSNumber *(^getter)(StatData *));
 extern NSArray *dist_cnt_array(NSArray<MyCounter *> *hist);
@@ -57,6 +56,9 @@ extern void init_context(void);
 - (BOOL)setupLocalFileToSave:(NSString *)extension;
 - (void)checkWorld;
 - (void)connectionWillClose;
+- (void)getInfo:(NSObject *)plist;
+- (NSObject *)plistFromJSONArgument:(NSJSONReadingOptions)option
+	class:(Class)class type:(NSString *)type;
 @end
 
 NS_ASSUME_NONNULL_END

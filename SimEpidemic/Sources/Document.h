@@ -28,6 +28,9 @@ extern NSString *nnScenarioText, *nnParamChanged;
 	NSArray<LegendView *> *lvViews;
 	IBOutlet NSView *savePanelAccView;
 	IBOutlet NSButton *savePopCBox, *saveGUICBox, *savePMapCBox;
+	IBOutlet NSWindow *addInfectedSheet;
+	IBOutlet NSPopUpButton *variantTypePopUp;
+	IBOutlet NSTextField *patientsNumberDgt;
 	NSMutableArray<void (^)(StatInfo *)> *statPanelInitializer;
 	BOOL (^worldInitializer)(World *, NSError **);
 	void (^panelInitializer)(Document *);
@@ -38,7 +41,7 @@ extern NSString *nnScenarioText, *nnParamChanged;
 	NSInteger animeSteps;
 }
 @property (readonly) World *world;
-- (void)adjustScenarioText;
+- (void)adjustScenarioText:(NSNotification *)note;
 - (void)setScenario:(NSArray *)newScen;
 - (void)setPanelTitle:(NSWindow *)panel;
 - (void)reviseColors;
@@ -49,6 +52,7 @@ extern NSString *nnScenarioText, *nnParamChanged;
 - (IBAction)openScenarioPanel:(id)sender;
 - (IBAction)openParamPanel:(id)sender;
 - (IBAction)openDataPanel:(id)sender;
+- (IBAction)openVaxAndVariantsPanel:(id)sender;
 @end
 
 @interface NSWindowController (ChildWindowExtension)

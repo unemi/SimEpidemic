@@ -130,7 +130,8 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->vx = cos(th);
 	a->vy = sin(th);
 	a->health = Susceptible;
-	a->nInfects = -1;
+	a->nInfects = a->virusVariant = a->vaccineType = -1;
+	a->agentImmunity = 0.;
 	a->isOutOfField = YES;
 	reset_days(a, rp);
 	a->daysToCompleteRecov = 0.;
@@ -277,22 +278,30 @@ static void attracted(Agent *a, Agent *b) {
 - (void)checkInfectionA:(Agent *)a B:(Agent *)b dist:(CGFloat)d {
 	if (was_hit(worldParams.stepsPerDay, runtimeParams.cntctTrc / 100.))
 		[self addNewCInfoA:a B:b tm:runtimeParams.step];
-	if (a->newHealth != a->health ||
-		!is_infected(b) || b->daysInfected <= runtimeParams.contagDelay) return;
+	if (a->newHealth != a->health || !is_infected(b)) return;
+	CGFloat virusX = variantInfo[b->virusVariant].reproductivity,
+		contagDelay = runtimeParams.contagDelay / virusX,
+		contagPeak = runtimeParams.contagPeak / virusX;
+	if (b->daysInfected <= contagDelay) return;
 	CGFloat immuneFactor;
 	switch (a->health) {
-		case Susceptible: immuneFactor = 1.; break;
-		case Recovered: case Vaccinated: immuneFactor = 1. - a->agentImmunity; break;
+		case Susceptible: immuneFactor = 0.; break;
+		case Recovered: immuneFactor = a->agentImmunity
+			* variantInfo[a->virusVariant].efficacy[b->virusVariant]; break;
+		case Vaccinated: immuneFactor = a->agentImmunity
+			* vaccineInfo[a->vaccineType].efficacy[b->virusVariant]; break;
 		default: return;
 	}
 	CGFloat timeFactor = (b->daysToCompleteRecov <= 0.)?
-		fmin(1., (b->daysInfected - runtimeParams.contagDelay) /
-			(fmin(runtimeParams.contagPeak, b->daysToOnset) - runtimeParams.contagDelay)) :
+		fmin(1., (b->daysInfected - contagDelay) /
+			(fmin(contagPeak, b->daysToOnset) - contagDelay)) :
 		(b->daysToCompleteRecov - b->daysInfected) / (b->daysToCompleteRecov - b->daysToRecover);
 	CGFloat distanceFactor = fmin(1., pow((runtimeParams.infecDst - d) / 2., 2.));
 	if (was_hit(worldParams.stepsPerDay,
-		runtimeParams.infec / 100. * timeFactor * distanceFactor * immuneFactor)) {
+		runtimeParams.infec / 100. * timeFactor * distanceFactor * (1. - immuneFactor))) {
 		a->newHealth = Asymptomatic;
+		a->agentImmunity = immuneFactor;
+		a->virusVariant = b->virusVariant;
 		a->daysInfected = a->daysDiseased = 0;
 		if (a->nInfects < 0) a->newNInfects = 1;
 		b->newNInfects ++;
@@ -332,26 +341,27 @@ static void attracted(Agent *a, Agent *b) {
 @end
 
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
-static BOOL patient_step(Agent *a, RuntimeParams *rp, WorldParams *wp,
-	BOOL inQuarantine, StepInfo *info) {
+static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepInfo *info) {
+	CGFloat virusX = prms.vrInfo[a->virusVariant].reproductivity;
 	if (a->daysToCompleteRecov > 0.) { // in the recovery phase
 		if (a->daysInfected >= a->daysToCompleteRecov) {
 			if (a->health == Symptomatic) SET_HIST(HistRecov, daysDiseased)
 			a->newHealth = Recovered;
 			a->daysInfected = a->daysToCompleteRecov = 0.;
-			setup_acquired_immunity(a, rp);
+			setup_acquired_immunity(a, prms.rp);
 		}
-	} else if (a->daysInfected > a->daysToRecover) { // starts recovery
-		a->daysToCompleteRecov = a->daysToRecover * (1. + 10. / a->daysToDie);
-	} else if (a->daysInfected >= a->daysToDie) {
+	} else if (a->daysInfected > a->daysToRecover * (1. - a->agentImmunity)) { // starts recovery
+		a->daysToCompleteRecov = a->daysToRecover * (1. - a->agentImmunity)
+			* (1. + 10. / a->daysToDie / virusX);
+	} else if (a->daysInfected >= a->daysToDie / virusX) {
 		SET_HIST(HistDeath, daysDiseased);
 		a->newHealth = Died;
 		info->warpType = inQuarantine? WarpToCemeteryH : WarpToCemeteryF;
 		info->warpTo = (NSPoint){
-			(d_random() * .248 + 1.001) * wp->worldSize,
-			(d_random() * .468 + 0.001) * wp->worldSize};
+			(d_random() * .248 + 1.001) * prms.wp->worldSize,
+			(d_random() * .468 + 0.001) * prms.wp->worldSize};
 		return YES;
-	} else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset) {
+	} else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset / virusX) {
 		a->newHealth = Symptomatic;
 		SET_HIST(HistIncub, daysInfected);
 	}
@@ -391,40 +401,49 @@ void going_back_home(Agent *a) {
 	a->fx += f.x;
 	a->fy += f.y;
 }
-static void vaccinate(Agent *a, RuntimeParams *rp) {
+static void vaccinate(Agent *a, ParamsForStep prms) {
 	a->newHealth = Vaccinated;
 	a->vaccineTicket = NO;
-	a->daysVaccinated = 0.;
-	a->daysToRecover *= 1. - rp->vcnEffcSymp / 100.;
+	CGFloat fdd = (CGFloat)prms.rp->step / prms.wp->stepsPerDay;
+	if (a->firstDoseDate >= 0.) {
+		a->firstDoseDate = fdd - prms.vxInfo[a->vaccineType].interval;
+	} else {
+		a->daysToRecover *= 1. - prms.wp->vcnEffcSymp / 100.;
+		a->firstDoseDate = fdd;
+	}
 }
-#define VCN_1_2_SPAN 21.
-void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, StepInfo *info) {
+void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
+	RuntimeParams *rp = prms.rp;
+	WorldParams *wp = prms.wp;
 	switch (a->health) {
-		case Susceptible: if (a->vaccineTicket) vaccinate(a, rp); break;
+		case Susceptible: if (a->vaccineTicket) vaccinate(a, prms); break;
 		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
 		a->daysDiseased += 1. / wp->stepsPerDay;
-		if (patient_step(a, rp, wp, NO, info)) return;
+		if (patient_step(a, prms, NO, info)) return;
 		else if (a->daysDiseased >= rp->tstDelay && was_hit(wp->stepsPerDay, rp->tstSbjSym / 100.))
 			info->testType = TestAsSymptom;
 		break;
-		case Asymptomatic: if (a->vaccineTicket) vaccinate(a, rp);
+		case Asymptomatic: if (a->vaccineTicket) vaccinate(a, prms);
 		else {
 			a->daysInfected += 1. / wp->stepsPerDay;
-			if (patient_step(a, rp, wp, NO, info)) return;
+			if (patient_step(a, prms, NO, info)) return;
 		} break;
-		case Vaccinated: a->daysVaccinated += 1. / wp->stepsPerDay;
-		if (a->daysVaccinated < VCN_1_2_SPAN)	// only the first dose
-			a->agentImmunity = a->daysVaccinated * rp->vcn1stEffc / 100. / VCN_1_2_SPAN;
-		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN)	// not fully vaccinated yet
-			a->agentImmunity = ((a->daysVaccinated - VCN_1_2_SPAN)
-				* (rp->vcnMaxEffc - rp->vcn1stEffc) / rp->vcnEDelay + rp->vcn1stEffc) / 100.;
-		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN + rp->vcnEDecay) // full
-			a->agentImmunity = rp->vcnMaxEffc / 100.;
-		else if (a->daysVaccinated < rp->vcnEDelay + VCN_1_2_SPAN + rp->vcnEPeriod) // Decay
-			a->agentImmunity = (rp->vcnEDelay + VCN_1_2_SPAN + rp->vcnEPeriod - a->daysVaccinated)
-				/ (rp->vcnEPeriod - rp->vcnEDecay) * rp->vcnMaxEffc / 100.;
-		else expire_immunity(a, rp);
-		break;
+		case Vaccinated: if (a->vaccineTicket) vaccinate(a, prms);
+		else {
+			CGFloat daysVaccinated = (CGFloat)rp->step / wp->stepsPerDay - a->firstDoseDate;
+			NSInteger span = prms.vxInfo[a->vaccineType].interval;
+			if (daysVaccinated < span)	// only the first dose
+				a->agentImmunity = daysVaccinated * wp->vcn1stEffc / 100. / span;
+			else if (daysVaccinated < wp->vcnEDelay + span)	// not fully vaccinated yet
+				a->agentImmunity = ((daysVaccinated - span)
+					* (wp->vcnMaxEffc - wp->vcn1stEffc) / wp->vcnEDelay + wp->vcn1stEffc) / 100.;
+			else if (daysVaccinated < wp->vcnEDelay + span + wp->vcnEDecay) // full
+				a->agentImmunity = wp->vcnMaxEffc / 100.;
+			else if (daysVaccinated < wp->vcnEDelay + span + wp->vcnEPeriod) // Decay
+				a->agentImmunity = (wp->vcnEDelay + span + wp->vcnEPeriod - daysVaccinated)
+					/ (wp->vcnEPeriod - wp->vcnEDecay) * wp->vcnMaxEffc / 100.;
+			else expire_immunity(a, rp);
+		} break;
 		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
 		if (a->daysInfected > a->imExpr) expire_immunity(a, rp);
 		break;
@@ -499,15 +518,15 @@ void step_agent(Agent *a, RuntimeParams *rp, WorldParams *wp, BOOL goHomeBack, S
 	NSInteger newIdx = index_in_pop(a, wp);
 	if (newIdx != orgIdx) { info->moveFrom = orgIdx; info->moveTo = newIdx; }
 }
-void step_agent_in_quarantine(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
+void step_agent_in_quarantine(Agent *a, ParamsForStep prms, StepInfo *info) {
 	switch (a->health) {
-		case Symptomatic: a->daysDiseased += 1. / wp->stepsPerDay;
-		case Asymptomatic: a->daysInfected += 1. / wp->stepsPerDay;
+		case Symptomatic: a->daysDiseased += 1. / prms.wp->stepsPerDay;
+		case Asymptomatic: a->daysInfected += 1. / prms.wp->stepsPerDay;
 		break;
 		default: info->warpType = WarpBack; info->warpTo = a->orgPt;
 		return;
 	}
-	if (!patient_step(a, rp, wp, YES, info) && a->newHealth == Recovered)
+	if (!patient_step(a, prms, YES, info) && a->newHealth == Recovered)
 		{ info->warpType = WarpBack; info->warpTo = a->orgPt; }
 }
 BOOL warp_step(Agent *a, WorldParams *wp, World *world, WarpType mode, NSPoint goal) {

@@ -225,7 +225,12 @@ static void send_large_data(int desc, const char *bytes, NSInteger size) {
 	content = @"Not implemented yet.";
 }
 - (void)setErrorMessage:(NSString *)msg {
-	code = [msg substringToIndex:3].intValue;
+	NSScanner *scan = [NSScanner scannerWithString:msg];
+	NSString *numStr;
+	if ([scan scanCharactersFromSet:
+		NSCharacterSet.decimalDigitCharacterSet intoString:&numStr])
+		code = numStr.intValue;
+	else { code = 417; msg = [@"417 " stringByAppendingString:msg]; }
 	type = @"text/plain";
 	content = msg;
 }
@@ -499,33 +504,28 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	[world popUnlock];
 	[self getInfo:plist];
 }
-void load_params_from_dict(World *world, WorldParams  * _Nullable wp, NSDictionary *dict) {
-	RuntimeParams *rp = world.runtimeParamsP;
-	VaccinePriority orgVcnPri = rp->vcnPri;
-	set_params_from_dict(rp, wp, dict);
-	VaccinePriority newVcnPri = rp->vcnPri;
-	if (newVcnPri != orgVcnPri) {
-		rp->vcnPri = orgVcnPri;
-		[world setVaccinePriority:newVcnPri toInit:NO];
-	}
+- (NSObject *)plistFromJSONArgument:(NSJSONReadingOptions)option
+	class:(Class)class type:(NSString *)type {
+	NSString *JSONstr = query[@"JSON"];
+	if (JSONstr == nil) return nil;
+	NSError *error;
+	NSData *data = [JSONstr dataUsingEncoding:NSUTF8StringEncoding];
+	NSObject *obj = [NSJSONSerialization JSONObjectWithData:data options:option error:&error];
+	if (obj == nil) @throw [NSString stringWithFormat:
+		@"417 %@%@.", error.localizedDescription, type];
+	if (class != NULL && ![obj isKindOfClass:class]) @throw [NSString stringWithFormat:
+		@"417 JSON data is not form of %@.", class];
+	return obj;
 }
 - (void)setParams {
 	[self checkWorld];
-	NSDictionary *dict = nil;
-	NSString *JSONstr = query[@"JSON"];
-	if (JSONstr != nil) {
-		NSError *error;
-		NSData *data = [JSONstr dataUsingEncoding:NSUTF8StringEncoding];
-		dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
-		if (dict == nil) @throw [NSString stringWithFormat:
-			@"417 Failed to interprete JSON data: %@", error.localizedDescription];
-		if (![dict isKindOfClass:NSDictionary.class])
-			@throw @"417 JSON data doesn't represent a dictionary.";
-	} else dict = query;
+	NSDictionary *dict = (NSDictionary *)
+		[self plistFromJSONArgument:0 class:NSDictionary.class type:@"parameters"];
+	if (dict == nil) dict = query;
 	MY_LOG_DEBUG("--- parameters\n%s\n", dict.description.UTF8String);
 	[world popLock];
 	WorldParams *wp = world.tmpWorldParamsP;
-	load_params_from_dict(world, wp, dict);
+	set_params_from_dict(world.runtimeParamsP, wp, dict);
 	NSInteger popSize = wp->initPop;
 	if (popSize > maxPopSize) wp->initPop = maxPopSize;
 	[world popUnlock];
@@ -587,6 +587,17 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(World *w
 	[self checkWorld];
 	World *wd = world;
 	in_main_thread(^{ [wd resetPop]; });
+}
+- (void)addInfected {
+	[self checkWorld];
+	NSString *arg = query[@"n"];
+	NSInteger n = (arg == nil)? 1 : arg.integerValue;
+	NSString *vrName = query[@"variant"];
+	int variantType = (vrName == nil)? 0 : [world variantTypeFromName:vrName];
+	if (variantType < 0) @throw [NSString stringWithFormat:
+		@"Could not find a variant named \"%@.\"", vrName];
+	World *wd = world;
+	in_main_thread(^{ [wd addInfected:n variant:variantType]; });
 }
 - (void)collectNamesInto:(NSMutableSet *)nameSet {
 	NSError *error;
@@ -823,7 +834,9 @@ void init_context(void) {
 	commandDict = @{
 		COM(getWorldID), COM(closeWorld), COM(newWorld),
 		COM(getParams), COM(setParams),
-		COM(start), COM(step), COM(stop), COM(reset),
+		COM(getVaccineList), COM(setVaccineList), COM(getVariantList), COM(setVariantList),
+		COM(loadVariantsAndVaccines),
+		COM(start), COM(step), COM(stop), COM(reset), COM(addInfected),
 		COM(getIndexes), COM(getDistribution),
 		COM(getPopulation), COM(getPopulation2),
 		COM(periodicReport), COM(quitReport), COM(changeReport),

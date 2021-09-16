@@ -20,6 +20,12 @@
 "subjectAsymptomatic" = "無症状の検査対象者";
 "subjectSymptomatic" = "有症状の検査対象者";
 "vaccinePerformRate" = "ワクチン接種率/日";
+"vaccinePriority" = "接種優先順位";
+"vaccineRegularity" = "接種順位の規則性";
+"Random" = "ランダム";
+"Elder" = "高齢者優先";
+"Center" = "中央優先";
+"Density" = "人口密度";
 
 "Effective with Scenario" = "シナリオ開始時に適用されます。";
 "Start" = "開始";

@@ -20,6 +20,7 @@
 #import "MyView.h"
 #import "DataPanel.h"
 #import "ParamPanel.h"
+#import "VVPanel.h"
 
 #ifndef NOGUI
 @implementation NSWindowController (ChildWindowExtension)
@@ -50,13 +51,13 @@ NSInteger nQueues = 10;
 #define N_MTIME 8
 #endif
 
-NSString *nnScenarioText = @"nnScenatioText",
-	*nnParamChanged = @"nnParamChanged";
+NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged";
 
 @interface Document () {
 	NSSize orgWindowSize, orgViewSize;
 	NSMutableDictionary *orgViewInfo, *nnObjects;
 	FillView *fillView;
+	VVPanel *vvPanel;
 }
 @end
 
@@ -89,35 +90,15 @@ NSString *nnScenarioText = @"nnScenatioText",
 	}
 	[world.statInfo reviseColors];
 }
-- (void)adjustScenarioText {
-	if (world.scenario != nil && world.scenario.count > 0)
-		scenarioText.integerValue = world.scenarioIndex;
-	else scenarioText.stringValue = NSLocalizedString(@"None", nil);
-}
-- (void)setupPhaseInfo {
-	if (world.scenario.count == 0) {
-		world.statInfo.phaseInfo = @[];
-		world.statInfo.labelInfo = @[];
-		return;
+- (void)adjustScenarioText:(NSNotification *)note {
+	NSTextField *scenTxt = scenarioText;
+	if (world.scenario != nil && world.scenario.count > 0) {
+		NSInteger idx = world.scenarioIndex;
+		in_main_thread(^{ scenTxt.integerValue = idx; });
+	} else {
+		NSString *str = NSLocalizedString(@"None", nil);
+		in_main_thread(^{ scenTxt.stringValue = str; });
 	}
-	NSMutableArray<NSNumber *> *maPhase = NSMutableArray.new;
-	NSMutableArray<NSString *> *maLabel = NSMutableArray.new;
-	for (NSInteger i = 0; i < world.scenario.count; i ++) {
-		NSObject *elm = world.scenario[i];
-		NSString *label;
-		NSPredicate *pred = predicate_in_item(elm, &label);
-		if (pred != nil) {
-			[maPhase addObject:@(i + 1)];
-			[maLabel addObject:label];
-		}
-	}
-	// if the final item is not an unconditional jump then add finale phase.
-	NSArray *item = world.scenario.lastObject;
-	if (![item isKindOfClass:NSArray.class] || item.count != 1 ||
-		![item[0] isKindOfClass:NSNumber.class])
-		[maPhase addObject:@(world.scenario.count + 1)];
-	world.statInfo.phaseInfo = maPhase;
-	world.statInfo.labelInfo = maLabel;
 }
 - (void)setScenario:(NSArray *)newScen {
 	if (world.running) return;
@@ -125,8 +106,8 @@ NSString *nnScenarioText = @"nnScenatioText",
 	[self.undoManager registerUndoWithTarget:self handler:
 		^(Document *target) { target.scenario = orgScen; }];
 	[world setScenario:newScen index:0];
-	[self setupPhaseInfo];
-	[self adjustScenarioText];
+	[world setupPhaseInfo];
+	[self adjustScenarioText:nil];
 	[scenarioPanel adjustControls:
 		self.undoManager.undoing || self.undoManager.redoing];
 }
@@ -181,13 +162,13 @@ NSString *nnScenarioText = @"nnScenatioText",
 	nnObjects = NSMutableDictionary.new;
 	NSNotificationCenter *ntfCenter = NSNotificationCenter.defaultCenter;
 	[ntfCenter addObserver:self
-		selector:@selector(adjustScenarioText) name:nnScenarioText object:world];
+		selector:@selector(adjustScenarioText:) name:nnScenarioText object:world];
 	nnObjects[nnScenarioText] = @YES;
 	nnObjects[nnParamChanged] = [ntfCenter addObserverForName:nnParamChanged
 		object:world queue:nil usingBlock:^(NSNotification *note) {
 		[self->paramPanel adjustParamControls:note.userInfo[@"keys"]];
 	}];
-	if (world.scenario != nil) [self setupPhaseInfo];
+	if (world.scenario != nil) [world setupPhaseInfo];
 	if (world.runtimeParamsP->step == 0) [self resetPopulation];
 	else savePopCBox.state = NSControlStateValueOn;
 	if (statPanelInitializer != nil) {
@@ -199,7 +180,7 @@ NSString *nnScenarioText = @"nnScenatioText",
 	show_anime_steps(animeStepsTxt, animeSteps);
 	stopAtNDaysDgt.integerValue = (world.stopAtNDays > 0)? world.stopAtNDays : - world.stopAtNDays;
 	stopAtNDaysCBox.state = world.stopAtNDays > 0;
-	[self adjustScenarioText];
+	[self adjustScenarioText:nil];
 	orgWindowSize = windowController.window.frame.size;
 	orgViewSize = view.frame.size;
 }
@@ -325,6 +306,7 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 		stepBtn.enabled = NO;
 		world.loopMode = LoopRunning;
 		[scenarioPanel adjustControls:NO];
+		[vvPanel adjustApplyBtnEnabled];
 		[NSThread detachNewThreadSelector:
 			@selector(runningLoop) toTarget:self withObject:nil];
 	} else {
@@ -332,6 +314,7 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 		stepBtn.enabled = YES;
 		world.loopMode = LoopEndByUser;
 		[scenarioPanel adjustControls:NO];
+		[vvPanel adjustApplyBtnEnabled];
 	}
 }
 - (IBAction)step:(id)sedner {
@@ -347,8 +330,29 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 	[self resetPopulation];
 	view.needsDisplay = YES;
 }
-- (IBAction)addOneInfected:(id)sender {
-	[world addInfected:1];
+- (IBAction)addInfectedPatients:(id)sender {
+	World *tmpWorld = world;
+	NSPopUpButton *vPopUp = variantTypePopUp;
+	NSTextField *dgt = patientsNumberDgt;
+	for (NSInteger i = 0; i < world.variantList.count; i ++) {
+		NSString *name = world.variantList[i][@"name"];
+		NSMenuItem *item = [variantTypePopUp itemAtIndex:i];
+		if (item != nil) item.title = name;
+		else [variantTypePopUp addItemWithTitle:name];
+	}
+	for (NSInteger i = variantTypePopUp.numberOfItems - 1;
+		i >= world.variantList.count; i --)
+		[variantTypePopUp removeItemAtIndex:i];
+	[view.window beginSheet:addInfectedSheet completionHandler:^(NSModalResponse returnCode) {
+		if (returnCode != NSModalResponseOK) return;
+		[tmpWorld addInfected:dgt.integerValue variant:(int)vPopUp.indexOfSelectedItem];
+	}];
+}
+- (IBAction)addInfectedOK:(id)sender {
+	[view.window endSheet:addInfectedSheet returnCode:NSModalResponseOK];
+}
+- (IBAction)addInfectedCancel:(id)sender {
+	[view.window endSheet:addInfectedSheet returnCode:NSModalResponseCancel];
 }
 - (IBAction)switchDaysToStop:(id)sender {
 	BOOL orgState = world.stopAtNDays > 0, newState = stopAtNDaysCBox.state;
@@ -422,6 +426,10 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 	[dataPanel showWindowWithParent:view.window];
 }
 - (IBAction)openStatPenel:(id)sender { [world.statInfo openStatPanel:view.window]; }
+- (IBAction)openVaxAndVariantsPanel:(id)sender {
+	if (vvPanel == nil) vvPanel = [VVPanel.alloc initWithWorld:world];
+	[vvPanel showWindow:sender];
+}
 //
 - (void)openScenarioFromURL:(NSURL *)url {
 	NSObject *pList = get_propertyList_from_url(url, NSArray.class, view.window);

@@ -11,6 +11,7 @@
 #import "Document.h"
 #import "World.h"
 #import "PopDist.h"
+#import "VVPanel.h"
 
 static void reveal_me_in_tabview(NSControl *me, NSTabView *tabView) {
 	NSView *parent = me.superview;
@@ -100,6 +101,7 @@ static NSNumberFormatter *distDgtFmt = nil;
 	BOOL hasUserDefaults;
 	NSSize viewSize[N_SUBPANELS];
 	NSRect orgFrame;
+	NSInteger vcnType;
 }
 @end
 
@@ -122,6 +124,14 @@ static NSInteger spd_to_stpInt(NSInteger stepsPerDay) {
 static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	return (stpExp <= 0)? 1 : round(pow(2., stpExp - 1)) * 3;
 }
+- (void)adjustVcnInfoControls:(NSInteger)newIndex {
+	vcnType = newIndex;
+	[vcnTypePopUp selectItemAtIndex:vcnType];
+	VaccinationInfo *vp = &targetParams->vcnInfo[vcnType];
+	[vcnPriPopUp selectItemAtIndex:vp->priority];
+	vcnPRateDgt.doubleValue = vcnPRateSld.doubleValue = vp->performRate;
+	vcnRegularityDgt.doubleValue = vcnRegularitySld.doubleValue = vp->regularity;
+}
 - (void)adjustControls {
 	WorldParams *wp = world.tmpWorldParamsP;
 	for (NSInteger i = 0; i < fDigits.count; i ++)
@@ -134,7 +144,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	stepsPerDayStp.integerValue = spd_to_stpInt(wp->stepsPerDay);
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 	[dDigitW adjustDigitsToCurrentValue];
-	[vcnPriPopUp selectItemAtIndex:targetParams->vcnPri];
+	[self adjustVcnInfoControls:0];
 	[wrkPlcModePopUp selectItemAtIndex:wp->wrkPlcMode];
 }
 - (void)adjustParamControls:(NSArray<NSString *> *)paramNames {
@@ -144,6 +154,30 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 			fSliders[idx].doubleValue = (&targetParams->PARAM_F1)[idx];
 		else [dDigits[idx - IDX_D] adjustDigitsToCurrentValue];
 	}
+}
+void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
+	NSArray<NSDictionary *> *vcnList = world.vaccineList;
+	NSInteger nVcns = vcnList.count, selIdx = 0;
+	for (NSPopUpButton *popUp in popUps) {
+		NSInteger nItems = popUp.numberOfItems;
+		NSString *orgSelected = popUp.titleOfSelectedItem;
+		for (NSInteger i = 0; i < nVcns; i ++) {
+			NSString *vcnName = vcnList[i][@"name"];
+			if (i < nItems) [popUp itemAtIndex:i].title = vcnName;
+			else [popUp addItemWithTitle:vcnName];
+			if ([vcnName isEqualToString:orgSelected]) selIdx = i;
+		}
+		for (NSInteger i = nItems - 1; i >= nVcns; i --)
+			[popUp removeItemAtIndex:i];
+		[popUp selectItemAtIndex:selIdx];
+	}
+}
+- (void)adjustVcnTypeMenu:(NSNotification *)note {
+	adjust_vcnType_popUps(@[trcVcnTypePopUp, vcnTypePopUp], world);
+	VaccinationInfo *vInfo = &targetParams->vcnInfo[vcnTypePopUp.indexOfSelectedItem];
+	vcnPRateDgt.doubleValue = vcnPRateSld.doubleValue = vInfo->performRate;
+	vcnRegularityDgt.doubleValue = vcnRegularitySld.doubleValue = vInfo->regularity;
+	[vcnPriPopUp selectItemAtIndex:vInfo->priority];
 }
 - (void)checkUpdate {
 	revertUDBtn.enabled = hasUserDefaults &&
@@ -179,8 +213,6 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt,
-		vcnPRateDgt, vcn1stEffcDgt, vcnMaxEffcDgt, vcnMaxEffcSDgt,
-		vcnEDelayDgt, vcnEPeriodDgt, vcnEDecayDgt,
 		imnMaxDurDgt, imnMaxDurSvDgt, imnMaxEffcDgt, imnMaxEffcSvDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
@@ -189,8 +221,6 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		dstSTSld, dstOBSld, backHmSld, gatFrSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld,
-		vcnPRateSld, vcn1stEffcSld, vcnMaxEffcSld, vcnMaxEffcSSld,
-		vcnEDelaySld, vcnEPeriodSld, vcnEDecaySld,
 		imnMaxDurSld, imnMaxDurSvSld, imnMaxEffcSld, imnMaxEffcSvSld];
 	ParamPanel __weak *pp = self;
 	void (^proc)(void) = ^{ [pp checkUpdate]; };
@@ -248,6 +278,9 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		s.minValue = fmt.minimum.doubleValue;
 		s.maxValue = fmt.maximum.doubleValue;
 	}
+	[self adjustVcnTypeMenu:nil];
+	[NSNotificationCenter.defaultCenter addObserver:self
+		selector:@selector(adjustVcnTypeMenu:) name:VaccineListChanged object:world];
 	clearUDBtn.enabled = hasUserDefaults =
 		memcmp(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams))
 	 || memcmp(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
@@ -294,10 +327,24 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		[target sendAction:target.action to:target.target];
 	}];
 	targetParams->trcOpe = newValue;
+	trcVcnTypePopUp.enabled = (newValue != TrcTst);
+	[self checkUpdate];
+}
+- (IBAction)chooseTrcVaccineType:(id)sender {
+	NSInteger orgValue = targetParams->trcVcnType,
+		newValue = trcVcnTypePopUp.indexOfSelectedItem;
+	if (orgValue == newValue) return;
+	NSTabView *tabV = tabView;
+	[undoManager registerUndoWithTarget:trcVcnTypePopUp handler:^(NSPopUpButton *target) {
+		reveal_me_in_tabview(target, tabV);
+		[target selectItemAtIndex:orgValue];
+		[target sendAction:target.action to:target.target];
+	}];
+	targetParams->trcVcnType = (int)newValue;
 	[self checkUpdate];
 }
 - (IBAction)chooseVaccinePriority:(id)sender {
-	VaccinePriority orgValue = targetParams->vcnPri,
+	VaccinePriority orgValue = targetParams->vcnInfo[vcnType].priority,
 		newValue = (VaccinePriority)vcnPriPopUp.indexOfSelectedItem;
 	if (orgValue == newValue) return;
 	NSTabView *tabV = tabView;
@@ -306,8 +353,42 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 		[target selectItemAtIndex:orgValue];
 		[target sendAction:target.action to:target.target];
 	}];
-	[world setVaccinePriority:newValue toInit:targetParams == world.initParamsP];
+	targetParams->vcnInfo[vcnType].priority = newValue;
+	if (newValue == VcnPrBooster) [world resetBoostQueue];
 	[self checkUpdate];
+}
+- (IBAction)chooseVcnType:(NSPopUpButton *)sender {
+	NSInteger newIndex = sender.indexOfSelectedItem, orgIndex = vcnType;
+	if (newIndex == orgIndex) return;
+	[undoManager registerUndoWithTarget:sender handler:^(NSPopUpButton *target) {
+		[sender selectItemAtIndex:orgIndex];
+		[target sendAction:target.action to:target.target];
+	}];
+	[self adjustVcnInfoControls:newIndex];
+}
+- (IBAction)changeVcnPRate:(NSControl *)sender {
+	CGFloat orgValue = targetParams->vcnInfo[vcnType].performRate,
+		newValue = sender.doubleValue;
+	if (orgValue == newValue) return;
+	[undoManager registerUndoWithTarget:sender handler:^(NSControl *target) {
+		sender.doubleValue = orgValue;
+		[target sendAction:target.action to:target.target];
+	}];
+	if (sender != vcnPRateDgt) vcnPRateDgt.doubleValue = newValue;
+	if (sender != vcnPRateSld) vcnPRateSld.doubleValue = newValue;
+	targetParams->vcnInfo[vcnType].performRate = newValue;
+}
+- (IBAction)changeVcnRegularity:(NSControl *)sender {
+	CGFloat orgValue = targetParams->vcnInfo[vcnType].regularity,
+		newValue = sender.doubleValue;
+	if (orgValue == newValue) return;
+	[undoManager registerUndoWithTarget:sender handler:^(NSControl *target) {
+		sender.doubleValue = orgValue;
+		[target sendAction:target.action to:target.target];
+	}];
+	if (sender != vcnRegularityDgt) vcnRegularityDgt.doubleValue = newValue;
+	if (sender != vcnRegularitySld) vcnRegularitySld.doubleValue = newValue;
+	targetParams->vcnInfo[vcnType].regularity = newValue;
 }
 - (void)setParamsOfRuntime:(const RuntimeParams *)rp world:(const WorldParams *)wp {
 	RuntimeParams rtPr = *targetParams;
@@ -315,13 +396,8 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	[undoManager registerUndoWithTarget:self handler:^(ParamPanel *panel) {
 		[panel setParamsOfRuntime:&rtPr world:&wlPr];
 	}];
-	VaccinePriority orgVcnPri = targetParams->vcnPri;
 	*targetParams = *rp;
 	*(world.tmpWorldParamsP) = *wp;
-	if (rp->vcnPri != orgVcnPri) {
-		targetParams->vcnPri = orgVcnPri;
-		[world setVaccinePriority:rp->vcnPri toInit:targetParams == world.initParamsP];
-	}
 	[self adjustControls];
 	[self checkUpdate];
 }
@@ -487,6 +563,9 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	[self.window beginSheet:popDist.window completionHandler:^(NSModalResponse returnCode) {
 		if (returnCode == NSModalResponseOK) [self setPopDistImage:ppdst.image];
 	}];
+}
+- (IBAction)openVaxAndVariantsPanel:(id)sender {
+	[doc openVaxAndVariantsPanel:sender];
 }
 // tabview delegate
 - (void)tabView:(NSTabView *)tabView willSelectTabViewItem:(NSTabViewItem *)tabViewItem {

@@ -18,7 +18,8 @@ enum { ColBackground = NHealthTypes,
 	ColHospital, ColCemetery, ColText, ColGathering };
 typedef enum {
 	ParamTypeNone, ParamTypeFloat, ParamTypeDist,
-	ParamTypeInteger, ParamTypeRate, ParamTypeEnum, ParamTypeWEnum
+	ParamTypeInteger, ParamTypeRate, ParamTypeEnum, ParamTypeWEnum,
+	ParamTypeVaxFloat, ParamTypeVaxEnum
 } ParamType;
 typedef struct {
 	ParamType type;
@@ -34,6 +35,7 @@ typedef struct {
 extern NSInteger nCores;
 extern BOOL isARM;
 extern unsigned long current_time_us(void);
+extern NSString *keyVaxPerformRate, *keyVaxRegurality, *keyVaxRegularity, *keyVaccinationInfo;
 extern RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
 extern WorldParams defaultWorldParams, userDefaultWorldParams;
 extern NSArray<NSString *> *paramKeys;

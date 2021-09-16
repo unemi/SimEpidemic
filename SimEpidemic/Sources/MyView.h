@@ -11,7 +11,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef enum {
-	ColNormal, ColAntiVax
+	ColNormal, ColAntiVax, ColVaxVariant
 } ColorType;
 
 @class Document, World;

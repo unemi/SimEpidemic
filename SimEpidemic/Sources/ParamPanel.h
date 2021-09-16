@@ -22,7 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)adjustDigitsToCurrentValue;
 @end
 
-@class Document;
+@class Document, World;
 @interface ParamPanel : NSWindowController
 	<NSWindowDelegate, NSTabViewDelegate> {
 	IBOutlet NSView *worldPView, *movePView, *pathoPView, *measPView, *testPView;
@@ -57,13 +57,12 @@ NS_ASSUME_NONNULL_BEGIN
 		*tstSbjAsyDgt, *tstSbjSymDgt;
 	IBOutlet NSSlider *tstDelaySld, *tstProcSld, *tstIntvlSld, *tstSensSld, *tstSpecSld,
 		*tstSbjAsySld, *tstSbjSymSld;
-	IBOutlet NSTextField *vcnPRateDgt, *vcn1stEffcDgt, *vcnMaxEffcDgt, *vcnMaxEffcSDgt,
-		*vcnEDelayDgt, *vcnEPeriodDgt, *vcnEDecayDgt, *vcnAntiRateDgt;
-	IBOutlet NSSlider *vcnPRateSld, *vcn1stEffcSld, *vcnMaxEffcSld, *vcnMaxEffcSSld,
-		*vcnEDelaySld, *vcnEPeriodSld, *vcnEDecaySld, *vcnAntiRateSld;
+	IBOutlet NSTextField *vcnPRateDgt, *vcnRegularityDgt, *vcnAntiRateDgt;
+	IBOutlet NSSlider *vcnPRateSld, *vcnRegularitySld, *vcnAntiRateSld;
 	IBOutlet NSTextField *vaClstrRtDgt, *vaClstrGrDgt, *vaTestRtDgt;
 	IBOutlet NSSlider *vaClstrRtSld, *vaClstrGrSld, *vaTestRtSld;
-	IBOutlet NSPopUpButton *wrkPlcModePopUp, *trcOpePopUp, *vcnPriPopUp;
+	IBOutlet NSPopUpButton *wrkPlcModePopUp, *trcOpePopUp, *trcVcnTypePopUp,
+		*vcnPriPopUp, *vcnTypePopUp;
 	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn, *saveAsUDBtn;
 	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn;
 }
@@ -81,5 +80,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (IBAction)saveDocument:(id)sender;
 - (IBAction)loadDocument:(id)sender;
 @end
+
+extern void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world);
 
 NS_ASSUME_NONNULL_END

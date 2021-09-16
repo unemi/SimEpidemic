@@ -30,6 +30,12 @@ typedef struct { Agent *agent; WarpType mode; NSPoint goal; } WarpInfo;
 typedef struct { Agent *agent; HistogramType type; CGFloat days; } HistInfo;
 typedef struct { Agent *agent; TestType reason; } TestInfo;
 typedef struct { Agent *agent; CGFloat dist; } DistanceInfo;
+typedef struct {
+	RuntimeParams *rp;
+	WorldParams *wp;
+	VariantInfo *vrInfo;
+	VaccineInfo *vxInfo;
+} ParamsForStep;
 
 @class StatInfo, MyCounter;
 #ifdef NOGUI
@@ -39,6 +45,8 @@ typedef struct { Agent *agent; CGFloat dist; } DistanceInfo;
 @interface World : NSObject {
 	RuntimeParams runtimeParams, initParams;
 	WorldParams worldParams, tmpWorldParams;
+	VariantInfo variantInfo[MAX_N_VARIANTS];
+	VaccineInfo vaccineInfo[MAX_N_VAXEN];
 	LoopMode loopMode;
 	NSInteger stopAtNDays;
 	NSLock *popLock;
@@ -49,14 +57,15 @@ typedef struct { Agent *agent; CGFloat dist; } DistanceInfo;
 	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
 	TestEntry *testQueHead, *testQueTail;
 	Gathering *gatherings;
-	NSInteger *vaccineList, vcnListIndex, vcnLateIdx, nVcnPop;
-	CGFloat vcnSubjectsRem;
+	NSInteger *vcnQueue, vcnQueIdx[N_VCN_QUEQUE];
+	CGFloat vcnSubjRem[MAX_N_VAXEN];
 }
 @property LoopMode loopMode;
 @property NSInteger stopAtNDays;
 @property (readonly) Agent *agents, **Pop, *QList, *CList;
 @property (readonly) NSMutableDictionary<NSNumber *, NSValue *> *WarpList;
 @property NSImage *popDistImage;
+@property NSMutableArray<NSMutableDictionary *> *variantList, *vaccineList;
 #ifdef DEBUGz
 @property NSInteger phaseInStep;
 #endif
@@ -85,13 +94,14 @@ typedef struct { Agent *agent; CGFloat dist; } DistanceInfo;
 - (NSInteger)scenarioIndex;
 - (void)setScenario:(NSArray *)newScen index:(NSInteger)idx;
 - (void)allocateMemory;
-- (void)reorganizeVcnInvList;
-- (void)setVaccinePriority:(VaccinePriority)newValue toInit:(BOOL)isInit;
-- (void)resetVaccineList;
+- (void)resetBoostQueue;
+- (void)resetVaccineQueue;
 - (BOOL)resetPop;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
 - (void)setScenarioWithPList:(NSArray *)plist;
 - (void)discardMemory;
+- (int)variantTypeFromName:(NSString *)varName;
+- (void)addInfected:(NSInteger)n variant:(int)variantType;
 #ifdef NOGUI
 @property (readonly) NSString *ID;
 @property (readonly) NSLock *lastTLock;
@@ -109,10 +119,10 @@ typedef struct { Agent *agent; CGFloat dist; } DistanceInfo;
 - (void)reporterConnectionWillClose:(int)desc;
 - (NSArray *)scenarioPList;
 #else
+- (void)setupVaxenAndVarintsFromLists;
 - (void)setupPhaseInfo;
 - (NSArray *)scenarioPList;
 - (CGFloat)stepsPerSec;
-- (void)addInfected:(NSInteger)n;
 - (void)runningLoopWithAnimeSteps:(NSInteger)animeSteps postProc:(void (^)(void))stepPostProc;
 - (void)goAhead;
 - (void)doOneStep;
@@ -125,5 +135,5 @@ DEC_VAL(MoveToIdxInfo, valueWithMoveToIdxInfo, moveToIdxInfoValue)
 DEC_VAL(WarpInfo, valueWithWarpInfo, warpInfoValue)
 DEC_VAL(HistInfo, valueWithHistInfo, histInfoValue)
 DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
-DEC_VAL(DistanceInfo, valueWithDistanceInfo, distanceInfo)			
+DEC_VAL(DistanceInfo, valueWithDistanceInfo, distanceInfo)
 @end
