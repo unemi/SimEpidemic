@@ -12,19 +12,22 @@
 //#define DEBUGz
 #endif
 
+typedef NSMutableArray<NSMutableDictionary *> * MutableDictArray;
 extern NSString *keyParameters, *keyScenario, *keyDaysToStop;
 extern void in_main_thread(dispatch_block_t block);
 extern NSPredicate *predicate_in_item(NSObject *item, NSString **comment);
 extern NSObject *scenario_element_from_property(NSObject *prop);
-#ifdef NOGUI
-extern NSString *check_scenario_element_from_property(NSObject *prop);
-#else
+extern void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat steps);
+#ifndef NOGUI
 extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
 #endif
 #ifdef DEBUG
 extern void my_exit(void);
 #endif
+extern MutableDictArray default_variants(void);
+extern MutableDictArray default_vaccines(void);
 
+typedef enum { IfcLocScattered, IfcLocCenter, IfcLocRandomCluster } InfecLocation;
 typedef struct { Agent *agent; NSInteger newIdx; } MoveToIdxInfo;
 typedef struct { Agent *agent; WarpType mode; NSPoint goal; } WarpInfo;
 typedef struct { Agent *agent; HistogramType type; CGFloat days; } HistInfo;
@@ -59,13 +62,15 @@ typedef struct {
 	Gathering *gatherings;
 	NSInteger *vcnQueue, vcnQueIdx[N_VCN_QUEQUE];
 	CGFloat vcnSubjRem[MAX_N_VAXEN];
+	NSInteger spanNPop[MAX_N_AGE_SPANS], ageSpanIdxs[MAX_N_AGE_SPANS], *ageSpanIDs;
+	int nAgeSpans;
 }
 @property LoopMode loopMode;
 @property NSInteger stopAtNDays;
 @property (readonly) Agent *agents, **Pop, *QList, *CList;
 @property (readonly) NSMutableDictionary<NSNumber *, NSValue *> *WarpList;
 @property NSImage *popDistImage;
-@property NSMutableArray<NSMutableDictionary *> *variantList, *vaccineList;
+@property MutableDictArray variantList, vaccineList;
 #ifdef DEBUGz
 @property NSInteger phaseInStep;
 #endif
@@ -90,25 +95,23 @@ typedef struct {
 - (void)addNewCInfoA:(Agent *)a B:(Agent *)b tm:(NSInteger)tm;
 - (void)freeGatherings:(Gathering *)gats;
 - (Gathering *)newNGatherings:(NSInteger)n;
-- (NSArray *)scenario;
-- (NSInteger)scenarioIndex;
-- (void)setScenario:(NSArray *)newScen index:(NSInteger)idx;
+- (NSString *)varNameFromKey:(NSString *)key vcnTypeReturn:(int *)vcnTypeP;
 - (void)allocateMemory;
 - (void)resetBoostQueue;
 - (void)resetVaccineQueue;
+- (void)organizeAgeSpanInfo;
 - (BOOL)resetPop;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
-- (void)setScenarioWithPList:(NSArray *)plist;
 - (void)discardMemory;
 - (int)variantTypeFromName:(NSString *)varName;
-- (void)addInfected:(NSInteger)n variant:(int)variantType;
+- (void)addInfected:(NSInteger)n location:(InfecLocation)location variant:(int)variantType;
+- (void)setupVaxenAndVariantsFromLists;
 #ifdef NOGUI
 @property (readonly) NSString *ID;
 @property (readonly) NSLock *lastTLock;
 @property NSDate *lastTouch;
 @property NSString *worldKey;
 @property void (^stopCallBack)(LoopMode);
-- (void)execScenario;
 - (CGFloat)howMuchBusy;
 - (BOOL)touch;
 - (void)start:(NSInteger)stopAt maxSPS:(CGFloat)maxSps priority:(CGFloat)prio;
@@ -117,11 +120,7 @@ typedef struct {
 - (void)addReporter:(PeriodicReporter *)rep;
 - (void)removeReporter:(PeriodicReporter *)rep;
 - (void)reporterConnectionWillClose:(int)desc;
-- (NSArray *)scenarioPList;
 #else
-- (void)setupVaxenAndVarintsFromLists;
-- (void)setupPhaseInfo;
-- (NSArray *)scenarioPList;
 - (CGFloat)stepsPerSec;
 - (void)runningLoopWithAnimeSteps:(NSInteger)animeSteps postProc:(void (^)(void))stepPostProc;
 - (void)goAhead;

@@ -11,9 +11,9 @@
 #import <sys/sysctl.h>
 #import <sys/resource.h>
 #import "Document.h"
-#import "World.h"
-#import "Agent.h"
 #import "Scenario.h"
+#import "Agent.h"
+#import "ScenPanel.h"
 #import "StatPanel.h"
 #import "Parameters.h"
 #import "Gatherings.h"
@@ -22,7 +22,18 @@
 #import "ParamPanel.h"
 #import "VVPanel.h"
 
-#ifndef NOGUI
+RainbowColorHB rainbow_color(NSInteger x, NSInteger n) {
+	RainbowColorHB rc = { x * .875 / n, .8 };
+	if (rc.hue < 1./4.) rc.hue *= 2./3.;	// red - yellow
+	else if (rc.hue < 1./2.) rc.hue = (rc.hue - 1./4.) * 2./3. + 1./6.; // yellow - green
+	else if (rc.hue < 3./4.) rc.hue = (rc.hue - 1./2.) * 4./3. + 1./3.; // green - blue
+	else {	 // blue - violet - black
+		rc.brightness *= 1. - (rc.hue - 3./4.) * 4.;
+		rc.hue = (rc.hue - 3./4.) * 4./3. + 2./3;
+	}
+	return rc;
+}
+
 @implementation NSWindowController (ChildWindowExtension)
 - (void)setupParentWindow:(NSWindow *)parentWindow {
 	if (self.window.parentWindow == nil && makePanelChildWindow)
@@ -40,7 +51,6 @@
 	}
 }
 @end
-#endif
 
 #ifdef GCD_CONCURRENT_QUEUE
 #else
@@ -195,6 +205,10 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 	saveGUICBox.state = NSControlStateValueOn;
 }
 - (void)windowWillClose:(NSNotification *)notification {
+	if (world.running) {
+		world.loopMode = LoopEndByUser;
+		[world popLock]; [world popUnlock];
+	}
 	if (scenarioPanel != nil) [scenarioPanel close];
 	if (paramPanel != nil) [paramPanel close];
 	if (dataPanel != nil) [dataPanel close];
@@ -332,7 +346,8 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 }
 - (IBAction)addInfectedPatients:(id)sender {
 	World *tmpWorld = world;
-	NSPopUpButton *vPopUp = variantTypePopUp;
+	MyView *myView = view;
+	NSPopUpButton *vPopUp = variantTypePopUp, *lPopUp = locationPopUp;
 	NSTextField *dgt = patientsNumberDgt;
 	for (NSInteger i = 0; i < world.variantList.count; i ++) {
 		NSString *name = world.variantList[i][@"name"];
@@ -345,7 +360,10 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 		[variantTypePopUp removeItemAtIndex:i];
 	[view.window beginSheet:addInfectedSheet completionHandler:^(NSModalResponse returnCode) {
 		if (returnCode != NSModalResponseOK) return;
-		[tmpWorld addInfected:dgt.integerValue variant:(int)vPopUp.indexOfSelectedItem];
+		[tmpWorld addInfected:dgt.integerValue
+			location:(InfecLocation)lPopUp.indexOfSelectedItem
+			variant:(int)vPopUp.indexOfSelectedItem];
+		in_main_thread(^{ myView.needsDisplay = YES; });
 	}];
 }
 - (IBAction)addInfectedOK:(id)sender {

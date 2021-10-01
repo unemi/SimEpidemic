@@ -182,3 +182,11 @@ NSArray *block_list(void) {
 	[blockDictLock unlock];
 	return result;
 }
+BOOL unblock(uint32 ipaddr) {
+	NSNumber *key = @(ipaddr);
+	[blockDictLock lock];
+	BOOL exist = blockDict[key] != nil;
+	if (exist) [blockDict removeObjectForKey:key];
+	[blockDictLock unlock];
+	return exist;
+}

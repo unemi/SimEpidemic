@@ -29,6 +29,7 @@
 "vaccinePerformRate" = "vaccination speed";
 "vaccinePriority" = "priority order";
 "vaccineRegularity" = "priority regularity";
+"vaccineFinalRate" = "final vaccination rate";
 
 "PreConditionWord" = "";
 "AnimeStepsFormat" = "Draw in each %ld steps.";

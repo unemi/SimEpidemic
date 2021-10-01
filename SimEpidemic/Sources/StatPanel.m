@@ -7,6 +7,7 @@
 //
 
 #import "StatPanel.h"
+#import "Agent.h"
 #import "World.h"
 #ifndef NOGUI
 #import "Document.h"
@@ -83,6 +84,7 @@ static void free_stat_mem(StatData **memp) {
 	_DeathPHist = NSMutableArray.new;
 	_NInfectsHist = NSMutableArray.new;
 	_sspData = [NSMutableData dataWithLength:sizeof(NSInteger) * SSP_MaxSteps * SSP_NRanks];
+	_variantsData = [NSMutableData dataWithLength:sizeof(NSInteger) * MAX_N_REC * MAX_N_VARIANTS];
 #ifndef NOGUI
 	imgBm = malloc(IMG_WIDTH * IMG_HEIGHT * 4);
 	scenarioPhases = NSMutableArray.new;
@@ -95,6 +97,7 @@ static void free_stat_mem(StatData **memp) {
 - (void)discardMemory {
 	_world = nil;
 	[statLock lock];
+	_sspData = _variantsData = nil;
 	free_stat_mem(&_statistics);
 	free_stat_mem(&_transit);
 	[statLock unlock];
@@ -160,6 +163,7 @@ static void free_stat_mem(StatData **memp) {
 //	[_NInfectsHist addObject:MyCounter.new];
 //	_NInfectsHist[0].cnt = nInitInfec;
 	memset(_sspData.mutableBytes, 0, _sspData.length);
+	memset(_variantsData.mutableBytes, 0, _variantsData.length);
 #ifndef NOGUI
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	[scenarioPhases removeAllObjects];
@@ -229,6 +233,9 @@ static void count_severity(Agent *a, NSInteger *cnt) {
 	if (rank < 0) rank = 0; else if (rank >= SSP_NRanks) rank = SSP_NRanks - 1;
 	cnt[rank] ++;
 }
+static void count_infected_variants(Agent *a, NSInteger *cnt) {
+	if (is_infected(a)) cnt[a->virusVariant] ++;
+}
 static CGFloat calc_positive_rate(NSUInteger *count) {
 	NSUInteger tt = count[TestPositive] + count[TestNegative];
 	return (tt == 0)? 0. : (CGFloat)count[TestPositive] / tt;
@@ -249,6 +256,11 @@ static CGFloat calc_reproduct_rate(NSInteger nInfec, InfecQueInfo *info) {
 	CGFloat denomi = n * sumX2 - sumX * sumX;
 	return (fabs(denomi) < 1e-6)? 0. :
 		(n * sumXY - sumX * sumY) / denomi;
+}
+static void shrink_data_in_half(NSMutableData *data, NSInteger unit) {
+	NSInteger *dt = (NSInteger *)data.mutableBytes;
+	for (NSInteger i = 0; i < MAX_N_REC; i += 2)
+		memcpy(dt + i / 2 * unit, dt + (i + 1) * unit, sizeof(NSInteger) * unit);
 }
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects {
@@ -355,9 +367,13 @@ static CGFloat calc_reproduct_rate(NSInteger nInfec, InfecQueInfo *info) {
 			testResultsW[idx].negative = dailyTests[TestNegative];
 		}
 		if (days % skipDays == 0) {
-			NSInteger *cnt = (NSInteger *)_sspData.mutableBytes + SSP_NRanks * days;
-			for (Agent *a = _world.QList; a != NULL; a = a->next)
-				count_severity(a, cnt);
+			NSInteger idx = days / skipDays;
+			NSInteger *cntS = (NSInteger *)_sspData.mutableBytes + SSP_NRanks * idx;
+			NSInteger *cntV = (NSInteger *)_variantsData.mutableBytes + MAX_N_VARIANTS * idx;
+			for (Agent *a = _world.QList; a != NULL; a = a->next) {
+				count_severity(a, cntS);
+				count_infected_variants(a, cntV);
+			}
 		}
 		days ++;
 		if (maxDailyPRate < transDaily.pRate) maxDailyPRate = transDaily.pRate;
@@ -386,10 +402,8 @@ static CGFloat calc_reproduct_rate(NSInteger nInfec, InfecQueInfo *info) {
 					q->next = freeStat;
 					freeStat = q;
 				}
-				NSInteger *sspDt = (NSInteger *)_sspData.bytes;
-				for (NSInteger i = 0; i < SSP_MaxSteps; i += 2)
-					memcpy(sspDt + i / 2 * SSP_NRanks, sspDt + (i + 1) * SSP_NRanks,
-						sizeof(NSInteger) * SSP_NRanks);
+				shrink_data_in_half(_sspData, SSP_NRanks);
+				shrink_data_in_half(_variantsData, MAX_N_VARIANTS);
 				[statLock unlock];
 				skipDays *= 2;
 	}}}
@@ -590,6 +604,53 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 	}
 	[ctx restoreGraphicsState];
 }
+- (void)drawCompositionData:(NSData *)data
+	ranks:(NSInteger)nRanks drawRanks:(NSInteger)drawRanks bounds:(NSRect)bounds {
+	NSRect dRect = drawing_area(bounds);
+	NSArray *labels =
+	  [self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y} xMax:steps];
+	NSInteger nPts = days / skipDays, nCnks = nRanks / drawRanks, maxSymp = 0;
+	if (nPts > 1) {
+		NSInteger *sspDt = (NSInteger *)data.bytes,
+			*sspTbl = malloc(sizeof(NSInteger) * drawRanks * nPts),
+			*dtP = sspDt, *tblP = sspTbl;
+	  for (NSInteger j = 0; j < nPts; j ++, dtP += nRanks, tblP += drawRanks) {
+		  NSInteger s = 0;
+		  for (NSInteger i = 0; i < drawRanks; i ++) {
+			  NSInteger ss = 0;
+			  for (NSInteger k = 0; k < nCnks; k ++)
+				  ss += dtP[(drawRanks - 1 - i) * nCnks + k];
+			  tblP[i] = (s += ss);
+		  }
+		  if (maxSymp < s) maxSymp = s;
+	  }
+	  NSPoint *pts = malloc(sizeof(NSPoint) * nPts * 2);
+	  for (NSInteger j = 0; j < nPts; j ++)
+		  pts[j].x = dRect.origin.x + dRect.size.width * j / (nPts - 1);
+	  pts[nPts].x = NSMaxX(dRect); pts[nPts + 1].x = dRect.origin.x;
+	  pts[nPts].y = pts[nPts + 1].y = dRect.origin.y;
+	  for (NSInteger i = 0; i < drawRanks; i ++) {
+		  tblP = sspTbl + i;
+		  for (NSInteger j = 0; j < nPts; j ++, tblP += drawRanks)
+			  pts[j].y = dRect.origin.y + dRect.size.height * tblP[0] / maxSymp;
+		  NSBezierPath *path = NSBezierPath.new;
+		  [path appendBezierPathWithPoints:pts count:(i==0)? nPts + 2 : nPts * 2];
+		  RainbowColorHB hb = rainbow_color(i, drawRanks);
+		  [[NSColor colorWithHue:hb.hue saturation:.75 brightness:hb.brightness alpha:1.] setFill];
+		  [path fill];
+		  if (i < nRanks - 1)
+			  for (NSInteger j = 0; j < nPts; j ++)
+				  pts[nPts * 2 - 1 - j] = pts[j];
+	  }
+	  free(pts);
+	  free(sspTbl);
+	}
+	[self drawLabels:labels y:NSMaxY(bounds)];
+	draw_tics(bounds, (CGFloat)steps/_world.worldParamsP->stepsPerDay);
+	[[NSString stringWithFormat:@"%@ %ld", NSLocalizedString(@"max count", nil), maxSymp]
+		drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
+		withAttributes:textAttributes];
+}
 - (void)drawWithType:(StatType)type info:(TimeEvoInfo *)info bounds:(NSRect)bounds {
 	static NSNumberFormatter *decFormat = nil;
 	if (textAttributes == nil) {
@@ -643,49 +704,14 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 			withAttributes:textAttributes];
 		draw_tics(bounds, isTransit? days : (CGFloat)steps/_world.worldParamsP->stepsPerDay);
 		} break;
-		case StatSeverity: {
-		NSRect dRect = drawing_area(bounds);
-		NSArray *labels =
-			[self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y} xMax:steps];
-		NSInteger nPts = steps/_world.worldParamsP->stepsPerDay, maxSymp = 0;
-		if (nPts > 1) {
-			while (nPts > SSP_MaxSteps) nPts /= 2;
-			NSInteger *sspDt = (NSInteger *)_sspData.bytes,
-				*sspTbl = malloc(sizeof(NSInteger) * SSP_NDrawRanks * nPts),
-				*dtP = sspDt, *tblP = sspTbl;
-			for (NSInteger j = 0; j < nPts; j ++, dtP += SSP_NRanks, tblP += SSP_NDrawRanks) {
-				NSInteger s = 0;
-				for (NSInteger i = 0; i < SSP_NDrawRanks; i ++) {
-					NSInteger ss = 0;
-					for (NSInteger k = 0; k < SSP_DrawCnkSize; k ++)
-						ss += dtP[(SSP_NDrawRanks - 1 - i) * SSP_DrawCnkSize + k];
-					tblP[i] = (s += ss);
-				}
-				if (maxSymp < s) maxSymp = s;
-			}
-			NSPoint *pts = malloc(sizeof(NSPoint) * nPts * 2);
-			for (NSInteger j = 0; j < nPts; j ++)
-				pts[j].x = dRect.origin.x + dRect.size.width * j / (nPts - 1);
-			pts[nPts].x = NSMaxX(dRect); pts[nPts + 1].x = dRect.origin.x;
-			pts[nPts].y = pts[nPts + 1].y = dRect.origin.y;
-			for (NSInteger i = 0; i < SSP_NDrawRanks; i ++) {
-				tblP = sspTbl + i;
-				for (NSInteger j = 0; j < nPts; j ++, tblP += SSP_NDrawRanks)
-					pts[j].y = dRect.origin.y + dRect.size.height * tblP[0] / maxSymp;
-				NSBezierPath *path = NSBezierPath.new;
-				[path appendBezierPathWithPoints:pts count:(i==0)? nPts + 2 : nPts * 2];
-				[[NSColor colorWithHue:i * .75 / SSP_NDrawRanks saturation:.75 brightness:.8 alpha:1.] setFill];
-				[path fill];
-				if (i < SSP_NRanks - 1)
-					for (NSInteger j = 0; j < nPts; j ++)
-						pts[nPts * 2 - 1 - j] = pts[j];
-			}
-			free(pts);
-			free(sspTbl);
-		}
-		[self drawLabels:labels y:NSMaxY(bounds)];
-		draw_tics(bounds, (CGFloat)steps/_world.worldParamsP->stepsPerDay);
-		} break;
+		case StatSeverity:
+		[self drawCompositionData:_sspData
+			ranks:SSP_NRanks drawRanks:SSP_NDrawRanks bounds:bounds];
+		break;
+		case StatVariants:
+		[self drawCompositionData:_variantsData
+			ranks:MAX_N_VARIANTS drawRanks:MAX_N_VARIANTS bounds:bounds];
+		break;
 		case StatPeriods:
 		show_period_hist(_IncubPHist, 0, bounds.size, @"Incubation Period");
 		show_period_hist(_RecovPHist, 1, bounds.size, @"Recovery Period");

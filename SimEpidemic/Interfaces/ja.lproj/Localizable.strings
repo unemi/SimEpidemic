@@ -22,11 +22,14 @@
 "vaccinePerformRate" = "ワクチン接種率/日";
 "vaccinePriority" = "接種優先順位";
 "vaccineRegularity" = "接種順位の規則性";
+"vaccineFinalRate" = "最終ワクチン接種率";
 "Random" = "ランダム";
 "Elder" = "高齢者優先";
 "Center" = "中央優先";
 "Density" = "人口密度";
 
+"Age" = "年齢";
+"Rate" = "百分率";
 "Effective with Scenario" = "シナリオ開始時に適用されます。";
 "Start" = "開始";
 "Stop" = "停止";
@@ -73,6 +76,7 @@
 "Incubation Period" = "潜伏期間";
 "Recovery Period" = "回復までの期間";
 "Fatal Period" = "死亡までの期間";
+"Spreaders" = "1人からの感染者数";
 "item" = "項目";
 "items" = "項目";
 "Remove scenario from the simulator" = "シナリオをシミュレータから削除";

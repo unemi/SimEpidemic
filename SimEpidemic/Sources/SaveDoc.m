@@ -7,14 +7,14 @@
 //
 
 #import "SaveDoc.h"
-#import "World.h"
+#import "Scenario.h"
 #ifdef NOGUI
 #import "../../SimEpidemicSV/noGUI.h"
 #else
 #import "Document.h"
 #import "MyView.h"
 #import "ParamPanel.h"
-#import "Scenario.h"
+#import "ScenPanel.h"
 #import "DataPanel.h"
 #endif
 #import "Agent.h"
@@ -45,8 +45,8 @@ static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*keyStep = @"step", *keyScenarioIndex = @"scenarioIndex",
 	*keyParamChangers = @"paramChangers",
 	*fnPopDensMap = @"populationDesityMap.gz",
-	*fnForVaccine = @"forVaccine.gz",
-	*fnSeverityStats = @"severityStats.gz";
+	*fnSeverityStats = @"severityStats.gz",
+	*fnVariantsStats = @"variantsStats.gz";
 #ifndef NOGUI
 static NSString *fnStatImageBM = @"statImageBitmap.gz",
 	*fnUIInfo = @"UIInfo.plist",
@@ -331,6 +331,11 @@ static StatData *stat_chain_from_data(NSData *data) {
 	return (nSteps <= 0)? nil : [NSData dataWithBytes:self.sspData.bytes
 		length:sizeof(NSInteger) * nSteps * SSP_NRanks];
 }
+- (NSData *)dataOfVariantsStats {
+	NSInteger nSteps = days / skipDays;
+	return (nSteps <= 0)? nil : [NSData dataWithBytes:self.variantsData.bytes
+		length:sizeof(NSInteger) * nSteps * MAX_N_VARIANTS];
+}
 #ifndef NOGUI
 - (NSData *)dataOfImageBitmap {
 	return [NSData dataWithBytes:imgBm length:IMG_WIDTH * IMG_HEIGHT * 4];
@@ -413,8 +418,9 @@ NSDictionary *plist_from_data(NSData *data) {
 	if (plist == nil) @throw error;
 	return plist;
 }
-NSMutableArray *mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
-	if ([list isKindOfClass:NSMutableArray.class]) {
+MutableDictArray mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
+	if (![list isKindOfClass:NSArray.class]) return nil;
+	else if ([list isKindOfClass:NSMutableArray.class]) {
 		BOOL mutable = YES;
 		for (NSDictionary *dict in list)
 			if (![dict isKindOfClass:NSMutableDictionary.class]) { mutable = NO; break; }
@@ -422,7 +428,8 @@ NSMutableArray *mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
 	}
 	NSMutableArray *ma = NSMutableArray.new;
 	for (NSDictionary *dict in list) {
-		if (![dict isKindOfClass:NSMutableDictionary.class]) [ma addObject:dict];
+		if (![dict isKindOfClass:NSDictionary.class]) continue;
+		else if ([dict isKindOfClass:NSMutableDictionary.class]) [ma addObject:dict];
 		else [ma addObject:[NSMutableDictionary dictionaryWithDictionary:dict]];
 	}
 	return ma;
@@ -442,7 +449,7 @@ NSMutableArray *mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
 z(orgPt); z(daysInfected); z(daysDiseased); z(daysToCompleteRecov);\
 z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr); z(firstDoseDate); z(agentImmunity);\
 z(mass); z(mobFreq); z(gatFreq); z(age); z(activeness);\
-z(health); z(nInfects); z(virusVariant); z(vaccineType);\
+z(health); z(forVcn); z(nInfects); z(virusVariant); z(vaccineType);\
 z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 
 #define CP_S(m) as[i].m = a->m
@@ -547,15 +554,6 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 	memcpy(vcnMem->index, vcnQueIdx, sizeof(vcnQueIdx));
 	memcpy(vcnMem->queue, vcnQueue, sizeof(NSInteger) * nPop * N_VCN_QUEQUE);
 	md[fnVaccineQueue] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
-
-	mdata.length = sizeof(ForVaccine) * nPop;
-	ForVaccine *vcnSv = mdata.mutableBytes;
-	BOOL isUseful = NO;
-	for (NSInteger i = 0; i < nPop; i ++)
-		if ((vcnSv[i] = self.agents[i].forVcn) != VcnAccept) isUseful = YES;
-	if (isUseful) md[fnForVaccine] =
-		[NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
-	
 	md[fnStatInfo] = fileWrapper_from_plist([statInfo statiInfoPList]);
 	md[fnHistograms] = fileWrapper_from_plist([statInfo dictOfHistograms]);
 	NSData *data;
@@ -565,6 +563,8 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 		md[fnStatTransit] = [NSFileWrapper.alloc initRegularFileWithContents:data];
 	if ((data = [statInfo dataOfSeverityStats]) != nil)
 		md[fnSeverityStats] = [NSFileWrapper.alloc initRegularFileWithContents:[data zippedData]];
+	if ((data = [statInfo dataOfVariantsStats]) != nil)
+		md[fnVariantsStats] = [NSFileWrapper.alloc initRegularFileWithContents:[data zippedData]];
 #ifndef NOGUI
 	md[fnStatImageBM] = [NSFileWrapper.alloc initRegularFileWithContents:
 		[[statInfo dataOfImageBitmap] zippedData]];
@@ -611,7 +611,7 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 		{ self.variantList = mutablized_array_of_dicts(seq); vvLoaded = YES; }
 	if ((seq = dict[keyVaccineList]) != nil)
 		{ self.vaccineList = mutablized_array_of_dicts(seq); vvLoaded = YES; }
-	if (vvLoaded) [self setupVaxenAndVarintsFromLists];
+	if (vvLoaded) [self setupVaxenAndVariantsFromLists];
 	return dict;
 }
 #define CP_L(m) a->m = as[i].m
@@ -629,7 +629,6 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 		a->prev = a->next = NULL;
 		a->contactInfoHead = a->contactInfoTail = NULL;
 		a->newHealth = a->health;
-		a->forVcn = VcnAccept;
 		a->isOutOfField = YES;
 		if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
 		else if (!a->isWarping) {
@@ -637,6 +636,7 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 			else add_to_list(a, self.QListP);
 		}
 	}
+	[self organizeAgeSpanInfo];
 }
 - (void)readContactsFromFileWrapper:(NSFileWrapper *)fw {
 	if (!fw.regularFile) return;
@@ -710,15 +710,6 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 - (void)resetVaccineQueueIfNecessary {
 	if (vcnQueue != NULL) [self resetVaccineQueue];
 }
-- (void)readAntiVaxFromFileWrapper:(NSFileWrapper *)fw {
-	if (!fw.regularFile) return;
-	NSData *data = [fw.regularFileContents unzippedData];
-	if (data.length < sizeof(ForVaccine) * worldParams.initPop)
-		@throw @"Data for vaccination attitudes is short.";
-	const ForVaccine *vcnSv = data.bytes;
-	for (NSInteger i = 0; i < worldParams.initPop; i ++)
-		self.agents[i].forVcn = vcnSv[i];
-}
 - (void)readPopDensMapFromFileWrapper:(NSFileWrapper *)fw {
 	if (!fw.regularFile) return;
 	NSData *data = [fw.regularFileContents unzippedData];
@@ -757,6 +748,12 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 	return [NSFileWrapper.alloc initDirectoryWithFileWrappers:md];;
 }
 #endif
+static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
+	if (!fw.regularFile) return;
+	NSData *srcData = [fw.regularFileContents unzippedData];
+	memcpy(dstData.mutableBytes, srcData.bytes,
+		(srcData.length < dstData.length)? srcData.length : dstData.length);
+}
 - (BOOL)readFromDict:(NSDictionary *)dict error:(NSError **)outError {
 	@try {
 	NSFileWrapper *fw = dict[fnParamsPList];
@@ -773,13 +770,8 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 	if ((fw = dict[fnGatherings]) != nil) [self readGatheringsFromFileWrapper:fw];
 	if ((fw = dict[fnVaccineQueue]) != nil) [self readVaccineQueueFromFileWrapper:fw];
 	else [self resetVaccineQueueIfNecessary];
-	if ((fw = dict[fnForVaccine]) != nil) [self readAntiVaxFromFileWrapper:fw];
-	if ((fw = dict[fnSeverityStats]) != nil && fw.regularFile) {
-		NSData *data = [fw.regularFileContents unzippedData];
-		NSInteger len = statInfo.sspData.length;
-		if (len > data.length) len = data.length;
-		memcpy(statInfo.sspData.mutableBytes, data.bytes, len);
-	}
+	if ((fw = dict[fnSeverityStats]) != nil) copy_data_from_fw(fw, statInfo.sspData);
+	if ((fw = dict[fnVariantsStats]) != nil) copy_data_from_fw(fw, statInfo.variantsData);
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st setStatInfoFromPList:plist_from_data(fw.regularFileContents)]; }];

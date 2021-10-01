@@ -57,8 +57,9 @@ typedef struct {
 	CGFloat mass, mobFreq, gatFreq;
 	CGFloat age, activeness;
 	HealthType health;
+	ForVaccine forVcn;
 	int nInfects, virusVariant, vaccineType;
-	BOOL distancing, isOutOfField, isWarping, gotAtHospital,
+	BOOL distancing, isOutOfField, isWarping,
 		inTestQueue;
 	NSInteger lastTested;
 } AgentSave;

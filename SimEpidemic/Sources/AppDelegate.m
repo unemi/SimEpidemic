@@ -8,6 +8,7 @@
 
 #import "AppDelegate.h"
 #import "Document.h"
+#import "World.h"
 #import "SaveDoc.h"
 #ifdef NOGUI
 #import "../../SimEpidemicSV/noGUI.h"
@@ -151,8 +152,9 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"gatheringBias", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"incubationBias", {.f = { 0., -100., 100.}}},
 	{ ParamTypeFloat, @"fatalityBias", {.f = { 0., -100., 100.}}},
-	{ ParamTypeFloat, @"recoveryBias", {.f = { 0., -100., 100.}}},
+//	{ ParamTypeFloat, @"recoveryBias", {.f = { 0., -100., 100.}}},
 	{ ParamTypeFloat, @"immunityBias", {.f = { 0., -100., 100.}}},
+	{ ParamTypeFloat, @"therapyEfficacy", {.f = { 0., 0., 100.}}},
 
 	{ ParamTypeFloat, @"contagionDelay", {.f = { .5, 0., 10.}}},
 	{ ParamTypeFloat, @"contagionPeak", {.f = { 3., 1., 10.}}},
@@ -179,7 +181,7 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeDist, @"mobilityDistance", {.d = { 10., 30., 80.}}},
 	{ ParamTypeDist, @"incubation", {.d = { 1., 5., 14.}}},
 	{ ParamTypeDist, @"fatality", {.d = { 4., 16., 20.}}},
-	{ ParamTypeDist, @"recovery", {.d = { 4., 10., 40.}}},
+//	{ ParamTypeDist, @"recovery", {.d = { 4., 10., 40.}}},
 //	{ ParamTypeDist, @"immunity", {.d = { 30., 180., 360.}}},
 	{ ParamTypeDist, @"gatheringSize", {.d = { 5., 10., 20.}}},
 	{ ParamTypeDist, @"gatheringDuration", {.d = { 6., 12., 24.}}},
@@ -197,10 +199,14 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"initialRecovered", {.f = { 0., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineAsymptomatic", {.f = { 20., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineSymptomatic", {.f = { 50., 0., 100.}}},
-	{ ParamTypeRate, @"vaccineAntiRate", {.f = { 30., 0., 100.}}},
+//	{ ParamTypeRate, @"vaccineAntiRate", {.f = { 30., 0., 100.}}},
 	{ ParamTypeRate, @"antiVaxClusterRate", {.f = { 60., 0., 100.}}},
 	{ ParamTypeRate, @"antiVaxClusterGranularity", {.f = { 50., 0., 100.}}},
 	{ ParamTypeRate, @"antiVaxTestRate", {.f = { 50., 0., 100.}}},
+	{ ParamTypeRate, @"recoveryBias", {.f = { 150., 0., 200.}}},
+	{ ParamTypeRate, @"recoveryTemp", {.f = { 50., 1., 100.}}},
+	{ ParamTypeRate, @"recoveryUpperRate", {.f = { 500., 100., 900.}}},
+	{ ParamTypeRate, @"recoveryLowerRate", {.f = { 40., 0., 100.}}},
 	{ ParamTypeRate, @"vaccineFirstDoseEfficacy", {.f = { 30., 0., 100.}}},
 	{ ParamTypeRate, @"vaccineMaxEfficacy", {.f = { 90., 0., 100.}}},
 	{ ParamTypeRate, @"vaccineEfficacySymp", {.f = { 95., 0., 100.}}},
@@ -214,8 +220,14 @@ static ParamInfo paramInfo[] = {
 
 	{ ParamTypeNone, nil }
 };
+static VaccineFinalRate defaultVaxFnlRt[MAX_N_AGE_SPANS] = {
+	{2, 0.}, {12, 0.}, {15, .9}, {20, .7}, {50, .8}, {65, .85}, {200, .9},
+	{-1, 0.}
+};
+
 NSString *keyVaxPerformRate = @"performRate", *keyVaxRegularity = @"regularity",
-	*keyVaxPriority = @"priority", *keyVaccinationInfo = @"vaccinationInfo";
+	*keyVaxPriority = @"priority", *keyVaccinationInfo = @"vaccinationInfo",
+	*keyVaccineFinalRate = @"vaccineFinalRate";
 NSInteger defaultAnimeSteps = 1;
 RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
 WorldParams defaultWorldParams, userDefaultWorldParams;
@@ -249,6 +261,14 @@ static void add_vax_info(NSMutableDictionary *md, VaccinationInfo *vp) {
 	}
 	if (ma.count > 0) md[keyVaccinationInfo] = ma;
 }
+static void add_final_vax(NSMutableDictionary *md, VaccineFinalRate *vp) {
+	NSMutableArray *ma = NSMutableArray.new;
+	for (NSInteger idx = 0; idx < MAX_N_AGE_SPANS; idx ++) {
+		[ma addObjectsFromArray:@[@(vp[idx].upperAge), @(vp[idx].rate * 100.)]];
+		if (vp[idx].upperAge > 150) break;
+	}
+	if (ma.count > 0) md[keyVaccineFinalRate] = ma;
+}
 NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	ParamPointers pp = param_pointers(rp, wp);
@@ -266,6 +286,7 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 		default: break;
 	}
 	add_vax_info(md, rp->vcnInfo);
+	add_final_vax(md, rp->vcnFnlRt);
 	return md;
 }
 void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict) {
@@ -289,6 +310,17 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 				}
 				for (NSInteger idx = nVaxen; idx < MAX_N_VAXEN; idx ++)
 					rp->vcnInfo[idx].priority = VcnPrNone;
+			} else if ([key isEqualToString:keyVaccineFinalRate] &&
+				[dict[key] isKindOfClass:NSArray.class]) {
+				NSArray<NSNumber *> *frList = dict[key];
+				NSInteger nSpans = frList.count / 2;
+				if (nSpans > MAX_N_AGE_SPANS) nSpans = MAX_N_AGE_SPANS;
+				for (NSInteger idx = 0; idx < nSpans; idx ++) {
+					rp->vcnFnlRt[idx].upperAge = frList[idx * 2].integerValue;
+					rp->vcnFnlRt[idx].rate = frList[idx * 2 + 1].doubleValue / 100.;
+				}
+				if (rp->vcnFnlRt[nSpans - 1].upperAge < 150)
+					rp->vcnFnlRt[nSpans - 1].upperAge = 200;
 			}
 			continue;
 		}
@@ -351,14 +383,21 @@ NSMutableDictionary *param_diff_dict(
 		} break;
 		default: break;
 	}
-	BOOL vaxInfoSame = YES;
+	BOOL isSame = YES;
 	for (NSInteger idx = 0; idx < MAX_N_VAXEN; idx ++) {
 		if (rpNew->vcnInfo[idx].priority == VcnPrNone
 			&& rpOrg->vcnInfo[idx].priority == VcnPrNone) break;
 		if (memcmp(&rpNew->vcnInfo[idx], &rpOrg->vcnInfo[idx], sizeof(VaccinationInfo)))
-			{ vaxInfoSame = NO; break; }
+			{ isSame = NO; break; }
 	}
-	if (!vaxInfoSame) add_vax_info(md, rpNew->vcnInfo);
+	if (!isSame) add_vax_info(md, rpNew->vcnInfo);
+	isSame = YES;
+	for (NSInteger idx = 0; idx < MAX_N_AGE_SPANS; idx ++) {
+		if (rpNew->vcnFnlRt[idx].upperAge != rpOrg->vcnFnlRt[idx].upperAge
+		 || rpNew->vcnFnlRt[idx].rate != rpOrg->vcnFnlRt[idx].rate) { isSame = NO; break; }
+		if (rpNew->vcnFnlRt[idx].upperAge > 150 && rpOrg->vcnFnlRt[idx].upperAge > 150) break;
+	}
+	if (!isSame) add_final_vax(md, rpNew->vcnFnlRt);
 	return md;
 }
 #ifndef NOGUI
@@ -442,6 +481,12 @@ static NSInteger
 	defaultRuntimeParams.vcnInfo[0].regularity = 100.;
 	defaultRuntimeParams.vcnInfo[0].priority = VcnPrRandom;
 	defaultRuntimeParams.vcnInfo[1].priority = VcnPrNone;
+	NSInteger upper = 0;
+	for (NSInteger i = 0; i < MAX_N_AGE_SPANS; i ++) {
+		if (upper < 0) defaultVaxFnlRt[i] = (VaccineFinalRate){-1, 0.};
+		else if (defaultVaxFnlRt[i].upperAge > 150) upper = -1;
+	}
+	memcpy(defaultRuntimeParams.vcnFnlRt, defaultVaxFnlRt, sizeof(defaultVaxFnlRt));
 	
 	NSInteger nn = nF + nD + nI + nR + nE + nH;
 	NSString *keys[nn], *names[nF];

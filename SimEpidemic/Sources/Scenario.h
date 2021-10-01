@@ -2,71 +2,22 @@
 //  Scenario.h
 //  SimEpidemic
 //
-//  Created by Tatsuo Unemi on 2020/05/17.
-//  Copyright © 2020 Tatsuo Unemi. All rights reserved.
+//  Created by Tatsuo Unemi on 2021/10/01.
+//  Copyright © 2021 Tatsuo Unemi. All rights reserved.
 //
-
-#import <Cocoa/Cocoa.h>
-#import "CommonTypes.h"
+#import <AppKit/AppKit.h>
+#import "World.h"
 
 NS_ASSUME_NONNULL_BEGIN
-typedef enum { CondTypeRunUntil, CondTypeMoveWhen } CondType;
-typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
-@class Document, World, Scenario, ButtonsCellView, ParamItem;
-
-@interface ScenarioItem : NSObject {
-	Scenario *scenario;
-}
-@property NSTableCellView *view;
-@property (readonly) NSTableCellView *lnView;
-@property (readonly) ButtonsCellView *btnsView;
-- (void)buttonAction:(NSButton *)button;
+@interface World (Scenario)
+- (void)execScenario;
+- (NSArray *)scenario;
+- (NSInteger)scenarioIndex;
+- (void)setScenario:(NSArray *)newScen index:(NSInteger)idx;
+- (NSArray *)scenarioPList;
+#ifndef NOGUI
+- (void)setupPhaseInfo;
+#endif
+- (void)setScenarioWithPList:(NSArray *)plist;
 @end
-@interface CondElmItem : ScenarioItem
-@property (weak) ScenarioItem *parent;
-@end
-@interface ComparisonItem : CondElmItem <NSTextFieldDelegate> {
-	NSInteger varIndex, opeIndex;
-	NSInteger maxValue;
-	CGFloat ratioValue;
-	NSInteger days;
-}
-@end
-@interface CompoundItem : CondElmItem
-@property NSMutableArray<CondElmItem *> *children;
-- (void)replaceChildAtIndex:(NSInteger)index withItem:(CondElmItem *)newChild;
-@end
-@interface CondItem : ScenarioItem <NSTextFieldDelegate> {
-	CondType condType;
-	NSString *orgLabel;
-	NSInteger destination;
-}
-@property CondElmItem *element;
-@property NSPredicate *predicate;
-- (void)replaceElementWithItem:(CondElmItem *)newElement;
-@end
-
-@interface Scenario : NSWindowController 
-	<NSWindowDelegate, NSTextFieldDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate> {
-	IBOutlet NSButton *shiftUpBtn, *shiftDownBtn, *deselectBtn;
-	IBOutlet NSButton *removeBtn, *applyBtn;
-	IBOutlet NSWindow *distParamSheet;
-	IBOutlet NSTextField *minDgt, *maxDgt, *modeDgt;
-	NSMutableArray<ScenarioItem *> *itemList;
-}
-@property IBOutlet NSOutlineView *outlineView;
-@property (readonly) Document *doc;
-@property (readonly) World *world;
-@property (readonly) NSUndoManager *undoManager;
-@property (readonly) NSNumberFormatter *intFormatter;
-- (instancetype)initWithDoc:(Document *)dc;
-- (void)makeDocItemList;
-- (void)adjustControls:(BOOL)undoOrRedo;
-- (NSInteger)numberOfItems;
-- (void)removeItem:(ScenarioItem *)item;
-- (CondElmItem *)itemWithPredicate:(NSPredicate *)predicate parent:(ScenarioItem *)parent;
-- (void)setScenarioWithArray:(NSArray *)array;
-- (void)distParamBySheetWithItem:(ParamItem *)item value:(DistInfo *)info;
-@end
-
 NS_ASSUME_NONNULL_END

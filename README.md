@@ -8,7 +8,8 @@ This is an individual-based simulator to help understanding the dynamics of epid
 
 This repository includes two different versions, macOS application and HTTP server. Both run on macOS 10.14, 10.15, and 11.0. The project file SimEpidemic.xcodeproj is tuned for Intel-based machine, but you can configure it for Apple M1 CPU.
 
-You can find more detail of the project at [http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/](http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/).
+You can find more detail of the project at [http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/](http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/)
+and the technical detail in Japanese at  [http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/simepidemic-docs.html](http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/simepidemic-docs.html).
 
 ## Subdirectories
 - SimEpidemic ... macOS application.

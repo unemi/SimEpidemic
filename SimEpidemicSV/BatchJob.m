@@ -9,8 +9,9 @@
 #import "BatchJob.h"
 #import "noGUI.h"
 #import "SaveState.h"
-#import "../SimEpidemic/Sources/World.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
+#import "../SimEpidemic/Sources/Scenario.h"
+#import "../SimEpidemic/Sources/SaveDoc.h"
 #import <os/log.h>
 
 @implementation StatInfo (JobResultExtension)
@@ -82,14 +83,15 @@
 	}
 	return rows;
 }
-- (NSArray *)objectOfSeverityStats {
-	NSInteger *sspStat = (NSInteger *)self.sspData.bytes, *p = sspStat;
+- (NSArray *)objectOfStatsInData:(NSData *)data unit:(NSInteger)unit {
+	NSInteger *stat = (NSInteger *)data.bytes, *p = stat;
 	NSInteger nSteps = days / skipDays;
 	NSMutableArray *rows = NSMutableArray.new;
-	for (NSInteger i = 0; i < nSteps; i ++, p += SSP_NRanks) {
-		NSNumber *row[SSP_NRanks + 1] = {@((i + 1) * skipDays)};
-		for (NSInteger j = 0; j < SSP_NRanks; j ++) row[j + 1] = @(p[j]);
-		[rows addObject:[NSArray arrayWithObjects:row count:SSP_NRanks + 1]];
+	NSNumber *row[unit + 1];
+	for (NSInteger i = 0; i < nSteps; i ++, p += unit) {
+		row[0] = @((i + 1) * skipDays);
+		for (NSInteger j = 0; j < unit; j ++) row[j + 1] = @(p[j]);
+		[rows addObject:[NSArray arrayWithObjects:row count:unit + 1]];
 	}
 	return rows;
 }
@@ -188,6 +190,54 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 	MY_LOG("%s", buf);
 }
 #endif
+static NSString *check_paramname_in_chng_prm_elm(NSArray *prop) {
+	NSString *paramName = prop[0];
+	if (![paramName isKindOfClass:NSString.class]) return nil;
+	@try {
+		NSNumber *idxNum = paramIndexFromKey[(NSString *)prop[0]];
+		if (idxNum != nil) {
+			NSInteger idx = idxNum.integerValue;
+			if ((idx >= IDX_I && idx < IDX_E) || idx >= IDX_H) {
+				if (![paramName hasPrefix:@"vaccine"] || prop.count > 2)
+					@throw @"invalid to modify in scenario.";
+			}
+		} else if ([paramName hasPrefix:@"vaccine"]) {
+			NSString *suffix;
+			NSScanner *scan = [NSScanner scannerWithString:paramName];
+			[scan scanString:@"vaccine" intoString:NULL];
+			[scan scanUpToString:@" " intoString:&suffix];
+			if ([@[@"PerformRate", @"Priority", @"Regularity"] indexOfObject:suffix] == NSNotFound)
+				@throw @"unknown parameter name";
+		} else @throw @"unknown parameter name";
+	} @catch (NSString *msg) {
+		return [NSString stringWithFormat:@"\"%@\" is %@.", paramName, msg]; }
+	return nil;
+}
+static NSString *check_scenario_element_from_property(NSObject *prop) {
+// returns nil when it looks OK, otherwise return a string of error message
+	NSString *predForm = nil;
+	if ([prop isKindOfClass:NSString.class]) predForm = (NSString *)prop;
+	else if (![prop isKindOfClass:NSArray.class]) return nil;
+	else if (((NSArray *)prop).count != 2) return check_paramname_in_chng_prm_elm((NSArray *)prop);
+	else if (![((NSArray *)prop)[1] isKindOfClass:NSString.class])
+		return check_paramname_in_chng_prm_elm((NSArray *)prop);
+	else predForm = (NSString *)((NSArray *)prop)[1];
+	if (predForm == nil || predForm.length == 0) return @"Null predicate";
+	@try { return ([NSPredicate predicateWithFormat:predForm] == nil)? @"Null" : nil; }
+	@catch (NSException *e) { return e.reason; }
+}
+static void add_vv_list(MutableDictArray base, MutableDictArray new) {
+	for (NSMutableDictionary *elm in base) {
+		NSString *name = elm[@"name"];
+		for (NSInteger j = new.count - 1; j >= 0; j --)
+		if ([name isEqualToString:new[j][@"name"]]) {
+			for (NSString *key in new[j]) elm[key] = new[j][key];
+			[new removeObjectAtIndex:j];
+			break;
+		}
+	}
+	if (new.count > 0) [base addObjectsFromArray:new];
+}
 - (instancetype)initWithInfo:(NSDictionary *)info ID:(NSString *)ID {
 	if (!(self = [super init])) return nil;
 	_ID = (ID != nil)? ID : new_uniq_string();
@@ -199,13 +249,16 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 	for (NSObject *elm in _scenario) {
 		NSString *errMsg = check_scenario_element_from_property(elm);
 		if (errMsg != nil)
-			@throw [NSString stringWithFormat:@"417 Invalid element in scenatio: %@", errMsg];
+			@throw [NSString stringWithFormat:@"417 Invalid element in scenario: %@", errMsg];
 	}
 	NSNumber *num;
 	_stopAt = ((num = info[@"stopAt"]) == nil)? 0 : num.integerValue;
 	_nIteration = ((num = info[@"n"]) == nil)? 1 : num.integerValue;
 	loadState = info[@"loadState"];
 	popDistMap = info[@"popDistMap"];
+	loadVV = info[@"loadVariantsAndVaccines"];
+	moreVaccines = info[@"vaccines"];
+	moreVariants = info[@"variants"];
 	if (_nIteration <= 1) _nIteration = 1;
 	NSArray<NSString *> *output = info[@"out"];
 	NSInteger n = output.count, nn = 0, nd = 0, nD = 0;
@@ -220,6 +273,7 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 				ad[nd ++] = newKey;
 		} else if ([distributionNames containsObject:key]) aD[nD ++] = key;
 		else if ([key isEqualToString:@"severityStats"]) shouldSaveSeverityStats = YES;
+		else if ([key isEqualToString:@"variantsStats"]) shouldSaveVariantsStats = YES;
 		else if ([key isEqualToString:@"saveState"]) shouldSaveState = YES;
 	}
 	output_n = [NSArray arrayWithObjects:an count:nn];
@@ -293,7 +347,16 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 		if (shouldSaveSeverityStats)
 			[self makeDataFileWith:number type:@"severity" names:nil
 				makeObj:^(StatInfo *stInfo, NSArray *names)
-					{ return [stInfo objectOfSeverityStats]; }];
+					{ return [stInfo objectOfStatsInData:stInfo.sspData unit:SSP_NRanks]; }];
+		if (shouldSaveVariantsStats) {
+			MutableDictArray vrList = runningTrials[number].variantList;
+			NSInteger nVariants = (vrList == nil)? 1 : vrList.count;
+			if (nVariants > MAX_N_VARIANTS) nVariants = MAX_N_VARIANTS;
+			[self makeDataFileWith:number type:@"variants" names:nil
+				makeObj:^(StatInfo *stInfo, NSArray *names) {
+				return [stInfo objectOfStatsInData:stInfo.variantsData unit:MAX_N_VARIANTS];
+			}];
+		}
 		if (shouldSaveState)
 			[runningTrials[number] saveStateTo:
 				[NSString stringWithFormat:@"%@_%@", _ID, number]];
@@ -312,6 +375,27 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 	}
 	[lock unlock];
 	[the_job_controller() tryNewTrial:YES];
+}
+- (void)organizeVariantsAndVaccines:(World *)world {
+	if (loadVV != nil) {
+		NSDictionary *vvDict = variants_vaccines_from_path(loadVV);
+		if (vvDict != nil) {
+			world.vaccineList = vvDict[@"vaccineList"];
+			world.variantList = vvDict[@"variantList"];
+		}
+	} else {
+		if (moreVaccines != nil) {
+			MutableDictArray moreV = mutablized_array_of_dicts(moreVaccines);
+			add_vv_list(world.vaccineList, moreV);
+			correct_vaccine_list(world.vaccineList, world.variantList);
+		}
+		if (moreVariants != nil) {
+			MutableDictArray moreV = mutablized_array_of_dicts(moreVariants);
+			add_vv_list(world.variantList, moreV);
+			correct_variant_list(world.variantList, world.vaccineList);
+		}
+	}
+	[world setupVaxenAndVariantsFromLists];
 }
 - (BOOL)runNextTrial {	// called only from JobController's tryNewTrial:
 	World *world = nil;
@@ -346,6 +430,7 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 				if (world.runtimeParamsP->step > 0) [world execScenario];
 			}
 		}
+		[self organizeVariantsAndVaccines:world];
 		NSNumber *trialNumb = @(++ nextTrialNumber);
 		runningTrials[trialNumb] = world;
 		if (nextTrialNumber >= _nIteration)

@@ -60,9 +60,9 @@ static NSString *data_file_path(NSString *dir, NSString *fname) {
 	if (image != nil) self.popDistImage = image;
 	else @throw [NSString stringWithFormat:@"Couldn't make an image from \"%@\".", fname];
 }
-- (void)correctVaccineList:(NSMutableArray<NSMutableDictionary *> *)list {
-	for (NSInteger i = 0; i < list.count; i ++) {
-		NSMutableDictionary *dict = list[i];
+void correct_vaccine_list(MutableDictArray vaList, MutableDictArray vrList) {
+	for (NSInteger i = 0; i < vaList.count; i ++) {
+		NSMutableDictionary *dict = vaList[i];
 		if (![dict isKindOfClass:NSMutableDictionary.class])
 			@throw @"Vaccine list includes object other than dictionary.";
 		NSString *name = dict[@"name"];
@@ -71,15 +71,15 @@ static NSString *data_file_path(NSString *dir, NSString *fname) {
 		 if (num == nil || ![num isKindOfClass:NSNumber.class]) dict[@"intervalDays"] = @(21);
 		num = dict[@"intervalOn"];
 		if (num == nil || ![num isKindOfClass:NSNumber.class]) dict[@"intervalOn"] = @YES;
-		for (NSDictionary *vr in self.variantList) {
+		for (NSDictionary *vr in vrList) {
 			NSString *vrNm = vr[@"name"];
 			if (dict[vrNm] == nil) dict[vrNm] = @(1.);
 		}
 	}
 }
-- (void)correctVariantList:(NSMutableArray<NSMutableDictionary *> *)list {
-	for (NSInteger i = 0; i < list.count; i ++) {
-		NSMutableDictionary *dict = list[i];
+void correct_variant_list(MutableDictArray vrList, MutableDictArray vaList) {
+	for (NSInteger i = 0; i < vrList.count; i ++) {
+		NSMutableDictionary *dict = vrList[i];
 		if (![dict isKindOfClass:NSMutableDictionary.class])
 			@throw @"417 Variant list includes object other than dictionary.";
 		NSString *name = dict[@"name"];
@@ -87,15 +87,15 @@ static NSString *data_file_path(NSString *dir, NSString *fname) {
 		NSNumber *num = dict[@"reproductivity"];
 		 if (num == nil || ![num isKindOfClass:NSNumber.class]) dict[@"reproductivity"] = @(1.);
 	}
-	for (NSDictionary *vrA in list) {
+	for (NSDictionary *vrA in vrList) {
 		NSString *vrNm = vrA[@"name"];
-		for (NSMutableDictionary *vrB in list)
+		for (NSMutableDictionary *vrB in vrList)
 			if (vrB[vrNm] == nil) vrB[vrNm] = @(1.);
-		for (NSMutableDictionary *vrB in self.vaccineList)
+		for (NSMutableDictionary *vrB in vaList)
 			if (vrB[vrNm] == nil) vrB[vrNm] = @(1.);
 	}
 }
-- (void)loadVarinatsAndVaccinesFrom:(NSString *)fname {
+NSDictionary *variants_vaccines_from_path(NSString *fname) {
 	NSString *filePath = data_file_path(@"VariantsAndVaccines", fname);
 	NSData *data = [NSData dataWithContentsOfFile:filePath];
 	if (data == nil) @throw [NSString stringWithFormat:@"Couldn't find \"%@\".", fname];
@@ -107,10 +107,14 @@ static NSString *data_file_path(NSString *dir, NSString *fname) {
 	NSMutableArray *vxList, *vrList;
 	if ((vxList = dict[@"vaccineList"]) == nil) @throw @"Vaccine list is missing.";
 	if ((vrList = dict[@"variantList"]) == nil) @throw @"Variant list is missing.";
-	[self correctVaccineList:vxList];
-	[self correctVariantList:vrList];
-	self.vaccineList = vxList;
-	self.variantList = vrList;
+	correct_vaccine_list(vxList, vrList);
+	correct_variant_list(vrList, vxList);
+	return dict;
+}
+- (void)loadVarianatsAndVaccinesFrom:(NSString *)fname {
+	NSDictionary *dict = variants_vaccines_from_path(fname);
+	self.vaccineList = dict[@"vaccineList"];
+	self.variantList = dict[@"variantList"];
 }
 @end
 
@@ -159,7 +163,7 @@ static NSString *data_file_path(NSString *dir, NSString *fname) {
 }
 - (void)loadVariantsAndVaccines {
 	[self checkWorld];
-	[world loadVarinatsAndVaccinesFrom:[self nameArgument]];
+	[world loadVarianatsAndVaccinesFrom:[self nameArgument]];
 }
 - (void)getVaccineList {
 	[self checkWorld];
@@ -171,7 +175,7 @@ static NSString *data_file_path(NSString *dir, NSString *fname) {
 		plistFromJSONArgument:NSJSONReadingMutableContainers
 		class:NSMutableArray.class type:@"vaccine list"];
 	if (list == nil) @throw @"417 No data for vaccine list.";
-	[world correctVaccineList:list];
+	correct_vaccine_list(list, world.variantList);
 	world.vaccineList = list;
 }
 - (void)getVariantList {
@@ -184,7 +188,7 @@ static NSString *data_file_path(NSString *dir, NSString *fname) {
 		plistFromJSONArgument:NSJSONReadingMutableContainers
 		class:NSMutableArray.class type:@"variant list"];
 	if (list == nil) @throw @"417 No data for variant list.";
-	[world correctVariantList:list];
+	correct_variant_list(list, world.vaccineList);
 	world.variantList = list;
 }
 @end

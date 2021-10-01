@@ -6,7 +6,6 @@
 //  Copyright © 2020 Tatsuo Unemi. All rights reserved.
 //
 #define VER_1_8
-#define VER_1_8_3
 
 typedef enum {
 	Susceptible, Asymptomatic, Symptomatic, Recovered, Died,
@@ -25,12 +24,13 @@ typedef enum {
 	TestTotal = TestNone
 } TestType;
 
+#define MAX_N_VAXEN 8
+#define MAX_N_VARIANTS 8
+#define MAX_N_AGE_SPANS 12
 #define NIntTestTypes TestPositiveRate
 #define NIntIndexes (NStateIndexes+NIntTestTypes)
 #define ReproductRate (NStateIndexes+NAllTestTypes)
 #define NAllIndexes (ReproductRate+1)
-#define MAX_N_VAXEN 16
-#define MAX_N_VARIANTS 16
 
 typedef enum {
 	WarpNone, WarpInside, WarpToHospital, WarpToCemeteryF, WarpToCemeteryH, WarpBack
@@ -42,7 +42,8 @@ typedef enum {
 
 typedef enum {
 	LoopNone, LoopRunning, LoopFinished, LoopEndByUser,
-	LoopEndByCondition, LoopEndAsDaysPassed, LoopEndByTimeLimit
+	LoopPauseByCondition, LoopEndByCondition,
+	LoopEndAsDaysPassed, LoopEndByTimeLimit
 } LoopMode;
 
 typedef enum {
@@ -69,6 +70,11 @@ typedef struct {
 } VaccinationInfo;
 
 typedef struct {
+	NSInteger upperAge;
+	CGFloat rate;
+} VaccineFinalRate;
+
+typedef struct {
 	CGFloat reproductivity;
 	CGFloat efficacy[MAX_N_VARIANTS];
 } VariantInfo;
@@ -82,7 +88,8 @@ typedef struct {
 	CGFloat mass, friction, avoidance, maxSpeed;
 	CGFloat actMode, actKurt; // activeness as individuality
 	CGFloat massAct, mobAct, gatAct; // bias for mobility and gatherings
-	CGFloat incubAct, fatalAct, recovAct, immuneAct;	// correlation
+	CGFloat incubAct, fatalAct, immuneAct;	// correlation
+	CGFloat therapyEffc;	// therapy efficacy
 	CGFloat contagDelay, contagPeak; // contagion delay and peak;
 	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat dstST, dstOB; // Distancing strength and obedience
@@ -93,13 +100,14 @@ typedef struct {
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
 	CGFloat imnMaxDur, imnMaxDurSv, imnMaxEffc, imnMaxEffcSv;	// acquired immunity by infection
 	DistInfo mobDist; // mass and warp distance
-	DistInfo incub, fatal, recov; // contagiousness, incubation, fatality, recovery
+	DistInfo incub, fatal; // incubation, fatality
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength
 	DistInfo mobFreq; // Participation frequency in long travel
 	DistInfo gatFreq; // Participation frequency in gathering
 	TracingOperation trcOpe; // How to treat the contacts, tests or vaccination, or both
 	int trcVcnType;	// vaccine type for tracing vaccination
 	VaccinationInfo vcnInfo[MAX_N_VAXEN];
+	VaccineFinalRate vcnFnlRt[MAX_N_AGE_SPANS];
 	NSInteger step;
 } RuntimeParams;
 
@@ -107,7 +115,9 @@ typedef struct {
 	NSInteger initPop, worldSize, mesh, stepsPerDay;
 	CGFloat infected, recovered;	// initial ratio in population
 	CGFloat qAsymp, qSymp;	// initial ratio of separation for each health state
-	CGFloat vcnAntiRate, avClstrRate, avClstrGran, avTestRate;	// Anti-Vax
+	CGFloat avClstrRate, avClstrGran, avTestRate;	// Anti-Vax
+	CGFloat rcvBias, rcvTemp; // coefficients to calculate recovery from age
+	CGFloat rcvUpper, rcvLower; // boundaries of period to start recovery
 	CGFloat vcn1stEffc, vcnMaxEffc, vcnEffcSymp, vcnEDelay, vcnEPeriod, vcnEDecay; // standard vaccine efficacy
 	WrkPlcMode wrkPlcMode;
 } WorldParams;
@@ -185,6 +195,7 @@ typedef struct AgentRec {
 	CGFloat fx, fy;
 	HealthType newHealth;
 	int newNInfects;
+	int ageSpanIndex;
 	struct AgentRec *best;
 	CGFloat bestDist, gatDist;
 	CGFloat daysToCompleteRecov;

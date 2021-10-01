@@ -55,6 +55,9 @@
                                     <menuItem title="Severity" id="bLn-8I-oDn">
                                         <modifierMask key="keyEquivalentModifierMask"/>
                                     </menuItem>
+                                    <menuItem title="Variants" id="IzK-1M-ZD6">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                    </menuItem>
                                     <menuItem title="Periods" id="Isv-8W-LbA">
                                         <modifierMask key="keyEquivalentModifierMask"/>
                                     </menuItem>

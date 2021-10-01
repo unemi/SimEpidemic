@@ -18,5 +18,6 @@ extern BOOL should_block_it(uint32 ipaddr);
 extern void schedule_clean_up_blocking_info(void);
 extern void block_list_from_plist(NSArray *plist);
 extern NSArray *block_list(void);
+extern BOOL unblock(uint32 ipaddr);
 
 NS_ASSUME_NONNULL_END

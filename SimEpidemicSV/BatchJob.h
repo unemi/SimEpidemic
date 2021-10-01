@@ -8,6 +8,7 @@
 
 #import <AppKit/AppKit.h>
 #import "ProcContext.h"
+#import "../SimEpidemic/Sources/World.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -24,8 +25,9 @@ extern void check_batch_jobs_to_restart(void);
 	NSInteger nextTrialNumber;
 	NSArray<NSString *> *output_n, *output_d, *output_D;
 	NSString *jobDirPath;
-	NSString *loadState, *popDistMap;
-	BOOL shouldSaveSeverityStats, shouldSaveState;
+	NSString *loadState, *popDistMap, *loadVV;
+	MutableDictArray moreVaccines, moreVariants;
+	BOOL shouldSaveSeverityStats, shouldSaveVariantsStats, shouldSaveState;
 }
 @property (readonly) NSString *ID;
 @property (readonly) NSDictionary<NSString *, NSNumber *> *parameters;

@@ -17,9 +17,10 @@
 #import "PeriodicReporter.h"
 #import "SaveState.h"
 #import "BatchJob.h"
-#import "../SimEpidemic/Sources/World.h"
+#import "../SimEpidemic/Sources/Scenario.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
 #import "DataCompress.h"
+#import "BlockingInfo.h"
 #define MAX_INT32 0x7fffffff
 
 static NSDictionary<NSString *, void (^)(ProcContext *)> *commandDict = nil;
@@ -118,15 +119,15 @@ World *make_new_world(NSString *type, NSString * _Nullable browserID) {
 	MY_LOG_DEBUG("(%d)-> %ld bytes.\n%s", desc, dataLength, buf);
 	if (dataLength > 0) {
 		if (length < 0) {
-			char b[128];
+			unsigned char b[128];
 			memcpy(b, buf, 120);
 			NSInteger i;
 			for (i = 0; i < 120; i ++) {
 				if (b[i] == '\r' || b[i] == '\n') { b[i] = '\0'; break; }
-				else if (b[i] < ' ') b[i] = ' ';
+				else if (b[i] < ' ' || b[i] > 0x7f) b[i] = ' ';
 			}
 			if (i == 120) memcpy(b + 119, "...", 4);
-			MY_LOG("%@ %s", ip4_string(ip4addr), b); 
+			MY_LOG("%@ %s", ip4_string(ip4addr), b);
 		} else MY_LOG("%@ Payload %ld bytes", ip4_string(ip4addr), dataLength);
 	}
 	return dataLength;
@@ -294,10 +295,9 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	content = moreHeader = nil;
 	code = 0;
 	@try {
-		if (dataLength <= 4) {
-			_requestString = @" ";
-			@throw @"400 Lack of method name.";
-		}
+		if (dataLength <= 4) { _requestString = @" "; @throw @"400 Lack of method name."; }
+		if (dataLength >= BUFFER_SIZE)
+			{ _requestString = @" "; @throw @"400 Too long top message."; }
 		NSString *req = [NSString stringWithUTF8String:bufData.bytes];
 		NSScanner *scan = [NSScanner scannerWithString:req];
 		scan.charactersToBeSkipped = nil;
@@ -592,12 +592,14 @@ NSDictionary<NSString *, NSArray<MyCounter *> *> *distribution_name_map(World *w
 	[self checkWorld];
 	NSString *arg = query[@"n"];
 	NSInteger n = (arg == nil)? 1 : arg.integerValue;
-	NSString *vrName = query[@"variant"];
-	int variantType = (vrName == nil)? 0 : [world variantTypeFromName:vrName];
+	arg = query[@"location"];
+	InfecLocation loc = (arg == nil)? IfcLocScattered : arg.intValue;
+	arg = query[@"variant"];
+	int variantType = (arg == nil)? 0 : [world variantTypeFromName:arg];
 	if (variantType < 0) @throw [NSString stringWithFormat:
-		@"Could not find a variant named \"%@.\"", vrName];
+		@"Could not find a variant named \"%@.\"", arg];
 	World *wd = world;
-	in_main_thread(^{ [wd addInfected:n variant:variantType]; });
+	in_main_thread(^{ [wd addInfected:n location:loc variant:variantType]; });
 }
 - (void)collectNamesInto:(NSMutableSet *)nameSet {
 	NSError *error;
@@ -827,6 +829,15 @@ NSData *JSON_pop2(World *world) {
 	dict[@"thermalState"] = @(pInfo.thermalState);
 	[self setJSONDataAsResponse:dict];
 }
+- (void)unblock {
+	NSString *ip4 = query[@"address"];
+	unsigned int parts[4] = {0,0,0,0}, ipadr;
+	sscanf(ip4.UTF8String, "%d.%d.%d.%d", parts, parts + 1, parts + 2, parts + 3);
+	ipadr = EndianU32_NtoB(((parts[0] & 0xff) << 24) | ((parts[1] & 0xff) << 16) |
+		((parts[2] & 0xff) << 8) | (parts[3] & 0xff));
+	if (!unblock(ipadr)) @throw [NSString stringWithFormat:
+		@"417 %@ was not blocked.", ip4_string(ipadr)];
+}
 @end
 
 #define COM(c)	@#c:^(ProcContext *ctx){[ctx c];}
@@ -845,5 +856,5 @@ void init_context(void) {
 		COM(getJobInfo), COM(stopJob), COM(getJobResults), COM(deleteJob),
 		COM(saveState), COM(loadState), COM(removeState),
 		COM(getState), COM(putState),
-		COM(version), COM(sysInfo) };
+		COM(version), COM(sysInfo), COM(unblock) };
 }

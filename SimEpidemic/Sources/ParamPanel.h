@@ -24,15 +24,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class Document, World;
 @interface ParamPanel : NSWindowController
-	<NSWindowDelegate, NSTabViewDelegate> {
+	<NSWindowDelegate, NSTabViewDelegate, NSTableViewDataSource, NSTableViewDelegate,
+		NSTextFieldDelegate> {
 	IBOutlet NSView *worldPView, *movePView, *pathoPView, *measPView, *testPView;
 	IBOutlet NSTabView *tabView;
 	IBOutlet NSTextField *massDgt, *fricDgt, *avoidDgt, *maxSpdDgt;
 	IBOutlet NSSlider *massSld, *fricSld, *avoidSld, *maxSpdSld;
 	IBOutlet NSTextField *actModeDgt, *actKurtDgt, *massActDgt, *mobActDgt, *gatActDgt;
 	IBOutlet NSSlider *actModeSld, *actKurtSld, *massActSld, *mobActSld, *gatActSld;
-	IBOutlet NSTextField *incubActDgt, *fatalActDgt, *recovActDgt, *immueActDgt;
-	IBOutlet NSSlider *incubActSld, *fatalActSld, *recovActSld, *immueActSld;
+	IBOutlet NSTextField *incubActDgt, *fatalActDgt, *immueActDgt, *therapyEffcDgt;
+	IBOutlet NSSlider *incubActSld, *fatalActSld, *immueActSld, *therapyEffcSld;
 	IBOutlet NSTextField *infecDgt, *infecDstDgt, *contagDDgt, *contagPDgt;
 	IBOutlet NSSlider *infecSld, *infecDstSld, *contagDSld, *contagPSld;
 	IBOutlet NSTextField *imnMaxDurDgt, *imnMaxDurSvDgt, *imnMaxEffcDgt, *imnMaxEffcSvDgt;
@@ -41,7 +42,6 @@ NS_ASSUME_NONNULL_BEGIN
 		*mobDistMinDgt, *mobDistMaxDgt, *mobDistModeDgt,
 		*incubMinDgt, *incubMaxDgt, *incubModeDgt,
 		*fatalMinDgt, *fatalMaxDgt, *fatalModeDgt,
-		*recovMinDgt, *recovMaxDgt, *recovModeDgt,
 		*gatSZMinDgt, *gatSZMaxDgt, *gatSZModeDgt,
 		*gatDRMinDgt, *gatDRMaxDgt, *gatDRModeDgt,
 		*gatSTMinDgt, *gatSTMaxDgt, *gatSTModeDgt,
@@ -57,14 +57,20 @@ NS_ASSUME_NONNULL_BEGIN
 		*tstSbjAsyDgt, *tstSbjSymDgt;
 	IBOutlet NSSlider *tstDelaySld, *tstProcSld, *tstIntvlSld, *tstSensSld, *tstSpecSld,
 		*tstSbjAsySld, *tstSbjSymSld;
-	IBOutlet NSTextField *vcnPRateDgt, *vcnRegularityDgt, *vcnAntiRateDgt;
-	IBOutlet NSSlider *vcnPRateSld, *vcnRegularitySld, *vcnAntiRateSld;
+	IBOutlet NSTextField *vcnPRateDgt, *vcnRegularityDgt;
+	IBOutlet NSSlider *vcnPRateSld, *vcnRegularitySld;
 	IBOutlet NSTextField *vaClstrRtDgt, *vaClstrGrDgt, *vaTestRtDgt;
 	IBOutlet NSSlider *vaClstrRtSld, *vaClstrGrSld, *vaTestRtSld;
+	IBOutlet NSTextField *rcvBiasDgt, *rcvTempDgt, *rcvUpperDgt, *rcvLowerDgt;
+	IBOutlet NSSlider *rcvBiasSld, *rcvTempSld, *rcvUpperSld, *rcvLowerSld;
 	IBOutlet NSPopUpButton *wrkPlcModePopUp, *trcOpePopUp, *trcVcnTypePopUp,
 		*vcnPriPopUp, *vcnTypePopUp;
 	IBOutlet NSButton *revertUDBtn, *revertFDBtn, *clearUDBtn, *saveAsUDBtn;
 	IBOutlet NSButton *initPrmRdBtn, *crntPrmRdBtn;
+	IBOutlet NSTableView *vaxFnlRtTable;
+	IBOutlet NSFormatter *percentForm;
+	IBOutlet NSMenu *vaxFnlRtMenu;
+	IBOutlet NSTextField *vaxFnlRtHelpTxt;
 }
 @property BOOL byUser;
 - (instancetype)initWithDoc:(Document *)dc;

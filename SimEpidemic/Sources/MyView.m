@@ -11,6 +11,7 @@
 #import "Agent.h"
 #import "Gatherings.h"
 #define LV_FONT_SIZE 11.
+#define N_AGE_SPAN 10
 
 //static void grade_color(CGFloat grade, CGFloat *rgb) {
 //	static CGFloat keyColor[7][3] = {
@@ -31,6 +32,19 @@
 //			rgb[i] = keyColor[idx][i] * (1. - a) + keyColor[idx + 1][i] * a;
 //	}
 //}
+
+static NSColor *ageFldColors[N_AGE_SPAN] = {nil}, *ageWrpColors[N_AGE_SPAN];
+static void setup_age_colors(void) {
+	if (ageFldColors[0] != nil) return;
+	for (NSInteger i = 0; i < N_AGE_SPAN; i ++) {
+		RainbowColorHB hb = rainbow_color(i, N_AGE_SPAN);
+		ageFldColors[i] = [NSColor colorWithHue:hb.hue
+			saturation:.9 brightness:hb.brightness alpha:1.];
+		ageWrpColors[i] = [NSColor colorWithHue:hb.hue
+			saturation:.9 brightness:hb.brightness alpha:warpOpacity];
+	}
+}
+
 @interface MyView () {
 	NSInteger nVaxen, nVariants;
 	NSArray<NSColor *> *vaxStColors, *varStColors, *vaxWpColors, *varWpColors;
@@ -90,6 +104,11 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 	switch (_colorType) {
 		case ColNormal: nColors = NHealthTypes;
 		pathIdx = ^(Agent *a){ return (NSInteger)a->health; }; break;
+		case ColAge: nColors = N_AGE_SPAN;
+		pathIdx = ^(Agent *a){
+			NSInteger idx = a->age / 105. * N_AGE_SPAN;
+			return (idx < N_AGE_SPAN)? idx : N_AGE_SPAN - 1;
+		}; break;
 		case ColAntiVax: nColors = 3;
 		pathIdx = ^(Agent *a){ return (NSInteger)a->forVcn; }; break;
 		case ColVaxVariant: nColors = _world.vaccineList.count + _world.variantList.count + 1;
@@ -141,10 +160,19 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 		warp_show(item.agent, item.mode, item.goal, dRect, pathsW[pathIdx(item.agent)]);
 	}
 	[_world popUnlock];
-	if (_colorType != ColVaxVariant) for (NSInteger i = 0; i < nColors; i ++) {
-		[stateColors[i] setFill]; [pathsI[i] fill];
-		[warpColors[i] setFill]; [pathsW[i] fill];
-	} else {
+	switch (_colorType) {
+		case ColNormal: case ColAntiVax:
+		for (NSInteger i = 0; i < nColors; i ++) {
+			[stateColors[i] setFill]; [pathsI[i] fill];
+			[warpColors[i] setFill]; [pathsW[i] fill];
+		} break;
+		case ColAge:
+		setup_age_colors();
+		for (NSInteger i = 0; i < nColors; i ++) {
+			[ageFldColors[i] setFill]; [pathsI[i] fill];
+			[ageWrpColors[i] setFill]; [pathsW[i] fill];
+		} break;
+		case ColVaxVariant: {
 		NSInteger nvx = _world.vaccineList.count, nvr = _world.variantList.count;
 		if (nvx != nVaxen) {
 			NSColor *stCols[nvx], *wpCols[nvx];
@@ -180,7 +208,7 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 			[varStColors[i] setFill]; [pathsI[i + nvx + 1] fill];
 			[varWpColors[i] setFill]; [pathsW[i + nvx + 1] fill];
 		}
-	}
+	}}
 	[NSGraphicsContext restoreGraphicsState];
 }
 -(void)adjustOffset:(NSPoint)newOffset {

@@ -8,10 +8,12 @@
 
 #import <Cocoa/Cocoa.h>
 #import "AppDelegate.h"
-#ifdef NOGUI
 //#define DEBUGz
-#endif
 
+typedef struct {
+	CGFloat hue, brightness;
+} RainbowColorHB;
+extern RainbowColorHB rainbow_color(NSInteger x, NSInteger n);
 extern NSString *nnScenarioText, *nnParamChanged;
 
 @class World, MyView, LegendView, StatInfo, MyCounter;
@@ -29,7 +31,7 @@ extern NSString *nnScenarioText, *nnParamChanged;
 	IBOutlet NSView *savePanelAccView;
 	IBOutlet NSButton *savePopCBox, *saveGUICBox, *savePMapCBox;
 	IBOutlet NSWindow *addInfectedSheet;
-	IBOutlet NSPopUpButton *variantTypePopUp;
+	IBOutlet NSPopUpButton *variantTypePopUp, *locationPopUp;
 	IBOutlet NSTextField *patientsNumberDgt;
 	NSMutableArray<void (^)(StatInfo *)> *statPanelInitializer;
 	BOOL (^worldInitializer)(World *, NSError **);

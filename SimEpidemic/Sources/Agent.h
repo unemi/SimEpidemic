@@ -34,7 +34,7 @@ extern CGFloat modified_prob(CGFloat x, DistInfo *p);
 extern CGFloat my_random(DistInfo *p);
 extern BOOL is_infected(Agent *a);
 extern CGFloat centered_bias(CGPoint p);
-extern void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp);
+extern void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp);
 extern NSBitmapImageRep *make_pop_dist_bm(void);
 extern NSBitmapImageRep *make_bm_with_image(NSImage *image);
 extern void setup_home_with_map(Agent *agents, WorldParams *wp, NSImage *image);

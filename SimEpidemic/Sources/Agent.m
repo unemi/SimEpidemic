@@ -89,26 +89,32 @@ static CGPoint centered_point(WorldParams *wp) {
 	return p;
 }
 static void setup_acquired_immunity(Agent *a, RuntimeParams *p) {
-	CGFloat maxSeverity = a->daysToRecover / a->daysToDie;
+	CGFloat maxSeverity = a->daysToRecover * (1. - p->therapyEffc / 100.) / a->daysToDie;
 	a->imExpr = fmin(1., maxSeverity / (p->imnMaxDurSv / 100.)) * p->imnMaxDur;
 	a->agentImmunity = fmin(1., maxSeverity / (p->imnMaxEffcSv / 100.)) * p->imnMaxEffc / 100.;
 }
-static void reset_days(Agent *a, RuntimeParams *p) {
-	struct ActivenessEffect ae = {a->activeness, p->actMode/100.};
-	a->daysToRecover = random_with_corr(&p->recov, ae, p->recovAct/100.);
-	a->daysToOnset = random_with_corr(&p->incub, ae, p->incubAct/100.);
-	a->daysToDie = random_with_corr(&p->fatal, ae, p->fatalAct/100.) + a->daysToOnset;
+static void reset_days(Agent *a, RuntimeParams *rp, WorldParams *wp) {
+	struct ActivenessEffect ae = {a->activeness, rp->actMode/100.};
+	a->daysToOnset = random_with_corr(&rp->incub, ae, rp->incubAct/100.);
+	a->daysToDie = random_with_corr(&rp->fatal, ae, rp->fatalAct/100.) + a->daysToOnset;
+	CGFloat mode = wp->rcvBias / 100. * exp((a->age - 105.) / wp->rcvTemp);
+	CGFloat low = wp->rcvLower / 100. * mode, span = wp->rcvUpper / 100. * mode - low;
+	a->daysToRecover = ((span == 0.)? mode : random_mk((mode - low) / span, 0.) * span + low)
+		* (rp->incub.mode + rp->fatal.mode);
+//if (a->ID < 50) printf("%.2f -> %.2f %.2f %.2f %c\n",
+//	a->age, a->daysToOnset, a->daysToDie, a->daysToRecover,
+//	(a->daysToRecover > a->daysToDie)? '*' : (a->daysToRecover > a->daysToOnset)? '+' : ' ');
 }
 #define ALT_RATE .1
-static void alter_days(Agent *a, RuntimeParams *p) {
+static void alter_days(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	Agent tmpA;
-	reset_days(&tmpA, p);
+	reset_days(&tmpA, rp, wp);
 	a->daysToRecover += (tmpA.daysToRecover - a->daysToRecover) * ALT_RATE;
 	a->daysToOnset += (tmpA.daysToOnset - a->daysToOnset) * ALT_RATE;
 	a->daysToDie += (tmpA.daysToDie - a->daysToDie) * ALT_RATE;
 	a->imExpr += (tmpA.imExpr - a->imExpr) * ALT_RATE;
 }
-void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
+void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp) {
 	memset(a, 0, sizeof(Agent));
 	a->app = d_random();
 	a->prf = d_random();
@@ -133,9 +139,10 @@ void reset_agent(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->nInfects = a->virusVariant = a->vaccineType = -1;
 	a->agentImmunity = 0.;
 	a->isOutOfField = YES;
-	reset_days(a, rp);
-	a->daysToCompleteRecov = 0.;
 	a->lastTested = -999999;
+	a->age = age;
+	reset_days(a, rp, wp);
+	a->daysToCompleteRecov = 0.;
 	a->activeness = random_mk(rp->actMode / 100., rp->actKurt / 100.);
 	a->gathering = NULL;
 	a->mass = rp->mass * pow(rp->massAct, (.5 - a->activeness) / .5);
@@ -275,13 +282,15 @@ static void attracted(Agent *a, Agent *b) {
 		a->best = b;
 	}
 }
+static inline CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 - (void)checkInfectionA:(Agent *)a B:(Agent *)b dist:(CGFloat)d {
 	if (was_hit(worldParams.stepsPerDay, runtimeParams.cntctTrc / 100.))
 		[self addNewCInfoA:a B:b tm:runtimeParams.step];
 	if (a->newHealth != a->health || !is_infected(b)) return;
 	CGFloat virusX = variantInfo[b->virusVariant].reproductivity,
-		contagDelay = runtimeParams.contagDelay / virusX,
-		contagPeak = runtimeParams.contagPeak / virusX;
+		exacerbate = exacerbation(virusX),
+		contagDelay = runtimeParams.contagDelay / exacerbate,
+		contagPeak = runtimeParams.contagPeak / exacerbate;
 	if (b->daysInfected <= contagDelay) return;
 	CGFloat immuneFactor;
 	switch (a->health) {
@@ -296,9 +305,9 @@ static void attracted(Agent *a, Agent *b) {
 		fmin(1., (b->daysInfected - contagDelay) /
 			(fmin(contagPeak, b->daysToOnset) - contagDelay)) :
 		(b->daysToCompleteRecov - b->daysInfected) / (b->daysToCompleteRecov - b->daysToRecover);
-	CGFloat distanceFactor = fmin(1., pow((runtimeParams.infecDst - d) / 2., 2.));
-	if (was_hit(worldParams.stepsPerDay,
-		runtimeParams.infec / 100. * timeFactor * distanceFactor * (1. - immuneFactor))) {
+	CGFloat distanceFactor = fmin(1., pow((runtimeParams.infecDst * sqrt(virusX) - d) / 2., 2.));
+	if (was_hit(worldParams.stepsPerDay, runtimeParams.infec / 100. * virusX
+		* timeFactor * distanceFactor * (1. - immuneFactor))) {	// infected!
 		a->newHealth = Asymptomatic;
 		a->agentImmunity = immuneFactor;
 		a->virusVariant = b->virusVariant;
@@ -342,7 +351,8 @@ static void attracted(Agent *a, Agent *b) {
 
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
 static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepInfo *info) {
-	CGFloat virusX = prms.vrInfo[a->virusVariant].reproductivity;
+	CGFloat exacerbate = exacerbation(prms.vrInfo[a->virusVariant].reproductivity);
+	CGFloat daysToRecv = (1. - prms.rp->therapyEffc / 100.) * a->daysToRecover;
 	if (a->daysToCompleteRecov > 0.) { // in the recovery phase
 		if (a->daysInfected >= a->daysToCompleteRecov) {
 			if (a->health == Symptomatic) SET_HIST(HistRecov, daysDiseased)
@@ -350,10 +360,10 @@ static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepIn
 			a->daysInfected = a->daysToCompleteRecov = 0.;
 			setup_acquired_immunity(a, prms.rp);
 		}
-	} else if (a->daysInfected > a->daysToRecover * (1. - a->agentImmunity)) { // starts recovery
-		a->daysToCompleteRecov = a->daysToRecover * (1. - a->agentImmunity)
-			* (1. + 10. / a->daysToDie / virusX);
-	} else if (a->daysInfected >= a->daysToDie / virusX) {
+	} else if (a->daysInfected > daysToRecv * (1. - a->agentImmunity)) { // starts recovery
+		a->daysToCompleteRecov = daysToRecv * (1. - a->agentImmunity)
+			* (1. + 10. / (a->daysToDie / exacerbate));
+	} else if (a->daysInfected >= a->daysToDie / exacerbate) {
 		SET_HIST(HistDeath, daysDiseased);
 		a->newHealth = Died;
 		info->warpType = inQuarantine? WarpToCemeteryH : WarpToCemeteryF;
@@ -361,7 +371,7 @@ static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepIn
 			(d_random() * .248 + 1.001) * prms.wp->worldSize,
 			(d_random() * .468 + 0.001) * prms.wp->worldSize};
 		return YES;
-	} else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset / virusX) {
+	} else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset / exacerbate) {
 		a->newHealth = Symptomatic;
 		SET_HIST(HistIncub, daysInfected);
 	}
@@ -371,10 +381,10 @@ static CGFloat wall(CGFloat d) {
 	if (d < .02) d = .02;
 	return AVOIDANCE * 20. / d / d;
 }
-static void expire_immunity(Agent *a, RuntimeParams *rp) {
+static void expire_immunity(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->newHealth = Susceptible;
 	a->daysInfected = a->daysDiseased = 0;
-	alter_days(a, rp);
+	alter_days(a, rp, wp);
 }
 static void go_warp(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info) {
 	CGFloat dst = my_random(&rp->mobDist) * wp->worldSize / 100.;
@@ -442,10 +452,10 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 			else if (daysVaccinated < wp->vcnEDelay + span + wp->vcnEPeriod) // Decay
 				a->agentImmunity = (wp->vcnEDelay + span + wp->vcnEPeriod - daysVaccinated)
 					/ (wp->vcnEPeriod - wp->vcnEDecay) * wp->vcnMaxEffc / 100.;
-			else expire_immunity(a, rp);
+			else expire_immunity(a, rp, wp);
 		} break;
 		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
-		if (a->daysInfected > a->imExpr) expire_immunity(a, rp);
+		if (a->daysInfected > a->imExpr) expire_immunity(a, rp, wp);
 		break;
 		default: break;
 	}

@@ -21,6 +21,7 @@
 #import "../../SimEpidemicSV/PeriodicReporter.h"
 #else
 #import "Document.h"
+#import "ScenPanel.h"
 #endif
 
 #ifdef GCD_CONCURRENT_QUEUE
@@ -31,13 +32,6 @@ NSInteger nQueues = 10;
 #ifdef MEASURE_TIME
 #define N_MTIME 8
 #endif
-
-#define N_AGE_BANDS 21
-NSInteger AgePopSize[N_AGE_BANDS] = {	// 2021/3/1 Tokyo
-// https://www.toukei.metro.tokyo.lg.jp/juukiy/2021/jy21qf0001.pdf
-	528572, 543911, 528135, 535275, 785544, 948618, 943157, 1003681,
-	1056852, 1173805, 1061030, 895855, 700522, 679782, 807894, 627318,
-	489137, 335982, 149459, 42354, 6641 };
 
 static CGFloat get_uptime(void) {
 	struct timespec ts;
@@ -61,6 +55,9 @@ void my_exit(void) {
 #endif
 }
 #endif
+
+NSString *keyParameters = @"parameters", *keyScenario = @"scenario",
+	*keyDaysToStop = @"daysToStop";
 
 @interface World () {
 #ifdef MEASURE_TIME
@@ -106,7 +103,7 @@ void my_exit(void) {
 - (WorldParams *)worldParamsP { return &worldParams; }
 - (WorldParams *)tmpWorldParamsP { return &tmpWorldParams; }
 - (CGFloat)stepsPerSec { return stepsPerSec; }
-- (BOOL)running { return loopMode == LoopRunning; }
+- (BOOL)running { return loopMode == LoopRunning || loopMode == LoopPauseByCondition; }
 - (Gathering *)gatherings { return gatherings; }
 - (void)popLock { [popLock lock]; }
 - (void)popUnlock { [popLock unlock]; }
@@ -214,38 +211,46 @@ static void force_infect(Agent *a, int vType) {
 	a->health = Asymptomatic; a->daysInfected = a->daysDiseased = 0;
 	a->virusVariant = vType;
 }
-- (void)addInfected:(NSInteger)n variant:(int)variantType {
-	NSInteger nSusc = 0, nCells = worldParams.mesh * worldParams.mesh;
-	for (NSInteger i = 0; i < nCells; i ++)
-		for (Agent *a = _Pop[i]; a; a = a->next) if (a->health == Susceptible) nSusc ++;
-	if (nSusc == 0) return;
-	if (n >= nSusc) {
-		n = nSusc;
-		for (NSInteger i = 0; i < nCells; i ++) for (Agent *a = _Pop[i]; a; a = a->next)
-			if (a->health == Susceptible) force_infect(a, variantType);
-	} else if (n > 0) {
-		NSInteger *idxs = malloc(nSusc * sizeof(NSInteger));
-		for (NSInteger i = 0; i < nSusc; i ++) idxs[i] = i;
+- (void)addInfected:(NSInteger)n location:(InfecLocation)loc variant:(int)variantType {
+	if (n <= 0) return;
+	Agent **cdd = malloc(sizeof(void *) * nPop);
+	NSInteger k = 0;
+	for (NSInteger i = 0; i < nPop; i ++) {
+		Agent *a = _agents + i;
+		if (!a->isOutOfField && a->health == Susceptible) cdd[k ++] = a;
+	}
+	if (k == 0) return;
+	if (n > k) n = k;
+	if (loc == IfcLocScattered) {
 		for (NSInteger i = 0; i < n; i ++) {
-			NSInteger j = (random() % (nSusc - i)) + i;
-			NSInteger k = idxs[j]; idxs[j] = idxs[i]; idxs[i] = k;
+			NSInteger j = (random() % (k - i)) + i;
+			if (j != i) { Agent *a = cdd[i]; cdd[i] = cdd[j]; cdd[j] = a; }
 		}
-		qsort_b(idxs, n, sizeof(NSInteger), ^int(const void *a, const void *b) {
-			NSInteger c = *((NSInteger *)a), d = *((NSInteger *)b);
-			return (c < d)? -1 : (c > d)? 1 : 0;
-		});
-		NSInteger idx = idxs[0];
-		for (NSInteger i = 0, j = 0, k = 0; i < nCells && j < n; i ++)
-		for (Agent *a = _Pop[i]; a; a = a->next) if (a->health == Susceptible) {
-			if (k == idx) {
-				force_infect(a, variantType);
-				if ((++ j) >= n) break;
-				else idx = idxs[j];
+	} else {
+		NSPoint pt = (loc == IfcLocRandomCluster)?
+			(NSPoint){d_random(), d_random()} : (NSPoint){.5, .5};
+		pt.x *= worldParams.worldSize;
+		pt.y *= worldParams.worldSize;
+		CGFloat *ds = malloc(sizeof(CGFloat) * n);
+		NSInteger kk = 0, jj;
+		for (NSInteger i = 0; i < k; i ++) {
+			Agent *a = cdd[i];
+			CGFloat d = hypot(a->x - pt.x, a->y - pt.y);
+			for (jj = kk; jj > 0; jj --) if (d > ds[jj - 1]) break;
+			if (jj < n) {
+				for (NSInteger j = (kk < n)? kk : n - 1; j > jj; j --) {
+					cdd[j] = cdd[j - 1];
+					ds[j] = ds[j - 1];
+				}
+				cdd[jj] = a;
+				ds[jj] = d;
+				if (kk < n) kk ++;
 			}
-			k ++;
 		}
-		free(idxs);
-	} else return;
+		free(ds);
+	}
+	for (NSInteger i = 0; i < n; i ++) force_infect(cdd[i], variantType);
+	free(cdd);
 	if (loopMode == LoopFinished) loopMode = LoopEndByUser;
 	statInfo.statistics->cnt[Susceptible] -= n;
 	statInfo.statistics->cnt[Asymptomatic] += n;
@@ -268,159 +273,6 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 		[self vcnTypeFromName:[key substringFromIndex:scan.scanLocation + 1]];
 	return varName;
 }
-- (void)execScenario {
-	predicateToStop = nil;
-	if (scenario == nil) return;
-	char visitFlags[scenario.count];
-	memset(visitFlags, 0, scenario.count);
-	BOOL hasStopCond = NO;
-	NSMutableDictionary<NSString *, NSObject *> *md = NSMutableDictionary.new;
-	while (scenarioIndex < scenario.count) {
-		if (visitFlags[scenarioIndex] == YES) {
-			NSString *message = [NSString stringWithFormat:@"%@: %ld",
-				NSLocalizedString(@"Looping was found in the Scenario.", nil),
-				scenarioIndex + 1];
-#ifdef NOGUI
-			fprintf(stderr, "%s\n", message.UTF8String);
-			break;
-#else
-			@throw message;
-#endif
-		}
-		visitFlags[scenarioIndex] = YES;
-		NSObject *item = scenario[scenarioIndex ++];
-		if ([item isKindOfClass:NSArray.class]) {
-			NSArray *arr = (NSArray *)item;
-			if ([arr[0] isKindOfClass:NSNumber.class]) {	// jump N if --
-				NSInteger n = [arr[0] integerValue];
-				switch (arr.count) {
-					case 1: scenarioIndex = n; break;
-					case 2: if ([(NSPredicate *)arr[1] evaluateWithObject:statInfo])
-						scenarioIndex = n; break;
-					case 3:	{ // add infected individuals of specified variant
-						int varType = [self variantTypeFromName:arr[2]];
-						if (varType >= 0) [self addInfected:n variant:varType];
-				}}
-			} else if ([arr[1] isKindOfClass:NSPredicate.class]) {	// continue until --
-				predicateToStop = (NSPredicate *)arr[1];
-				hasStopCond = YES;
-				break;
-			} else if (arr.count == 2) md[arr[0]] = arr[1];	// paramter assignment
-			else {	// parameter assignment with delay
-				NSObject *goal = [(NSString *)arr[0] hasPrefix:@"vaccine"]? arr[1] :
-					(paramIndexFromKey[arr[0]].integerValue > IDX_D &&
-					[arr[1] isKindOfClass:NSNumber.class])? @[arr[1], arr[1], arr[1]] : arr[1];
-				paramChangers[arr[0]] = @[goal,
-					@(runtimeParams.step / worldParams.stepsPerDay + [(arr[2]) doubleValue])];
-			}
-		} else if ([item isKindOfClass:NSDictionary.class]) {	// for upper compatibility
-			[md addEntriesFromDictionary:(NSDictionary *)item];
-		} else if ([item isKindOfClass:NSNumber.class]) {	// add infected individuals
-			[self addInfected:((NSNumber *)item).integerValue variant:0];
-		} else if ([item isKindOfClass:NSPredicate.class]) {	// predicate to stop
-			predicateToStop = (NSPredicate *)item;
-			hasStopCond = YES;
-			break;
-		}
-	}
-#ifndef NOGUI
-	if (hasStopCond)
-		[NSNotificationCenter.defaultCenter postNotificationName:nnScenarioText object:self];
-#endif
-	if (md.count > 0) {	// parameter change
-		for (NSString *key in md) {
-			if ([key hasPrefix:@"vaccine"]) {
-				if ([key isEqualToString:@"vaccineAntiRate"]) {
-					CGFloat newAntiRate = ((NSNumber *)md[key]).doubleValue;
-					if (newAntiRate > worldParams.vcnAntiRate) {
-						NSInteger nReg = nPop * (newAntiRate - worldParams.vcnAntiRate);
-						for (NSInteger i = 0; i < nPop && nReg > 0; i ++)
-							if (_agents[i].forVcn != VcnAccept)
-								{ _agents[i].forVcn = VcnAccept; nReg --; }
-					}
-				} else {
-					int vcnType;
-					NSString *varName = [self varNameFromKey:key vcnTypeReturn:&vcnType];
-					if (vcnType < 0) continue;
-					VaccinationInfo *vInfo = &runtimeParams.vcnInfo[vcnType];
-					NSNumber *num = (NSNumber *)md[key];
-					if ([varName hasSuffix:@"Rate"]) vInfo->performRate = num.doubleValue;
-					else if ([varName hasSuffix:@"Regularity"]) vInfo->regularity = num.doubleValue;
-					else {
-						vInfo->priority = num.intValue;
-						if (vInfo->priority == VcnPrBooster) [self resetBoostQueue];
-					}
-				}
-			} else {
-				NSNumber *idxNum = paramIndexFromKey[key];
-				if (idxNum == nil) continue;
-				NSInteger idx = idxNum.integerValue;
-				NSObject *value = md[key];
-				if (idx < IDX_D)
-					(&runtimeParams.PARAM_F1)[idx] = ((NSNumber *)md[key]).doubleValue;
-				else if (idx < IDX_I) {
-					if ([value isKindOfClass:NSArray.class] && ((NSArray *)value).count == 3)
-						set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
-							(NSArray<NSNumber *> *)value, 1.);
-				} else if (idx >= IDX_E && idx < IDX_H)
-					(&runtimeParams.PARAM_E1)[idx - IDX_E] = ((NSNumber *)md[key]).intValue;
-			}
-		}
-#ifndef NOGUI
-		[NSNotificationCenter.defaultCenter
-			postNotificationName:nnParamChanged object:self
-			userInfo:@{@"keys":md.allKeys}];
-//		NSArray<NSString *> *allKeys = md.allKeys;
-//		in_main_thread( ^{ [self->paramPanel adjustParamControls:allKeys]; });
-#endif
-	}
-	if (predicateToStop == nil && scenarioIndex == scenario.count) scenarioIndex ++;
-#ifndef NOGUI
-	[statInfo phaseChangedTo:scenarioIndex];
-#endif
-}
-- (NSArray *)scenario { return scenario; }
-- (NSInteger)scenarioIndex { return scenarioIndex; }
-- (void)setScenario:(NSArray *)newScen index:(NSInteger)idx {
-	scenario = newScen;
-	scenarioIndex = 0;
-	paramChangers = NSMutableDictionary.new;
-	if (runtimeParams.step == 0) [self execScenario];
-}
-#ifndef NOGUI
-- (void)setupPhaseInfo {
-	if (scenario.count == 0) {
-		statInfo.phaseInfo = @[];
-		statInfo.labelInfo = @[];
-		return;
-	}
-	NSMutableArray<NSNumber *> *maPhase = NSMutableArray.new;
-	NSMutableArray<NSString *> *maLabel = NSMutableArray.new;
-	for (NSInteger i = 0; i < scenario.count; i ++) {
-		NSObject *elm = scenario[i];
-		NSString *label;
-		NSPredicate *pred = predicate_in_item(elm, &label);
-		if (pred != nil) {
-			[maPhase addObject:@(i + 1)];
-			[maLabel addObject:label];
-		}
-	}
-	// if the final item is not an unconditional jump then add finale phase.
-	NSArray *item = scenario.lastObject;
-	if (![item isKindOfClass:NSArray.class] || item.count != 1 ||
-		![item[0] isKindOfClass:NSNumber.class])
-		[maPhase addObject:@(scenario.count + 1)];
-	statInfo.phaseInfo = maPhase;
-	statInfo.labelInfo = maLabel;
-}
-#else
-- (void)forAllReporters:(void (^)(PeriodicReporter *))block {
-	if (reporters == nil) return;
-	[reportersLock lock];
-	for (PeriodicReporter *rep in reporters) block(rep);
-	[reportersLock unlock];
-}
-#endif
 - (void)allocateMemory {
 	[self freeGatherings:gatherings];
 	gatherings = NULL;
@@ -444,6 +296,7 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 		pop = realloc(pop, sizeof(void *) * nPop);
 		_agents = realloc(_agents, sizeof(Agent) * nPop);
 		vcnQueue = realloc(vcnQueue, sizeof(NSInteger) * nPop * N_VCN_QUEQUE);
+		ageSpanIDs = realloc(ageSpanIDs, sizeof(NSInteger) * nPop);
 	}
 	memset(_agents, 0, sizeof(Agent) * nPop);
 	if (testQueTail != nil) {
@@ -456,12 +309,20 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 	_QList = _CList = NULL;
 	[_WarpList removeAllObjects];
 }
+#ifdef NOGUI
+- (void)forAllReporters:(void (^)(PeriodicReporter *))block {
+	if (reporters == nil) return;
+	[reportersLock lock];
+	for (PeriodicReporter *rep in reporters) block(rep);
+	[reportersLock unlock];
+}
+#endif
 static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	return (NSPoint){
 		(d_random() * .248 + 1.001) * worldSize,
 		(d_random() * .458 + 0.501) * worldSize};
 }
-- (void)setupVaxenAndVarintsFromLists {
+- (void)setupVaxenAndVariantsFromLists {
 	NSInteger nVariants, nVaccines;
 	if ((nVariants = _variantList.count) > MAX_N_VARIANTS) nVariants = MAX_N_VARIANTS;
 	NSString *vrNames[nVariants];
@@ -519,131 +380,139 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 		[self sortVaccineQueue:vcnQueue + VcnPrBooster * nPop comp:^CGFloat(Agent *a)
 			{ CGFloat fdd = a->firstDoseDate; return (fdd > 0.)? fdd : MAXFLOAT; }];
 }
+typedef enum { IdxDown, IdxUp, IdxLeft, IdxRight } ExIdxOrder;
+static ExIdxOrder exIdxOrder[8][4] = {
+	{ IdxDown, IdxLeft, IdxUp, IdxRight },
+	{ IdxDown, IdxRight, IdxLeft, IdxUp },
+	{ IdxLeft, IdxUp, IdxDown, IdxRight },
+	{ IdxRight, IdxUp, IdxDown, IdxLeft },
+	{ IdxLeft, IdxDown, IdxUp, IdxRight },
+	{ IdxRight, IdxDown, IdxUp, IdxLeft },
+	{ IdxUp, IdxLeft, IdxRight, IdxDown },
+	{ IdxUp, IdxRight, IdxLeft, IdxDown }
+};
 - (void)resetVaccineQueue {
+	WorldParams *wp = &worldParams;
+	RuntimeParams *rp = &runtimeParams;
 	for (NSInteger i = 0; i < nPop; i ++) {
 		_agents[i].vaccineType = -1;
 		_agents[i].vaccineTicket = NO;
 		_agents[i].forVcn = VcnAccept;
 	}
-	WorldParams *p = &worldParams;
-	NSInteger nAntiVcnPop = nPop * p->vcnAntiRate / 100.;
-	NSInteger nNoVcnNorTest = nAntiVcnPop * (1. - p->avTestRate / 100.);
-	NSInteger nClstrs = pow(nAntiVcnPop / 2, p->avClstrGran / 100.);
-	NSInteger nAgentsInClstr = nAntiVcnPop * p->avClstrRate / 100.;
-	NSInteger nClstrCols = ceil(sqrt(nClstrs)),
-		nClstrRows = (nClstrs + nClstrCols - 1) / nClstrCols,
-		idx = 0, lstIdx = 0;
-	typedef enum { IdxDown, IdxUp, IdxLeft, IdxRight } ExIdxOrder;
-	static ExIdxOrder exIdxOrder[8][4] = {
-		{ IdxDown, IdxLeft, IdxUp, IdxRight },
-		{ IdxDown, IdxRight, IdxLeft, IdxUp },
-		{ IdxLeft, IdxUp, IdxDown, IdxRight },
-		{ IdxRight, IdxUp, IdxDown, IdxLeft },
-		{ IdxLeft, IdxDown, IdxUp, IdxRight },
-		{ IdxRight, IdxDown, IdxUp, IdxLeft },
-		{ IdxUp, IdxLeft, IdxRight, IdxDown },
-		{ IdxUp, IdxRight, IdxLeft, IdxDown }
-	};
-	NSInteger *avAgentIDs = malloc(sizeof(NSInteger) * nAntiVcnPop);
-	for (NSInteger i = 0; i < nClstrs; i ++) {
-		NSInteger nAgents = (nAgentsInClstr - idx) / (nClstrs - i);
-		if (nAgents <= 0) continue;
-		NSPoint pt = {
-			(i % nClstrCols + .5) * worldParams.worldSize / nClstrCols,
-			(i / nClstrCols + .5) * worldParams.worldSize / nClstrRows
-		};
-		CGFloat ay = pt.y * p->mesh / p->worldSize, ax = pt.x * p->mesh / p->worldSize;
-		NSInteger iy = floor(ay), ix = floor(ax);
-		if (iy < 0) iy = 0; else if (iy >= p->mesh) iy = p->mesh - 1;
-		if (ix < 0) ix = 0; else if (ix >= p->mesh) ix = p->mesh - 1;
-		NSInteger iw = 1, ih = 1, kx = ix, ky = iy, jx = ix, jy = iy,
-			exOrder = 0, orderIdx = 0, noChangeCount = 0;
-		if (ax - ix > .5) exOrder |= 1;
-		if (ay - iy > .5) exOrder |= 2;
-		if (exOrder == 0 || exOrder == 3) {
-			if (ax - ix < ay - iy) exOrder |= 4;
-		} else if (ax - ix > 1 - ay + iy) exOrder |= 4;
-		ExIdxOrder *idxOrder = exIdxOrder[exOrder];
-		NSMutableArray<NSValue *> *members = nil;
-		for (BOOL doItMore = YES; doItMore; ) {
-			NSMutableArray<NSValue *> *candidates = NSMutableArray.new;
-			for (NSInteger v = 0; v < ih; v ++) for (NSInteger u = 0; u < iw; u ++)
-			for (Agent *a = _Pop[(ky + v) * p->mesh + kx + u]; a != NULL; a = a->next)
-				if (a->forVcn != VcnReject) [candidates addObject:[NSValue valueWithDistanceInfo:
-					(DistanceInfo){a, hypot(a->x - pt.x, a->y - pt.y)}]];
-			[candidates sortUsingComparator:^NSComparisonResult(NSValue *v1, NSValue *v2) {
-				CGFloat d1 = v1.distanceInfo.dist, d2 = v2.distanceInfo.dist;
-				return (d1 < d2)? NSOrderedAscending : (d1 > d2)? NSOrderedDescending : NSOrderedSame;
-			}];
-			if (members == nil) { if (candidates.count > 0) members = candidates; }
-			else if (candidates.count > 0) {
-				BOOL changed = NO;
-				NSMutableArray<NSValue *> *newMem = NSMutableArray.new;
-				NSInteger mIdx = 0, cIdx = 0;
-				CGFloat mDist = members[0].distanceInfo.dist, cDist = candidates[0].distanceInfo.dist;
-				while (newMem.count < nAgents && (mDist < MAXFLOAT || cDist < MAXFLOAT)) {
-					if (mDist < cDist) {
-						[newMem addObject:members[mIdx ++]];
-						mDist = (mIdx < members.count)? members[mIdx].distanceInfo.dist : MAXFLOAT;
-					} else {
-						[newMem addObject:candidates[cIdx ++]];
-						cDist = (cIdx < candidates.count)?
-							candidates[cIdx].distanceInfo.dist : MAXFLOAT;
-						changed = YES;
+	NSInteger nAntiVcnPopTotal = 0, antiVcnNPop[nAgeSpans];
+	for (NSInteger i = 0; i < nAgeSpans; i ++)
+		nAntiVcnPopTotal += antiVcnNPop[i] = round(spanNPop[i] * (1. - rp->vcnFnlRt[i].rate));
+	NSInteger nClstrs = pow(nAntiVcnPopTotal / 2, wp->avClstrGran / 100.);
+	for (NSInteger spanIdx = 0; spanIdx < nAgeSpans; spanIdx ++) {
+		NSInteger nAntiVcnPop = antiVcnNPop[spanIdx];
+		if (nAntiVcnPop <= 0) continue;
+		NSInteger nNoVcnNorTest = round(nAntiVcnPop * (1. - wp->avTestRate / 100.));
+		NSInteger nAgentsInClstr = nAntiVcnPop * wp->avClstrRate / 100.;
+		NSInteger nClstrCols = ceil(sqrt(nClstrs)),
+			nClstrRows = (nClstrs + nClstrCols - 1) / nClstrCols,
+			idx = 0, lstIdx = 0;
+		NSInteger *avAgentIDs = malloc(sizeof(NSInteger) * nAntiVcnPop);
+		for (NSInteger i = 0; i < nClstrs; i ++) {
+			NSInteger nAgents = (nAgentsInClstr - idx) / (nClstrs - i);
+			if (nAgents <= 0) continue;
+			NSPoint pt = {
+				(i % nClstrCols + .5) * worldParams.worldSize / nClstrCols,
+				(i / nClstrCols + .5) * worldParams.worldSize / nClstrRows
+			};
+			CGFloat ay = pt.y * wp->mesh / wp->worldSize, ax = pt.x * wp->mesh / wp->worldSize;
+			NSInteger iy = floor(ay), ix = floor(ax);
+			if (iy < 0) iy = 0; else if (iy >= wp->mesh) iy = wp->mesh - 1;
+			if (ix < 0) ix = 0; else if (ix >= wp->mesh) ix = wp->mesh - 1;
+			NSInteger iw = 1, ih = 1, kx = ix, ky = iy, jx = ix, jy = iy,
+				exOrder = 0, orderIdx = 0, noChangeCount = 0;
+			if (ax - ix > .5) exOrder |= 1;
+			if (ay - iy > .5) exOrder |= 2;
+			if (exOrder == 0 || exOrder == 3) {
+				if (ax - ix < ay - iy) exOrder |= 4;
+			} else if (ax - ix > 1 - ay + iy) exOrder |= 4;
+			ExIdxOrder *idxOrder = exIdxOrder[exOrder];
+			NSMutableArray<NSValue *> *members = nil;
+			for (BOOL doItMore = YES; doItMore; ) {
+				NSMutableArray<NSValue *> *candidates = NSMutableArray.new;
+				for (NSInteger v = 0; v < ih; v ++) for (NSInteger u = 0; u < iw; u ++)
+				for (Agent *a = _Pop[(ky + v) * wp->mesh + kx + u]; a != NULL; a = a->next)
+					if (a->ageSpanIndex == spanIdx && a->forVcn != VcnReject)
+						[candidates addObject:[NSValue valueWithDistanceInfo:
+							(DistanceInfo){a, hypot(a->x - pt.x, a->y - pt.y)}]];
+				[candidates sortUsingComparator:^NSComparisonResult(NSValue *v1, NSValue *v2) {
+					CGFloat d1 = v1.distanceInfo.dist, d2 = v2.distanceInfo.dist;
+					return (d1 < d2)? NSOrderedAscending : (d1 > d2)? NSOrderedDescending : NSOrderedSame;
+				}];
+				if (members == nil) { if (candidates.count > 0) members = candidates; }
+				else if (candidates.count > 0) {
+					BOOL changed = NO;
+					NSMutableArray<NSValue *> *newMem = NSMutableArray.new;
+					NSInteger mIdx = 0, cIdx = 0;
+					CGFloat mDist = members[0].distanceInfo.dist, cDist = candidates[0].distanceInfo.dist;
+					while (newMem.count < nAgents && (mDist < MAXFLOAT || cDist < MAXFLOAT)) {
+						if (mDist < cDist) {
+							[newMem addObject:members[mIdx ++]];
+							mDist = (mIdx < members.count)? members[mIdx].distanceInfo.dist : MAXFLOAT;
+						} else {
+							[newMem addObject:candidates[cIdx ++]];
+							cDist = (cIdx < candidates.count)?
+								candidates[cIdx].distanceInfo.dist : MAXFLOAT;
+							changed = YES;
+						}
 					}
+					members = newMem;
+					if (changed) noChangeCount = 0;
+					else if ((++ noChangeCount) >= 4) { doItMore = NO; break; }
+				} else if (members.count >= nAgents)
+					if ((++ noChangeCount) >= 4) { doItMore = NO; break; }
+				doItMore = NO;
+				for (NSInteger i = 0; !doItMore && i < 4; i ++) {
+					switch (idxOrder[orderIdx]) {
+						case IdxDown: if (jy < wp->mesh - 1) 
+							{ ky = ++ jy; kx = ix; ih = 1; iw = jx - ix + 1; doItMore = YES; } break;
+						case IdxUp: if (iy > 0)
+							{ ky = -- iy; kx = ix; ih = 1; iw = jx - ix + 1; doItMore = YES; } break;
+						case IdxRight: if (jx < wp->mesh - 1)
+							{ kx = ++ jx; ky = iy; iw = 1; ih = jy - iy + 1; doItMore = YES; } break;
+						case IdxLeft: if (ix > 0)
+							{ kx = -- ix; ky = iy; iw = 1; ih = jy - iy + 1; doItMore = YES; }
+					}
+					orderIdx = (orderIdx + 1) % 4;
 				}
-				members = newMem;
-				if (changed) noChangeCount = 0;
-				else if ((++ noChangeCount) >= 4) { doItMore = NO; break; }
-			} else if (members.count >= nAgents)
-				if ((++ noChangeCount) >= 4) { doItMore = NO; break; }
-			doItMore = NO;
-			for (NSInteger i = 0; !doItMore && i < 4; i ++) {
-				switch (idxOrder[orderIdx]) {
-					case IdxDown: if (jy < p->mesh - 1) 
-						{ ky = ++ jy; kx = ix; ih = 1; iw = jx - ix + 1; doItMore = YES; } break;
-					case IdxUp: if (iy > 0)
-						{ ky = -- iy; kx = ix; ih = 1; iw = jx - ix + 1; doItMore = YES; } break;
-					case IdxRight: if (jx < p->mesh - 1)
-						{ kx = ++ jx; ky = iy; iw = 1; ih = jy - iy + 1; doItMore = YES; } break;
-					case IdxLeft: if (ix > 0)
-						{ kx = -- ix; ky = iy; iw = 1; ih = jy - iy + 1; doItMore = YES; }
-				}
-				orderIdx = (orderIdx + 1) % 4;
+			}
+			for (NSInteger i = 0; i < nAgents && i < members.count; i ++) {
+				NSInteger ID = members[i].distanceInfo.agent->ID;
+				_agents[ID].forVcn = VcnReject;
+				avAgentIDs[lstIdx ++] = ID;
+			}
+			idx += nAgents;
+		}
+		if (idx < nAntiVcnPop) {
+			NSInteger nRestAgents = spanNPop[spanIdx] - nAgentsInClstr;
+			NSInteger *agentIDs = malloc(sizeof(NSInteger) * nRestAgents);
+			for (NSInteger i = 0, j = 0; i < nPop && j < nRestAgents; i ++)
+				if (_agents[i].ageSpanIndex == spanIdx && _agents[i].forVcn != VcnReject)
+					agentIDs[j ++] = i;
+			for (NSInteger i = 0; i < nAntiVcnPop - idx; i ++) {
+				NSInteger j = random() % (nRestAgents - i);
+				_agents[agentIDs[j]].forVcn = VcnReject;
+				avAgentIDs[lstIdx ++] = agentIDs[j];
+				if (j < nRestAgents - i - 1) agentIDs[j] = agentIDs[nRestAgents - i - 1];
+			}
+			free(agentIDs);
+		}
+		if (nNoVcnNorTest >= nAntiVcnPop) {
+			for (NSInteger i = 0; i < nAntiVcnPop; i ++)
+				_agents[avAgentIDs[i]].forVcn = VcnNoTest;
+		} else if (nNoVcnNorTest > 0) {
+			for (NSInteger i = 0; i < nNoVcnNorTest; i ++) {
+				NSInteger j = random() % (nAntiVcnPop - i);
+				_agents[avAgentIDs[j]].forVcn = VcnNoTest;
+				if (j < nAntiVcnPop - i - 1) avAgentIDs[j] = avAgentIDs[nAntiVcnPop - i - 1];
 			}
 		}
-		for (NSInteger i = 0; i < nAgents && i < members.count; i ++) {
-			NSInteger ID = members[i].distanceInfo.agent->ID;
-			_agents[ID].forVcn = VcnReject;
-			avAgentIDs[lstIdx ++] = ID;
-		}
-		idx += nAgents;
+		free(avAgentIDs);
 	}
-	if (idx < nAntiVcnPop) {
-		NSInteger nRestAgents = nPop - nAgentsInClstr;
-		NSInteger *agentIDs = malloc(sizeof(NSInteger) * nRestAgents);
-		for (NSInteger i = 0, j = 0; i < nPop && j < nRestAgents; i ++)
-			if (_agents[i].forVcn != VcnReject) agentIDs[j ++] = i;
-		for (NSInteger i = 0; i < nAntiVcnPop - idx; i ++) {
-			NSInteger j = random() % (nRestAgents - i);
-			_agents[agentIDs[j]].forVcn = VcnReject;
-			avAgentIDs[lstIdx ++] = agentIDs[j];
-			if (j < nRestAgents - i - 1) agentIDs[j] = agentIDs[nRestAgents - i - 1];
-		}
-		free(agentIDs);
-	}
-	if (nNoVcnNorTest >= nAntiVcnPop) {
-		for (NSInteger i = 0; i < nAntiVcnPop; i ++)
-			_agents[avAgentIDs[i]].forVcn = VcnNoTest;
-	} else if (nNoVcnNorTest > 0) {
-		for (NSInteger i = 0; i < nNoVcnNorTest; i ++) {
-			NSInteger j = random() % (nAntiVcnPop - i);
-			_agents[avAgentIDs[j]].forVcn = VcnNoTest;
-			if (j < nAntiVcnPop - i - 1) avAgentIDs[j] = avAgentIDs[nAntiVcnPop - i - 1];
-		}
-	}
-	free(avAgentIDs);
-
 	NSInteger *queue = vcnQueue + VcnPrRandom * nPop;
 	for (NSInteger i = 0; i < nPop; i ++) queue[i] = i;
 	for (NSInteger i = 0; i < nPop - 1; i ++) {
@@ -664,6 +533,69 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	memset(vcnQueIdx, 0, sizeof(vcnQueIdx));
 	memset(vcnSubjRem, 0, sizeof(vcnSubjRem));
 }
+- (void)organizeAgeSpanInfo {
+	memset(spanNPop, 0, sizeof(spanNPop));
+	for (nAgeSpans = 0; nAgeSpans < MAX_N_AGE_SPANS; nAgeSpans ++)
+		if (initParams.vcnFnlRt[nAgeSpans].upperAge >= 150) { nAgeSpans ++; break; }
+	for (NSInteger i = 0; i < nPop; i ++) {
+		Agent *a = &_agents[i];
+		int sIdx = 0;
+		for (; sIdx < nAgeSpans; sIdx ++)
+			if (a->age < initParams.vcnFnlRt[sIdx].upperAge + 1) break;
+		if (sIdx >= nAgeSpans) sIdx = nAgeSpans - 1;
+		a->ageSpanIndex = sIdx;
+		spanNPop[sIdx] ++;
+	}
+	ageSpanIdxs[0] = 0;
+	for (NSInteger i = 0; i < nAgeSpans - 1; i ++)
+		ageSpanIdxs[i + 1] = ageSpanIdxs[i] + spanNPop[i];
+	NSInteger idx[nAgeSpans];
+	memset(idx, 0, sizeof(idx));
+	for (NSInteger i = 0; i < nPop; i ++) {
+		int span = _agents[i].ageSpanIndex;
+		ageSpanIDs[ageSpanIdxs[span] + (idx[span] ++)] = i;
+	}
+}
+#define N_AGE_BANDS 104
+static NSInteger AgePopSize[N_AGE_BANDS] = {	// 2021/3/1 Tokyo
+// https://www.toukei.metro.tokyo.lg.jp/juukiy/2021/jy21q10601.htm
+	95975, 99101, 103773, 104797, 107163, 108487, 105920, 106118, 103586, 102899,
+	104775, 103597, 103591, 102340, 100832, 96638, 100756, 100955, 105038, 112672,
+	120006, 127282, 140154, 159382, 166432, 168263, 178101, 170612, 173084, 172862,
+	168955, 168514, 175146, 177028, 178665, 183927, 190680, 190906, 189606, 189371,
+	192704, 198755, 203002, 205724, 210132, 214166, 227010, 235031, 231145, 228018,
+	221382, 217032, 213949, 217545, 157671, 200787, 185100, 171046, 160955, 152337,
+	148371, 141566, 138486, 127619, 127979, 129708, 128497, 130110, 138327, 142374,
+	153823, 176341, 174508, 176877, 119524, 105249, 127560, 135271, 128519, 126580,
+	113767, 96597, 90751, 96408, 88884, 86876, 71570, 66662, 59730, 49570, 41908,
+	35028, 29471, 23645, 18724, 14969, 10446, 7535, 5301, 3867, 2614, 1586, 962, 1448 
+};
+static void random_ages(CGFloat *ages, NSInteger n) {
+	NSInteger sum = 0, nn = n, agePop[N_AGE_BANDS];
+	for (NSInteger i = 0; i < N_AGE_BANDS; i ++) sum += AgePopSize[i];
+	for (NSInteger i = 0; i < N_AGE_BANDS; i ++) {
+		agePop[i] = (sum > 0)? (nn * AgePopSize[i] + sum / 2) / sum : 0;
+		sum -= AgePopSize[i];
+		nn -= agePop[i];
+	}
+//#ifdef DEBUG
+//	sum = 0;
+//	for (NSInteger i = 0; i < N_AGE_BANDS; i ++) {
+//		printf("%ld,", agePop[i]);
+//		sum += agePop[i];
+//	}
+//	printf("\n%ld\n", sum);
+//#endif
+	for (NSInteger i = 1; i < N_AGE_BANDS; i ++) agePop[i] += agePop[i - 1];
+	for (NSInteger i = 0, j = 0; i < n; i ++) {
+		while (i >= agePop[j] && j < N_AGE_BANDS - 1) j ++;
+		ages[i] = j + d_random();
+	}
+	for (NSInteger i = 0; i < n - 1; i ++) {
+		NSInteger j = (random() % (n - i)) + i;
+		if (j != i) { CGFloat v = ages[i]; ages[i] = ages[j]; ages[j] = v; }
+	}
+}
 - (BOOL)resetPop {
 	BOOL changed = NO;
 	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
@@ -673,25 +605,17 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
 	[popLock lock];
 	[self allocateMemory];
-	NSInteger nAgePop[N_AGE_BANDS], nASum = 0;
-	for (NSInteger i = 0; i < N_AGE_BANDS; i ++) nASum += AgePopSize[i];
-	for (NSInteger i = 0; i < N_AGE_BANDS; i ++)
-		nAgePop[i] = nPop * AgePopSize[i] / nASum + ((i == 0)? 0 : nAgePop[i - 1]);
-	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
-	for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
-	for (NSInteger i = 0, iS = 0; i < nPop; i ++) {
-		NSInteger j = random() % (nPop - i) + i, k = ibuf[j];
-		if (i != j) ibuf[j] = ibuf[i];
-		_agents[k].age = (d_random() + iS) * 5.;
-		if (i >= nAgePop[iS] && iS < N_AGE_BANDS - 1) iS ++;
-	}
+	CGFloat *ages = malloc(sizeof(CGFloat) * nPop);
+	random_ages(ages, nPop);
 	NSInteger nDist = runtimeParams.dstOB / 100. * nPop;
 	for (NSInteger i = 0; i < nPop; i ++) {
 		Agent *a = &_agents[i];
-		reset_agent(a, &runtimeParams, &worldParams);
+		reset_agent(a, ages[i], &runtimeParams, &worldParams);
 		a->ID = i;
 		a->distancing = (i < nDist);
 	}
+	free(ages);
+	[self organizeAgeSpanInfo];
 	if (worldParams.wrkPlcMode == WrkPlcPopDistImg)
 		setup_home_with_map(_agents, &worldParams, _popDistImage);
 	PopulationHConf pconf = { 0,
@@ -701,6 +625,7 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	NSInteger nn = pconf.asym + pconf.recv;
 	if (nn > nPop) pconf.recv = (nn = nPop) - pconf.asym;
 	pconf.susc = nPop - nn;
+	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
 	for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
 	for (NSInteger i = 0; i < nn; i ++) {
 		NSInteger j = random() % (nPop - i) + i, k = ibuf[j];
@@ -743,7 +668,7 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 			add_to_list(a, &_QList);
 		} else add_agent(a, &worldParams, _Pop);
 	}
-	[self setupVaxenAndVarintsFromLists];
+	[self setupVaxenAndVariantsFromLists];
 	[self resetVaccineQueue];
 	runtimeParams.step = 0;
 	[statInfo reset:pconf];
@@ -760,6 +685,16 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	memset(mtime, 0, sizeof(mtime));
 #endif
 	return changed;
+}
+MutableDictArray default_variants(void) {
+	return [NSMutableArray arrayWithObject:
+		[NSMutableDictionary dictionaryWithDictionary:
+		@{@"name":@"Original", @"reproductivity":@(1.),@"Original":@(1.)}]];
+}
+MutableDictArray default_vaccines(void) {
+	return [NSMutableArray arrayWithObject:
+		[NSMutableDictionary dictionaryWithDictionary:
+		@{@"name":@"PfBNT", @"intervalOn":@YES, @"intervalDays":@(21),@"Original":@(1.)}]];
 }
 - (instancetype)init {
 	if ((self = [super init]) == nil) return nil;
@@ -785,14 +720,8 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	tmemLock = NSLock.new;
 	cmemLock = NSLock.new;
 	gmemLock = NSLock.new;
-	_variantList = [NSMutableArray arrayWithObject:
-		[NSMutableDictionary dictionaryWithDictionary:
-		@{@"name":@"Original", @"reproductivity":@(1.),
-			@"Original":@(1.)}]];
-	_vaccineList = [NSMutableArray arrayWithObject:
-		[NSMutableDictionary dictionaryWithDictionary:
-		@{@"name":@"PfBNT", @"intervalOn":@YES, @"intervalDays":@(21),
-			@"Original":@(1.)}]];
+	_variantList = default_variants();
+	_vaccineList = default_vaccines();
 	stopAtNDays = -365;
 	memcpy(&runtimeParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
 	memcpy(&initParams, &userDefaultRuntimeParams, sizeof(RuntimeParams));
@@ -820,96 +749,8 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	free(pop);
 	free(_agents);
 	free(vcnQueue);
+	free(ageSpanIDs);
 	self.popDistImage = nil;
-}
-NSString *keyParameters = @"parameters", *keyScenario = @"scenario",
-	*keyDaysToStop = @"daysToStop";
-static NSObject *property_from_element(NSObject *elm) {
-	NSString *label;
-	NSPredicate *pred = predicate_in_item(elm, &label);
-	if (pred == nil) return elm;
-	if (label.length == 0) return pred.predicateFormat;
-	return @[label, pred.predicateFormat];
-}
-NSObject *scenario_element_from_property(NSObject *prop) {
-	if ([prop isKindOfClass:NSString.class])
-		return [NSPredicate predicateWithFormat:(NSString *)prop];
-	else if (![prop isKindOfClass:NSArray.class]) return prop;
-	else if (((NSArray *)prop).count != 2) return prop;
-	else if (![((NSArray *)prop)[1] isKindOfClass:NSString.class]) return prop;
-	NSPredicate *pred =
-		[NSPredicate predicateWithFormat:(NSString *)((NSArray *)prop)[1]];
-	return (pred != nil)? @[((NSArray *)prop)[0], pred] : nil;
-}
-#ifdef NOGUI
-static NSString *check_paramname_in_chng_prm_elm(NSArray *prop) {
-	NSString *paramName = prop[0];
-	if (![paramName isKindOfClass:NSString.class]) return nil;
-	@try {
-		NSNumber *idxNum = paramIndexFromKey[(NSString *)prop[0]];
-		if (idxNum != nil) {
-			NSInteger idx = idxNum.integerValue;
-			if ((idx >= IDX_I && idx < IDX_E) || idx >= IDX_H) {
-				if (![paramName isEqualToString:@"vaccineAntiRate"] || prop.count > 2)
-					@throw @"invalid to modify in scenario.";
-			}
-		} else if ([paramName hasPrefix:@"vaccine"]) {
-			NSString *suffix;
-			NSScanner *scan = [NSScanner scannerWithString:paramName];
-			[scan scanString:@"vaccine" intoString:NULL];
-			[scan scanUpToString:@" " intoString:&suffix];
-			if ([@[@"PerformRate", @"Priority", @"Regularity"] indexOfObject:suffix] == NSNotFound)
-				@throw @"unknown parameter name";
-		} else @throw @"unknown parameter name";
-	} @catch (NSString *msg) {
-		return [NSString stringWithFormat:@"\"%@\" is %@.", paramName, msg]; }
-	return nil;
-}
-NSString *check_scenario_element_from_property(NSObject *prop) {
-// returns nil when it looks OK, otherwise return a string of error message
-	NSString *predForm = nil;
-	if ([prop isKindOfClass:NSString.class]) predForm = (NSString *)prop;
-	else if (![prop isKindOfClass:NSArray.class]) return nil;
-	else if (((NSArray *)prop).count != 2) return check_paramname_in_chng_prm_elm((NSArray *)prop);
-	else if (![((NSArray *)prop)[1] isKindOfClass:NSString.class])
-		return check_paramname_in_chng_prm_elm((NSArray *)prop);
-	else predForm = (NSString *)((NSArray *)prop)[1];
-	if (predForm == nil || predForm.length == 0) return @"Null predicate";
-	@try { return ([NSPredicate predicateWithFormat:predForm] == nil)? @"Null" : nil; }
-	@catch (NSException *e) { return e.reason; }
-}
-#endif
-- (NSArray *)scenarioPList {
-	if (scenario == nil || scenario.count == 0) return @[];
-	NSObject *items[scenario.count];
-	for (NSInteger i = 0; i < scenario.count; i ++)
-		items[i] = property_from_element(scenario[i]);
-	return [NSArray arrayWithObjects:items count:scenario.count];
-}
-- (void)setScenarioWithPList:(NSArray *)plist {
-	NSArray *newScen;
-	if (plist.count == 0) newScen = plist;
-	else {
-		NSObject *items[plist.count];
-		for (NSInteger i = 0; i < plist.count; i ++) {
-			NSString *errmsg = nil;
-			@try {
-				items[i] = scenario_element_from_property(plist[i]);
-				if (items[i] == nil) errmsg = [NSString stringWithFormat:
-					@"Could not convert it to a scenario element: %@", plist[i]];
-			} @catch (NSException *exc) { errmsg = exc.reason; }
-			if (errmsg != nil) @throw errmsg;
-		}
-		newScen = [NSArray arrayWithObjects:items count:plist.count];
-	}
-	scenario = newScen;
-	scenarioIndex = 0;
-	if (statInfo != nil) {
-#ifndef NOGUI
-		[self setupPhaseInfo];
-#endif
-		if (runtimeParams.step == 0) [self execScenario];
-	}
 }
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason {
 	if (runtimeParams.step - agent->lastTested <
@@ -993,7 +834,7 @@ NSString *check_scenario_element_from_property(NSObject *prop) {
 	for (NSInteger j = 0; j < pRange[iA].length; j ++)
 		[self interactsA:apA[j] Bs:apB n:pRange[iB].length];
 }
-static void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat steps) {
+void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat steps) {
 	dp->min += (arr[0].doubleValue - dp->min) / steps;
 	dp->max += (arr[1].doubleValue - dp->max) / steps;
 	dp->mode += (arr[2].doubleValue - dp->mode) / steps;
@@ -1035,36 +876,37 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 		NSMutableArray<NSString *> *keyToRemove = NSMutableArray.new;
 		for (NSString *key in paramChangers) {
 			NSArray<NSNumber *> *entry = paramChangers[key];
-			CGFloat stepsLeft = entry[1].doubleValue * worldParams.stepsPerDay
-				- runtimeParams.step;
-			if ([key hasPrefix:@"vaccine"]) {
+			DistInfo *targetDist = NULL;
+			CGFloat *targetVar = NULL,
+				stepsLeft = entry[1].doubleValue * worldParams.stepsPerDay - runtimeParams.step;
+			NSNumber *idxNum;
+			if (![key hasPrefix:@"vaccine"]) {
+				NSInteger idx = paramIndexFromKey[key].integerValue;
+				if (idx < IDX_D) targetVar = &runtimeParams.PARAM_F1 + idx;
+				else targetDist = &runtimeParams.PARAM_D1 + idx - IDX_D;
+			} else if ((idxNum = paramIndexFromKey[key]) != nil) {
+				NSInteger idx = idxNum.integerValue;
+				if (idx >= IDX_R && idx < IDX_E)
+					targetVar = &worldParams.PARAM_R1 + idx - IDX_R;
+			} else {
 				int vcnType;
 				NSString *varName = [self varNameFromKey:key vcnTypeReturn:&vcnType];
 				if (vcnType < 0) continue;
 				VaccinationInfo *vInfo = &runtimeParams.vcnInfo[vcnType];
-				CGFloat goalValue = entry[0].doubleValue;
-				if (stepsLeft <= 1.) {
-					[keyToRemove addObject:key];
-					if ([varName hasSuffix:@"Rate"]) vInfo->performRate = goalValue;
-					else vInfo->regularity = goalValue;
-				} else {
-					CGFloat *vp = [varName hasSuffix:@"Rate"]?
-						&vInfo->performRate : &vInfo->regularity;
-					*vp += (goalValue - *vp) / stepsLeft;
-				}
-			} else {
-				NSInteger idx = paramIndexFromKey[key].integerValue;
-				if (stepsLeft <= 1.) {
-					[keyToRemove addObject:key];
-					if (idx < IDX_D) (&runtimeParams.PARAM_F1)[idx] = entry[0].doubleValue;
-					else set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
-						(NSArray<NSNumber *> *)entry[0], 1.);
-				} else if (idx < IDX_D) {
-					CGFloat *vp = &runtimeParams.PARAM_F1 + idx;
-					*vp += (entry[0].doubleValue - *vp) / stepsLeft;
-				} else set_dist_values(&runtimeParams.PARAM_D1 + idx - IDX_D,
-					(NSArray<NSNumber *> *)entry[0], stepsLeft);
-		}}
+				if ([varName hasSuffix:@"Rate"]) targetVar = &vInfo->performRate;
+				else if ([varName hasSuffix:@"Regularity"]) targetVar = &vInfo->regularity;
+				else continue;
+			}
+			if (stepsLeft <= 1.) {
+				[keyToRemove addObject:key];
+				if (targetVar != NULL) *targetVar = entry[0].doubleValue;
+				else if (targetDist != NULL) set_dist_values(targetDist,
+					(NSArray<NSNumber *> *)entry[0], 1.);
+			} else if (targetVar != NULL)
+				*targetVar += (entry[0].doubleValue - *targetVar) / stepsLeft;
+			else if (targetDist != NULL)
+				set_dist_values(targetDist, (NSArray<NSNumber *> *)entry[0], stepsLeft);
+		}
 #ifndef NOGUI
 		[NSNotificationCenter.defaultCenter postNotificationName:nnParamChanged
 			object:self userInfo:@{@"keys":paramChangers.allKeys}];
@@ -1351,7 +1193,7 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 	if (loopMode == LoopRunning) {
 		if (finished) loopMode = LoopFinished;
 		else if ([predicateToStop evaluateWithObject:statInfo])
-			loopMode = LoopEndByCondition;
+			loopMode = LoopPauseByCondition;
 	}
 #ifdef MEASURE_TIME
 	tm2 = current_time_us();
@@ -1392,9 +1234,11 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 		CGFloat timePassed = get_uptime() - startTime;
 		if (timePassed < 1.)
 			stepsPerSec += (1. / timePassed - stepsPerSec) * 0.2;
-		if (loopMode == LoopEndByCondition && scenarioIndex < scenario.count) {
-			[self execScenario];
-			loopMode = LoopRunning;
+		if (loopMode == LoopPauseByCondition) {
+			if (scenarioIndex < scenario.count) {
+				[self execScenario];
+				loopMode = LoopRunning;
+			} else loopMode = LoopEndByCondition;
 		}
 		if (stopAtNDays > 0 && runtimeParams.step
 			== stopAtNDays * worldParams.stepsPerDay - 1) {

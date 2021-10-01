@@ -40,8 +40,7 @@ NSString *VariantListChanged = @"VariantListChanged";
 
 @interface VVPanel () {
 	World * __weak world;
-	NSMutableArray<NSMutableDictionary *> *variantList;
-	NSMutableArray<NSMutableDictionary *> *vaccineList;
+	MutableDictArray variantList, vaccineList;
 	NSUndoManager *undoManager;
 	NSInteger vaxNextID, vrnNextID;
 	NSTableColumn *vaxColToEdit;
@@ -329,7 +328,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 		changed = YES;
 	}
 	applyBtn.enabled = NO;
-	if (changed && world.runtimeParamsP->step == 0) [world setupVaxenAndVarintsFromLists];
+	if (changed && world.runtimeParamsP->step == 0) [world setupVaxenAndVariantsFromLists];
 }
 - (NSData *)dataOfVVInfo:(BOOL)isPlist {
 	NSDictionary *info = @{@"variantList":variantList, @"vaccineList":[self stippedVaxList]};

@@ -73,7 +73,7 @@ typedef struct {
 @property (readonly) NSMutableArray<MyCounter *> *IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
 @property StatData *statistics, *transit;
 @property TestResultCount testResultCnt;	// weekly total
-@property NSMutableData *sspData;
+@property NSMutableData *sspData, *variantsData;
 
 - (void)reset:(PopulationHConf)popConf;
 - (void)cummulateHistgrm:(HistogramType)type days:(CGFloat)d;
@@ -97,13 +97,12 @@ typedef struct {
 
 #ifndef NOGUI
 #define SSP_NDrawRanks 10
-#define SSP_DrawCnkSize (SSP_NRanks / SSP_NDrawRanks)
 typedef struct {
 	NSInteger idxBits, nIndexes, windowSize;
 } TimeEvoInfo;
 
 typedef enum {
-	StatWhole, StatTimeEvo, StatSeverity, StatPeriods, StatSpreaders
+	StatWhole, StatTimeEvo, StatSeverity, StatVariants, StatPeriods, StatSpreaders
 } StatType;
 
 typedef enum {
