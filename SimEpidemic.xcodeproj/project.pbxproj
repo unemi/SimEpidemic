@@ -316,10 +316,10 @@
 				235639CB247111A200F941A6 /* ScenPanel.m */,
 				238A8F27246694D300604BF4 /* StatPanel.h */,
 				238A8F28246694D300604BF4 /* StatPanel.m */,
-				23B4E4E1262E8F3B0058BCCC /* World.h */,
-				23B4E4E2262E8F3B0058BCCC /* World.m */,
 				23A9C7FC26CBDA5C006F7DDE /* VVPanel.h */,
 				23A9C7FD26CBDA5C006F7DDE /* VVPanel.m */,
+				23B4E4E1262E8F3B0058BCCC /* World.h */,
+				23B4E4E2262E8F3B0058BCCC /* World.m */,
 			);
 			path = Sources;
 			sourceTree = "<group>";

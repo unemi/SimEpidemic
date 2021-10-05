@@ -11,7 +11,7 @@
 #import "Document.h"
 #endif
 
-@implementation World (Scenario)
+@implementation World (ScenarioExtension)
 static NSInteger age_span_index_from_key(NSString *key) {
 	NSScanner *scan = [NSScanner scannerWithString:key];
 	[scan scanUpToString:@" " intoString:NULL];

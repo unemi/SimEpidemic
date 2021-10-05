@@ -104,6 +104,9 @@
 "gatheringDuration" = "集会の長さ";
 "gatheringStrength" = "集会の強さ";
 "Value..." = "値...";
+"Scattered" = "散在";
+"Cluster at center" = "中央に集団";
+"Cluster in random" = "任意位置に集団";
 "Saved population data was short." = "保存された個体集団のデータが足りません。";
 "The file format seems to be old." = "ファイル形式が古いようです。";
 "The file format is too new." = "新しいファイル形式のようです。";

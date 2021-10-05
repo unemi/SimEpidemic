@@ -284,11 +284,14 @@ static void attracted(Agent *a, Agent *b) {
 }
 static inline CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 - (void)checkInfectionA:(Agent *)a B:(Agent *)b dist:(CGFloat)d {
-	if (was_hit(worldParams.stepsPerDay, runtimeParams.cntctTrc / 100.))
+	if (d < runtimeParams.infecDst &&
+		was_hit(worldParams.stepsPerDay, runtimeParams.cntctTrc / 100.))
 		[self addNewCInfoA:a B:b tm:runtimeParams.step];
 	if (a->newHealth != a->health || !is_infected(b)) return;
 	CGFloat virusX = variantInfo[b->virusVariant].reproductivity,
-		exacerbate = exacerbation(virusX),
+		infecDMax = runtimeParams.infecDst * sqrt(virusX);
+	if (d > infecDMax) return;
+	CGFloat exacerbate = exacerbation(virusX),
 		contagDelay = runtimeParams.contagDelay / exacerbate,
 		contagPeak = runtimeParams.contagPeak / exacerbate;
 	if (b->daysInfected <= contagDelay) return;
@@ -305,9 +308,11 @@ static inline CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 		fmin(1., (b->daysInfected - contagDelay) /
 			(fmin(contagPeak, b->daysToOnset) - contagDelay)) :
 		(b->daysToCompleteRecov - b->daysInfected) / (b->daysToCompleteRecov - b->daysToRecover);
-	CGFloat distanceFactor = fmin(1., pow((runtimeParams.infecDst * sqrt(virusX) - d) / 2., 2.));
-	if (was_hit(worldParams.stepsPerDay, runtimeParams.infec / 100. * virusX
-		* timeFactor * distanceFactor * (1. - immuneFactor))) {	// infected!
+	CGFloat distanceFactor = fmin(1., pow((infecDMax - d) / 2., 2.));
+	CGFloat infecProb = (virusX < 1.)? runtimeParams.infec / 100. * virusX :
+		1. - (1. - runtimeParams.infec / 100.) / virusX;
+	if (was_hit(worldParams.stepsPerDay,
+		infecProb * timeFactor * distanceFactor * (1. - immuneFactor))) {	// infected!
 		a->newHealth = Asymptomatic;
 		a->agentImmunity = immuneFactor;
 		a->virusVariant = b->virusVariant;
@@ -341,10 +346,8 @@ static inline CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 		bb[i]->fx += ax[i]; bb[i]->fy += ay[i];
 		attracted(a, bb[i]);
 		attracted(bb[i], a);
-		if (d[i] < runtimeParams.infecDst) {
-			[self checkInfectionA:a B:bb[i] dist:d[i]];
-			[self checkInfectionA:bb[i] B:a dist:d[i]];
-		}
+		[self checkInfectionA:a B:bb[i] dist:d[i]];
+		[self checkInfectionA:bb[i] B:a dist:d[i]];
 	}
 }
 @end

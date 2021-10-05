@@ -206,8 +206,8 @@ static NSString *check_paramname_in_chng_prm_elm(NSArray *prop) {
 			NSScanner *scan = [NSScanner scannerWithString:paramName];
 			[scan scanString:@"vaccine" intoString:NULL];
 			[scan scanUpToString:@" " intoString:&suffix];
-			if ([@[@"PerformRate", @"Priority", @"Regularity"] indexOfObject:suffix] == NSNotFound)
-				@throw @"unknown parameter name";
+			if ([@[@"PerformRate", @"Priority", @"Regularity", @"FinalRate"]
+				indexOfObject:suffix] == NSNotFound) @throw @"unknown parameter name";
 		} else @throw @"unknown parameter name";
 	} @catch (NSString *msg) {
 		return [NSString stringWithFormat:@"\"%@\" is %@.", paramName, msg]; }
@@ -387,7 +387,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 		if (moreVaccines != nil) {
 			MutableDictArray moreV = mutablized_array_of_dicts(moreVaccines);
 			add_vv_list(world.vaccineList, moreV);
-			correct_vaccine_list(world.vaccineList, world.variantList);
+			correct_vaccine_list(world.variantList, world.vaccineList);
 		}
 		if (moreVariants != nil) {
 			MutableDictArray moreV = mutablized_array_of_dicts(moreVariants);

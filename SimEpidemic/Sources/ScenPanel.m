@@ -436,7 +436,7 @@ static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
 
 @interface InfecCellView : NSTableCellView
 @property (readonly) NSTextField *digits;
-@property (readonly) NSPopUpButton *variantPopUp;
+@property (readonly) NSPopUpButton *variantPopUp, *locationPopUp;
 @end
 @implementation InfecCellView
 - (instancetype)initWithWorld:(World *)world {
@@ -453,6 +453,10 @@ static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
 	[NSNotificationCenter.defaultCenter addObserver:self selector:@selector(variantListChanged:)
 		name:VariantListChanged object:world];
 	set_subview(_variantPopUp, self, YES);
+	_locationPopUp = NSPopUpButton.new;
+	for (NSString *title in @[@"Scattered", @"Cluster at center", @"Cluster in random"])
+		[_locationPopUp addItemWithTitle:NSLocalizedString(title, nil)];
+	set_subview(_locationPopUp, self, YES);
 	return self;
 }
 - (void)variantListChanged:(NSNotification *)note {
@@ -1067,22 +1071,11 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 }
 - (NSObject *)scenarioElement {
 	InfecCellView *view = (InfecCellView *)self.view;
-	return @[@(view.digits.integerValue), @"variant",
+	return @[@(view.digits.integerValue),
+		@(view.locationPopUp.indexOfSelectedItem),
 		view.variantPopUp.titleOfSelectedItem];
 }
 @end
-//
-//@implementation World (ScenarioExtension)
-//- (void)setScenario:(NSArray *)newScen index:(NSInteger)index {
-//	if (index == 0) { self.scenario = newScen; return; }
-//	self.scenario = newScen;
-//	scenarioIndex = index;
-//	if (index > 0 && index <= newScen.count)
-//		predicateToStop = predicate_in_item(newScen[index - 1], NULL);
-//	[self adjustScenarioText];
-//}
-//- (NSInteger)scenarioIndex { return scenarioIndex; }
-//@end
 
 @interface Scenario () {
 	NSArray *savedPList;
@@ -1369,6 +1362,9 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 					item = [InfecItem.alloc initWithScenario:self];
 					InfecCellView *view = (InfecCellView *)item.view;
 					view.digits.integerValue = [((NSArray *)elm)[0] integerValue];
+					NSInteger loc = [((NSArray *)elm)[1] isKindOfClass:NSNumber.class]?
+						[((NSArray *)elm)[1] integerValue] : 0;
+					[view.locationPopUp selectItemAtIndex:loc];
 					NSString *varName = ((NSArray *)elm)[2];
 					NSArray<NSDictionary *> *list = _world.variantList;
 					NSInteger idx; for (idx = 0; idx < list.count; idx ++)

@@ -9,7 +9,7 @@
 #import "World.h"
 
 NS_ASSUME_NONNULL_BEGIN
-@interface World (Scenario)
+@interface World (ScenarioExtension)
 - (void)execScenario;
 - (NSArray *)scenario;
 - (NSInteger)scenarioIndex;
