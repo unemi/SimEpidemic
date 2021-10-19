@@ -176,7 +176,7 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 	nnObjects[nnScenarioText] = @YES;
 	nnObjects[nnParamChanged] = [ntfCenter addObserverForName:nnParamChanged
 		object:world queue:nil usingBlock:^(NSNotification *note) {
-		[self->paramPanel adjustParamControls:note.userInfo[@"keys"]];
+		in_main_thread(^{[self->paramPanel adjustParamControls:note.userInfo[@"keys"]];});
 	}];
 	if (world.scenario != nil) [world setupPhaseInfo];
 	if (world.runtimeParamsP->step == 0) [self resetPopulation];

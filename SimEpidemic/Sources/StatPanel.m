@@ -226,10 +226,10 @@ static void count_health(Agent *a, StatData *stat, StatData *tran) {
 	}
 	stat->cnt[a->health] ++;
 }
-static void count_severity(Agent *a, NSInteger *cnt) {
-	NSInteger rank = (a->health != Symptomatic)? 0
-		: (a->daysInfected - a->daysToOnset) / a->daysToDie * SSP_NRanks;
-//	if (rank < 0 || rank >= SSP_NRanks) return;
+static void count_severity(Agent *a, VariantInfo *vp, NSInteger *cnt) {
+	NSInteger rank = (a->health != Symptomatic)? 0 :
+		(a->daysInfected * exacerbation(vp[a->virusVariant].reproductivity) - a->daysToOnset)
+		/ a->daysToDie * SSP_NRanks;
 	if (rank < 0) rank = 0; else if (rank >= SSP_NRanks) rank = SSP_NRanks - 1;
 	cnt[rank] ++;
 }
@@ -371,7 +371,7 @@ static void shrink_data_in_half(NSMutableData *data, NSInteger unit) {
 			NSInteger *cntS = (NSInteger *)_sspData.mutableBytes + SSP_NRanks * idx;
 			NSInteger *cntV = (NSInteger *)_variantsData.mutableBytes + MAX_N_VARIANTS * idx;
 			for (Agent *a = _world.QList; a != NULL; a = a->next) {
-				count_severity(a, cntS);
+				count_severity(a, _world.variantInfoP, cntS);
 				count_infected_variants(a, cntV);
 			}
 		}

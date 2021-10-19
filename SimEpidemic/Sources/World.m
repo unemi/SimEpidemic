@@ -102,6 +102,7 @@ NSString *keyParameters = @"parameters", *keyScenario = @"scenario",
 - (RuntimeParams *)initParamsP { return &initParams; }
 - (WorldParams *)worldParamsP { return &worldParams; }
 - (WorldParams *)tmpWorldParamsP { return &tmpWorldParams; }
+- (VariantInfo *)variantInfoP { return variantInfo; }
 - (CGFloat)stepsPerSec { return stepsPerSec; }
 - (BOOL)running { return loopMode == LoopRunning || loopMode == LoopPauseByCondition; }
 - (Gathering *)gatherings { return gatherings; }
@@ -814,7 +815,8 @@ MutableDictArray default_vaccines(void) {
 		Agent *agent = &_agents[num.integerValue];
 		TestEntry *entry = [self newTestEntry];
 		entry->isPositive = is_infected(agent)?
-			(d_random() < runtimeParams.tstSens / 100.) :
+			(d_random() < 1. - pow(1. - runtimeParams.tstSens / 100.,
+				variantInfo[agent->virusVariant].reproductivity)) :
 			(d_random() > runtimeParams.tstSpec / 100.);
 		agent->lastTested = entry->timeStamp = runtimeParams.step;
 		entry->agent = agent;
@@ -973,8 +975,11 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 			if (give_vcn_ticket_if_possible(_agents + num.integerValue, (int)idx, VcnPrNone))
 				if ((-- n) < 0) break;
 		NSInteger *vQue = vcnQueue + vp->priority * nPop, ix = vcnQueIdx[vp->priority];
-		for (NSInteger cnt = 0, k = 0; cnt < n && k < nPop; ix = (ix + 1) % nPop, k ++)
-			if (give_vcn_ticket_if_possible(_agents + vQue[ix], (int)idx, vp->priority)) cnt ++;
+		for (NSInteger cnt = 0, k = 0; cnt < n && k < nPop; ix = (ix + 1) % nPop, k ++) {
+			NSInteger jx = (vp->priority == VcnPrRandom || vp->regularity >= 100. ||
+				d_random() < vp->regularity / 100.)? ix : (ix + 1 + random() % (nPop / 2)) % nPop;
+			if (give_vcn_ticket_if_possible(_agents + vQue[jx], (int)idx, vp->priority)) cnt ++;
+		}
 		vcnQueIdx[vp->priority] = ix;
 	}
 	[self waitAllOperations];

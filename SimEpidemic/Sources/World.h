@@ -80,6 +80,7 @@ typedef struct {
 - (RuntimeParams *)initParamsP;
 - (WorldParams *)worldParamsP;
 - (WorldParams *)tmpWorldParamsP;
+- (VariantInfo *)variantInfoP;
 - (BOOL)running;
 - (Gathering *)gatherings;
 - (void)popLock;

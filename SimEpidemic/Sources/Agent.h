@@ -43,6 +43,7 @@ extern void add_to_list(Agent *a, Agent **list);
 extern void remove_from_list(Agent *a, Agent **list);
 extern void add_agent(Agent *a, WorldParams *wp, Agent **Pop);
 extern void remove_agent(Agent *a, WorldParams *p, Agent **Pop);
+extern CGFloat exacerbation(CGFloat repro);
 extern void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp);
 extern void going_back_home(Agent *a);
 extern void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info);

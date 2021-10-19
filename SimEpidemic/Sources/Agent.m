@@ -282,7 +282,7 @@ static void attracted(Agent *a, Agent *b) {
 		a->best = b;
 	}
 }
-static inline CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
+CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 - (void)checkInfectionA:(Agent *)a B:(Agent *)b dist:(CGFloat)d {
 	if (d < runtimeParams.infecDst &&
 		was_hit(worldParams.stepsPerDay, runtimeParams.cntctTrc / 100.))
@@ -418,9 +418,9 @@ static void vaccinate(Agent *a, ParamsForStep prms) {
 	a->newHealth = Vaccinated;
 	a->vaccineTicket = NO;
 	CGFloat fdd = (CGFloat)prms.rp->step / prms.wp->stepsPerDay;
-	if (a->firstDoseDate >= 0.) {
+	if (a->firstDoseDate >= 0.) {	// booster shot
 		a->firstDoseDate = fdd - prms.vxInfo[a->vaccineType].interval;
-	} else {
+	} else {	// first dose
 		a->daysToRecover *= 1. - prms.wp->vcnEffcSymp / 100.;
 		a->firstDoseDate = fdd;
 	}

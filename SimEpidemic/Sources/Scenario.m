@@ -15,9 +15,28 @@
 static NSInteger age_span_index_from_key(NSString *key) {
 	NSScanner *scan = [NSScanner scannerWithString:key];
 	[scan scanUpToString:@" " intoString:NULL];
-	if (scan.atEnd) return 0;
+	if (scan.atEnd) return -1;
 	NSInteger idx = [key substringFromIndex:scan.scanLocation + 1].integerValue;
 	return (idx < 0)? 0 : (idx > MAX_N_AGE_SPANS)? MAX_N_AGE_SPANS - 1 : idx;
+}
+- (void)reviseFinalVaxRate:(CGFloat)newRate index:(NSInteger)spanIdx {
+	VaccineFinalRate *fr = runtimeParams.vcnFnlRt + spanIdx;
+	NSInteger npop = spanNPop[spanIdx], n = round(npop * (newRate - fr->rate));
+	if (n == 0) return;
+	NSInteger *IDs = malloc(sizeof(NSInteger) * npop);
+	memcpy(IDs, ageSpanIDs + ageSpanIdxs[spanIdx], sizeof(NSInteger) * npop);
+	struct FVInfo { BOOL acc; ForVaccine fVcn; } info;
+	if (n > 0) info = (struct FVInfo){ NO, VcnAccept };
+	else { info = (struct FVInfo){ YES, VcnReject }; n = -n; }
+	for (NSInteger i = 0; i < npop && n > 0; i ++) {
+		NSInteger j = random() % (npop - i) + i;
+		Agent *a = self.agents + IDs[j];
+		if (j != i) IDs[j] = IDs[i];
+		if ((a->forVcn == VcnAccept) == info.acc && a->health != Died)
+			{ a->forVcn = info.fVcn; n --; }
+	}
+	fr->rate = newRate;
+	free(IDs);
 }
 - (void)execScenario {
 	predicateToStop = nil;
@@ -93,32 +112,19 @@ static NSInteger age_span_index_from_key(NSString *key) {
 				if ([key hasPrefix:@"vaccineFinalRate"]) {
 					CGFloat newRate = fmax(0., fmin(1., ((NSNumber *)md[key]).doubleValue / 100.));
 					NSInteger spanIdx = age_span_index_from_key(key);
-					VaccineFinalRate *fr = runtimeParams.vcnFnlRt + spanIdx;
-					if (newRate > fr->rate) {
-						NSInteger n = spanNPop[spanIdx] * (newRate - fr->rate);
-						NSInteger *IDs = ageSpanIDs + ageSpanIdxs[spanIdx];
-						for (NSInteger i = 0; i < spanNPop[spanIdx] && n > 0; i ++) {
-							Agent *a = self.agents + IDs[i];
-							if (a->forVcn != VcnAccept && a->health != Died)
-								{ a->forVcn = VcnAccept; n --; }
-						}
-						fr->rate = newRate;
-					}
-//					CGFloat newAntiRate = ((NSNumber *)md[key]).doubleValue;
-//					if (newAntiRate < worldParams.vcnAntiRate) {
-//						NSInteger nReg = nPop * (worldParams.vcnAntiRate - newAntiRate) / 100.;
-//						for (NSInteger i = 0; i < nPop && nReg > 0; i ++)
-//							if (_agents[i].forVcn != VcnAccept)
-//								{ _agents[i].forVcn = VcnAccept; nReg --; }
-//					} else if (newAntiRate > worldParams.vcnAntiRate) {
-//						NSInteger nReg = nPop * (newAntiRate - worldParams.vcnAntiRate) / 100.;
-//						for (NSInteger i = 0; i < nPop && nReg > 0; i ++)
-//							if (_agents[i].forVcn == VcnAccept && _agents[i].health != Vaccinated)
-//								{ _agents[i].forVcn = VcnReject; nReg --; }
-//						for (NSInteger i = 0; i < nPop && nReg > 0; i ++)
-//							if (_agents[i].forVcn == VcnAccept)
-//								{ _agents[i].forVcn = VcnReject; nReg --; }
-//					}
+					if (spanIdx < 0) {
+						VaccineFinalRate *fr = runtimeParams.vcnFnlRt;
+						NSInteger orgN = 0, nSubPop = 0;
+						for (NSInteger idx = 0; idx < nAgeSpans; idx ++)
+							if (fr[idx].rate > 0.) {
+								orgN += round(spanNPop[idx] * fr[idx].rate);
+								nSubPop += spanNPop[idx];
+							}
+						CGFloat a = (1. - newRate) / (1. - (CGFloat)orgN / nSubPop);
+						for (NSInteger idx = 0; idx < nAgeSpans; idx ++)
+							if (fr[idx].rate > 0.)
+								[self reviseFinalVaxRate:1. - a * (1. - fr[idx].rate) index:idx];
+					} else [self reviseFinalVaxRate:newRate index:spanIdx];
 				} else if ((idxNum = paramIndexFromKey[key]) != nil) {
 					NSInteger idx = idxNum.integerValue;
 					if (idx >= IDX_R && idx < IDX_E)

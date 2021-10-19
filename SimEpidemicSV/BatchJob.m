@@ -423,8 +423,10 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 				[availableWorlds removeLastObject];
 			}
 			[world loadStateFrom:loadState];
-			if (_parameters != nil)
-				set_params_from_dict(world.runtimeParamsP, NULL, _parameters);
+			if (_parameters != nil) {
+				RuntimeParams *rp = world.runtimeParamsP;
+				set_params_from_dict(rp, NULL, _parameters);
+			}
 			if (_scenario != nil) {
 				[world setScenarioWithPList:_scenario];
 				if (world.runtimeParamsP->step > 0) [world execScenario];
@@ -665,31 +667,36 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	}
 }
 - (void)deleteJob {
-	NSString *jobID = query[@"job"];
-	if (jobID == nil) @throw @"500 Job ID is missing.";
+	NSString *jobIDs = query[@"job"];
+	if (jobIDs == nil) @throw @"500 Job ID is missing.";
 	NSError *error;
-	NSFileManager *fm = NSFileManager.defaultManager;
-	BOOL jInfo = [fm removeItemAtPath:
-		[batch_job_dir() stringByAppendingPathComponent:jobID] error:&error];
-	NSDirectoryEnumerator *dEnm = [fm enumeratorAtPath:save_state_dir()];
-	NSInteger cnt = 0;
-	if (dEnm != nil) {
-		[dEnm skipDescendants];
-		for (NSString *dname in dEnm) if ([dname hasPrefix:jobID]) {
-			NSString *fullPath = [save_state_dir() stringByAppendingPathComponent:dname];
-			if (![fm removeItemAtPath:fullPath error:&error])
-				@throw [NSString stringWithFormat:@"500 Could not remove %@. %@",
-					fullPath, error.localizedDescription];
-			cnt ++;
+	NSArray<NSString *> *jobIDArry = [jobIDs componentsSeparatedByString:@","];
+	NSMutableString *results = NSMutableString.new;
+	for (NSString *jobID in jobIDArry) {
+		NSFileManager *fm = NSFileManager.defaultManager;
+		BOOL jInfo = [fm removeItemAtPath:
+			[batch_job_dir() stringByAppendingPathComponent:jobID] error:&error];
+		NSDirectoryEnumerator *dEnm = [fm enumeratorAtPath:save_state_dir()];
+		NSInteger cnt = 0;
+		if (dEnm != nil) {
+			[dEnm skipDescendants];
+			for (NSString *dname in dEnm) if ([dname hasPrefix:jobID]) {
+				NSString *fullPath = [save_state_dir() stringByAppendingPathComponent:dname];
+				if (![fm removeItemAtPath:fullPath error:&error])
+					@throw [NSString stringWithFormat:@"500 Could not remove %@. %@",
+						fullPath, error.localizedDescription];
+				cnt ++;
+			}
 		}
+		[results appendFormat:@"Job information of %@ %@. %@.\n", jobID,
+			jInfo? @"was deleted" : @"could not be found",
+			(cnt == 0)? @"No saved state was found" :
+			(cnt == 1)? @"One saved state was deleted" : 
+			[NSString stringWithFormat:@"%ld saved states were deleted", cnt]];
 	}
 	type = @"text/plain";
-	content = [NSString stringWithFormat:@"Job information %@. %@.",
-		jInfo? @"was deleted" : @"could not be found",
-		(cnt == 0)? @"No saved state was found" :
-		(cnt == 1)? @"One saved state was deleted" : 
-		[NSString stringWithFormat:@"%ld job states were deleted", cnt]];
-	code = (jInfo || cnt > 0)? 200 : 500;
+	content = results;
+	code = 200;
 }
 @end
 

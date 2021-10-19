@@ -264,6 +264,7 @@ static NSPopUpButton *make_mini_popup(NSRect xFrame, NSRect yFrame) {
 		case SPTypeVaxFnlRt:
 		if (_vcnAgeSpanPopUp == nil) {
 			_vcnAgeSpanPopUp = make_mini_popup(label.frame, _namePopUp.frame);
+			[_vcnAgeSpanPopUp addItemWithTitle:NSLocalizedString(@"Subj.", nil)];
 			NSInteger low = 0;
 			for (VaccineFinalRate *fr = world.initParamsP->vcnFnlRt; fr->upperAge < 150; fr ++) {
 				[_vcnAgeSpanPopUp addItemWithTitle:[NSString stringWithFormat:
@@ -520,12 +521,9 @@ static void check_images(void) {
 	namePopUp.target = distBtn.target = self;
 	namePopUp.action = @selector(chooseParameter:);
 	distBtn.action = @selector(distParamBeginSheet:);
-	NSTextField *digits = ((ParameterCellView *)self.view).digits,
-		*days = ((ParameterCellView *)self.view).days;
-	digits.doubleValue = scen.world.runtimeParamsP->PARAM_F1;
-	days.doubleValue = 0.;
-	days.delegate = digits.delegate = scen;
-	
+	view.digits.doubleValue = scen.world.runtimeParamsP->PARAM_F1;
+	view.days.doubleValue = 0.;
+	view.days.delegate = view.digits.delegate = scen;
 	return self;
 }
 - (CGFloat)value { return ((ParameterCellView *)self.view).digits.doubleValue; }
@@ -601,7 +599,8 @@ static void check_images(void) {
 			(prmIdx == 0)? vInfo->performRate : vInfo->regularity];
 		} break;
 		case SPTypeVaxFnlRt:
-		[self setParamUndoable:newIndex value:rp->vcnFnlRt[_ageSpanIdx].rate];
+		[self setParamUndoable:newIndex value:
+			rp->vcnFnlRt[(_ageSpanIdx < 0)? 0 : _ageSpanIdx].rate];
 	}
 }
 - (void)distParamBeginSheet:(id)sender {
@@ -622,11 +621,11 @@ static void check_images(void) {
 	_priority = sender.indexOfSelectedItem;
 }
 - (void)chooseAgeSpan:(NSPopUpButton *)sender {
-	NSInteger orgChoice = _ageSpanIdx;
+	NSInteger orgChoice = _ageSpanIdx + 1;
 	[scenario.undoManager registerUndoWithTarget:self handler:^(ParamItem *target) {
 		[sender selectItemAtIndex:orgChoice];
 		[target chooseAgeSpan:sender]; }];
-	_ageSpanIdx = sender.indexOfSelectedItem;
+	_ageSpanIdx = sender.indexOfSelectedItem - 1;
 }
 - (NSObject *)scenarioElement {
 	ParameterCellView *view = (ParameterCellView *)self.view;
@@ -636,7 +635,7 @@ static void check_images(void) {
 	if ([key hasPrefix:@"vaccine"]) {
 		if ([key hasSuffix:@"Priority"]) { value = @(_priority); days = 0.; }
 		else value = @(self.value);
-		key = [key hasSuffix:@"FinalRate"]?
+		key = [key hasSuffix:@"FinalRate"]? (_ageSpanIdx < 0)? key :
 			[key stringByAppendingFormat:@" %ld", _ageSpanIdx] :
 			[key stringByAppendingFormat:@" %@", view.vcnTypePopUp.titleOfSelectedItem];
 	} else value = (paramIndexFromKey[key].integerValue < IDX_D)? @(self.value) :
@@ -1295,7 +1294,7 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 	NSPopUpButton *prmPopUp = cView.namePopUp;
 	NSString *vaxName = nil;
 	BOOL isVax = NO, isAgeSpan = NO;
-	NSInteger ageSpanIdx = 0;
+	NSInteger ageSpanIdx = -1;
 	if ([key hasPrefix:@"vaccine"]) {
 		NSString *newKey;
 		NSScanner *scan = [NSScanner scannerWithString:key];
@@ -1335,6 +1334,7 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 	}
 	cView.days.doubleValue = (days == nil)? 0. : days.doubleValue;
 	[cView adjustView:[item paramType:idx prmIdxReturn:NULL]];
+	if (isAgeSpan) [cView.vcnAgeSpanPopUp selectItemAtIndex:ageSpanIdx + 1];
 	return item;
 }
 - (CondItem *)condItemFromObject:(NSObject *)elm label:(NSString *)label {
