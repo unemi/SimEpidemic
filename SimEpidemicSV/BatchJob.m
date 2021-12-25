@@ -407,7 +407,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 				world = make_new_world(@"Job", nil);
 				set_params_from_dict(world.runtimeParamsP, world.worldParamsP, _parameters);
 				set_params_from_dict(world.initParamsP, world.tmpWorldParamsP, _parameters);
-				[world setScenarioWithPList:_scenario];
+				[world setScenarioPList:_scenario];
 				if (popDistMap != nil) [world loadPopDistMapFrom:popDistMap];
 			} else {
 				world = [availableWorlds lastObject];
@@ -428,7 +428,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 				set_params_from_dict(rp, NULL, _parameters);
 			}
 			if (_scenario != nil) {
-				[world setScenarioWithPList:_scenario];
+				[world setScenarioPList:_scenario];
 				if (world.runtimeParamsP->step > 0) [world execScenario];
 			}
 		}

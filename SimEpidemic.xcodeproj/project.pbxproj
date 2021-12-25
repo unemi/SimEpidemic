@@ -58,7 +58,7 @@
 		23BBEEE52706D3D1003F983C /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BBEEE42706D3D0003F983C /* Scenario.m */; };
 		23BBEEE62706D3D1003F983C /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BBEEE42706D3D0003F983C /* Scenario.m */; };
 		23C3FFE32557FB3F004906AE /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 23C3FFE22557FB3F004906AE /* main.m */; };
-		23D6E02D24D59DDD00A5D604 /* Parameters.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6E02C24D59DDD00A5D604 /* Parameters.m */; };
+		23D6E02D24D59DDD00A5D604 /* Scripting.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6E02C24D59DDD00A5D604 /* Scripting.m */; };
 		23D6EAE2260C4C6900D48F7E /* PopDist.xib in Resources */ = {isa = PBXBuildFile; fileRef = 23D6EAE0260C4C6900D48F7E /* PopDist.xib */; };
 		23D6EAE7260C562D00D48F7E /* PopDist.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6EAE6260C562D00D48F7E /* PopDist.m */; };
 		23DAF068251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
@@ -179,8 +179,9 @@
 		23C3FFE02557FB3F004906AE /* simepiBackend */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiBackend; sourceTree = BUILT_PRODUCTS_DIR; };
 		23C3FFE22557FB3F004906AE /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		23CAF41E26D1F49B00DCC929 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/VirusVariantPanel.strings; sourceTree = "<group>"; };
-		23D6E02B24D59DDD00A5D604 /* Parameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Parameters.h; sourceTree = "<group>"; };
-		23D6E02C24D59DDD00A5D604 /* Parameters.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Parameters.m; sourceTree = "<group>"; };
+		23D325F72722EBAC0083274B /* jp.ac.soka.unemi.simepidemicSV.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = jp.ac.soka.unemi.simepidemicSV.plist; sourceTree = "<group>"; };
+		23D6E02B24D59DDD00A5D604 /* Scripting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scripting.h; sourceTree = "<group>"; };
+		23D6E02C24D59DDD00A5D604 /* Scripting.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Scripting.m; sourceTree = "<group>"; };
 		23D6EAE1260C4C6900D48F7E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/PopDist.xib; sourceTree = "<group>"; };
 		23D6EAE4260C555000D48F7E /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/PopDist.strings; sourceTree = "<group>"; };
 		23D6EAE5260C562D00D48F7E /* PopDist.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PopDist.h; sourceTree = "<group>"; };
@@ -300,8 +301,8 @@
 				23DAF067251737FB00C41E76 /* Gatherings.m */,
 				231E000E2461497000BFBE9E /* MyView.h */,
 				231E000F2461497000BFBE9E /* MyView.m */,
-				23D6E02B24D59DDD00A5D604 /* Parameters.h */,
-				23D6E02C24D59DDD00A5D604 /* Parameters.m */,
+				23D6E02B24D59DDD00A5D604 /* Scripting.h */,
+				23D6E02C24D59DDD00A5D604 /* Scripting.m */,
 				235D65782462564600487784 /* ParamPanel.h */,
 				235D65792462564600487784 /* ParamPanel.m */,
 				23D6EAE5260C562D00D48F7E /* PopDist.h */,
@@ -343,6 +344,7 @@
 				23673363252EFA8E00284D91 /* PeriodicReporter.m */,
 				2359E8E7253B092B004041D9 /* BlockingInfo.h */,
 				2359E8E8253B092B004041D9 /* BlockingInfo.m */,
+				23D325F72722EBAC0083274B /* jp.ac.soka.unemi.simepidemicSV.plist */,
 			);
 			path = SimEpidemicSV;
 			sourceTree = "<group>";
@@ -610,7 +612,7 @@
 				238A8F2A246694D300604BF4 /* StatPanel.m in Sources */,
 				2310A3142587486F00201F0C /* SaveDoc.m in Sources */,
 				235D657B2462564600487784 /* ParamPanel.m in Sources */,
-				23D6E02D24D59DDD00A5D604 /* Parameters.m in Sources */,
+				23D6E02D24D59DDD00A5D604 /* Scripting.m in Sources */,
 				232055FF2457D2C7005ADCCF /* main.m in Sources */,
 				23BBEEE52706D3D1003F983C /* Scenario.m in Sources */,
 				23D6EAE7260C562D00D48F7E /* PopDist.m in Sources */,

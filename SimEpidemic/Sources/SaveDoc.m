@@ -594,7 +594,7 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 	}
 //
 	if ((seq = dict[keyScenario]) != nil) {
-		@try { [self setScenarioWithPList:seq]; }
+		@try { [self setScenarioPList:seq]; }
 		@catch (NSString *msg) { ERROR_MSG(msg); }
 	}
 	if (scenario != nil && (num = dict[keyScenarioIndex]) != nil) {

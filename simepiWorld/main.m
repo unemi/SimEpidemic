@@ -85,7 +85,7 @@ static void set_scenario(ComSetScenario *c) {
 	if (plist == nil) return;
 	[document popLock];
 	@try {
-		[document setScenarioWithPList:plist];
+		[document setScenarioPList:plist];
 		respond_ok();
 	} @catch (NSString *msg) { respond_err(msg); }
 	[document popUnlock];

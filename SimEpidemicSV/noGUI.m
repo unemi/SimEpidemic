@@ -8,6 +8,7 @@
 
 #import <sys/socket.h>
 #import <sys/stat.h>
+#import <sys/sysctl.h>
 #import <arpa/inet.h>
 #import <signal.h>
 #import "noGUI.h"
@@ -390,11 +391,17 @@ static void schedule_record_expiration_check(void) {
 		expiration_check(save_state_dir(), stateRecExpirationHours);
 	}];
 }
-
+static void set_default_max_trials(void) {
+	sint32 ncpu;
+	size_t dataSize = sizeof(ncpu);
+	int result = sysctlbyname("hw.physicalcpu", &ncpu, &dataSize, NULL, 0);
+	maxTrialsAtSameTime = (result < 0)? 4 : ncpu;
+}
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
 	short err;
 	uint16 port = SERVER_PORT;
+	set_default_max_trials();
 // Check command options
 	for (NSInteger i = 1; i < argc; i ++) if (argv[i][0] == '-') {
 		if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--port") == 0) {

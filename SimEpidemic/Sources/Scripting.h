@@ -1,5 +1,5 @@
 //
-//  Parameters.h
+//  Scripting.h
 //  SimEpidemic
 //
 //  Created by Tatsuo Unemi on 2020/08/01.

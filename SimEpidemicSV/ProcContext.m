@@ -798,7 +798,7 @@ NSData *JSON_pop2(World *world) {
 		@"417 Failed to interprete JSON data: %@", error.localizedDescription];
 	if (![plist isKindOfClass:NSArray.class])
 		@throw @"417 JSON data doesn't represent an array form.";
-	@try { [world setScenarioWithPList:plist]; }
+	@try { [world setScenarioPList:plist]; }
 	@catch (NSString *msg) { @throw [@"500 " stringByAppendingString:msg]; }
 }
 // utility command
@@ -829,6 +829,15 @@ NSData *JSON_pop2(World *world) {
 	dict[@"thermalState"] = @(pInfo.thermalState);
 	[self setJSONDataAsResponse:dict];
 }
+- (void)getConfig {
+	[self setJSONDataAsResponse:@{
+		@"format":@(JSONOptions), @"maxPopSize":@(maxPopSize), @"maxNWorlds":@(maxNWorlds),
+		@"maxRuntime":@(maxRuntime), @"documentTimeout":@(worldTimeout),
+		@"maxQueuedJobs":@(maxJobsInQueue), @"maxTrials":@(maxTrialsAtSameTime),
+		@"jobExprHours":@(jobRecExpirationHours), @"stateExprHours":@(stateRecExpirationHours),
+		@"documentRoot":fileDirectory, @"dataStorage":dataDirectory
+	}];
+}
 - (void)unblock {
 	NSString *ip4 = query[@"address"];
 	unsigned int parts[4] = {0,0,0,0}, ipadr;
@@ -856,5 +865,5 @@ void init_context(void) {
 		COM(getJobInfo), COM(stopJob), COM(getJobResults), COM(deleteJob),
 		COM(saveState), COM(loadState), COM(removeState),
 		COM(getState), COM(putState),
-		COM(version), COM(sysInfo), COM(unblock) };
+		COM(version), COM(sysInfo), COM(getConfig), COM(unblock) };
 }

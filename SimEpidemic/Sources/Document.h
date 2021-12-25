@@ -16,7 +16,7 @@ typedef struct {
 extern RainbowColorHB rainbow_color(NSInteger x, NSInteger n);
 extern NSString *nnScenarioText, *nnParamChanged;
 
-@class World, MyView, LegendView, StatInfo, MyCounter;
+@class World, MyView, FillView, LegendView, StatInfo, MyCounter;
 @class Scenario, ParamPanel, DataPanel;
 
 @interface Document : NSDocument <NSWindowDelegate> {
@@ -40,6 +40,7 @@ extern NSString *nnScenarioText, *nnParamChanged;
 	Scenario *scenarioPanel;
 	ParamPanel *paramPanel;
 	DataPanel *dataPanel;
+	FillView *fillView;
 	NSInteger animeSteps;
 }
 @property (readonly) World *world;
@@ -51,9 +52,12 @@ extern NSString *nnScenarioText, *nnParamChanged;
 - (void)openParamsFromURL:(NSURL *)url;
 - (void)revisePanelsAlpha;
 - (void)revisePanelChildhood;
+- (IBAction)startStop:(id)sender;
+- (IBAction)reset:(id)sender;
 - (IBAction)openScenarioPanel:(id)sender;
 - (IBAction)openParamPanel:(id)sender;
 - (IBAction)openDataPanel:(id)sender;
+- (IBAction)openStatPenel:(id)sender;
 - (IBAction)openVaxAndVariantsPanel:(id)sender;
 @end
 

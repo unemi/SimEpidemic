@@ -15,7 +15,6 @@
 #import "Agent.h"
 #import "ScenPanel.h"
 #import "StatPanel.h"
-#import "Parameters.h"
 #import "Gatherings.h"
 #import "MyView.h"
 #import "DataPanel.h"
@@ -66,17 +65,12 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 @interface Document () {
 	NSSize orgWindowSize, orgViewSize;
 	NSMutableDictionary *orgViewInfo, *nnObjects;
-	FillView *fillView;
 	VVPanel *vvPanel;
 }
 @end
 
 @implementation Document
 @synthesize world;
-- (void)setRunning:(BOOL)newState {
-	BOOL orgState = world.loopMode == LoopRunning;
-	if (orgState != newState) [self startStop:nil];
-}
 - (void)setPanelTitle:(NSWindow *)panel {
 	NSString *orgTitle = panel.title;
 	NSScanner *scan = [NSScanner scannerWithString:orgTitle];
@@ -234,18 +228,21 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 	NSSize contentSize = contentView.frame.size;
 	NSRect newViewFrame = {0, 0, contentSize.height * 1.2, contentSize.height};
 	newViewFrame.origin.x = contentSize.width - newViewFrame.size.width;
-	NSRect panelRect = {0, stopAtNDaysDgt.frame.origin.y - 10., newViewFrame.origin.x,};
 	[view setFrame:newViewFrame];
-	panelRect.origin.y -= (panelRect.size.height = panelRect.size.width / 4.);
+	NSRect panelRect = {0, stopAtNDaysDgt.frame.origin.y - 10., newViewFrame.origin.x, 0.};
 	if (world.statInfo.statPanels != nil) {
+		panelRect.size.height = panelRect.origin.y / world.statInfo.statPanels.count;
+		panelRect.origin.y -= panelRect.size.height;
+		NSRect panelViewRect = NSInsetRect(panelRect, 2, 1);
 		NSMutableArray *ma = NSMutableArray.new;
 		for (StatPanel *sp in world.statInfo.statPanels) {
 			NSView *statView = sp.view;
 			[ma addObject:@[statView, statView.superview,
 				[NSValue valueWithRect:statView.frame]]];
 			[contentView addSubview:statView];
-			[statView setFrame:panelRect];
-			if ((panelRect.origin.y -= panelRect.size.height) < 0.) break;
+			[statView setFrame:panelViewRect];
+			panelRect.origin.y -= panelRect.size.height;
+			panelViewRect.origin.y -= panelRect.size.height;
 		}
 		orgViewInfo[@"statViews"] = ma;
 	}

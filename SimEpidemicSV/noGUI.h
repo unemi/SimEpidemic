@@ -29,7 +29,8 @@ extern NSMutableDictionary<NSString *, World *> *defaultWorlds;
 extern NSMutableDictionary<NSString *, World *> *theWorlds;
 extern NSUInteger JSONOptions;
 extern NSInteger maxPopSize, maxNWorlds, maxRuntime,
-	worldTimeout, maxJobsInQueue, maxTrialsAtSameTime;
+	worldTimeout, maxJobsInQueue, maxTrialsAtSameTime,
+	jobRecExpirationHours, stateRecExpirationHours;
 extern NSString *fileDirectory, *dataDirectory;
 extern NSDictionary *extToMime, *codeMeaning, *indexNames;
 extern NSArray *distributionNames;

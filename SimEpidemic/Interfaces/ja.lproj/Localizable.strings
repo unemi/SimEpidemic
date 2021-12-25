@@ -73,9 +73,11 @@
 "max count" = "最大人数";
 "max test positive rate" = "最大陽性率";
 "max reproductive rate" = "最大再生産率";
+"Symptom severity" = "重症度";
+"Virus variants" = "変異ウイルス";
 "HistogramFormat" = "%@\nサンプル数 %ld\n最小 %ld, 最大 %ld\n中央値 %ld\n平均値 %.2f";
 "Incubation Period" = "潜伏期間";
-"Recovery Period" = "回復までの期間";
+"Recovery Period" = "快復までの期間";
 "Fatal Period" = "死亡までの期間";
 "Spreaders" = "1人からの感染者数";
 "item" = "項目";

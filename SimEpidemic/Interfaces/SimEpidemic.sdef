@@ -71,108 +71,157 @@
 		</command>
 	</suite>
 	<suite name="SimEpidemic Suite" code="SEPI" description="SimEpidemic specific classes and commands.">
-		<record-type name="runtime parameter set" code="RTPR" description="Runtime parameters">
-			<property name="infection proberbility" code="rtIP" type="real"/>
-			<property name="infection distance" code="rtID" type="real"/>
-			<property name="distancing strength" code="rtDS" type="real"/>
-			<property name="distancing obedience" code="rtDO" type="real"/>
-			<property name="mobility frequency" code="rtMF" type="real"/>
-			<property name="contact tracing" code="rtCT" type="real"/>
-			<property name="test delay" code="rtTD" type="real"/>
-			<property name="test process" code="rtTP" type="real"/>
-			<property name="test interval" code="rtTI" type="real"/>
-			<property name="test sensitivity" code="rtTS" type="real"/>
-			<property name="test specificity" code="rtTC" type="real"/>
-			<property name="subject asymptomatic" code="rtSA" type="real"/>
-			<property name="subject symptomatic" code="rtSS" type="real"/>
-			<property name="mobility distance" code="rtMD"><type type="real" list="yes"/></property>
-			<property name="incubation" code="rtIC"><type type="real" list="yes"/></property>
-			<property name="fatality" code="rtFT"><type type="real" list="yes"/></property>
-			<property name="recovery" code="rtRC"><type type="real" list="yes"/></property>
-			<property name="immunity" code="rtIM"><type type="real" list="yes"/></property>
+		<record-type name="vaccination type" code="VAXN" description="Vaccination type">
+			<property name="perform rate" code="vx01" type="real"/>
+			<property name="regularity" code="vx02" type="real"/>
+			<property name="priority" code="vx03" type="integer"/>
 		</record-type>
-		<record-type name="world parameter set" code="WPPR" description="World parameters">
-			<property name="populationSize" code="wpPS" type="integer"/>
-			<property name="worldSize" code="wpWS" type="integer"/>
-			<property name="mesh" code="wpMS" type="integer"/>
-			<property name="initialInfected" code="wpIF" type="integer"/>
-			<property name="stepsPerDay" code="wpSD" type="integer"/>
+		<record-type name="vaccine type" code="VAXT" description="Vaccine type">
+			<property name="vaccine name" code="vxTN" type="text"/>
+			<property name="interval on" code="vxTI" type="boolean"/>
+			<property name="interval days" code="vxTD" type="real"/>
+			<property name="vaccine efficacy" code="vxTE" type="list of real"/>
+		</record-type>
+		<record-type name="variant type" code="VART" description="Virus variant type">
+			<property name="variant name" code="vrTN" type="text"/>
+			<property name="reproductivity" code="vrTR" type="real"/>
+			<property name="immunity efficacy" code="vrTE" type="list of real"/>
+		</record-type>
+		<record-type name="parameter set for runtime" code="RTPR" description="Runtime parameters">
+			<property name="mass" code="rt00" type="real"/>
+			<property name="friction" code="rt01" type="real"/>
+			<property name="avoidance" code="rt02" type="real"/>
+			<property name="max speed" code="rt03" type="real"/>
+			<property name="activeness mode" code="rt04" type="real"/>
+			<property name="activeness kurtosis" code="rt05" type="real"/>
+			<property name="mass bias" code="rt06" type="real"/>
+			<property name="mobility bias" code="rt07" type="real"/>
+			<property name="gathering bias" code="rt08" type="real"/>
+			<property name="incubation bias" code="rt09" type="real"/>
+			<property name="fatality bias" code="rt10" type="real"/>
+			<property name="immunity bias" code="rt11" type="real"/>
+			<property name="therapy efficacy" code="rt12" type="real"/>
+			<property name="contagion delay" code="rt13" type="real"/>
+			<property name="contagion peak" code="rt14" type="real"/>
+			<property name="infection proberbility" code="rt15" type="real"/>
+			<property name="infection distance" code="rt16" type="real"/>
+			<property name="distancing strength" code="rt17" type="real"/>
+			<property name="distancing obedience" code="rt18" type="real"/>
+			<property name="back home rate" code="rt19" type="real"/>
+			<property name="gathering frequency" code="rt20" type="real"/>
+			<property name="contact tracing" code="rt21" type="real"/>
+			<property name="test delay" code="rt22" type="real"/>
+			<property name="test process" code="rt23" type="real"/>
+			<property name="test interval" code="rt24" type="real"/>
+			<property name="test sensitivity" code="rt25" type="real"/>
+			<property name="test specificity" code="rt26" type="real"/>
+			<property name="subject asymptomatic" code="rt27" type="real"/>
+			<property name="subject symptomatic" code="rt28" type="real"/>
+			<property name="immune max period" code="rt29" type="real"/>
+			<property name="immune max prd severity" code="rt30" type="real"/>
+			<property name="immune max efficacy" code="rt31" type="real"/>
+			<property name="immune max effc severity" code="rt32" type="real"/>
+			<property name="mobility distance" code="rt33" type="list of real"/>
+			<property name="incubation" code="rt34" type="list of real"/>
+			<property name="fatality" code="rt35" type="list of real"/>
+			<property name="gathering size" code="rt36" type="list of real"/>
+			<property name="gathering duration" code="rt37" type="list of real"/>
+			<property name="gathering strength" code="rt38" type="list of real"/>
+			<property name="mobility frequency" code="rt39" type="list of real"/>
+			<property name="gathering participation" code="rt40" type="list of real"/>
+			<property name="tracing operation" code="rt62" type="integer"/>
+			<property name="vaccine type for tracing vaccination" code="rt63" type="integer"/>
+			<property name="vaccination info" code="rt70" type="list of vaccination type"/>
+			<property name="vaccine final rate" code="rt71" type="list of real"/>
+		</record-type>
+		<record-type name="parameter set for world" code="WPPR" description="World parameters">
+			<property name="population size" code="wp41" type="integer"/>
+			<property name="world size" code="wp42" type="integer"/>
+			<property name="mesh" code="wp43" type="integer"/>
+			<property name="steps per day" code="wp44" type="integer"/>
+			<property name="initial infected rate" code="wp45" type="real"/>
+			<property name="initial recovered" code="wp46" type="real"/>
+			<property name="quarantine asymptomatic" code="wp47" type="real"/>
+			<property name="quarantine symptomatic" code="wp48" type="real"/>
+			<property name="anti vax cluster rate" code="wp49" type="real"/>
+			<property name="anti vax cluster granularity" code="wp50" type="real"/>
+			<property name="anti vax test rate" code="wp51" type="real"/>
+			<property name="recovery bias" code="wp52" type="real"/>
+			<property name="recovery temp" code="wp53" type="real"/>
+			<property name="recovery upper rate" code="wp54" type="real"/>
+			<property name="recovery lower rate" code="wp55" type="real"/>
+			<property name="vaccine first dose efficacy" code="wp56" type="real"/>
+			<property name="vaccine max efficacy" code="wp57" type="real"/>
+			<property name="vaccine efficacy symp" code="wp58" type="real"/>
+			<property name="vaccine effect delay" code="wp59" type="real"/>
+			<property name="vaccine effect period" code="wp60" type="real"/>
+			<property name="vaccine effect decay" code="wp61" type="real"/>
+			<property name="tracing operation" code="rt62" type="integer"/>
+			<property name="vaccine type for tracing vaccination" code="rt63" type="integer"/>
+			<property name="work place mode" code="wp64" type="integer"/>
 		</record-type>
 		<class name="application" code="capp" description="The application&apos;s top-level scripting object.">
 			<cocoa class="NSApplication"/>
-			<element type="world" access="r">
-				<cocoa key="orderedDocuments"/>
-			</element>
-			<element type="window" access="r">
-				<cocoa key="orderedWindows"/>
-			</element>
+			<element type="world" access="r"><cocoa key="orderedDocuments"/></element>
+			<element type="window" access="r"><cocoa key="orderedWindows"/></element>
 			<property name="name" code="pnam" description="The name of the application." type="text" access="r"/>
-			<property name="frontmost" code="pisf" description="Is this the active application?" type="boolean" access="r">
-				<cocoa key="isActive"/>
-			</property>
+			<property name="frontmost" code="pisf" description="Is this the active application?" type="boolean" access="r"><cocoa key="isActive"/></property>
 			<property name="version" code="vers" description="The version number of the application." type="text" access="r"/>
-			<property name="factory defaults runtime" code="fdRT" description="Runtime parameters of factory defaults." type="runtime parameter set" access="r"/>
-			<property name="user defaults runtime" code="udRT" description="Runtime parameters of user's defaults." type="runtime parameter set" access="r"/>
-			<property name="factory defaults world" code="fdWP" description="World parameters of factory defaults." type="world parameter set" access="r"/>
-			<property name="user defaults world" code="udWP" description="World parameters of user's defaults." type="world parameter set" access="r"/>
-			<responds-to command="open">
-				<cocoa method="handleOpenScriptCommand:"/>
-			</responds-to>
-			<responds-to command="quit">
-				<cocoa method="handleQuitScriptCommand:"/>
-			</responds-to>
+			<property name="factory defaults runtime" code="fdRT" description="Runtime parameters of factory defaults." type="parameter set for runtime" access="r"/>
+			<property name="user defaults runtime" code="udRT" description="Runtime parameters of user&apos;s defaults." type="parameter set for runtime" access="r"/>
+			<property name="factory defaults world" code="fdWP" description="World parameters of factory defaults." type="parameter set for world" access="r"/>
+			<property name="user defaults world" code="udWP" description="World parameters of user&apos;s defaults." type="parameter set for world" access="r"/>
+			<responds-to command="open"><cocoa method="handleOpenScriptCommand:"/></responds-to>
+			<responds-to command="quit"><cocoa method="handleQuitScriptCommand:"/></responds-to>
 		</class>
 		<class name="world" code="Wrld" description="Simulation world.">
 			<cocoa class="Document"/>
-			<element type="statistic" access="r">
-				<cocoa key="population"/>
-			</element>
-			<property name="name" code="pnam" description="The name of the world." type="text" access="r">
-				<cocoa key="lastComponentOfFileName"/>
-			</property>
-			<property name="runtime parameter" code="SMRT" description="Runtime parameters." type="runtime parameter set"/>
-			<property name="initial runtime parameter" code="SMIR" description="Runtime parameters at step zero." type="runtime parameter set"/>
-			<property name="world parameter" code="SMWP" description="Currently effective world parameters." type="world parameter set" access="r"/>
-			<property name="temporary world parameter" code="SMTW" description="World parameters applied when resrart." type="world parameter set"/>
+			<element type="stat panel" access="r"><cocoa key="statPanels"/></element>
+			<property name="name" code="pnam" description="The name of the world." type="text" access="r"><cocoa key="lastComponentOfFileName"/></property>
+			<property name="runtime parameter" code="SMRT" description="Runtime parameters." type="parameter set for runtime"/>
+			<property name="initial runtime parameter" code="SMIR" description="Runtime parameters at step zero." type="parameter set for runtime"/>
+			<property name="current world parameter" code="SMWP" description="Currently effective world parameters." type="parameter set for world" access="r"/>
+			<property name="temporary world parameter" code="SMTW" description="World parameters applied when resrart." type="parameter set for world"/>
+			<property name="scenario" code="SMSC" description="Scenario description." type="any"><cocoa key="scenarioPList"/></property>
+			<property name="variant list" code="SMVA" description="List of virus variants." type="list of variant type"/>
+			<property name="vaccine list" code="SMVX" description="List of vaccines." type="list of vaccine type"/>
 			<property name="running" code="SMRN" description="Simulation is running or not." type="boolean"/>
-			<responds-to command="close">
-				<cocoa method="handleCloseScriptCommand:"/>
-			</responds-to>
-			<responds-to command="save">
-				<cocoa method="handleSaveScriptCommand:"/>
-			</responds-to>
-			<responds-to command="reset">
-				<cocoa method="handleResetCommand:"/>
-			</responds-to>
+			<property name="stopAt" code="SMSD" description="Number of days from starting point to stop." type="integer"/>
+			<property name="full screen" code="SMFS" description="Fullscreen mode." type="boolean"/>
+			<property name="show gatherings" code="SMSG" description="Gatherings are shown or not." type="boolean"/>
+			<responds-to command="close"><cocoa method="handleCloseCommand:"/></responds-to>
+			<responds-to command="reset"><cocoa method="handleResetCommand:"/></responds-to>
+			<responds-to command="open stat panel"><cocoa method="handleOpenStatCommand:"/></responds-to>
 		</class>
-		<class name="statistic" code="stst" description="">
+		<class name="stat panel" code="stst" description="Panel showing statistics.">
+			<cocoa class="StatPanel"/>
+			<property name="stat type" code="stTp" description="Type of statistics to show." type="integer"/> 
+			<property name="susceptible" code="stSu" description="Shows susceptible individuals." type="boolean"/> 
+			<property name="asymptomatic" code="stAs" description="Shows asymptomatic individuals." type="boolean"/> 
+			<property name="symptomatic" code="stSy" description="Shows symptomatic individuals." type="boolean"/> 
+			<property name="recovered" code="stRe" description="Shows recovered individuals." type="boolean"/> 
+			<property name="died" code="stDi" description="Shows dead individuals." type="boolean"/> 
+			<property name="vaccinated" code="stVa" description="Shows vaccinated individuals." type="boolean"/> 
+			<property name="quarantine asym" code="stQA" description="Shows asymptomatic qurantined individuals." type="boolean"/> 
+			<property name="quarantine symp" code="stQS" description="Shows symptomatic qurantined individuals." type="boolean"/> 
+			<property name="tests total" code="stTe" description="Shows the number of tests." type="boolean"/> 
+			<property name="tests as symptom" code="stTS" description="Shows the number of tests because of symptom." type="boolean"/> 
+			<property name="tests as contact" code="stTC" description="Shows the number of tests because of contact." type="boolean"/> 
+			<property name="tests as suspected" code="stTs" description="Shows the number of tests because of suspected." type="boolean"/> 
+			<property name="test positive" code="stTP" description="Shows the number of test positives." type="boolean"/> 
+			<property name="test negative" code="stTN" description="Shows the number of test negatives." type="boolean"/> 
+			<property name="positive rate" code="stPR" description="Shows the rate of test positive." type="boolean"/> 
+			<property name="reproduction number" code="stRt" description="Shows the effective reproduction number." type="boolean"/> 
+			<property name="daily" code="stDC" description="Shows the daily counts." type="boolean"/> 
+			<property name="window exponent" code="stWE" description="Exponent of window width." type="integer"/> 
+			<responds-to command="close"><cocoa method="handleCloseCommand:"/></responds-to>
 		</class>
-<!--
-		<command name="load" code="SEPIload" description="Load external media data.">
-			<cocoa class="MyLoadCommand"/>
-			<direct-parameter description="The file containing image or movie data." type="file"/>
-			<parameter name="to" code="tagt" description="Target to load a media datum to." type="external medium">
-				<cocoa key="target"/>
-			</parameter>
+		<command name="reset" code="SEPIrest" description="Reset population in the world.">
+			<direct-parameter description="World." type="world"/>
 		</command>
-		<command name="reset" code="SEPIrest" description="Reset.">
-			<direct-parameter type="world"/>
+		<command name="open stat panel" code="SEPIopSt" description="Open a statistics panel.">
+			<direct-parameter description="World." type="world"/>
+			<result description="Stat panel newly opened." type="stat panel"/>
 		</command>
-		<command name="do one step" code="SEPIstep" description="Execute one step of evolutionary process in an evolver.">
-			<direct-parameter description="Evolver that should go forward one step." type="evolver"/>
-		</command>
-		<command name="copy image" code="SEPIcpim" description="Copy image into the pasteboard.">
-			<direct-parameter>
-				<type type="world"/>
-				<type type="statistic"/>
-			</direct-parameter>
-		</command>
-		<command name="save image" code="SEPIsimg" description="Save an image in a file from world window and statistics panel.">
-			<direct-parameter description="Zoomed view showing the image to be saved." type="world"/>
-			<parameter name="in" code="kfil" description="The file to save the image in. The image format is determined by the filename&apos;s extension." type="file">
-				<cocoa key="File"/>
-			</parameter>
-		</command>
--->
 	</suite>
 </dictionary>

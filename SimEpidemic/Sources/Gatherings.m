@@ -29,7 +29,7 @@ void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect) {
 	NSRect rect = {gat->p.x - gat->size, gat->p.y - gat->size, gat->size * 2., gat->size * 2.};
 	if (NSIntersectsRect(rect, dRect)) {
 		[[NSColor colorWithCalibratedRed:rgb[0] green:rgb[1] blue:rgb[2]
-			alpha:gat->strength * .01] setFill];
+			alpha:gat->strength * .005] setFill];
 		[[NSBezierPath bezierPathWithOvalInRect:rect] fill];
 	}
 }

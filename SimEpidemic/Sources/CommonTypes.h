@@ -105,7 +105,7 @@ typedef struct {
 	DistInfo mobFreq; // Participation frequency in long travel
 	DistInfo gatFreq; // Participation frequency in gathering
 	TracingOperation trcOpe; // How to treat the contacts, tests or vaccination, or both
-	int trcVcnType;	// vaccine type for tracing vaccination
+	sint32 trcVcnType;	// vaccine type for tracing vaccination
 	VaccinationInfo vcnInfo[MAX_N_VAXEN];
 	VaccineFinalRate vcnFnlRt[MAX_N_AGE_SPANS];
 	NSInteger step;

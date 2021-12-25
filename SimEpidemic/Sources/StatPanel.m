@@ -420,11 +420,12 @@ static void shrink_data_in_half(NSMutableData *data, NSInteger unit) {
 	return _statistics->cnt[Asymptomatic] + _statistics->cnt[Symptomatic] == 0;
 }
 #ifndef NOGUI
-- (void)openStatPanel:(NSWindow *)parentWindow {
+- (StatPanel *)openStatPanel:(NSWindow *)parentWindow {
 	StatPanel *statPnl = [StatPanel.alloc initWithInfo:self];
 	if (_statPanels == nil) _statPanels = NSMutableArray.new;
 	[_statPanels addObject:statPnl];
 	[statPnl showWindowWithParent:parentWindow];
+	return statPnl;
 }
 - (void)statPanelDidClose:(StatPanel *)panel {
 	[_statPanels removeObject:panel];
@@ -498,6 +499,7 @@ static NSColor *color_for_index(NSUInteger k, TimeEvoInfo *info) {
 	c.r += (1. - c.r) * d * (1. - L.r);
 	c.g += (1. - c.g) * d * (1. - L.g);
 	c.b += (1. - c.b) * d * (1. - L.b);
+	if (!bgIsDark) { c.r *= .5; c.g *= .5; c.b *= .5; }
 	return [NSColor colorWithRed:c.r green:c.g blue:c.b alpha:1.];
 }
 static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info,
@@ -558,6 +560,32 @@ static TimeEvoMax show_time_evo(StatData *stData, TimeEvoInfo *info,
 	free(pts);
 	return teMax;
 }
+static NSArray<NSString *> *indexCBoxTitles = nil;
+#define LEGEND_LINE_LENGTH 20
+#define LEGEND_PADDING 4
+static void draw_legend(TimeEvoInfo *info, NSRect rect) {
+	if (indexCBoxTitles == nil) return;
+	NSInteger n = 0, k = 0, m = indexCBoxTitles.count;
+	NSMutableString *ms = NSMutableString.new;
+	if ((info->idxBits & MskTransit) != 0) m --;
+	for (NSInteger i = 0; i < m; i ++) if ((info->idxBits & 1 << i) != 0)
+		{ [ms appendFormat:@"%@\n", indexCBoxTitles[i]]; n ++; }
+	if (n == 0) return;
+	[ms deleteCharactersInRange:(NSRange){ms.length - 1, 1}];
+	NSSize lgSize = [ms sizeWithAttributes:textAttributes];
+	NSPoint p1 = {NSMaxX(rect) - LEGEND_PADDING*2 - lgSize.width,
+		NSMaxY(rect) - lgSize.height / n / 2 - LEGEND_PADDING},
+		p2 = {p1.x - LEGEND_LINE_LENGTH, p1.y};
+	for (NSInteger i = 0; i < m; i ++) if ((info->idxBits & 1 << i) != 0) {
+		[color_for_index(k, info) setStroke];
+		[NSBezierPath strokeLineFromPoint:p1 toPoint:p2];
+		p1.y = p2.y -= lgSize.height / n;
+		k ++;
+	}
+	[ms drawAtPoint:(NSPoint){
+		NSMaxX(rect) - LEGEND_PADDING - lgSize.width,
+		NSMaxY(rect) - LEGEND_PADDING - lgSize.height} withAttributes:textAttributes];
+}
 static void show_histogram(NSMutableArray<MyCounter *> *hist,
 	NSRect area, NSColor *color, NSString *title) {
 	NSInteger n = hist.count;
@@ -604,11 +632,11 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 	}
 	[ctx restoreGraphicsState];
 }
-- (void)drawCompositionData:(NSData *)data
+- (void)drawCompositionData:(NSData *)data title:(NSString *)title
 	ranks:(NSInteger)nRanks drawRanks:(NSInteger)drawRanks bounds:(NSRect)bounds {
 	NSRect dRect = drawing_area(bounds);
-	NSArray *labels =
-	  [self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y} xMax:steps];
+	NSArray *labels = [self fillPhaseBackground:(NSSize){bounds.size.width, dRect.origin.y}
+		xMax:days * _world.worldParamsP->stepsPerDay];
 	NSInteger nPts = days / skipDays, nCnks = nRanks / drawRanks, maxSymp = 0;
 	if (nPts > 1) {
 		NSInteger *sspDt = (NSInteger *)data.bytes,
@@ -646,9 +674,10 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 	  free(sspTbl);
 	}
 	[self drawLabels:labels y:NSMaxY(bounds)];
-	draw_tics(bounds, (CGFloat)steps/_world.worldParamsP->stepsPerDay);
-	[[NSString stringWithFormat:@"%@ %ld", NSLocalizedString(@"max count", nil), maxSymp]
-		drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
+	draw_tics(bounds, days);
+	[[NSString stringWithFormat:@"%@\n%@ %ld", NSLocalizedString(title, nil),
+		NSLocalizedString(@"max count", nil), maxSymp]
+		drawAtPoint:(NSPoint){6., (bounds.size.height + NSFont.systemFontSize) / 2.}
 		withAttributes:textAttributes];
 }
 - (void)drawWithType:(StatType)type info:(TimeEvoInfo *)info bounds:(NSRect)bounds {
@@ -702,14 +731,15 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 		if (ms.length > 0) [ms
 			drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
 			withAttributes:textAttributes];
+		draw_legend(info, dRect);
 		draw_tics(bounds, isTransit? days : (CGFloat)steps/_world.worldParamsP->stepsPerDay);
 		} break;
 		case StatSeverity:
-		[self drawCompositionData:_sspData
+		[self drawCompositionData:_sspData title:@"Symptom severity"
 			ranks:SSP_NRanks drawRanks:SSP_NDrawRanks bounds:bounds];
 		break;
 		case StatVariants:
-		[self drawCompositionData:_variantsData
+		[self drawCompositionData:_variantsData title:@"Virus variants"
 			ranks:MAX_N_VARIANTS drawRanks:MAX_N_VARIANTS bounds:bounds];
 		break;
 		case StatPeriods:
@@ -773,6 +803,12 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 	[idxSelectionSheet setFrameOrigin:self.window.frame.origin];
 	timeEvoInfo.windowSize = mvAvrgDgt.integerValue = 1;
 	mvAvrgUnit.stringValue = NSLocalizedString(@"day", nil);
+	if (indexCBoxTitles == nil) {
+		NSInteger n = indexCBoxes.count;
+		NSString *titles[n];
+		for (NSInteger i = 0; i < n; i ++) titles[i] = indexCBoxes[i].title;
+		indexCBoxTitles = [NSArray.alloc initWithObjects:titles count:n];
+	}
 }
 - (void)windowDidMove:(NSNotification *)notification {
 	if (notification.object == self.window && !idxSelectionSheet.isVisible)

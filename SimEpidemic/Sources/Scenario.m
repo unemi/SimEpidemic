@@ -231,7 +231,7 @@ NSObject *scenario_element_from_property(NSObject *prop) {
 		items[i] = property_from_element(scenario[i]);
 	return [NSArray arrayWithObjects:items count:scenario.count];
 }
-- (void)setScenarioWithPList:(NSArray *)plist {
+- (void)setScenarioPList:(NSArray *)plist {
 	NSArray *newScen;
 	if (plist.count == 0) newScen = plist;
 	else {

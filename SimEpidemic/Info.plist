@@ -70,6 +70,20 @@
 			<key>LSTypeIsPackage</key>
 			<integer>0</integer>
 		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sEpA</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>AppearanceIcon</string>
+			<key>CFBundleTypeName</key>
+			<string>SimEpidemic Appearance</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSTypeIsPackage</key>
+			<integer>0</integer>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -86,7 +100,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>21</string>
+	<string>50</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSAppleScriptEnabled</key>

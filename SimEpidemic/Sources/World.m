@@ -14,7 +14,6 @@
 #import "Agent.h"
 #import "Scenario.h"
 #import "StatPanel.h"
-#import "Parameters.h"
 #import "Gatherings.h"
 #ifdef NOGUI
 #import "../../SimEpidemicSV/noGUI.h"

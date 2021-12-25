@@ -90,7 +90,7 @@ typedef struct {
 - (void)setLabelInfo:(NSArray<NSString *> *)info;
 - (void)phaseChangedTo:(NSInteger)lineNumber;
 - (void)reviseColors;
-- (void)openStatPanel:(NSWindow *)parentWindow;
+- (StatPanel *)openStatPanel:(NSWindow *)parentWindow;
 - (void)flushPanels;
 #endif
 @end

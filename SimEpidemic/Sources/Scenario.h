@@ -15,9 +15,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSInteger)scenarioIndex;
 - (void)setScenario:(NSArray *)newScen index:(NSInteger)idx;
 - (NSArray *)scenarioPList;
+- (void)setScenarioPList:(NSArray *)plist;
 #ifndef NOGUI
 - (void)setupPhaseInfo;
 #endif
-- (void)setScenarioWithPList:(NSArray *)plist;
 @end
 NS_ASSUME_NONNULL_END

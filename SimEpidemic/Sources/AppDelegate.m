@@ -285,8 +285,10 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 		case ParamTypeWEnum: if (pp.hp != NULL) md[p->key] = @(*(pp.hp ++)); break;
 		default: break;
 	}
-	add_vax_info(md, rp->vcnInfo);
-	add_final_vax(md, rp->vcnFnlRt);
+	if (rp != NULL) {
+		add_vax_info(md, rp->vcnInfo);
+		add_final_vax(md, rp->vcnFnlRt);
+	}
 	return md;
 }
 void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict) {
@@ -429,6 +431,7 @@ BOOL makePanelChildWindow = DEFAULT_CHILD_WIN;
 NSJSONWritingOptions JSONFormat = DEFAULT_JSON_FORM;
 NSString *keyWarpOpacity = @"warpOpacity", *keyPanelsAlpha = @"panelsAlpha",
 	*keyChildWindow = @"makePanelChildWindow", *keyJSONFormat = @"JSONFormat";
+BOOL bgIsDark = YES;
 void setup_colors(void) {
 	NSColorSpace *colSpc = NSColorSpace.genericRGBColorSpace;
 	for (NSInteger i = 0; i < N_COLORS; i ++) {
@@ -441,6 +444,7 @@ void setup_colors(void) {
 			cols[3] = warpOpacity;
 			warpColors[i] = [NSColor colorWithColorSpace:colSpc components:cols count:4];
 		}
+		if (i == ColBackground) bgIsDark = (cols[0] + cols[1] + cols[2]) < 1.5;
 	}
 }
 #endif
@@ -462,6 +466,11 @@ static NSInteger
 	}
 	isARM = strcmp(archName, "x86_64") != 0;
 	nCores = NSProcessInfo.processInfo.processorCount;
+	if (sizeof(sint32) != sizeof(TracingOperation)) {
+		fprintf(stderr, "The size of 'enum' is not %ld but %ld.",
+			sizeof(sint32), sizeof(TracingOperation));
+		exit(1);
+	}
 	NSInteger nF = 0, nD = 0, nI = 0, nR = 0, nE = 0, nH = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat:
@@ -491,6 +500,42 @@ static NSInteger
 	NSInteger nn = nF + nD + nI + nR + nE + nH;
 	NSString *keys[nn], *names[nF];
 	NSNumber *indexes[nn];
+
+#ifdef SDEF_PROPS
+	for (NSInteger i = 0; i < nn; i ++) {
+		ParamInfo *p = paramInfo + i;
+		char keyOrg[64], key[64];
+		NSUInteger len;
+		[p->key getBytes:keyOrg maxLength:64 usedLength:&len encoding:NSUTF8StringEncoding
+		 options:0 range:(NSRange){0, p->key.length} remainingRange:NULL];
+		NSInteger j = 0;
+		for (NSInteger i = 0; i < len && j < 64; i ++, j ++) {
+			if (keyOrg[i] >= 'A' && keyOrg[i] <= 'Z')
+				{ key[j ++] = ' '; key[j] = keyOrg[i] + 'a' - 'A'; }
+			else key[j] = keyOrg[i];
+		}
+		key[j] = '\0';
+		switch (p->type) {
+		case ParamTypeFloat:
+		printf("<property name=\"%s\" code=\"rt%02ld\" type=\"real\"/>\n", key, i); break;
+		case ParamTypeDist:
+		printf("<property name=\"%s\" code=\"rt%02ld\"><type type=\"real\" list=\"yes\"/></property>\n",
+			key, i); break;
+		case ParamTypeEnum:
+		printf("<property name=\"%s\" code=\"rt%02ld\" type=\"integer\"/>\n", key, i); break;
+		default: break;
+		}
+
+		switch (p->type) {
+		case ParamTypeInteger: case ParamTypeWEnum:
+		printf("<property name=\"%s\" code=\"wp%02ld\" type=\"integer\"/>\n", key, i); break;
+		case ParamTypeRate:
+		printf("<property name=\"%s\" code=\"wp%02ld\" type=\"real\"/>\n", key, i); break;
+		default: break;
+		}
+	}
+	[NSApp terminate:nil];
+#endif
 	for (NSInteger i = 0; i < nn; i ++) {
 		ParamInfo *p = paramInfo + i;
 		keys[i] = p->key;

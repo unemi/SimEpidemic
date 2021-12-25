@@ -62,6 +62,7 @@ extern void window_order_info(NSWindow *window, NSDictionary *dict, NSMutableArr
 extern void rearrange_window_order(NSMutableArray<NSArray *> *winList);
 extern void confirm_operation(NSString *text, NSWindow *window, void (^proc)(void));
 extern void show_anime_steps(NSTextField *txtField, NSInteger steps);
+extern BOOL bgIsDark;
 extern void setup_colors(void);
 extern NSString *keyAnimeSteps;
 extern NSInteger defaultAnimeSteps;
