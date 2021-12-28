@@ -261,6 +261,8 @@ static void shrink_data_in_half(NSMutableData *data, NSInteger unit) {
 	NSInteger *dt = (NSInteger *)data.mutableBytes;
 	for (NSInteger i = 0; i < MAX_N_REC; i += 2)
 		memcpy(dt + i / 2 * unit, dt + (i + 1) * unit, sizeof(NSInteger) * unit);
+	NSInteger nItemsHalf = MAX_N_REC / 2 * unit;
+	memset(dt + nItemsHalf, 0, sizeof(NSInteger) * nItemsHalf);
 }
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects {

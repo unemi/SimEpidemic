@@ -751,8 +751,9 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
 static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
 	if (!fw.regularFile) return;
 	NSData *srcData = [fw.regularFileContents unzippedData];
-	memcpy(dstData.mutableBytes, srcData.bytes,
-		(srcData.length < dstData.length)? srcData.length : dstData.length);
+	NSInteger srcLen = srcData.length, dstLen = dstData.length;
+	memcpy(dstData.mutableBytes, srcData.bytes, (srcLen < dstLen)? srcLen : dstLen);
+	if (dstLen > srcLen) memset(dstData.mutableBytes + srcLen, 0, dstLen - srcLen);
 }
 - (BOOL)readFromDict:(NSDictionary *)dict error:(NSError **)outError {
 	@try {

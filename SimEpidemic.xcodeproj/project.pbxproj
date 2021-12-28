@@ -596,7 +596,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n#env | sort > /tmp/x.txt\nif [ $CONFIGURATION != Debug ]; then\nfor m in simepi simepi2; do\nscp $BUILT_PRODUCTS_DIR/$EXECUTABLE_NAME admin@$m.intlab.soka.ac.jp:SimEpidemic/$EXECUTABLE_NAME.new\ndone\ncd $PROJECT_DIR\nCOPYFILE_DISABLE=1 tar -cf - --newer-mtime-than touch README.md SimEpidemic/Sources SimEpidemicSV | \\\nssh simepiM00.intlab.soka.ac.jp \"cd Program/SimEpidemic; tar -xpf -\"\ntouch touch\nfi\n";
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n#env | sort > /tmp/x.txt\nif [ $CONFIGURATION != Debug ]; then\nfor m in simepi; do\nscp $BUILT_PRODUCTS_DIR/$EXECUTABLE_NAME admin@$m.intlab.soka.ac.jp:SimEpidemic/$EXECUTABLE_NAME.new\ndone\ncd $PROJECT_DIR\nCOPYFILE_DISABLE=1 tar -cf - --newer-mtime-than touch README.md SimEpidemic/Sources SimEpidemicSV | \\\nssh simepiM00.intlab.soka.ac.jp \"cd Program/SimEpidemic; tar -xpf -\"\ntouch touch\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
