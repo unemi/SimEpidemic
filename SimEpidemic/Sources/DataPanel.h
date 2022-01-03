@@ -14,7 +14,7 @@ typedef enum { TableTimeEvo, TableTransit, TableTests, TableHistgram } TableType
 @class StatInfo;
 
 @interface DataPanel : NSWindowController
-	<NSWindowDelegate, NSTableViewDataSource> {
+	<NSMenuItemValidation, NSWindowDelegate, NSTableViewDataSource> {
 	IBOutlet NSScrollView
 		*timeEvoScrlView, *transitScrlView, *testsScrView, *histogramScrlView;
 	IBOutlet NSTableView

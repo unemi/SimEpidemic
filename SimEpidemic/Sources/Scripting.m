@@ -20,15 +20,14 @@
 - (NSDictionary *)factoryDefaultsWorld { return param_dict(NULL, &defaultWorldParams); }
 - (NSDictionary *)userDefaultsWorld { return param_dict(NULL, &userDefaultWorldParams); }
 - (IBAction)openScriptingDictionary:(id)sender {
-	NSString *path = [NSBundle.mainBundle pathForResource:@"SimEpidemic" ofType:@"sdef"];
-	[NSWorkspace.sharedWorkspace openFile:path withApplication:@"Script Editor"];
+	NSWorkspace *ws = NSWorkspace.sharedWorkspace;
+	NSURL *fileURL = [NSBundle.mainBundle URLForResource:@"SimEpidemic" withExtension:@"sdef"];
+	NSURL *appURL = [ws URLForApplicationWithBundleIdentifier:@"com.apple.ScriptEditor2"];
+	NSWorkspaceOpenConfiguration *config = NSWorkspaceOpenConfiguration.configuration;
+	config.addsToRecentItems = NO;
+	[ws openURLs:@[fileURL] withApplicationAtURL:appURL configuration:config completionHandler:nil];
 }
 @end
-
-//@interface ScenarioElement : NSObject
-//@end
-//@implementation ScenarioElement
-//@end
 
 @implementation Document (ScriptingExtension)
 // element
@@ -137,8 +136,8 @@ static NSArray *object_array(NSArray<NSDictionary *> *array, NSString *key) {
 	return [NSArray arrayWithObjects:objects count:n];
 }
 - (NSArray *)variantList {
-	return [self vvListFrom:world.variantList
-		nameKey:@"variantName" efficacyKey:@"immunityEfficacy" keys:@[@"reproductivity"]];
+	return [self vvListFrom:world.variantList nameKey:@"variantName"
+		efficacyKey:@"immunityEfficacy" keys:@[@"reproductivity", @"toxicity"]];
 }
 - (void)setVariantList:(NSArray<NSDictionary *> *)vList {
 	world.variantList = [self vvArrayFrom:vList nameList:object_array(vList, @"variantName")];

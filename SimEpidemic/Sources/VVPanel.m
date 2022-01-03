@@ -357,7 +357,7 @@ static void check_vvlist(NSMutableArray *ma, NSDictionary *keys) {
 	NSMutableArray *ma = md[@"variantList"];
 	if (ma != nil && [ma isKindOfClass:NSArray.class]) {
 		ma = mutablized_array_of_dicts(ma);
-		check_vvlist(ma, @{@"reproductivity":@(1.)});
+		check_vvlist(ma, @{@"reproductivity":@(1.), @"toxicity":@(1.)});
 		variantList = ma;
 		[variantTable reloadData];
 		loaded = YES;
@@ -449,7 +449,7 @@ static void check_vvlist(NSMutableArray *ma, NSDictionary *keys) {
 		txtFld.stringValue = rowDict[ID];
 		txtFld.row = row;
 		txtFld.list = list;
-	} else if ([ID isEqualToString:@"reproductivity"]) {
+	} else if ([@[@"reproductivity", @"toxicity"] containsObject:ID]) {
 		view.textField.doubleValue = [rowDict[ID] doubleValue];
 	} else if ([ID isEqualToString:@"interval"]) {
 		view.textField.integerValue = [rowDict[@"intervalDays"] integerValue];

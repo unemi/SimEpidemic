@@ -6,10 +6,14 @@ Individual-based Epidemic Simulator (2020-21)
 
 This is an individual-based simulator to help understanding the dynamics of epidemic, spread of infectous disease, mainly targetting SARS-CoV-2.
 
-This repository includes two different versions, macOS application and HTTP server. Both run on macOS 10.14, 10.15, and 11.0. The project file SimEpidemic.xcodeproj is tuned for Intel-based machine, but you can configure it for Apple M1 CPU.
+This repository includes two different versions, macOS application and HTTP server. Both run on macOS 11, and 12. The project file SimEpidemic.xcodeproj is tuned for universal binary runnable on both Intel x86_64 and Apple Sillicon arm64 CPUs.
 
 You can find more detail of the project at [http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/](http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/)
 and the technical detail in Japanese at  [http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/simepidemic-docs.html](http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/simepidemic-docs.html).
+
+## How to install the HTTP server version
+The HTTP server version is also in a form of universal binary.
+If the execution module "simepidemic" is immediately killed by zsh just after the invokation; please try to "archive" the product, export it into a local folder, then copy the product module "simepidemic" under Products/use/local/bin to the target server machine.
 
 ## Subdirectories
 - SimEpidemic ... macOS application.

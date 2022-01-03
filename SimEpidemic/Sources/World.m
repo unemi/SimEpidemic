@@ -330,7 +330,9 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 	VariantInfo *rInfo = variantInfo;
 	for (NSInteger i = 0; i < nVariants; i ++) {
 		NSDictionary *dict = _variantList[i];
-		rInfo[i].reproductivity = [dict[@"reproductivity"] doubleValue];
+		NSNumber *num;
+		rInfo[i].reproductivity = ((num = dict[@"reproductivity"]))? num.doubleValue : 1.;
+		rInfo[i].toxicity = ((num = dict[@"toxicity"]))? num.doubleValue : 1.;
 		for (NSInteger j = 0; j < nVariants; j ++)
 			rInfo[i].efficacy[j] = [dict[vrNames[j]] doubleValue];
 	}
@@ -689,7 +691,8 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 MutableDictArray default_variants(void) {
 	return [NSMutableArray arrayWithObject:
 		[NSMutableDictionary dictionaryWithDictionary:
-		@{@"name":@"Original", @"reproductivity":@(1.),@"Original":@(1.)}]];
+		@{@"name":@"Original", @"reproductivity":@(1.),
+			@"toxicity":@(1.),@"Original":@(1.)}]];
 }
 MutableDictArray default_vaccines(void) {
 	return [NSMutableArray arrayWithObject:

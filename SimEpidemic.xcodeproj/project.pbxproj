@@ -150,9 +150,6 @@
 		23673363252EFA8E00284D91 /* PeriodicReporter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PeriodicReporter.m; sourceTree = "<group>"; };
 		236BD9D2252ADD5300A1D21D /* control.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = control.html; sourceTree = "<group>"; };
 		2372797525203323000BC3C5 /* batch.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = batch.html; sourceTree = "<group>"; };
-		23774D7B25C2F5C2009A3132 /* simepidemic-http-server132.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-http-server132.md"; sourceTree = "<group>"; };
-		2378766825027AE500897003 /* simepidemic-model.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "simepidemic-model.md"; sourceTree = "<group>"; };
-		2378766B25027AE500897003 /* Pathogenesis.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Pathogenesis.svg; sourceTree = "<group>"; };
 		2387B42324FCD2190039796A /* Preferences.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Preferences.h; sourceTree = "<group>"; };
 		2387B42424FCD2190039796A /* Preferences.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Preferences.m; sourceTree = "<group>"; };
 		238A8F27246694D300604BF4 /* StatPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StatPanel.h; sourceTree = "<group>"; };
@@ -234,7 +231,6 @@
 				23C3FFE12557FB3F004906AE /* simepiBackend */,
 				23B89E4D255BD61000A95360 /* simepiWorld */,
 				232055ED2457D2C5005ADCCF /* Products */,
-				2378766625027AE500897003 /* Documents */,
 			);
 			sourceTree = "<group>";
 		};
@@ -349,24 +345,6 @@
 			path = SimEpidemicSV;
 			sourceTree = "<group>";
 		};
-		2378766625027AE500897003 /* Documents */ = {
-			isa = PBXGroup;
-			children = (
-				2378766825027AE500897003 /* simepidemic-model.md */,
-				23774D7B25C2F5C2009A3132 /* simepidemic-http-server132.md */,
-				2378766A25027AE500897003 /* Figures */,
-			);
-			path = Documents;
-			sourceTree = "<group>";
-		};
-		2378766A25027AE500897003 /* Figures */ = {
-			isa = PBXGroup;
-			children = (
-				2378766B25027AE500897003 /* Pathogenesis.svg */,
-			);
-			path = Figures;
-			sourceTree = "<group>";
-		};
 		239A1AEE25136D0200B92DAD /* DocumentRoot */ = {
 			isa = PBXGroup;
 			children = (
@@ -429,7 +407,6 @@
 				2365DECB250616E5006C2A95 /* ShellScript */,
 				2365DEB22506145A006C2A95 /* Sources */,
 				2365DEB32506145A006C2A95 /* Frameworks */,
-				23AD673D264F9978008AAEAB /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -480,7 +457,7 @@
 		232055E42457D2C5005ADCCF /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1130;
+				LastUpgradeCheck = 1320;
 				ORGANIZATIONNAME = "Tatsuo Unemi";
 				TargetAttributes = {
 					232055EB2457D2C5005ADCCF = {
@@ -579,24 +556,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ ${CONFIGURATION} == Release ]; then /Users/unemi/Program/bin/incBuildVersion.csh; fi\n";
-		};
-		23AD673D264F9978008AAEAB /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n#env | sort > /tmp/x.txt\nif [ $CONFIGURATION != Debug ]; then\nfor m in simepi; do\nscp $BUILT_PRODUCTS_DIR/$EXECUTABLE_NAME admin@$m.intlab.soka.ac.jp:SimEpidemic/$EXECUTABLE_NAME.new\ndone\ncd $PROJECT_DIR\nCOPYFILE_DISABLE=1 tar -cf - --newer-mtime-than touch README.md SimEpidemic/Sources SimEpidemicSV | \\\nssh simepiM00.intlab.soka.ac.jp \"cd Program/SimEpidemic; tar -xpf -\"\ntouch touch\nfi\n";
+			shellScript = "if [ ${CONFIGURATION} == Release -a -f /Users/unemi/Program/bin/incBuildVersion.csh ]\nthen /Users/unemi/Program/bin/incBuildVersion.csh; fi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -796,7 +756,6 @@
 		232056012457D2C7005ADCCF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -820,13 +779,13 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -844,19 +803,17 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
-				VALID_ARCHS = x86_64;
+				VALID_ARCHS = "$(ARCHS_STANDARD)";
 			};
 			name = Debug;
 		};
 		232056022457D2C7005ADCCF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -880,31 +837,29 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
-				VALID_ARCHS = x86_64;
+				VALID_ARCHS = "$(ARCHS_STANDARD)";
 			};
 			name = Release;
 		};
@@ -915,17 +870,14 @@
 				CODE_SIGN_ENTITLEMENTS = SimEpidemic/SimEpidemic.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SimEpidemic/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MARKETING_VERSION = 1.9.0;
-				OTHER_CFLAGS = "-mavx";
+				MARKETING_VERSION = 1.9.1;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "";
+				"OTHER_CFLAGS[arch=x86_64]" = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -938,17 +890,13 @@
 				CODE_SIGN_ENTITLEMENTS = SimEpidemic/SimEpidemic.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SimEpidemic/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MARKETING_VERSION = 1.9.0;
-				OTHER_CFLAGS = "-mavx";
+				MARKETING_VERSION = 1.9.1;
+				OTHER_CFLAGS = "";
+				"OTHER_CFLAGS[arch=x86_64]" = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -960,11 +908,8 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 726X5Z9867;
-				ENABLE_HARDENED_RUNTIME = YES;
-				OTHER_CFLAGS = (
-					"-DNOGUI",
-					"-mavx",
-				);
+				ENABLE_HARDENED_RUNTIME = NO;
+				OTHER_CFLAGS = "-DNOGUI";
 				PRODUCT_NAME = simepidemic;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
@@ -976,10 +921,11 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 726X5Z9867;
-				ENABLE_HARDENED_RUNTIME = YES;
-				OTHER_CFLAGS = (
+				ENABLE_HARDENED_RUNTIME = NO;
+				OTHER_CFLAGS = "-DNOGUI";
+				"OTHER_CFLAGS[arch=x86_64]" = (
+					"-mavx2",
 					"-DNOGUI",
-					"-mavx",
 				);
 				PRODUCT_NAME = simepidemic;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -989,6 +935,7 @@
 		23B89E50255BD61000A95360 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1003,6 +950,7 @@
 		23B89E51255BD61000A95360 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1017,6 +965,7 @@
 		23C3FFE42557FB3F004906AE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1027,6 +976,7 @@
 		23C3FFE52557FB3F004906AE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;

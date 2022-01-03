@@ -354,7 +354,9 @@ CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
 static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepInfo *info) {
-	CGFloat exacerbate = exacerbation(prms.vrInfo[a->virusVariant].reproductivity);
+	VariantInfo *vrInfo = prms.vrInfo + a->virusVariant;
+	CGFloat exacerbate = exacerbation(vrInfo->reproductivity);
+	if (a->health == Symptomatic) exacerbate *= vrInfo->toxicity;
 	CGFloat daysToRecv = (1. - prms.rp->therapyEffc / 100.) * a->daysToRecover;
 	if (a->daysToCompleteRecov > 0.) { // in the recovery phase
 		if (a->daysInfected >= a->daysToCompleteRecov) {

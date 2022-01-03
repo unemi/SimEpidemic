@@ -10,7 +10,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface Preferences : NSWindowController {
+@interface Preferences : NSWindowController <NSColorChanging> {
 	IBOutlet NSStepper *animeStepper;
 	IBOutlet NSTextField *animeStepTxt;
 	IBOutlet NSColorWell

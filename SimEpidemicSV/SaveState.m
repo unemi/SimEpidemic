@@ -84,8 +84,10 @@ void correct_variant_list(MutableDictArray vrList, MutableDictArray vaList) {
 			@throw @"417 Variant list includes object other than dictionary.";
 		NSString *name = dict[@"name"];
 		if (name == nil) @throw [NSString stringWithFormat:@"Element %ld has no name.", i];
-		NSNumber *num = dict[@"reproductivity"];
-		 if (num == nil || ![num isKindOfClass:NSNumber.class]) dict[@"reproductivity"] = @(1.);
+		for (NSString *key in @[@"reproductivity", @"toxicity"]) {
+			NSNumber *num = dict[key];
+			if (num == nil || ![num isKindOfClass:NSNumber.class]) dict[key] = @(1.);
+		}
 	}
 	for (NSDictionary *vrA in vrList) {
 		NSString *vrNm = vrA[@"name"];

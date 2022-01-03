@@ -75,7 +75,7 @@ typedef struct {
 } VaccineFinalRate;
 
 typedef struct {
-	CGFloat reproductivity;
+	CGFloat reproductivity, toxicity;
 	CGFloat efficacy[MAX_N_VARIANTS];
 } VariantInfo;
 

@@ -85,6 +85,7 @@
 		<record-type name="variant type" code="VART" description="Virus variant type">
 			<property name="variant name" code="vrTN" type="text"/>
 			<property name="reproductivity" code="vrTR" type="real"/>
+			<property name="toxicity" code="vrTX" type="real"/>
 			<property name="immunity efficacy" code="vrTE" type="list of real"/>
 		</record-type>
 		<record-type name="parameter set for runtime" code="RTPR" description="Runtime parameters">
