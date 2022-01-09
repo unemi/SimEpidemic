@@ -31,12 +31,13 @@ extern NSUInteger JSONOptions;
 extern NSInteger maxPopSize, maxNWorlds, maxRuntime,
 	worldTimeout, maxJobsInQueue, maxTrialsAtSameTime,
 	jobRecExpirationHours, stateRecExpirationHours;
-extern NSString *fileDirectory, *dataDirectory;
+extern NSString *hostname, *fileDirectory, *dataDirectory;
 extern NSDictionary *extToMime, *codeMeaning, *indexNames;
 extern NSArray *distributionNames;
 extern NSDictionary *indexNameToIndex, *testINameToIdx;
 extern NSDateFormatter *dateFormat;
 extern void unix_error_msg(NSString *msg, int code);
+extern NSString *data_hostname_path(NSString *subPath);
 extern NSString *new_uniq_string(void);
 extern NSString *ip4_string(uint32 ip4addr);
 extern void my_log(const char *, ...);

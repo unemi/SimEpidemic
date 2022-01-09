@@ -835,7 +835,8 @@ NSData *JSON_pop2(World *world) {
 		@"maxRuntime":@(maxRuntime), @"documentTimeout":@(worldTimeout),
 		@"maxQueuedJobs":@(maxJobsInQueue), @"maxTrials":@(maxTrialsAtSameTime),
 		@"jobExprHours":@(jobRecExpirationHours), @"stateExprHours":@(stateRecExpirationHours),
-		@"documentRoot":fileDirectory, @"dataStorage":dataDirectory
+		@"documentRoot":fileDirectory, @"dataStorage":dataDirectory,
+		@"hostname":(hostname == nil)? @"" : hostname
 	}];
 }
 - (void)unblock {
@@ -862,7 +863,7 @@ void init_context(void) {
 		COM(periodicReport), COM(quitReport), COM(changeReport),
 		COM(getScenario), COM(setScenario),
 		COM(submitJob), COM(getJobStatus), COM(getJobQueueStatus),
-		COM(getJobInfo), COM(stopJob), COM(getJobResults), COM(deleteJob),
+		COM(getJobInfo), COM(stopJob), COM(getJobResults), COM(deleteJob), COM(touchJob),
 		COM(saveState), COM(loadState), COM(removeState),
 		COM(getState), COM(putState),
 		COM(version), COM(sysInfo), COM(getConfig), COM(unblock) };

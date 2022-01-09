@@ -106,8 +106,7 @@ static JobController *the_job_controller(void) {
 }
 NSString *batch_job_dir(void) {
 	static NSString *batchJobDir = nil;
-	if (batchJobDir == nil) batchJobDir =
-		[dataDirectory stringByAppendingPathComponent:@"BatchJob"];
+	if (batchJobDir == nil) batchJobDir = data_hostname_path(@"BatchJob");
 	return batchJobDir;
 }
 @implementation JobController
@@ -302,7 +301,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 		NSString *infoPath = [jobDirPath stringByAppendingPathComponent:batchJobInfoFileName];
 		if (![infoData writeToFile:infoPath options:0 error:&error]) @throw error;
 	} @catch (NSString *msg) {
-		MY_LOG("Data strage %@ %@.", dataDirectory, msg); return NO;
+		MY_LOG("Job info directory %@ %@.", jobDirPath, msg); return NO;
 	} @catch (NSError *error) {
 		MY_LOG("%@", error.localizedDescription); return NO;
 	}
@@ -666,37 +665,49 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 		code = 200;
 	}
 }
-- (void)deleteJob {
+- (void)forAllJobsInArgs:(BOOL (^)(NSString *, NSError **))block
+	opeName:(NSArray<NSString *>*)opeName {
 	NSString *jobIDs = query[@"job"];
 	if (jobIDs == nil) @throw @"500 Job ID is missing.";
 	NSError *error;
 	NSArray<NSString *> *jobIDArry = [jobIDs componentsSeparatedByString:@","];
 	NSMutableString *results = NSMutableString.new;
+	NSFileManager *fm = NSFileManager.defaultManager;
 	for (NSString *jobID in jobIDArry) {
-		NSFileManager *fm = NSFileManager.defaultManager;
-		BOOL jInfo = [fm removeItemAtPath:
-			[batch_job_dir() stringByAppendingPathComponent:jobID] error:&error];
+		BOOL jInfo = block([batch_job_dir() stringByAppendingPathComponent:jobID], &error);
 		NSDirectoryEnumerator *dEnm = [fm enumeratorAtPath:save_state_dir()];
 		NSInteger cnt = 0;
-		if (dEnm != nil) {
-			[dEnm skipDescendants];
-			for (NSString *dname in dEnm) if ([dname hasPrefix:jobID]) {
+		if (dEnm != nil) for (NSString *dname in dEnm) {
+			if ([dname hasPrefix:jobID]) {
 				NSString *fullPath = [save_state_dir() stringByAppendingPathComponent:dname];
-				if (![fm removeItemAtPath:fullPath error:&error])
-					@throw [NSString stringWithFormat:@"500 Could not remove %@. %@",
-						fullPath, error.localizedDescription];
+				if (!block(fullPath, &error))
+					@throw [NSString stringWithFormat:@"500 Could not %@ %@. %@",
+						opeName[0], fullPath, error.localizedDescription];
 				cnt ++;
 			}
+			[dEnm skipDescendants];
 		}
 		[results appendFormat:@"Job information of %@ %@. %@.\n", jobID,
-			jInfo? @"was deleted" : @"could not be found",
+			jInfo? [@"was " stringByAppendingString:opeName[1]] : @"could not be found",
 			(cnt == 0)? @"No saved state was found" :
-			(cnt == 1)? @"One saved state was deleted" : 
-			[NSString stringWithFormat:@"%ld saved states were deleted", cnt]];
+			(cnt == 1)? [@"One saved state was " stringByAppendingString:opeName[1]] : 
+			[NSString stringWithFormat:@"%ld saved states were %@", cnt, opeName[1]]];
 	}
 	type = @"text/plain";
 	content = results;
 	code = 200;
+}
+- (void)deleteJob {
+	[self forAllJobsInArgs:^BOOL(NSString *path, NSError **error) {
+		return [NSFileManager.defaultManager removeItemAtPath:path error:error];
+	} opeName:@[@"remove", @"deleted"]];
+}
+- (void)touchJob {
+	NSDate *date = NSDate.date;
+	[self forAllJobsInArgs:^BOOL(NSString *path, NSError **error) {
+		return [NSFileManager.defaultManager setAttributes:
+			@{NSFileModificationDate:date} ofItemAtPath:path error:error];
+	} opeName:@[@"touch", @"touched"]];
 }
 @end
 
@@ -713,7 +724,8 @@ void check_batch_jobs_to_restart(void) {	// called from main()
 	NSString *ID;
 	NSCharacterSet *chSet = NSCharacterSet.newlineCharacterSet;
 	NSError *error;
-	NSArray<NSString *> *filePrefixes = @[@"indexes", @"daily", @"distribution"];
+	NSArray<NSString *> *filePrefixes =
+		@[@"indexes", @"daily", @"distribution", @"severity", @"variants"];
 	while ([scan scanUpToCharactersFromSet:chSet intoString:&ID]) {
 		NSString *jobDir = [batch_job_dir() stringByAppendingPathComponent:ID];
 		if (![fm fileExistsAtPath:jobDir isDirectory:&isDirectory]) continue;

@@ -14,57 +14,10 @@
             filePath = "SimEpidemicSV/noGUI.m"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "492"
-            endingLineNumber = "492"
+            startingLineNumber = "518"
+            endingLineNumber = "518"
             landmarkName = "main(argc, argv)"
             landmarkType = "9">
-            <Locations>
-               <Location
-                  uuid = "924F8EC5-61BD-4494-B5A7-11F53C77C9F2 - 719bca0b54bee8f6"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "main"
-                  moduleName = "simepidemic"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/unemi/Program/SimEpidemic/SimEpidemicSV/noGUI.m"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "492"
-                  endingLineNumber = "492"
-                  offsetFromSymbolStart = "4114">
-               </Location>
-               <Location
-                  uuid = "924F8EC5-61BD-4494-B5A7-11F53C77C9F2 - 719bca0b54bee8f6"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "main"
-                  moduleName = "simepidemic"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/unemi/Program/SimEpidemic/SimEpidemicSV/noGUI.m"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "492"
-                  endingLineNumber = "492"
-                  offsetFromSymbolStart = "4177">
-               </Location>
-               <Location
-                  uuid = "924F8EC5-61BD-4494-B5A7-11F53C77C9F2 - 719bca0b54bee8f6"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "main"
-                  moduleName = "simepidemic"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/unemi/Program/SimEpidemic/SimEpidemicSV/noGUI.m"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "492"
-                  endingLineNumber = "492"
-                  offsetFromSymbolStart = "4369">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy

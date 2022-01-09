@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>jp.ac.soka.unemi.simepidemicSV</string>
+	<key>UserName</key>
+	<string>admin</string>
+	<key>WorkingDirectory</key>
+	<string>/Users/admin/SimEpidemic</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/admin/SimEpidemic/simepidemic</string>
+		<string>-p</string>
+		<string>80</string>
+		<string>-d</string>
+		<string>DocumentRoot</string>
+		<string>-D</string>
+		<string>DataStorage</string>
+	</array>
+	<key>KeepAlive</key>
+	<true/>
+</dict>
+</plist>

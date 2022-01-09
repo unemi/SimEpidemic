@@ -39,6 +39,7 @@ uint32 BCA4Contract = INADDR_BROADCAST;
 NSInteger maxPopSize = 1000000, maxNWorlds = 128, maxRuntime = 48*3600,
 	worldTimeout = 20*60, maxJobsInQueue = 256, maxTrialsAtSameTime = 4,
 	jobRecExpirationHours = 24*7, stateRecExpirationHours = 24*7;
+NSString *hostname = nil;
 NSString *fileDirectory = nil, *dataDirectory = nil, *logFilePath = nil;
 NSDictionary *extToMime, *codeMeaning, *indexNames;
 NSArray *distributionNames;
@@ -50,12 +51,29 @@ static NSString *pidFilename = @"pid", *IDCntFilename = @"IDCount",
 	*keyBlockList = @"blockList",
 	*logFilename = @"log";
 
+NSString *data_hostname_path(NSString *subPath) {
+	NSString *dir = (hostname == nil)? dataDirectory :
+		[dataDirectory stringByAppendingPathComponent:hostname];
+	return [dir stringByAppendingPathComponent:subPath];
+}
+static NSString *get_hostname(void) {
+	char buf[BUFSIZ];
+	int err = gethostname(buf, BUFSIZ);
+	if (err != 0) {
+		unix_error_msg(@"gethostname", err);
+		return nil;
+	}
+	for (NSInteger i = 0; i < BUFSIZ; i ++) {
+		if (buf[i] == '.') { buf[i] = '\0'; break; }
+		else if (buf[i] == '\0') break;
+	}
+	return [NSString stringWithUTF8String:buf];
+}
 static void save_info_dict(void) {
 	NSData *infoData = [NSPropertyListSerialization
 		dataWithPropertyList:infoDictionary
 		format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL];
-	if (infoData) [infoData writeToFile:
-		[dataDirectory stringByAppendingPathComponent:infoFilename] atomically:YES];
+	if (infoData) [infoData writeToFile:data_hostname_path(infoFilename) atomically:YES];
 }
 static NSLock *uniqStrLock = nil;
 #define N_UNIQ_CHARS 61
@@ -66,7 +84,7 @@ NSString *new_uniq_string(void) {
 	if (uniqStrLock == nil) uniqStrLock = NSLock.new;
 	[uniqStrLock lock];
 	if (IDCntPath == nil) {
-		IDCntPath = [dataDirectory stringByAppendingPathComponent:IDCntFilename];
+		IDCntPath = data_hostname_path(IDCntFilename);
 		NSString *str = [NSString stringWithContentsOfFile:IDCntPath
 			encoding:NSUTF8StringEncoding error:NULL];
 		if (str != nil) counter = str.integerValue;
@@ -343,6 +361,7 @@ void catch_signal(int sig) {
 	terminateApp(EXIT_NORMAL);
 }
 static void expiration_check(NSString *dirPath, NSInteger hours) {
+	MY_LOG_DEBUG("expiration_check %@ %ld", dirPath, hours)
 	@try {
 		NSFileManager *fm = NSFileManager.defaultManager;
 		NSDirectoryEnumerator *dirEnum = [fm enumeratorAtPath:dirPath];
@@ -354,12 +373,14 @@ static void expiration_check(NSString *dirPath, NSInteger hours) {
 				MY_LOG("Record %@ failed to get attributes", path);
 				continue;
 			}
-			if (![attr[NSFileType] isEqualTo:NSFileTypeDirectory]) continue;
-			NSDate *modDate = attr[NSFileModificationDate];
+			if (![attr.fileType isEqualTo:NSFileTypeDirectory]) continue;
+			NSDate *modDate = attr.fileModificationDate;
 			if (modDate == nil) MY_LOG(
 				"Record %@ failed to get the content modification date.", path)
-			else if ([pastDate compare:modDate] == NSOrderedDescending)
+			else if ([pastDate compare:modDate] == NSOrderedDescending) {
 				[dirsTobeRemoved addObject:path];
+				MY_LOG_DEBUG("%@(%@) is older than %@.", path, modDate, pastDate)
+			}
 			[dirEnum skipDescendents];
 		}
 		if (dirsTobeRemoved.count > 0) {
@@ -381,7 +402,7 @@ static void expiration_check(NSString *dirPath, NSInteger hours) {
 }
 static void schedule_record_expiration_check(void) {
 #ifdef DEBUG
-	CGFloat interval = 1.; BOOL repeats = NO;
+	CGFloat interval = 5.; BOOL repeats = NO;
 #else
 	CGFloat interval = 3600.; BOOL repeats = YES;
 #endif
@@ -399,6 +420,7 @@ static void set_default_max_trials(void) {
 }
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
+NSLog(@"%@", NSDate.date);
 	short err;
 	uint16 port = SERVER_PORT;
 	set_default_max_trials();
@@ -412,6 +434,12 @@ int main(int argc, const char * argv[]) {
 			if (i + 1 < argc) fileDirectory = path_from_unix_string(argv[++ i]);
 		} else if (strcmp(argv[i], "-D") == 0 || strcmp(argv[i], "--dataStorage") == 0) {
 			if (i + 1 < argc) dataDirectory = path_from_unix_string(argv[++ i]);
+		} else if (strcmp(argv[i], "-DR") == 0 || strcmp(argv[i], "--dataStorageR") == 0) {
+			if (i + 1 < argc) dataDirectory = path_from_unix_string(argv[++ i]);
+			if ((hostname = get_hostname()) == nil) exit(EXIT_INVALID_ARGS);
+		} else if (strcmp(argv[i], "-Dr") == 0 || strcmp(argv[i], "--dataStorageR2") == 0) {
+			if (i + 1 < argc) dataDirectory = path_from_unix_string(argv[++ i]);
+			hostname = NSProcessInfo.processInfo.hostName;
 		} else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--maxPopSize") == 0) {
 			if (i + 1 < argc) maxPopSize = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--maxNWorlds") == 0) {
@@ -436,14 +464,13 @@ int main(int argc, const char * argv[]) {
 	}
 	fileDirectory = adjust_dir_path(fileDirectory);
 	dataDirectory = adjust_dir_path(dataDirectory);
-	logFilePath = [dataDirectory stringByAppendingPathComponent:
-		[NSString stringWithFormat:@"%@_%04d.txt", logFilename, port]];
+	logFilePath = data_hostname_path(
+		[NSString stringWithFormat:@"%@_%04d.txt", logFilename, port]);
 	[NSThread detachNewThreadWithBlock:^{ logging_thread(); }];
 	MY_LOG_DEBUG("fileDir=%s\ndataDir=%s\n",
 		fileDirectory.UTF8String, dataDirectory.UTF8String);
 //
-	NSData *infoData = [NSData dataWithContentsOfFile:
-		[dataDirectory stringByAppendingPathComponent:infoFilename]];
+	NSData *infoData = [NSData dataWithContentsOfFile:data_hostname_path(infoFilename)];
 	if (infoData != nil) infoDictionary = [NSPropertyListSerialization
 		propertyListWithData:infoData options:NSPropertyListMutableContainers
 		format:NULL error:NULL];
@@ -474,8 +501,8 @@ int main(int argc, const char * argv[]) {
 	if ((err = listen(soc, 1))) unix_error_msg(@"TCP listen", EXIT_LISTEN);
 //
 	NSError *error;
-	NSString *pidPath = [dataDirectory stringByAppendingPathComponent:
-		[NSString stringWithFormat:@"%@_%04d", pidFilename, port]];
+	NSString *pidPath = data_hostname_path(
+		[NSString stringWithFormat:@"%@_%04d", pidFilename, port]);
 	if (![@(getpid()).stringValue writeToFile:pidPath
 		atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
 		MY_LOG("Couldn't write pid. %@", error.localizedDescription);

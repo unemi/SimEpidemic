@@ -12,8 +12,7 @@
 
 NSString *save_state_dir(void) {
 	static NSString *stateDir = nil;
-	if (stateDir == nil) stateDir =
-		[dataDirectory stringByAppendingPathComponent:@"States"];
+	if (stateDir == nil) stateDir = data_hostname_path(@"States");
 	return stateDir;
 }
 static NSString *save_state_file_path(NSString *fname) {

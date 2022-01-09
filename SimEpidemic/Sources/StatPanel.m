@@ -227,10 +227,14 @@ static void count_health(Agent *a, StatData *stat, StatData *tran) {
 	stat->cnt[a->health] ++;
 }
 static void count_severity(Agent *a, VariantInfo *vp, NSInteger *cnt) {
-	NSInteger rank = (a->health != Symptomatic)? 0 :
-		(a->daysInfected * exacerbation(vp[a->virusVariant].reproductivity) - a->daysToOnset)
-		/ a->daysToDie * SSP_NRanks;
-	if (rank < 0) rank = 0; else if (rank >= SSP_NRanks) rank = SSP_NRanks - 1;
+	NSInteger rank;
+	if (a->health != Symptomatic) rank = 0;
+	else {
+		vp += a->virusVariant;
+		CGFloat exc = exacerbation(vp->reproductivity) * vp->toxicity;
+		rank = (a->daysInfected - a->daysToOnset) / (a->daysToDie / exc) * SSP_NRanks;
+		if (rank < 0) rank = 0; else if (rank >= SSP_NRanks) rank = SSP_NRanks - 1;
+	}
 	cnt[rank] ++;
 }
 static void count_infected_variants(Agent *a, NSInteger *cnt) {
