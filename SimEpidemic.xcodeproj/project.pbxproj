@@ -832,11 +832,11 @@
 				CODE_SIGN_ENTITLEMENTS = SimEpidemic/SimEpidemic.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 70;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SimEpidemic/Info.plist;
-				MARKETING_VERSION = 1.9.1;
+				MARKETING_VERSION = 1.9.2;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				"OTHER_CFLAGS[arch=x86_64]" = "-mavx";
@@ -852,11 +852,11 @@
 				CODE_SIGN_ENTITLEMENTS = SimEpidemic/SimEpidemic.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 70;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SimEpidemic/Info.plist;
-				MARKETING_VERSION = 1.9.1;
+				MARKETING_VERSION = 1.9.2;
 				OTHER_CFLAGS = "";
 				"OTHER_CFLAGS[arch=x86_64]" = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;

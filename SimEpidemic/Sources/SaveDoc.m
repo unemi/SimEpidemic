@@ -446,11 +446,11 @@ MutableDictArray mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
 	dict[keyVaccineList] = self.vaccineList;
 }
 #define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
-z(orgPt); z(daysInfected); z(daysDiseased); z(daysToCompleteRecov);\
+z(orgPt); z(daysInfected); z(daysDiseased); z(severity);\
 z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr); z(firstDoseDate); z(agentImmunity);\
 z(mass); z(mobFreq); z(gatFreq); z(age); z(activeness);\
 z(health); z(forVcn); z(nInfects); z(virusVariant); z(vaccineType);\
-z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(lastTested);
+z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(lastTested);
 
 #define CP_S(m) as[i].m = a->m
 - (void)addSavePop:(NSMutableDictionary *)md info:(NSMutableDictionary *)dict {

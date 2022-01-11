@@ -51,7 +51,7 @@ typedef struct {
 typedef struct {
 	CGFloat app, prf, x, y, vx, vy;
 	NSPoint orgPt;
-	CGFloat daysInfected, daysDiseased, daysToCompleteRecov;
+	CGFloat daysInfected, daysDiseased, severity;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
 	CGFloat firstDoseDate, agentImmunity;
 	CGFloat mass, mobFreq, gatFreq;
@@ -59,8 +59,7 @@ typedef struct {
 	HealthType health;
 	ForVaccine forVcn;
 	int nInfects, virusVariant, vaccineType;
-	BOOL distancing, isOutOfField, isWarping,
-		inTestQueue;
+	BOOL distancing, isOutOfField, isWarping, inTestQueue, onRecovery;
 	NSInteger lastTested;
 } AgentSave;
 

@@ -118,12 +118,29 @@ NSString *batch_job_dir(void) {
 	unfinishedJobIDs = NSMutableArray.new;
 	return self;
 }
+- (void)tryNewTrialInJobQueue {
+	NSInteger index = 0;
+	while (index < jobQueue.count && nRunningTrials < maxTrialsAtSameTime) {
+		BatchJob *jb = jobQueue[index];
+		if (![jb checkStateDependency]) index ++;
+		else if ([jb runNextTrial]) nRunningTrials ++;
+		else [jobQueue removeObjectAtIndex:index];
+	}
+}
+- (void)checkStateWaitingJob:(NSTimer *)timer {
+	[lock lock];
+	[self tryNewTrialInJobQueue];
+	if (jobQueue.count == 0) [timer invalidate];
+	[lock unlock];
+}
 - (void)tryNewTrial:(BOOL)trialFinished {
 	[lock lock];
 	if (trialFinished) nRunningTrials --;
-	while (jobQueue.count > 0 && nRunningTrials < maxTrialsAtSameTime) {
-		if ([jobQueue[0] runNextTrial]) nRunningTrials ++;
-		else [jobQueue removeObjectAtIndex:0];
+	if (jobQueue.count > 0) {
+		[self tryNewTrialInJobQueue];
+		if (nRunningTrials == 0 && jobQueue.count > 0)
+			[NSTimer scheduledTimerWithTimeInterval:20 target:self
+				selector:@selector(checkStateWaitingJob:) userInfo:nil repeats:YES];
 	}
 	[lock unlock];
 }
@@ -253,7 +270,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	NSNumber *num;
 	_stopAt = ((num = info[@"stopAt"]) == nil)? 0 : num.integerValue;
 	_nIteration = ((num = info[@"n"]) == nil)? 1 : num.integerValue;
-	loadState = info[@"loadState"];
+	if ((loadState = info[@"loadState"]) != nil) loadState = fullpath_of_load_state(loadState);
 	popDistMap = info[@"popDistMap"];
 	loadVV = info[@"loadVariantsAndVaccines"];
 	moreVaccines = info[@"vaccines"];
@@ -287,6 +304,10 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 			^(NSTimer * _Nonnull timer) { [self monitorProgress]; }]; });
 #endif
 	return self;
+}
+- (BOOL)checkStateDependency {
+	return (loadState == nil || stateDependencyIsOK)? YES : (stateDependencyIsOK =
+		[NSFileManager.defaultManager fileExistsAtPath:loadState] );
 }
 - (BOOL)saveInfoData:(NSData *)infoData {
 	@try {

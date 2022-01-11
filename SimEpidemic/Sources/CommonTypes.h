@@ -184,9 +184,10 @@ typedef struct AgentRec {
 	CGFloat mass;
 	CGFloat mobFreq, gatFreq;	// frequency of participation in travel & gathering
 	CGFloat age, activeness;
+	CGFloat severity;
 	HealthType health;
 	int nInfects, virusVariant, vaccineType;
-	BOOL distancing, isOutOfField, isWarping, inTestQueue;
+	BOOL distancing, isOutOfField, isWarping, inTestQueue, onRecovery;
 	NSInteger lastTested;
 	ContactInfo *contactInfoHead, *contactInfoTail;
 	Gathering *gathering;
@@ -198,6 +199,5 @@ typedef struct AgentRec {
 	int ageSpanIndex;
 	struct AgentRec *best;
 	CGFloat bestDist, gatDist;
-	CGFloat daysToCompleteRecov;
 	BOOL gotAtHospital, vaccineTicket;
 } Agent;

@@ -420,7 +420,6 @@ static void set_default_max_trials(void) {
 }
 int main(int argc, const char * argv[]) {
 @autoreleasepool {
-NSLog(@"%@", NSDate.date);
 	short err;
 	uint16 port = SERVER_PORT;
 	set_default_max_trials();

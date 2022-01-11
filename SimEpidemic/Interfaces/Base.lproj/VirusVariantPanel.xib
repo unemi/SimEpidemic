@@ -213,7 +213,7 @@
                         </textFieldCell>
                     </textField>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="HGg-5c-wsX">
-                        <rect key="frame" x="25" y="96" width="97" height="16"/>
+                        <rect key="frame" x="25" y="94" width="97" height="16"/>
                         <textFieldCell key="cell" lineBreakMode="clipping" alignment="left" title="Max efficacy S:" id="Kkl-pF-Lbm">
                             <font key="font" metaFont="system"/>
                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -221,7 +221,7 @@
                         </textFieldCell>
                     </textField>
                     <slider verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="MB3-rh-I0y">
-                        <rect key="frame" x="126" y="94" width="150" height="20"/>
+                        <rect key="frame" x="126" y="92" width="150" height="20"/>
                         <sliderCell key="cell" controlSize="small" continuous="YES" state="on" alignment="left" maxValue="20" doubleValue="20" tickMarkPosition="above" sliderType="linear" id="SwQ-7f-BmN"/>
                     </slider>
                     <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="nCE-JZ-fkW">
@@ -537,7 +537,7 @@
                                                             <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                             <prototypeCellViews>
                                                                 <tableCellView id="5IU-hA-cyI">
-                                                                    <rect key="frame" x="11" y="1" width="91" height="17"/>
+                                                                    <rect key="frame" x="1" y="1" width="91" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
                                                                         <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="juA-0y-E62" customClass="VVNameTextField">
@@ -572,7 +572,7 @@
                                                             <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                             <prototypeCellViews>
                                                                 <tableCellView id="hD1-QT-dKJ" customClass="ShotIntervalView">
-                                                                    <rect key="frame" x="104" y="1" width="90" height="17"/>
+                                                                    <rect key="frame" x="94" y="1" width="90" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
                                                                         <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Jwe-Xo-BQm">
@@ -631,7 +631,7 @@
                                                             </textFieldCell>
                                                             <prototypeCellViews>
                                                                 <tableCellView id="P84-0C-Bg7">
-                                                                    <rect key="frame" x="196" y="1" width="77" height="17"/>
+                                                                    <rect key="frame" x="186" y="1" width="77" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
                                                                         <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" textCompletion="NO" translatesAutoresizingMaskIntoConstraints="NO" id="6Dg-lP-Yf8">

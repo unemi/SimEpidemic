@@ -15,12 +15,19 @@ NSString *save_state_dir(void) {
 	if (stateDir == nil) stateDir = data_hostname_path(@"States");
 	return stateDir;
 }
-static NSString *save_state_file_path(NSString *fname) {
+NSString *save_state_file_path(NSString *fname) {
 	return [save_state_dir() stringByAppendingFormat:@"/%@.sEpi", fname];
 }
 static NSString *data_file_path(NSString *dir, NSString *fname) {
 	return [[dataDirectory stringByAppendingPathComponent:dir]
 		stringByAppendingPathComponent:fname];
+}
+NSString *fullpath_of_load_state(NSString *fname) {
+	if (hostname != nil) {
+		NSArray<NSString *> *names = [fname pathComponents];
+		return (names.count < 2)? save_state_file_path(fname) :
+			data_file_path(names[0], [names[1] stringByAppendingPathExtension:@"sEpi"]);
+	} else return save_state_file_path(fname);
 }
 
 @implementation World (SaveStateExpension)
@@ -32,15 +39,14 @@ static NSString *data_file_path(NSString *dir, NSString *fname) {
 		attributes:nil error:&error]) @throw error;
 	NSFileWrapper *fw = [self fileWrapperOfWorld];
 	if (fw == nil) @throw @"Could not make a data of the world.";
-	NSString *filePath = [stateDirPath stringByAppendingFormat:@"/%@.sEpi", fname];
+	NSString *filePath = save_state_file_path(fname);
 	if (![fw writeToURL:[NSURL fileURLWithPath:filePath] options:NSFileWrapperWritingAtomic
 		originalContentsURL:nil error:&error]) @throw error;
 }
-- (void)loadStateFrom:(NSString *)fname {
+- (void)loadStateFrom:(NSString *)filePath {
 	static NSLock *fwLock = nil;
 	if (fwLock == nil) fwLock = NSLock.new;
 	NSError *error = nil;
-	NSString *filePath = save_state_file_path(fname);
 	[fwLock lock];
 	@try {
 		NSFileWrapper *fw = [NSFileWrapper.alloc initWithURL:
@@ -135,7 +141,7 @@ NSDictionary *variants_vaccines_from_path(NSString *fname) {
 }
 - (void)loadState {
 	[self checkWorld];
-	[world loadStateFrom:[self stateID]];
+	[world loadStateFrom:fullpath_of_load_state([self stateID])];
 }
 - (void)removeState {
 	NSError *error;

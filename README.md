@@ -1,5 +1,5 @@
 # SimEpidemic
-Individual-based Epidemic Simulator (2020-21)
+Individual-based Epidemic Simulator (2020-22)
 
 - As a part of [project](http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/) by Tatsuo Unemi, under cooperation with Saki Nawata and Masaaki Miyashita.
 - Supported by Cabinet Secretariat of Japanese Government.
@@ -14,6 +14,7 @@ and the technical detail in Japanese at  [http://www.intlab.soka.ac.jp/~unemi/Si
 ## How to install the HTTP server version
 The HTTP server version is also in a form of universal binary.
 If the execution module "simepidemic" is immediately killed by zsh just after the invokation; please try to "archive" the product, export it into a local folder, then copy the product module "simepidemic" under Products/use/local/bin to the target server machine.
+A shell script SimEpidemicSV/install.sh might be helpful to learn how to install the binary.
 
 ## Subdirectories
 - SimEpidemic ... macOS application.
@@ -21,6 +22,6 @@ If the execution module "simepidemic" is immediately killed by zsh just after th
 - Sample ... sample parameter files.
 - simepiWorld, simepiBackend ... another version of HTTP server under construction.
 
-&copy; Tatsuo Unemi, 2020-21, All rights reserved.
+&copy; Tatsuo Unemi, 2020-22, All rights reserved.
 
 ---

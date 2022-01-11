@@ -27,12 +27,14 @@ extern void check_batch_jobs_to_restart(void);
 	NSString *jobDirPath;
 	NSString *loadState, *popDistMap, *loadVV;
 	MutableDictArray moreVaccines, moreVariants;
+	BOOL stateDependencyIsOK;
 	BOOL shouldSaveSeverityStats, shouldSaveVariantsStats, shouldSaveState;
 }
 @property (readonly) NSString *ID;
 @property (readonly) NSDictionary<NSString *, NSNumber *> *parameters;
 @property (readonly) NSArray *scenario;
 @property (readonly) NSInteger stopAt, nIteration;
+- (BOOL)checkStateDependency;
 - (BOOL)runNextTrial;
 - (void)forAllLiveWorlds:(void (^)(World *))block;
 @end

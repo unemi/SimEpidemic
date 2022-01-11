@@ -142,7 +142,8 @@ void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp) {
 	a->lastTested = -999999;
 	a->age = age;
 	reset_days(a, rp, wp);
-	a->daysToCompleteRecov = 0.;
+	a->onRecovery = NO;
+	a->severity = 0.;
 	a->activeness = random_mk(rp->actMode / 100., rp->actKurt / 100.);
 	a->gathering = NULL;
 	a->mass = rp->mass * pow(rp->massAct, (.5 - a->activeness) / .5);
@@ -304,10 +305,8 @@ CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 			* vaccineInfo[a->vaccineType].efficacy[b->virusVariant]; break;
 		default: return;
 	}
-	CGFloat timeFactor = (b->daysToCompleteRecov <= 0.)?
-		fmin(1., (b->daysInfected - contagDelay) /
-			(fmin(contagPeak, b->daysToOnset) - contagDelay)) :
-		(b->daysToCompleteRecov - b->daysInfected) / (b->daysToCompleteRecov - b->daysToRecover);
+	CGFloat timeFactor = fmin(1., (b->daysInfected - contagDelay) /
+			(fmin(contagPeak, b->daysToOnset) - contagDelay));
 	CGFloat distanceFactor = fmin(1., pow((infecDMax - d) / 2., 2.));
 	CGFloat infecProb = (virusX < 1.)? runtimeParams.infec / 100. * virusX :
 		1. - (1. - runtimeParams.infec / 100.) / virusX;
@@ -352,23 +351,48 @@ CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 }
 @end
 
+static CGFloat vax_sv_effc(Agent *a, ParamsForStep prms) {
+	if (a->firstDoseDate == 0.) return 1.;
+	CGFloat daysVaccinated = (CGFloat)prms.rp->step / prms.wp->stepsPerDay - a->firstDoseDate;
+	NSInteger span = prms.vxInfo[a->vaccineType].interval;
+	if (daysVaccinated < span) return 1. + daysVaccinated / span;
+	else if (daysVaccinated < prms.wp->vcnEDelay + span) // not fully vaccinated yet
+		return 2. + 8. * (daysVaccinated - span) / prms.wp->vcnEDelay;
+	return 10.;
+}
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
+#define MAX_DAYS_FOR_RECOVERY 7.
+static void recovered(Agent *a, ParamsForStep prms) {
+	a->newHealth = Recovered;
+	a->daysInfected = 0.;
+	a->onRecovery = NO;
+	setup_acquired_immunity(a, prms.rp);
+}
 static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepInfo *info) {
-	VariantInfo *vrInfo = prms.vrInfo + a->virusVariant;
-	CGFloat exacerbate = exacerbation(vrInfo->reproductivity);
-	if (a->health == Symptomatic) exacerbate *= vrInfo->toxicity;
-	CGFloat daysToRecv = (1. - prms.rp->therapyEffc / 100.) * a->daysToRecover;
-	if (a->daysToCompleteRecov > 0.) { // in the recovery phase
-		if (a->daysInfected >= a->daysToCompleteRecov) {
+	if (a->onRecovery) { // in the recovery phase
+		a->severity -= 1. / MAX_DAYS_FOR_RECOVERY / prms.wp->stepsPerDay;
+		if (a->severity <= 0.) {
 			if (a->health == Symptomatic) SET_HIST(HistRecov, daysDiseased)
-			a->newHealth = Recovered;
-			a->daysInfected = a->daysToCompleteRecov = 0.;
-			setup_acquired_immunity(a, prms.rp);
+			a->severity = 0.;
+			recovered(a, prms);
 		}
-	} else if (a->daysInfected > daysToRecv * (1. - a->agentImmunity)) { // starts recovery
-		a->daysToCompleteRecov = daysToRecv * (1. - a->agentImmunity)
-			* (1. + 10. / (a->daysToDie / exacerbate));
-	} else if (a->daysInfected >= a->daysToDie / exacerbate) {
+		return NO;
+	}
+	VariantInfo *vrInfo = prms.vrInfo + a->virusVariant;
+	CGFloat excrbt = exacerbation(vrInfo->reproductivity);
+	CGFloat daysToRecv = (1. - a->agentImmunity) * a->daysToRecover;
+	if (a->isOutOfField) daysToRecv *= 1. - prms.rp->therapyEffc / 100.;
+	if (a->health == Asymptomatic) {
+		if (a->daysInfected < a->daysToOnset / excrbt) {
+			if (a->daysInfected > daysToRecv) recovered(a, prms);
+			return NO;
+		}
+		a->newHealth = Symptomatic;
+		SET_HIST(HistIncub, daysInfected);
+	}
+	a->severity += 1. / (a->daysToDie - a->daysToOnset)
+		* vrInfo->toxicity / vax_sv_effc(a, prms) * excrbt / prms.wp->stepsPerDay;
+	if (a->severity >= 1.) {
 		SET_HIST(HistDeath, daysDiseased);
 		a->newHealth = Died;
 		info->warpType = inQuarantine? WarpToCemeteryH : WarpToCemeteryF;
@@ -376,10 +400,8 @@ static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepIn
 			(d_random() * .248 + 1.001) * prms.wp->worldSize,
 			(d_random() * .468 + 0.001) * prms.wp->worldSize};
 		return YES;
-	} else if (a->health == Asymptomatic && a->daysInfected >= a->daysToOnset / exacerbate) {
-		a->newHealth = Symptomatic;
-		SET_HIST(HistIncub, daysInfected);
 	}
+	if (a->daysInfected > daysToRecv) a->onRecovery = YES;
 	return NO;
 }
 static CGFloat wall(CGFloat d) {

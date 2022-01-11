@@ -12,6 +12,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *save_state_dir(void);
+extern NSString *save_state_file_path(NSString *fname);
+extern NSString *fullpath_of_load_state(NSString *fname);
 extern NSDictionary *variants_vaccines_from_path(NSString *fname);
 extern void correct_vaccine_list(MutableDictArray vaList, MutableDictArray vrList);
 extern void correct_variant_list(MutableDictArray vrList, MutableDictArray vaList);

@@ -230,10 +230,8 @@ static void count_severity(Agent *a, VariantInfo *vp, NSInteger *cnt) {
 	NSInteger rank;
 	if (a->health != Symptomatic) rank = 0;
 	else {
-		vp += a->virusVariant;
-		CGFloat exc = exacerbation(vp->reproductivity) * vp->toxicity;
-		rank = (a->daysInfected - a->daysToOnset) / (a->daysToDie / exc) * SSP_NRanks;
-		if (rank < 0) rank = 0; else if (rank >= SSP_NRanks) rank = SSP_NRanks - 1;
+		rank = a->severity * (SSP_NRanks - 1) + 1;
+		if (rank >= SSP_NRanks) rank = SSP_NRanks - 1;
 	}
 	cnt[rank] ++;
 }
