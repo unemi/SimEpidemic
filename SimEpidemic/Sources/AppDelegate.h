@@ -38,6 +38,7 @@ extern unsigned long current_time_us(void);
 extern NSString *keyVaxPerformRate, *keyVaxRegurality, *keyVaxRegularity, *keyVaccinationInfo;
 extern RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;
 extern WorldParams defaultWorldParams, userDefaultWorldParams;
+extern ParamInfo paramInfo[];
 extern NSArray<NSString *> *paramKeys;
 extern NSArray<NSNumberFormatter *> *paramFormatters;
 extern NSDictionary<NSString *, NSString *> *paramKeyFromName;

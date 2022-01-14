@@ -354,11 +354,12 @@ CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 static CGFloat vax_sv_effc(Agent *a, ParamsForStep prms) {
 	if (a->firstDoseDate == 0.) return 1.;
 	CGFloat daysVaccinated = (CGFloat)prms.rp->step / prms.wp->stepsPerDay - a->firstDoseDate;
-	NSInteger span = prms.vxInfo[a->vaccineType].interval;
-	if (daysVaccinated < span) return 1. + daysVaccinated / span;
+	NSInteger span = prms.vxInfo[a->vaccineType].interval, vcnSvEffc = prms.wp->vcnSvEffc / 100.;
+	if (daysVaccinated < span) return 1. + daysVaccinated / span * vcnSvEffc;
 	else if (daysVaccinated < prms.wp->vcnEDelay + span) // not fully vaccinated yet
-		return 2. + 8. * (daysVaccinated - span) / prms.wp->vcnEDelay;
-	return 10.;
+		return (1. / (1. - vcnSvEffc) - 1. - vcnSvEffc)
+			* (daysVaccinated - span) / prms.wp->vcnEDelay + 1. + vcnSvEffc;
+	return 1. / (1. - vcnSvEffc);
 }
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
 #define MAX_DAYS_FOR_RECOVERY 7.

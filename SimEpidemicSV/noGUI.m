@@ -370,7 +370,7 @@ static void expiration_check(NSString *dirPath, NSInteger hours) {
 		for (NSString *path in dirEnum) {
 			NSDictionary *attr = dirEnum.fileAttributes;
 			if (attr == nil) {
-				MY_LOG("Record %@ failed to get attributes", path);
+				MY_LOG("Record %@ failed to get attributes", path)
 				continue;
 			}
 			if (![attr.fileType isEqualTo:NSFileTypeDirectory]) continue;
@@ -386,16 +386,19 @@ static void expiration_check(NSString *dirPath, NSInteger hours) {
 		if (dirsTobeRemoved.count > 0) {
 			NSMutableString *ms = NSMutableString.new;
 			NSString *pnc = @"";
-			for (NSString *name in dirsTobeRemoved)
-				{ [ms appendFormat:@"%@%@", pnc, name]; pnc = @", "; }
-			MY_LOG("Records %@ are going to be removed.", ms);
+			NSError *error;
+			NSInteger cnt = 0;
+			for (NSString *path in dirsTobeRemoved) {
+				if ([fm removeItemAtPath:
+					[dirPath stringByAppendingPathComponent:path] error:&error]) {
+					[ms appendFormat:@"%@%@", pnc, path]; pnc = @", ";
+					cnt ++;
+				} else MY_LOG("Record %@ couldn't be removed. %@",
+					path, error.localizedDescription)
+			}
+			MY_LOG("Record%@ %@ %@ removed.",
+				(cnt > 1)? @"s" : @"", ms, (cnt > 1)? @"were" : @"was")
 		}
-		NSError *error;
-		for (NSString *path in dirsTobeRemoved)
-			if (![fm removeItemAtPath:
-				[dirPath stringByAppendingPathComponent:path] error:&error])
-				MY_LOG("Record %@ couldn't be removed. %@",
-					path, error.localizedDescription);
 	} @catch (NSException *excp) {
 		MY_LOG("Record expiration check: %@", excp.reason);
 	}

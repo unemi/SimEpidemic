@@ -139,7 +139,7 @@ void rearrange_window_order(NSMutableArray<NSArray *> *winList) {
 }
 NSString *keyAnimeSteps = @"animeSteps";
 #endif
-static ParamInfo paramInfo[] = {
+ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"mass", {.f = { 20., 1., 100.}}},
 	{ ParamTypeFloat, @"friction", {.f = { 80., 0., 100.}}},
 	{ ParamTypeFloat, @"avoidance", {.f = { 50., 0., 100.}}},
@@ -213,6 +213,7 @@ static ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
 	{ ParamTypeRate, @"vaccineEffectPeriod", {.f = { 200., 50., 500.}}},
 	{ ParamTypeRate, @"vaccineEffectDecay", {.f = { 100., 0., 500.}}},
+	{ ParamTypeRate, @"vaccineSvEfficacy", {.f = { 90., 0., 99.}}},
 
 	{ ParamTypeEnum, @"tracingOperation", {.e = {0, 2}}},
 	{ ParamTypeEnum, @"vaccineTypeForTracingVaccination", {.e = {0, MAX_N_VAXEN - 1}}},

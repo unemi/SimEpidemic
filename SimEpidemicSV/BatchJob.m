@@ -130,7 +130,7 @@ NSString *batch_job_dir(void) {
 - (void)checkStateWaitingJob:(NSTimer *)timer {
 	[lock lock];
 	[self tryNewTrialInJobQueue];
-	if (jobQueue.count == 0) [timer invalidate];
+	if (nRunningTrials == maxTrialsAtSameTime || jobQueue.count == 0) [timer invalidate];
 	[lock unlock];
 }
 - (void)tryNewTrial:(BOOL)trialFinished {
@@ -138,9 +138,12 @@ NSString *batch_job_dir(void) {
 	if (trialFinished) nRunningTrials --;
 	if (jobQueue.count > 0) {
 		[self tryNewTrialInJobQueue];
-		if (nRunningTrials == 0 && jobQueue.count > 0)
+		if (nRunningTrials == 0 && jobQueue.count > 0) {
 			[NSTimer scheduledTimerWithTimeInterval:20 target:self
 				selector:@selector(checkStateWaitingJob:) userInfo:nil repeats:YES];
+			BatchJob *bj = jobQueue[0];
+			MY_LOG("Job %@ is waiting for state file %@.", bj.ID, bj.loadState);
+		}
 	}
 	[lock unlock];
 }
@@ -270,7 +273,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	NSNumber *num;
 	_stopAt = ((num = info[@"stopAt"]) == nil)? 0 : num.integerValue;
 	_nIteration = ((num = info[@"n"]) == nil)? 1 : num.integerValue;
-	if ((loadState = info[@"loadState"]) != nil) loadState = fullpath_of_load_state(loadState);
+	if ((_loadState = info[@"loadState"]) != nil) _loadState = fullpath_of_load_state(_loadState);
 	popDistMap = info[@"popDistMap"];
 	loadVV = info[@"loadVariantsAndVaccines"];
 	moreVaccines = info[@"vaccines"];
@@ -306,8 +309,8 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	return self;
 }
 - (BOOL)checkStateDependency {
-	return (loadState == nil || stateDependencyIsOK)? YES : (stateDependencyIsOK =
-		[NSFileManager.defaultManager fileExistsAtPath:loadState] );
+	return (_loadState == nil || stateDependencyIsOK)? YES : (stateDependencyIsOK =
+		[NSFileManager.defaultManager fileExistsAtPath:_loadState] );
 }
 - (BOOL)saveInfoData:(NSData *)infoData {
 	@try {
@@ -422,7 +425,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	NSString *failedReason = nil;
 	[lock lock];
 	@try {
-		if (loadState == nil) {
+		if (_loadState == nil) {
 			if (availableWorlds.count <= 0) {
 				world = make_new_world(@"Job", nil);
 				set_params_from_dict(world.runtimeParamsP, world.worldParamsP, _parameters);
@@ -442,7 +445,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 				world = [availableWorlds lastObject];
 				[availableWorlds removeLastObject];
 			}
-			[world loadStateFrom:loadState];
+			[world loadStateFrom:_loadState];
 			if (_parameters != nil) {
 				RuntimeParams *rp = world.runtimeParamsP;
 				set_params_from_dict(rp, NULL, _parameters);
@@ -694,13 +697,15 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	NSArray<NSString *> *jobIDArry = [jobIDs componentsSeparatedByString:@","];
 	NSMutableString *results = NSMutableString.new;
 	NSFileManager *fm = NSFileManager.defaultManager;
-	for (NSString *jobID in jobIDArry) {
-		BOOL jInfo = block([batch_job_dir() stringByAppendingPathComponent:jobID], &error);
+	for (NSString *jobID in jobIDArry) if (jobID.length > 0) {
+		NSString *fullPath = [batch_job_dir() stringByAppendingPathComponent:jobID];
+		BOOL jInfo = (fullPath.length > batch_job_dir().length + 1)?
+			block(fullPath, &error) : NO;
 		NSDirectoryEnumerator *dEnm = [fm enumeratorAtPath:save_state_dir()];
 		NSInteger cnt = 0;
 		if (dEnm != nil) for (NSString *dname in dEnm) {
 			if ([dname hasPrefix:jobID]) {
-				NSString *fullPath = [save_state_dir() stringByAppendingPathComponent:dname];
+				fullPath = [save_state_dir() stringByAppendingPathComponent:dname];
 				if (!block(fullPath, &error))
 					@throw [NSString stringWithFormat:@"500 Could not %@ %@. %@",
 						opeName[0], fullPath, error.localizedDescription];

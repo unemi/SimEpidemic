@@ -70,7 +70,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	dHeader.alignment = sHeader.alignment;
 }
 - (void)addVariantColumn:(NSString *)name {
-	NSTableColumn *colTmp = variantTable.tableColumns[2],
+	NSTableColumn *colTmp = variantTable.tableColumns[3],
 		*tblColVir = NSTableColumn.new, *tblColVax = NSTableColumn.new;
 	tblColVir.title = tblColVax.title = name;
 	copy_tableColumn_properties(tblColVir, colTmp);
@@ -88,14 +88,21 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	if (vaccineList.count >= MAX_N_VAXEN) addVaccineBtn.enabled = NO;
 	vaccineTable.headerView.needsDisplay = YES;
 	vcnDgts = @[vcn1stEffcDgt, vcnMaxEffcDgt, vcnMaxEffcSDgt,
-		vcnEDelayDgt, vcnEPeriodDgt, vcnEDecayDgt];
+		vcnEDelayDgt, vcnEPeriodDgt, vcnEDecayDgt, vcnSvEffcDgt];
 	vcnSlds = @[vcn1stEffcSld, vcnMaxEffcSld, vcnMaxEffcSSld,
-		vcnEDelaySld, vcnEPeriodSld, vcnEDecaySld];
+		vcnEDelaySld, vcnEPeriodSld, vcnEDecaySld, vcnSvEffcSld];
 	CGFloat *p = &world.tmpWorldParamsP->vcn1stEffc;
+	ParamInfo *prmInfo = paramInfo;
+	while (prmInfo->key != nil &&
+		![prmInfo->key isEqualToString:@"vaccineFirstDoseEfficacy"]) prmInfo ++;
 	for (NSInteger i = 0; i < vcnDgts.count; i ++) {
 		vcnDgts[i].tag = vcnSlds[i].tag = i;
 		vcnDgts[i].target = vcnSlds[i].target = self;
 		vcnDgts[i].action = vcnSlds[i].action = @selector(changeFValue:);
+		if (prmInfo->key != nil) {
+			vcnSlds[i].minValue = prmInfo[i].v.f.minValue;
+			vcnSlds[i].maxValue = prmInfo[i].v.f.maxValue;
+		}
 		vcnDgts[i].doubleValue = vcnSlds[i].doubleValue = p[i];
 	}
 	[variantTable reloadData];
@@ -129,7 +136,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 		NSMutableDictionary *newRow = enm.nextObject;
 		[variantList insertObject:newRow atIndex:idx];
 		[self addVariantColumn:newRow[@"name"]];
-		[variantTable moveColumn:variantTable.numberOfColumns - 1 toColumn:idx + 2];
+		[variantTable moveColumn:variantTable.numberOfColumns - 1 toColumn:idx + 3];
 		[vaccineTable moveColumn:vaccineTable.numberOfColumns - 1 toColumn:idx + 2];
 	}];
 	if (vrnEfc == nil) {

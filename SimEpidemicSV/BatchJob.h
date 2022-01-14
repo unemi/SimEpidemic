@@ -25,12 +25,12 @@ extern void check_batch_jobs_to_restart(void);
 	NSInteger nextTrialNumber;
 	NSArray<NSString *> *output_n, *output_d, *output_D;
 	NSString *jobDirPath;
-	NSString *loadState, *popDistMap, *loadVV;
+	NSString *popDistMap, *loadVV;
 	MutableDictArray moreVaccines, moreVariants;
 	BOOL stateDependencyIsOK;
 	BOOL shouldSaveSeverityStats, shouldSaveVariantsStats, shouldSaveState;
 }
-@property (readonly) NSString *ID;
+@property (readonly) NSString *ID, *loadState;
 @property (readonly) NSDictionary<NSString *, NSNumber *> *parameters;
 @property (readonly) NSArray *scenario;
 @property (readonly) NSInteger stopAt, nIteration;

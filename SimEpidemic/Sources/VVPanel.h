@@ -28,9 +28,9 @@ extern NSString *VaccineListChanged, *VariantListChanged;
 	IBOutlet NSTableView *variantTable, *vaccineTable;
 	IBOutlet NSButton *rmVariantBtn, *rmVaccineBtn, *addVaccineBtn;
 	IBOutlet NSTextField *vcn1stEffcDgt, *vcnMaxEffcDgt, *vcnMaxEffcSDgt,
-		*vcnEDelayDgt, *vcnEPeriodDgt, *vcnEDecayDgt;
+		*vcnEDelayDgt, *vcnEPeriodDgt, *vcnEDecayDgt, *vcnSvEffcDgt;
 	IBOutlet NSSlider *vcn1stEffcSld, *vcnMaxEffcSld, *vcnMaxEffcSSld,
-		*vcnEDelaySld, *vcnEPeriodSld, *vcnEDecaySld;
+		*vcnEDelaySld, *vcnEPeriodSld, *vcnEDecaySld, *vcnSvEffcSld;
 	IBOutlet NSButton *applyBtn;
 }
 - (instancetype)initWithWorld:(World *)wd;
