@@ -411,8 +411,11 @@
                                                                     <rect key="frame" x="141" y="1" width="45" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
-                                                                        <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" misplaced="YES" textCompletion="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ANE-T4-wV3">
-                                                                            <rect key="frame" x="0.0" y="0.0" width="45" height="16"/>
+                                                                        <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" textCompletion="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ANE-T4-wV3">
+                                                                            <rect key="frame" x="0.0" y="0.0" width="45" height="17"/>
+                                                                            <constraints>
+                                                                                <constraint firstAttribute="height" constant="17" id="QPA-XU-nGD"/>
+                                                                            </constraints>
                                                                             <textFieldCell key="cell" lineBreakMode="truncatingTail" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" alignment="right" placeholderString="1.000" id="LlC-RC-XwJ">
                                                                                 <numberFormatter key="formatter" formatterBehavior="custom10_4" usesGroupingSeparator="NO" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" minimumFractionDigits="3" maximumFractionDigits="3" id="Dnr-sY-1xm">
                                                                                     <real key="minimum" value="0.0"/>
@@ -446,11 +449,11 @@
                                                             </textFieldCell>
                                                             <prototypeCellViews>
                                                                 <tableCellView id="waV-73-aRy">
-                                                                    <rect key="frame" x="188" y="1" width="77" height="17"/>
+                                                                    <rect key="frame" x="188" y="1" width="65" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
                                                                         <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" textCompletion="NO" translatesAutoresizingMaskIntoConstraints="NO" id="pgZ-tE-lpa">
-                                                                            <rect key="frame" x="0.0" y="0.0" width="77" height="17"/>
+                                                                            <rect key="frame" x="0.0" y="0.0" width="65" height="17"/>
                                                                             <constraints>
                                                                                 <constraint firstAttribute="height" constant="17" id="LQk-qx-Dgr"/>
                                                                             </constraints>
@@ -680,11 +683,11 @@
                                                             </textFieldCell>
                                                             <prototypeCellViews>
                                                                 <tableCellView id="P84-0C-Bg7">
-                                                                    <rect key="frame" x="186" y="1" width="77" height="17"/>
+                                                                    <rect key="frame" x="186" y="1" width="65" height="17"/>
                                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                     <subviews>
                                                                         <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" textCompletion="NO" translatesAutoresizingMaskIntoConstraints="NO" id="6Dg-lP-Yf8">
-                                                                            <rect key="frame" x="0.0" y="0.0" width="77" height="17"/>
+                                                                            <rect key="frame" x="0.0" y="0.0" width="65" height="17"/>
                                                                             <constraints>
                                                                                 <constraint firstAttribute="height" constant="17" id="5k4-CG-hwK"/>
                                                                             </constraints>

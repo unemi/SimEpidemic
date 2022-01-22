@@ -438,10 +438,13 @@ int main(int argc, const char * argv[]) {
 			if (i + 1 < argc) dataDirectory = path_from_unix_string(argv[++ i]);
 		} else if (strcmp(argv[i], "-DR") == 0 || strcmp(argv[i], "--dataStorageR") == 0) {
 			if (i + 1 < argc) dataDirectory = path_from_unix_string(argv[++ i]);
-			if ((hostname = get_hostname()) == nil) exit(EXIT_INVALID_ARGS);
+			if (hostname == nil)
+				if ((hostname = get_hostname()) == nil) exit(EXIT_INVALID_ARGS);
 		} else if (strcmp(argv[i], "-Dr") == 0 || strcmp(argv[i], "--dataStorageR2") == 0) {
 			if (i + 1 < argc) dataDirectory = path_from_unix_string(argv[++ i]);
-			hostname = NSProcessInfo.processInfo.hostName;
+			if (hostname == nil) hostname = NSProcessInfo.processInfo.hostName;
+		} else if (strcmp(argv[i], "-H") == 0 || strcmp(argv[i], "--hostname") == 0) {
+			if (i + 1 < argc) hostname = [NSString stringWithUTF8String:argv[++ i]];		
 		} else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--maxPopSize") == 0) {
 			if (i + 1 < argc) maxPopSize = atoi(argv[++ i]);
 		} else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--maxNWorlds") == 0) {
