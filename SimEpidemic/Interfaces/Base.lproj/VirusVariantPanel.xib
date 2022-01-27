@@ -424,6 +424,9 @@
                                                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                                                 <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                                             </textFieldCell>
+                                                                            <connections>
+                                                                                <action selector="valueChangedInVariantTable:" target="-2" id="Edh-lM-Ls9"/>
+                                                                            </connections>
                                                                         </textField>
                                                                     </subviews>
                                                                     <constraints>
@@ -631,8 +634,8 @@
                                                                                 <action selector="valueChangedInVaccineTable:" target="-2" id="6nC-mK-6uV"/>
                                                                             </connections>
                                                                         </textField>
-                                                                        <button verticalHuggingPriority="750" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="nPP-Xh-Rzr">
-                                                                            <rect key="frame" x="0.0" y="-1" width="20" height="20"/>
+                                                                        <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="nPP-Xh-Rzr">
+                                                                            <rect key="frame" x="0.0" y="-2" width="20" height="21"/>
                                                                             <constraints>
                                                                                 <constraint firstAttribute="width" constant="18" id="Rl3-cd-Qxc"/>
                                                                             </constraints>

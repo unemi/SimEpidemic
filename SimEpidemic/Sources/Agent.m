@@ -363,6 +363,7 @@ static CGFloat vax_sv_effc(Agent *a, ParamsForStep prms) {
 }
 #define SET_HIST(t,d) { info->histType = t; info->histDays = a->d; }
 #define MAX_DAYS_FOR_RECOVERY 7.
+#define TOXICITY_LEVEL .5
 static void recovered(Agent *a, ParamsForStep prms) {
 	a->newHealth = Recovered;
 	a->daysInfected = 0.;
@@ -391,9 +392,10 @@ static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepIn
 		a->newHealth = Symptomatic;
 		SET_HIST(HistIncub, daysInfected);
 	}
-	a->severity += 1. / (a->daysToDie - a->daysToOnset)
-		* vrInfo->toxicity / vax_sv_effc(a, prms) * excrbt / prms.wp->stepsPerDay;
-	if (a->severity >= 1.) {
+	CGFloat dSvr = 1. / (a->daysToDie - a->daysToOnset)
+		/ vax_sv_effc(a, prms) * excrbt / prms.wp->stepsPerDay;
+	if (a->severity > TOXICITY_LEVEL) dSvr *= vrInfo->toxicity;
+	if ((a->severity += dSvr) >= 1.) {
 		SET_HIST(HistDeath, daysDiseased);
 		a->newHealth = Died;
 		info->warpType = inQuarantine? WarpToCemeteryH : WarpToCemeteryF;

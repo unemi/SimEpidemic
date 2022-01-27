@@ -9,7 +9,8 @@
 #import "VVPanel.h"
 #import "World.h"
 #import "SaveDoc.h"
-
+#define VAR_PNL_EXCOLS 3
+#define VAX_PNL_EXCOLS 2
 NSString *VaccineListChanged = @"VaccineListChanged";
 NSString *VariantListChanged = @"VariantListChanged";
 
@@ -70,7 +71,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	dHeader.alignment = sHeader.alignment;
 }
 - (void)addVariantColumn:(NSString *)name {
-	NSTableColumn *colTmp = variantTable.tableColumns[3],
+	NSTableColumn *colTmp = variantTable.tableColumns[VAR_PNL_EXCOLS],
 		*tblColVir = NSTableColumn.new, *tblColVax = NSTableColumn.new;
 	tblColVir.title = tblColVax.title = name;
 	copy_tableColumn_properties(tblColVir, colTmp);
@@ -136,8 +137,8 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 		NSMutableDictionary *newRow = enm.nextObject;
 		[variantList insertObject:newRow atIndex:idx];
 		[self addVariantColumn:newRow[@"name"]];
-		[variantTable moveColumn:variantTable.numberOfColumns - 1 toColumn:idx + 3];
-		[vaccineTable moveColumn:vaccineTable.numberOfColumns - 1 toColumn:idx + 2];
+		[variantTable moveColumn:variantTable.numberOfColumns - 1 toColumn:idx + VAR_PNL_EXCOLS];
+		[vaccineTable moveColumn:vaccineTable.numberOfColumns - 1 toColumn:idx + VAX_PNL_EXCOLS];
 	}];
 	if (vrnEfc == nil) {
 		for (NSMutableDictionary *newRow in rows) {
@@ -277,7 +278,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	else {
 		NSTableColumn *tblCol = variantTable.tableColumns[col];
 		[self assignObject:@(sender.doubleValue) dict:variantList[row]
-			key:(col == 1)? tblCol.identifier : tblCol.title
+			key:(col < VAR_PNL_EXCOLS)? tblCol.identifier : tblCol.title
 			tableView:variantTable row:row col:col];
 	}
 }
@@ -286,7 +287,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	if (row < 0 || row >= vaccineList.count) return;
 	if (col < 0 || col >= vaccineTable.numberOfColumns) return;
 	NSMutableDictionary *rowDict = vaccineList[row];
-	NSTableColumn *tblCol = variantTable.tableColumns[col];
+	NSTableColumn *tblCol = vaccineTable.tableColumns[col];
 	if (col == 0) {	// name
 		[self assignObject:sender.stringValue dict:rowDict key:@"name"
 			tableView:vaccineTable row:row col:col];
@@ -301,7 +302,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 			tableView:vaccineTable row:row col:col];
 	}
 }
-- (NSMutableArray *)stippedVaxList {
+- (NSMutableArray *)strippedVaxList {
 	NSMutableArray *ma = NSMutableArray.new;
 	for (NSDictionary *elm in vaccineList) {
 		NSMutableDictionary *md = NSMutableDictionary.new;
@@ -330,7 +331,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 		}
 		memcpy(iP, iInfo, sizeof(VaccinationInfo) * nVaxen);
 		memcpy(rP, rInfo, sizeof(VaccinationInfo) * nVaxen);
-		world.vaccineList = [self stippedVaxList];
+		world.vaccineList = [self strippedVaxList];
 		[NSNotificationCenter.defaultCenter postNotificationName:VaccineListChanged object:world];
 		changed = YES;
 	}
@@ -338,13 +339,13 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	if (changed && world.runtimeParamsP->step == 0) [world setupVaxenAndVariantsFromLists];
 }
 - (NSData *)dataOfVVInfo:(BOOL)isPlist {
-	NSDictionary *info = @{@"variantList":variantList, @"vaccineList":[self stippedVaxList]};
+	NSDictionary *info = @{@"variantList":variantList, @"vaccineList":[self strippedVaxList]};
 	return isPlist? [NSPropertyListSerialization dataWithPropertyList:info
 			format:NSPropertyListXMLFormat_v1_0 options:0 error:NULL] : 
 		[NSJSONSerialization dataWithJSONObject:info
 			options:NSJSONWritingPrettyPrinted|NSJSONWritingSortedKeys error:NULL];
 }
-static void check_vvlist(NSMutableArray *ma, NSDictionary *keys) {
+static void check_vvlist(NSMutableArray *ma, NSArray *varList, NSDictionary *keys) {
 	if (![ma isKindOfClass:NSMutableArray.class]) @throw @"Given list is not in array form.";
 	for (NSInteger idx = 0; idx < ma.count; idx ++) {
 		NSMutableDictionary *elm = ma[idx];
@@ -354,7 +355,7 @@ static void check_vvlist(NSMutableArray *ma, NSDictionary *keys) {
 			@"Element [%ld] lacks the name.", idx];
 		for (NSString *key in keys) if (elm[key] == nil) elm[key] = keys[key];
 	}
-	for (NSMutableDictionary *md in ma) {
+	for (NSDictionary *md in varList) {
 		NSString *vrName = md[@"name"];
 		for (NSMutableDictionary *elm in ma) if (elm[vrName] == nil) elm[vrName] = @(1.);
 	}
@@ -364,7 +365,20 @@ static void check_vvlist(NSMutableArray *ma, NSDictionary *keys) {
 	NSMutableArray *ma = md[@"variantList"];
 	if (ma != nil && [ma isKindOfClass:NSArray.class]) {
 		ma = mutablized_array_of_dicts(ma);
-		check_vvlist(ma, @{@"reproductivity":@(1.), @"toxicity":@(1.)});
+		check_vvlist(ma, ma, @{@"reproductivity":@(1.), @"toxicity":@(1.)});
+		NSArray<NSTableColumn *> *varTabCols = variantTable.tableColumns,
+			*vaxTabCols = vaccineTable.tableColumns;
+		NSInteger newVarCnt = ma.count, orgVarCnt = variantList.count;
+		for (NSInteger i = 0; i < newVarCnt; i ++) {
+			NSString *varName = ma[i][@"name"];
+			if (i < orgVarCnt) varTabCols[i + VAR_PNL_EXCOLS].title =
+				vaxTabCols[i + VAX_PNL_EXCOLS].title = varName; 
+			else [self addVariantColumn:varName];
+		}
+		for (NSInteger i = orgVarCnt - 1; i >= newVarCnt; i --) {
+			[variantTable removeTableColumn:varTabCols[i + VAR_PNL_EXCOLS]];
+			[vaccineTable removeTableColumn:vaxTabCols[i + VAX_PNL_EXCOLS]];
+		}
 		variantList = ma;
 		[variantTable reloadData];
 		loaded = YES;
@@ -372,7 +386,7 @@ static void check_vvlist(NSMutableArray *ma, NSDictionary *keys) {
 	ma = md[@"vaccineList"];
 	if (ma != nil && [ma isKindOfClass:NSArray.class]) {
 		ma = mutablized_array_of_dicts(ma);
-		check_vvlist(ma, @{@"intervalDays":@(21), @"intervalOn":@YES});
+		check_vvlist(ma, variantList, @{@"intervalDays":@(21), @"intervalOn":@YES});
 		vaccineList = ma;
 		[vaccineTable reloadData];
 		loaded = YES;

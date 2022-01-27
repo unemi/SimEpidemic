@@ -307,7 +307,7 @@ static NSArray *index_array(StatData *stat, NSInteger nItems, NSString *name) {
 	fileSize = 0;
 	content = nil;
 	type = @"text/event-stream";
-	moreHeader = @"Content-Encoding: deflate\n";
+	moreHeader = @"Access-Control-Allow-Origin: *\nContent-Encoding: deflate\n";
 	code = 200;
 }
 - (PeriodicReporter *)reporterFromID:(NSString *__nullable *)IDreturn {
