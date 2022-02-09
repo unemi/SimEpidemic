@@ -247,17 +247,17 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		actModeDgt, actKurtDgt, massActDgt, mobActDgt, gatActDgt,
 		incubActDgt, fatalActDgt, immueActDgt, therapyEffcDgt,
 		contagDDgt, contagPDgt, infecDgt, infecDstDgt,
-		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, cntctTrcDgt,
+		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, gatRndDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
-		tstSbjAsyDgt, tstSbjSymDgt,
+		tstSbjAsyDgt, tstSbjSymDgt, tstCapaDgt, tstDlyLimDgt,
 		imnMaxDurDgt, imnMaxDurSvDgt, imnMaxEffcDgt, imnMaxEffcSvDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, immueActSld, therapyEffcSld,
 		contagDSld, contagPSld, infecSld, infecDstSld,
-		dstSTSld, dstOBSld, backHmSld, gatFrSld, cntctTrcSld,
+		dstSTSld, dstOBSld, backHmSld, gatFrSld, gatRndSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
-		tstSbjAsySld, tstSbjSymSld,
+		tstSbjAsySld, tstSbjSymSld, tstCapaSld, tstDlyLimSld,
 		imnMaxDurSld, imnMaxDurSvSld, imnMaxEffcSld, imnMaxEffcSvSld];
 	ParamPanel __weak *pp = self;
 	void (^proc)(void) = ^{ [pp checkUpdate]; };
@@ -272,10 +272,10 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		DDGT(gatFreqMinDgt, gatFreqMaxDgt, gatFreqModeDgt)];
 	iDigits = @[initPopDgt, worldSizeDgt, meshDgt];
 	iSteppers = @[initPopStp, worldSizeStp, meshStp];
-	rDigits = @[initInfcDgt, initRecvDgt, initQAsymDgt, initQSympDgt,
+	rDigits = @[initInfcDgt, initRecvDgt, initQAsymDgt, initQSympDgt, gatSptFxDgt,
 		vaClstrRtDgt, vaClstrGrDgt, vaTestRtDgt,
 		rcvBiasDgt, rcvTempDgt, rcvUpperDgt, rcvLowerDgt];
-	rSliders = @[initInfcSld, initRecvSld, initQAsymSld, initQSympSld,
+	rSliders = @[initInfcSld, initRecvSld, initQAsymSld, initQSympSld, gatSptFxSld,
 		vaClstrRtSld, vaClstrGrSld, vaTestRtSld,
 		rcvBiasSld, rcvTempSld, rcvUpperSld, rcvLowerSld];
     for (NSInteger idx = 0; idx < fDigits.count; idx ++) {

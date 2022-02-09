@@ -165,6 +165,7 @@ ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"distancingObedience", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"backHomeRate", {.f = { 75., 0., 100.}}},
 	{ ParamTypeFloat, @"gatheringFrequency", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"gatheringSpotRandom", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"contactTracing", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"testDelay", {.f = { 1., 0., 10.}}},
 	{ ParamTypeFloat, @"testProcess", {.f = { 1., 0., 10.}}},
@@ -173,6 +174,8 @@ ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"testSpecificity", {.f = { 99.8, 0., 100.}}},
 	{ ParamTypeFloat, @"subjectAsymptomatic", {.f = { 1., 0., 100.}}},
 	{ ParamTypeFloat, @"subjectSymptomatic", {.f = { 99., 0., 100.}}},
+	{ ParamTypeFloat, @"testCapacity", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"testDelayLimit", {.f = { 3., 1., 14.}}},
 	{ ParamTypeFloat, @"immuneMaxPeriod", {.f = { 200., 50., 500.}}},
 	{ ParamTypeFloat, @"immuneMaxPrdSeverity", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"immuneMaxEfficacy", {.f = { 90., 0., 100.}}},
@@ -199,6 +202,7 @@ ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"initialRecovered", {.f = { 0., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineAsymptomatic", {.f = { 20., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineSymptomatic", {.f = { 50., 0., 100.}}},
+	{ ParamTypeRate, @"gatheringSpotFixed", {.f = { 0., 0., 100.}}},
 //	{ ParamTypeRate, @"vaccineAntiRate", {.f = { 30., 0., 100.}}},
 	{ ParamTypeRate, @"antiVaxClusterRate", {.f = { 60., 0., 100.}}},
 	{ ParamTypeRate, @"antiVaxClusterGranularity", {.f = { 50., 0., 100.}}},
@@ -576,7 +580,8 @@ static NSInteger
 		fmt.allowsFloats = YES;
 		fmt.minimum = @(p->v.f.minValue);
 		fmt.maximum = @(p->v.f.maxValue);
-		fmt.minimumFractionDigits = fmt.maximumFractionDigits = 2;
+		fmt.minimumFractionDigits = fmt.maximumFractionDigits =
+			(p->v.f.maxValue >= 100.)? 2 : 3;
 		fmt.minimumIntegerDigits = 1;
 		formatters[k ++] = fmt;
 		break;

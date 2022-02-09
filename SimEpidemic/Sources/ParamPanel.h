@@ -49,14 +49,14 @@ NS_ASSUME_NONNULL_BEGIN
 		*gatFreqMinDgt, *gatFreqMaxDgt, *gatFreqModeDgt;
 	IBOutlet NSTextField *initPopDgt, *worldSizeDgt, *stepsPerDayDgt, *meshDgt;
 	IBOutlet NSStepper *initPopStp, *worldSizeStp, *stepsPerDayStp, *meshStp;
-	IBOutlet NSTextField *initInfcDgt, *initRecvDgt, *initQAsymDgt, *initQSympDgt;
-	IBOutlet NSSlider *initInfcSld, *initRecvSld, *initQAsymSld, *initQSympSld;
-	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *backHmDgt, *gatFrDgt, *cntctTrcDgt;
-	IBOutlet NSSlider *dstSTSld, *dstOBSld, *backHmSld, *gatFrSld, *cntctTrcSld;
+	IBOutlet NSTextField *initInfcDgt, *initRecvDgt, *initQAsymDgt, *initQSympDgt, *gatSptFxDgt;
+	IBOutlet NSSlider *initInfcSld, *initRecvSld, *initQAsymSld, *initQSympSld, *gatSptFxSld;
+	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *backHmDgt, *gatFrDgt, *gatRndDgt, *cntctTrcDgt;
+	IBOutlet NSSlider *dstSTSld, *dstOBSld, *backHmSld, *gatFrSld, *gatRndSld, *cntctTrcSld;
 	IBOutlet NSTextField *tstDelayDgt, *tstProcDgt, *tstIntvlDgt, *tstSensDgt, *tstSpecDgt,
-		*tstSbjAsyDgt, *tstSbjSymDgt;
+		*tstSbjAsyDgt, *tstSbjSymDgt, *tstCapaDgt, *tstDlyLimDgt;
 	IBOutlet NSSlider *tstDelaySld, *tstProcSld, *tstIntvlSld, *tstSensSld, *tstSpecSld,
-		*tstSbjAsySld, *tstSbjSymSld;
+		*tstSbjAsySld, *tstSbjSymSld, *tstCapaSld, *tstDlyLimSld;
 	IBOutlet NSTextField *vcnPRateDgt, *vcnRegularityDgt;
 	IBOutlet NSSlider *vcnPRateSld, *vcnRegularitySld;
 	IBOutlet NSTextField *vaClstrRtDgt, *vaClstrGrDgt, *vaTestRtDgt;

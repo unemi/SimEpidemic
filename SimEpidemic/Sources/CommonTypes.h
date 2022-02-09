@@ -18,7 +18,7 @@ typedef enum {
 typedef enum {
 	TestNone,
 	TestAsSymptom, TestAsContact, TestAsSuspected,
-	TestPositive, TestNegative,
+	TestPositive, TestNegative, //TestGivenUp,
 	TestPositiveRate,
 	NAllTestTypes,
 	TestTotal = TestNone
@@ -94,10 +94,11 @@ typedef struct {
 	CGFloat infec, infecDst; // infection probability and distance
 	CGFloat dstST, dstOB; // Distancing strength and obedience
 	CGFloat backHmRt; // probability per day for travelers to go back home
-	CGFloat gatFr;	// Gathering's frequency
+	CGFloat gatFr, gatRndRt;	// Gathering's frequency, random spot rate (%)
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
+	CGFloat tstCapa, tstDlyLim; // Test capacity (per 1,000 persons per day), test delay limit (days)
 	CGFloat imnMaxDur, imnMaxDurSv, imnMaxEffc, imnMaxEffcSv;	// acquired immunity by infection
 	DistInfo mobDist; // mass and warp distance
 	DistInfo incub, fatal; // incubation, fatality
@@ -115,6 +116,7 @@ typedef struct {
 	NSInteger initPop, worldSize, mesh, stepsPerDay;
 	CGFloat infected, recovered;	// initial ratio in population
 	CGFloat qAsymp, qSymp;	// initial ratio of separation for each health state
+	CGFloat gatSpotFixed; // number of fixed gathering spots per population
 	CGFloat avClstrRate, avClstrGran, avTestRate;	// Anti-Vax
 	CGFloat rcvBias, rcvTemp; // coefficients to calculate recovery from age
 	CGFloat rcvUpper, rcvLower; // boundaries of period to start recovery

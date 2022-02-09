@@ -38,7 +38,7 @@ static NSString *keyVariantList = @"variantList", *keyVaccineList = @"vaccineLis
 NSString *fnParamsPList = @"initParams.plist";
 static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*fnTestees = @"testees.gz", *fnWarps = @"warps.gz", *fnGatherings = @"gatherings.gz",
-	*fnVaccineQueue = @"vaccineQueue.gz",
+	*fnGatSpotsFixed = @"gatSpotsFixed.gz", *fnVaccineQueue = @"vaccineQueue.gz",
 	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
 	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
 	*keyCurrentParams = @"currentParams",
@@ -546,6 +546,10 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 		}
 		md[fnGatherings] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	}
+
+	if (nGatSpotsFixed > 0) md[fnGatSpotsFixed] = [NSFileWrapper.alloc
+		initRegularFileWithContents:[[NSData dataWithBytesNoCopy:gatSpotsFixed
+		length:sizeof(NSPoint) * nGatSpotsFixed] zippedData]];
 
 	mdata = [NSMutableData dataWithLength:
 		sizeof(VaccineQueueSave) + sizeof(NSInteger) * (nPop * N_VCN_QUEQUE - 1)];

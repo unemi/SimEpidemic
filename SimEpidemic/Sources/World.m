@@ -620,14 +620,30 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 	[self organizeAgeSpanInfo];
 	if (worldParams.wrkPlcMode == WrkPlcPopDistImg)
 		setup_home_with_map(_agents, &worldParams, _popDistImage);
+
+	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
+	NSInteger nn = nPop * worldParams.gatSpotFixed / 1000.;
+	if (nn > 0) {
+		if (nn != nGatSpotsFixed) gatSpotsFixed = realloc(gatSpotsFixed, sizeof(NSPoint) * nn);
+		for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
+		for (NSInteger i = 0; i < nn; i ++) {
+			NSInteger j = random() % (nPop - i) + i, k = ibuf[j];
+			if (i != j) ibuf[j] = ibuf[i];
+			gatSpotsFixed[i] = (NSPoint){_agents[k].x, _agents[k].y};
+		}
+	} else if (gatSpotsFixed != NULL) { free(gatSpotsFixed); gatSpotsFixed = NULL; }
+	nGatSpotsFixed = nn;
+#ifdef DEBUG
+	printf("Fixed gathering spots = %ld\n", nn);
+#endif
+
 	PopulationHConf pconf = { 0,
 		nPop * worldParams.infected / 100, 0,
 		nPop * worldParams.recovered / 100, 0,
 	};
-	NSInteger nn = pconf.asym + pconf.recv;
+	nn = pconf.asym + pconf.recv;
 	if (nn > nPop) pconf.recv = (nn = nPop) - pconf.asym;
 	pconf.susc = nPop - nn;
-	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
 	for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
 	for (NSInteger i = 0; i < nn; i ++) {
 		NSInteger j = random() % (nPop - i) + i, k = ibuf[j];
@@ -768,42 +784,49 @@ MutableDictArray default_vaccines(void) {
 }
 - (void)deliverTestResults:(NSUInteger *)testCount {
 	// check the results of tests
-	NSInteger cTm = runtimeParams.step - runtimeParams.tstProc * worldParams.stepsPerDay;
+	CGFloat maxT = worldParams.initPop
+		* runtimeParams.tstCapa / 1000. / worldParams.stepsPerDay;
+	NSInteger cTmLatest = runtimeParams.step - runtimeParams.tstProc * worldParams.stepsPerDay,
+		cTmOldest = cTmLatest - 12,//runtimeParams.tstDlyLim * worldParams.stepsPerDay, 
+		maxTests = maxT;
+	if (maxT - maxTests > d_random()) maxTests ++;
 	if (runtimeParams.trcOpe != TrcTst) trcVcnSet = NSMutableSet.new;
 	for (TestEntry *entry = testQueHead; entry != NULL; entry = testQueHead) {
-		if (entry->timeStamp > cTm) break;
-		if (entry->isPositive) {
-			testCount[TestPositive] ++;
-			Agent *a = entry->agent;
-			if (worldParams.wrkPlcMode == WrkPlcNone) a->orgPt = (NSPoint){a->x, a->y};
-			[self addNewWarp:(WarpInfo){a, WarpToHospital,
-				random_point_in_hospital(worldParams.worldSize)}];
-			if (a->contactInfoHead != NULL) {
-				switch (runtimeParams.trcOpe) {
-					case TrcTst:
-					for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
-						[self testInfectionOfAgent:c->agent reason:TestAsContact];
-					break;
-					case TrcVcn:
-					for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
-						[trcVcnSet addObject:@(c->agent->ID)];
-					break;
-					case TrcBoth:
-					for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next) {
-						[self testInfectionOfAgent:c->agent reason:TestAsContact];
-						[trcVcnSet addObject:@(c->agent->ID)];
+		if (entry->timeStamp > cTmLatest || maxTests <= 0) break;
+		Agent *a = entry->agent;
+		if (entry->timeStamp > cTmOldest && a->x < worldParams.worldSize) {
+			maxTests --;
+			if (entry->isPositive) {
+				testCount[TestPositive] ++;
+				if (worldParams.wrkPlcMode == WrkPlcNone) a->orgPt = (NSPoint){a->x, a->y};
+				[self addNewWarp:(WarpInfo){a, WarpToHospital,
+					random_point_in_hospital(worldParams.worldSize)}];
+				if (a->contactInfoHead != NULL) {
+					switch (runtimeParams.trcOpe) {
+						case TrcTst:
+						for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
+							[self testInfectionOfAgent:c->agent reason:TestAsContact];
+						break;
+						case TrcVcn:
+						for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next)
+							[trcVcnSet addObject:@(c->agent->ID)];
+						break;
+						case TrcBoth:
+						for (ContactInfo *c = a->contactInfoHead; c != NULL; c = c->next) {
+							[self testInfectionOfAgent:c->agent reason:TestAsContact];
+							[trcVcnSet addObject:@(c->agent->ID)];
+						}
 					}
+					[cmemLock lock];
+					a->contactInfoTail->next = freeCMem;
+					freeCMem = a->contactInfoHead;
+					[cmemLock unlock];
+					a->contactInfoHead = a->contactInfoTail = NULL;
 				}
-				[cmemLock lock];
-				a->contactInfoTail->next = freeCMem;
-				freeCMem = a->contactInfoHead;
-				[cmemLock unlock];
-				a->contactInfoHead = a->contactInfoTail = NULL;
-			}
-		} else testCount[TestNegative] ++;
+			} else testCount[TestNegative] ++;
+		}
 		entry->agent->inTestQueue = NO;
-		testQueHead = entry->next;
-		if (entry->next) entry->next->prev = NULL;
+		if ((testQueHead = entry->next) != NULL) testQueHead->prev = NULL;
 		else testQueTail = NULL;
 		[tmemLock lock];
 		entry->next = freeTMem;
@@ -828,8 +851,8 @@ MutableDictArray default_vaccines(void) {
 		testQueTail = entry;
 		agent->inTestQueue = YES;
 	}
-	[testeesLock unlock];
 	[testees removeAllObjects];
+	[testeesLock unlock];
 	for (NSInteger i = TestAsSymptom; i < TestPositive; i ++)
 		testCount[TestTotal] += testCount[i];
 }

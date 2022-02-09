@@ -59,9 +59,11 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 	gat->duration = my_random(&rp->gatDR);
 	gat->strength = my_random(&rp->gatST);
 	NSInteger wSize = wp->worldSize;
-	gat->p = (wp->wrkPlcMode == WrkPlcNone)?
-		(NSPoint){ d_random() * wSize, d_random() * wSize } :
-		self.agents[random() % wp->initPop].orgPt;
+	gat->p = (nGatSpotsFixed > 0 && rp->gatRndRt / 100. < d_random())?
+		gatSpotsFixed[random() % nGatSpotsFixed] :
+		(wp->wrkPlcMode == WrkPlcNone)?
+			(NSPoint){ d_random() * wSize, d_random() * wSize } :
+			self.agents[random() % wp->initPop].orgPt;
 	if (wp->wrkPlcMode == WrkPlcCentered) gat->size *= centered_bias((CGPoint){
 		gat->p.x / wSize * 2. - 1., gat->p.y / wSize * 2. - 1. }) * M_SQRT2;
 	CGFloat grid = (CGFloat)wSize / wp->mesh, r = gat->size + SURROUND;
