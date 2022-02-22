@@ -540,7 +540,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	if (job == nil) @throw @"500 Couldn't make a batch job.";
 	MY_LOG("%@ Job %@ was submitted.", ip4_string(ip4addr), job.ID);
 	[job saveInfoData:jobData];
-	[the_job_controller() submitJob:job];
+	in_main_thread(^{ [the_job_controller() submitJob:job]; });
 	content = job.ID;
 	type = @"text/plain";
 	code = 200;

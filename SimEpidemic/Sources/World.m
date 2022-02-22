@@ -380,7 +380,7 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 - (void)resetBoostQueue {
 	if (vcnQueIdx[VcnPrBooster] == 0)
 		[self sortVaccineQueue:vcnQueue + VcnPrBooster * nPop comp:^CGFloat(Agent *a)
-			{ CGFloat fdd = a->firstDoseDate; return (fdd > 0.)? fdd : MAXFLOAT; }];
+			{ CGFloat fdd = a->firstDoseDate; return (fdd >= 0.)? fdd : MAXFLOAT; }];
 }
 typedef enum { IdxDown, IdxUp, IdxLeft, IdxRight } ExIdxOrder;
 static ExIdxOrder exIdxOrder[8][4] = {
@@ -624,15 +624,16 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
 	NSInteger nn = nPop * worldParams.gatSpotFixed / 1000.;
 	if (nn > 0) {
-		if (nn != nGatSpotsFixed) gatSpotsFixed = realloc(gatSpotsFixed, sizeof(NSPoint) * nn);
+		NSPoint *pp = malloc(sizeof(NSPoint) * nn);
 		for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
 		for (NSInteger i = 0; i < nn; i ++) {
 			NSInteger j = random() % (nPop - i) + i, k = ibuf[j];
 			if (i != j) ibuf[j] = ibuf[i];
-			gatSpotsFixed[i] = (NSPoint){_agents[k].x, _agents[k].y};
+			pp[i] = (NSPoint){_agents[k].x, _agents[k].y};
 		}
-	} else if (gatSpotsFixed != NULL) { free(gatSpotsFixed); gatSpotsFixed = NULL; }
-	nGatSpotsFixed = nn;
+		gatSpotsFixed = [NSData dataWithBytesNoCopy:pp
+			length:sizeof(NSPoint) * nn freeWhenDone:YES];
+	} else gatSpotsFixed = nil;
 #ifdef DEBUG
 	printf("Fixed gathering spots = %ld\n", nn);
 #endif
@@ -770,6 +771,7 @@ MutableDictArray default_vaccines(void) {
 	free(vcnQueue);
 	free(ageSpanIDs);
 	self.popDistImage = nil;
+//	MY_LOG("Memory for world %@ was discarded.", _ID)
 }
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason {
 	if (runtimeParams.step - agent->lastTested <
@@ -782,12 +784,13 @@ MutableDictArray default_vaccines(void) {
 - (void)addNewWarp:(WarpInfo)info {
 	newWarpF[@(info.agent->ID)] = [NSValue valueWithWarpInfo:info];
 }
+#define TEST_DUMPER 0.9
 - (void)deliverTestResults:(NSUInteger *)testCount {
 	// check the results of tests
 	CGFloat maxT = worldParams.initPop
 		* runtimeParams.tstCapa / 1000. / worldParams.stepsPerDay;
 	NSInteger cTmLatest = runtimeParams.step - runtimeParams.tstProc * worldParams.stepsPerDay,
-		cTmOldest = cTmLatest - 12,//runtimeParams.tstDlyLim * worldParams.stepsPerDay, 
+		cTmOldest = cTmLatest - runtimeParams.tstDlyLim * worldParams.stepsPerDay, 
 		maxTests = maxT;
 	if (maxT - maxTests > d_random()) maxTests ++;
 	if (runtimeParams.trcOpe != TrcTst) trcVcnSet = NSMutableSet.new;

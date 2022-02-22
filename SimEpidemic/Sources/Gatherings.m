@@ -59,8 +59,8 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 	gat->duration = my_random(&rp->gatDR);
 	gat->strength = my_random(&rp->gatST);
 	NSInteger wSize = wp->worldSize;
-	gat->p = (nGatSpotsFixed > 0 && rp->gatRndRt / 100. < d_random())?
-		gatSpotsFixed[random() % nGatSpotsFixed] :
+	gat->p = (gatSpotsFixed != nil && rp->gatRndRt / 100. < d_random())?
+		((NSPoint *)(gatSpotsFixed.bytes))[random() % (gatSpotsFixed.length / sizeof(NSPoint))] :
 		(wp->wrkPlcMode == WrkPlcNone)?
 			(NSPoint){ d_random() * wSize, d_random() * wSize } :
 			self.agents[random() % wp->initPop].orgPt;

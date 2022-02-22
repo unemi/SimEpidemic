@@ -238,10 +238,10 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		viewSize[i] = views[i].frame.size;
 		tabs[i].view = views[i];
 	}
-	NSRect wFrame = self.window.frame;
+	NSRect wFrame = self.window.frame, scrRct = self.window.screen.frame;
 	CGFloat dh = viewSize[0].height - tabs[0].view.frame.size.height;
 	wFrame.size.height += dh;
-	if ((wFrame.origin.y -= dh) < 0.) wFrame.origin.y = 0.;
+	if ((wFrame.origin.y -= dh) < NSMinY(scrRct)) wFrame.origin.y = NSMinY(scrRct);
 	[self.window setFrame:wFrame display:NO];
     fDigits = @[massDgt, fricDgt, avoidDgt, maxSpdDgt,
 		actModeDgt, actKurtDgt, massActDgt, mobActDgt, gatActDgt,
@@ -335,6 +335,8 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
     [self adjustControls];
 	[self checkUpdate];
     [doc setPanelTitle:self.window];
+//
+	gatSptFxDgt.toolTip = gatSptFxSld.toolTip = NSLocalizedString(@"per population", nil);
 }
 - (IBAction)changeStepsPerDay:(id)sender {
 // steps/day's possible values = {1, 3, 6, 12, 24, 48, ... }, changed at ver.1.8.4
@@ -622,10 +624,10 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 - (void)tabView:(NSTabView *)tabView didSelectTabViewItem:(NSTabViewItem *)tabViewItem {
 	NSInteger index = [tabView indexOfTabViewItem:tabViewItem];
 	NSSize newSz = viewSize[index];
-	NSRect wFrame = self.window.frame;
+	NSRect wFrame = self.window.frame, scrRct = self.window.screen.frame;
 	wFrame.size.height += newSz.height - orgFrame.size.height;
-	if ((wFrame.origin.y -= newSz.height - orgFrame.size.height) < 0)
-		wFrame.origin.y = 0.;
+	if ((wFrame.origin.y -= newSz.height - orgFrame.size.height) < NSMinY(scrRct))
+		wFrame.origin.y = NSMinY(scrRct);
 	[self.window setFrame:wFrame display:YES animate:_byUser];
 	initPrmRdBtn.hidden = crntPrmRdBtn.hidden = index == 0;
 	_byUser = YES;

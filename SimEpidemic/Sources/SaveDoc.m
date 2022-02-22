@@ -547,9 +547,8 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 		md[fnGatherings] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
 	}
 
-	if (nGatSpotsFixed > 0) md[fnGatSpotsFixed] = [NSFileWrapper.alloc
-		initRegularFileWithContents:[[NSData dataWithBytesNoCopy:gatSpotsFixed
-		length:sizeof(NSPoint) * nGatSpotsFixed] zippedData]];
+	if (gatSpotsFixed != nil) md[fnGatSpotsFixed] = [NSFileWrapper.alloc
+		initRegularFileWithContents:[gatSpotsFixed zippedData]];
 
 	mdata = [NSMutableData dataWithLength:
 		sizeof(VaccineQueueSave) + sizeof(NSInteger) * (nPop * N_VCN_QUEQUE - 1)];
@@ -726,6 +725,11 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 		self.popDistImage = img;
 	}
 }
+- (void)readGatheringSpotsFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return;
+	NSData *data = [fw.regularFileContents unzippedData];
+	if (data.length >= sizeof(NSPoint)) gatSpotsFixed = data;
+}
 #ifdef NOGUI
 - (NSFileWrapper *)fileWrapperOfWorld {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
@@ -777,6 +781,8 @@ static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
 	else [self resetVaccineQueueIfNecessary];
 	if ((fw = dict[fnSeverityStats]) != nil) copy_data_from_fw(fw, statInfo.sspData);
 	if ((fw = dict[fnVariantsStats]) != nil) copy_data_from_fw(fw, statInfo.variantsData);
+	if ((fw = dict[fnGatSpotsFixed]) != nil) [self readGatheringSpotsFromFileWrapper:fw];
+
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st setStatInfoFromPList:plist_from_data(fw.regularFileContents)]; }];

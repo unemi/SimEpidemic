@@ -151,6 +151,7 @@ void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp) {
 	DistInfo dInfo = {0., 1., .5};
 	a->mobFreq = random_with_corr(&dInfo, ae, rp->mobAct/100.);
 	a->gatFreq = random_with_corr(&dInfo, ae, rp->gatAct/100.);
+	a->firstDoseDate = -1.;
 }
 static float pop_dist_sum(NSInteger x, NSInteger y, NSInteger w, float *pd) {
 	float s = 0;
@@ -352,7 +353,7 @@ CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 @end
 
 static CGFloat vax_sv_effc(Agent *a, ParamsForStep prms) {
-	if (a->firstDoseDate == 0.) return 1.;
+	if (a->firstDoseDate < 0.) return 1.;
 	CGFloat daysVaccinated = (CGFloat)prms.rp->step / prms.wp->stepsPerDay - a->firstDoseDate;
 	NSInteger span = prms.vxInfo[a->vaccineType].interval, vcnSvEffc = prms.wp->vcnSvEffc / 100.;
 	if (daysVaccinated < span) return 1. + daysVaccinated / span * vcnSvEffc;

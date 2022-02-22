@@ -64,8 +64,7 @@ typedef struct {
 	CGFloat vcnSubjRem[MAX_N_VAXEN];
 	NSInteger spanNPop[MAX_N_AGE_SPANS], ageSpanIdxs[MAX_N_AGE_SPANS], *ageSpanIDs;
 	int nAgeSpans;
-	NSInteger nGatSpotsFixed;
-	NSPoint *gatSpotsFixed;
+	NSData *gatSpotsFixed;
 }
 @property LoopMode loopMode;
 @property NSInteger stopAtNDays;
