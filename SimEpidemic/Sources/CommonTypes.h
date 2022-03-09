@@ -120,8 +120,8 @@ typedef struct {
 	CGFloat avClstrRate, avClstrGran, avTestRate;	// Anti-Vax
 	CGFloat rcvBias, rcvTemp; // coefficients to calculate recovery from age
 	CGFloat rcvUpper, rcvLower; // boundaries of period to start recovery
-	CGFloat vcn1stEffc, vcnMaxEffc, vcnEffcSymp,
-		vcnEDelay, vcnEPeriod, vcnEDecay, vcnSvEffc; // standard vaccine efficacy
+	CGFloat vcn1stEffc, vcnMaxEffc, vcnEffcSymp;
+	CGFloat	vcnEDelay, vcnEPeriod, vcnEDecay, vcnSvEffc; // standard vaccine efficacy
 	WrkPlcMode wrkPlcMode;
 } WorldParams;
 

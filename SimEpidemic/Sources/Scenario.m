@@ -41,8 +41,9 @@ static NSInteger age_span_index_from_key(NSString *key) {
 - (void)execScenario {
 	predicateToStop = nil;
 	if (scenario == nil) return;
-	char visitFlags[scenario.count];
+	char *visitFlags = malloc(scenario.count);
 	memset(visitFlags, 0, scenario.count);
+	NSPredicate *pred = nil;
 	BOOL hasStopCond = NO;
 	NSMutableDictionary<NSString *, NSObject *> *md = NSMutableDictionary.new;
 	while (scenarioIndex < scenario.count) {
@@ -74,9 +75,7 @@ static NSInteger age_span_index_from_key(NSString *key) {
 						if (varType >= 0) [self addInfected:n location:loc variant:varType];
 				}}
 			} else if ([arr[1] isKindOfClass:NSPredicate.class]) {	// continue until --
-				predicateToStop = (NSPredicate *)arr[1];
-				hasStopCond = YES;
-				break;
+				pred = (NSPredicate *)arr[1];
 			} else if (arr.count == 2) md[arr[0]] = arr[1];	// paramter assignment
 			else if ([(NSString *)arr[0] hasPrefix:@"vaccineFinalRate"]) {
 				md[arr[0]] = arr[1]; // final vax rate must not be delayed.
@@ -95,12 +94,13 @@ static NSInteger age_span_index_from_key(NSString *key) {
 		} else if ([item isKindOfClass:NSNumber.class]) {	// add infected individuals
 			[self addInfected:((NSNumber *)item).integerValue
 				location:IfcLocScattered variant:0];
-		} else if ([item isKindOfClass:NSPredicate.class]) {	// predicate to stop
-			predicateToStop = (NSPredicate *)item;
-			hasStopCond = YES;
-			break;
+		} else if ([item isKindOfClass:NSPredicate.class])	// predicate to stop
+			pred = (NSPredicate *)item;
+		if (pred != nil && ![pred evaluateWithObject:statInfo]) {
+			predicateToStop = pred; hasStopCond = YES; break;
 		}
 	}
+	free(visitFlags);
 #ifndef NOGUI
 	if (hasStopCond)
 		[NSNotificationCenter.defaultCenter postNotificationName:nnScenarioText object:self];
@@ -145,7 +145,7 @@ static NSInteger age_span_index_from_key(NSString *key) {
 						}
 					}
 				}
-			} else {
+			} else { // parameters other than vaccination
 				if ((idxNum = paramIndexFromKey[key]) == nil) continue;
 				NSInteger idx = idxNum.integerValue;
 				NSObject *value = md[key];

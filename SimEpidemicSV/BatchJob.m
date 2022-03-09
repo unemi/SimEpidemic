@@ -528,7 +528,8 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 		@throw [NSString stringWithFormat:
 			@"500 The job queue is full (%ld jobs).", maxJobsInQueue];
 	NSString *jobStr = query[@"JSON"];
-	if (jobStr == nil) jobStr = query[@"job"].stringByRemovingPercentEncoding;
+	if (jobStr == nil) jobStr = [query[@"job"] stringByReplacingOccurrencesOfString:
+		@"+" withString:@" "].stringByRemovingPercentEncoding;
 	if (jobStr == nil) @throw @"417 Job data is missing.";
 	NSData *jobData = [jobStr dataUsingEncoding:NSUTF8StringEncoding];
 	NSError *error;

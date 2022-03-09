@@ -122,8 +122,26 @@ BOOL check_blocking(int code, uint32 ipaddr, NSString *request) {
 	[blockDictLock unlock];
 	return shouldBlock;
 }
+static uint32 *setup_IP_list(char **a) {
+	NSInteger n = 0;
+	for (char **p = a; *p; p ++) n ++;
+	uint32 *ipList = malloc(sizeof(uint32) * (n + 1));
+	for (NSInteger i = 0; i < n; i ++) ipList[i] = inet_addr(a[i]);
+	ipList[n] = 0;
+	return ipList;
+}
 BOOL should_block_it(uint32 ipaddr) {
-	if (ipaddr == inet_addr("193.27.229.26")) return YES;
+	static char *blackIPList[] = {
+		"193.27.229.26", "45.137.23.152", "45.146.165.37",
+		"62.233.50.179", "109.237.103.118", "109.237.103.123", NULL };
+	static char *whiteIPList[] = { "127.0.0.1", NULL };
+	static uint32 *blackList = NULL, *whiteList = NULL; 
+	if (blackList == NULL) {
+		blackList = setup_IP_list(blackIPList);
+		whiteList = setup_IP_list(whiteIPList);
+	}
+	for (uint32 *p = blackList; *p != 0; p ++) if (ipaddr == *p) return YES;
+	for (uint32 *p = whiteList; *p != 0; p ++) if (ipaddr == *p) return NO;
 	BOOL result = NO;
 	[blockDictLock lock];
 	BlockingInfo *info = blockDict[@(ipaddr)];

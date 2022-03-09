@@ -126,7 +126,8 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 //	using random number in exponetial distribution.
 	NSInteger nNewGat = round(rp->gatFr / wp->stepsPerDay
 		* wp->worldSize * wp->worldSize / GAT_DENS * - log(d_random() * .9999 + .0001));
-//	if (rp->step % 32 == 31) printf("%ld %ld\n", rp->step / 16, nNewGat);
+//	if (rp->step % wp->stepsPerDay == wp->stepsPerDay - 1)
+//		printf("%ld %.2f %ld\n", rp->step / wp->stepsPerDay, rp->gatFr, nNewGat);
 	Gathering *newGats;
 	if (nNewGat < nFree) {
 		if (nNewGat <= 0) { [self freeGatherings:gatToFree]; return; }
