@@ -39,6 +39,7 @@
 		2365DEC92506159A006C2A95 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
 		2365DECA2506159A006C2A95 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
 		23673364252EFA8E00284D91 /* PeriodicReporter.m in Sources */ = {isa = PBXBuildFile; fileRef = 23673363252EFA8E00284D91 /* PeriodicReporter.m */; };
+		2373979A27DB0496002AD753 /* GatheringPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2373979C27DB0496002AD753 /* GatheringPanel.xib */; };
 		2387B42524FCD2190039796A /* Preferences.m in Sources */ = {isa = PBXBuildFile; fileRef = 2387B42424FCD2190039796A /* Preferences.m */; };
 		238A8F2A246694D300604BF4 /* StatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 238A8F28246694D300604BF4 /* StatPanel.m */; };
 		238C4527248B783B00FB5F89 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 238C4525248B783B00FB5F89 /* Preferences.xib */; };
@@ -55,6 +56,7 @@
 		23B89E57255BD70A00A95360 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
 		23BBEEE52706D3D1003F983C /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BBEEE42706D3D0003F983C /* Scenario.m */; };
 		23BBEEE62706D3D1003F983C /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BBEEE42706D3D0003F983C /* Scenario.m */; };
+		23BC70C227D8E07A00740BF3 /* GatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BC70C027D8E07A00740BF3 /* GatPanel.m */; };
 		23D6E02D24D59DDD00A5D604 /* Scripting.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6E02C24D59DDD00A5D604 /* Scripting.m */; };
 		23D6EAE2260C4C6900D48F7E /* PopDist.xib in Resources */ = {isa = PBXBuildFile; fileRef = 23D6EAE0260C4C6900D48F7E /* PopDist.xib */; };
 		23D6EAE7260C562D00D48F7E /* PopDist.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6EAE6260C562D00D48F7E /* PopDist.m */; };
@@ -144,6 +146,8 @@
 		23673363252EFA8E00284D91 /* PeriodicReporter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PeriodicReporter.m; sourceTree = "<group>"; };
 		236BD9D2252ADD5300A1D21D /* control.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = control.html; sourceTree = "<group>"; };
 		2372797525203323000BC3C5 /* batch.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = batch.html; sourceTree = "<group>"; };
+		2373979B27DB0496002AD753 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/GatheringPanel.xib; sourceTree = "<group>"; };
+		2373979E27DB0587002AD753 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/GatheringPanel.strings; sourceTree = "<group>"; };
 		2387B42324FCD2190039796A /* Preferences.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Preferences.h; sourceTree = "<group>"; };
 		2387B42424FCD2190039796A /* Preferences.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Preferences.m; sourceTree = "<group>"; };
 		238A8F27246694D300604BF4 /* StatPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StatPanel.h; sourceTree = "<group>"; };
@@ -165,6 +169,8 @@
 		23B89E4C255BD61000A95360 /* simepiWorld */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiWorld; sourceTree = BUILT_PRODUCTS_DIR; };
 		23BBEEE32706D362003F983C /* Scenario.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scenario.h; sourceTree = "<group>"; };
 		23BBEEE42706D3D0003F983C /* Scenario.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Scenario.m; sourceTree = "<group>"; };
+		23BC70BF27D8E07A00740BF3 /* GatPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GatPanel.h; sourceTree = "<group>"; };
+		23BC70C027D8E07A00740BF3 /* GatPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GatPanel.m; sourceTree = "<group>"; };
 		23C3FFE02557FB3F004906AE /* simepiBackend */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiBackend; sourceTree = BUILT_PRODUCTS_DIR; };
 		23CAF41E26D1F49B00DCC929 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/VirusVariantPanel.strings; sourceTree = "<group>"; };
 		23D325F72722EBAC0083274B /* jp.ac.soka.unemi.simepidemicSV.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = jp.ac.soka.unemi.simepidemicSV.plist; sourceTree = "<group>"; };
@@ -259,6 +265,7 @@
 				23D6EAE0260C4C6900D48F7E /* PopDist.xib */,
 				238C4525248B783B00FB5F89 /* Preferences.xib */,
 				23F16F6426CC9E5C005CCF2B /* VirusVariantPanel.xib */,
+				2373979C27DB0496002AD753 /* GatheringPanel.xib */,
 				233D9DF524869F9B00498A77 /* Localizable.strings */,
 				233D9DF824869FA200498A77 /* Credits.rtf */,
 				233D9E0D2486B14A00498A77 /* InfoPlist.strings */,
@@ -302,6 +309,8 @@
 				238A8F28246694D300604BF4 /* StatPanel.m */,
 				23A9C7FC26CBDA5C006F7DDE /* VVPanel.h */,
 				23A9C7FD26CBDA5C006F7DDE /* VVPanel.m */,
+				23BC70BF27D8E07A00740BF3 /* GatPanel.h */,
+				23BC70C027D8E07A00740BF3 /* GatPanel.m */,
 				23B4E4E1262E8F3B0058BCCC /* World.h */,
 				23B4E4E2262E8F3B0058BCCC /* World.m */,
 			);
@@ -483,6 +492,7 @@
 				23576D3F24D80FCC00120D3F /* SimEpidemic.sdef in Resources */,
 				231E25C7247401060005A381 /* loupePlus.pdf in Resources */,
 				233D9DED24869F8400498A77 /* StatPanel.xib in Resources */,
+				2373979A27DB0496002AD753 /* GatheringPanel.xib in Resources */,
 				23D6EAE2260C4C6900D48F7E /* PopDist.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -544,6 +554,7 @@
 				23D6EAE7260C562D00D48F7E /* PopDist.m in Sources */,
 				23B4E4E3262E8F3B0058BCCC /* World.m in Sources */,
 				232055F12457D2C6005ADCCF /* AppDelegate.m in Sources */,
+				23BC70C227D8E07A00740BF3 /* GatPanel.m in Sources */,
 				235639CD247111A200F941A6 /* ScenPanel.m in Sources */,
 				231E00102461497000BFBE9E /* MyView.m in Sources */,
 				2387B42524FCD2190039796A /* Preferences.m in Sources */,
@@ -674,6 +685,15 @@
 				2364494F25A174B600C67E18 /* ja */,
 			);
 			name = Document.xib;
+			sourceTree = "<group>";
+		};
+		2373979C27DB0496002AD753 /* GatheringPanel.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				2373979B27DB0496002AD753 /* Base */,
+				2373979E27DB0587002AD753 /* ja */,
+			);
+			name = GatheringPanel.xib;
 			sourceTree = "<group>";
 		};
 		238C4525248B783B00FB5F89 /* Preferences.xib */ = {
@@ -836,7 +856,7 @@
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SimEpidemic/Info.plist;
-				MARKETING_VERSION = 1.9.1;
+				MARKETING_VERSION = 1.9.2;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				"OTHER_CFLAGS[arch=x86_64]" = "-mavx";
@@ -856,7 +876,7 @@
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SimEpidemic/Info.plist;
-				MARKETING_VERSION = 1.9.1;
+				MARKETING_VERSION = 1.9.2;
 				OTHER_CFLAGS = "";
 				"OTHER_CFLAGS[arch=x86_64]" = "-mavx";
 				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimEpidemic;

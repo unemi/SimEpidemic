@@ -17,6 +17,8 @@ extern void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect);
 #endif
 
 @interface World (GatheringExtantion)
+- (void)resetRegGatInfo;
+- (void)reviseRegGatNppOfName:(NSString *)name npp:(CGFloat)npp;
 - (void)manageGatherings;
 @end
 

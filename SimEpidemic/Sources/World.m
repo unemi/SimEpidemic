@@ -598,6 +598,22 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 		if (j != i) { CGFloat v = ages[i]; ages[i] = ages[j]; ages[j] = v; }
 	}
 }
+-(void)doItExclusivelyForRandomIndexes:(NSInteger *)ibuf n:(NSInteger)n
+	block:(void (^)(NSInteger, NSInteger))block {
+	NSInteger nPop = worldParams.initPop, k, *idxes;
+	BOOL fullPop;
+	if (ibuf != NULL) { idxes = ibuf; fullPop = NO; k = 0; }
+	else { idxes = rndPopIndexes; fullPop = rndPopIndexesFull; k = rndPopOffset; }
+	for (NSInteger i = 0; i < n; i ++, k = (k + 1) % nPop) {
+		if (!fullPop) {
+			NSInteger j = random() % (nPop - k) + k;
+			if (j != k) { NSInteger m = idxes[j]; idxes[j] = idxes[k]; idxes[k] = m; }
+			if (k == nPop - 1) fullPop = YES;
+		}
+		block(i, idxes[k]);
+	}
+	if (ibuf == NULL) { rndPopIndexesFull = fullPop; rndPopOffset = k; }
+}
 - (BOOL)resetPop {
 	BOOL changed = NO;
 	if (memcmp(&worldParams, &tmpWorldParams, sizeof(WorldParams)) != 0) {
@@ -621,42 +637,42 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 	if (worldParams.wrkPlcMode == WrkPlcPopDistImg)
 		setup_home_with_map(_agents, &worldParams, _popDistImage);
 
-	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
+	rndPopIndexes = realloc(rndPopIndexes, sizeof(NSInteger) * nPop);
+	for (NSInteger i = 0; i < nPop; i ++) rndPopIndexes[i] = i;
 	NSInteger nn = nPop * worldParams.gatSpotFixed / 1000.;
+	rndPopIndexesFull = NO; rndPopOffset = 0;
+	Agent *ags = _agents;
 	if (nn > 0) {
 		NSPoint *pp = malloc(sizeof(NSPoint) * nn);
-		for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
-		for (NSInteger i = 0; i < nn; i ++) {
-			NSInteger j = random() % (nPop - i) + i, k = ibuf[j];
-			if (i != j) ibuf[j] = ibuf[i];
-			pp[i] = (NSPoint){_agents[k].x, _agents[k].y};
-		}
+		[self doItExclusivelyForRandomIndexes:NULL n:nn block:
+			^(NSInteger i, NSInteger idx) { pp[i] = (NSPoint){ags[idx].x, ags[idx].y}; }];
 		gatSpotsFixed = [NSData dataWithBytesNoCopy:pp
 			length:sizeof(NSPoint) * nn freeWhenDone:YES];
 	} else gatSpotsFixed = nil;
+	rndPopOffset = nn;
 #ifdef DEBUG
 	printf("Fixed gathering spots = %ld\n", nn);
 #endif
+	[self resetRegGatInfo];
 
 	PopulationHConf pconf = { 0,
 		nPop * worldParams.infected / 100, 0,
 		nPop * worldParams.recovered / 100, 0,
-	};
+	}, *pconfp = &pconf;
 	nn = pconf.asym + pconf.recv;
 	if (nn > nPop) pconf.recv = (nn = nPop) - pconf.asym;
 	pconf.susc = nPop - nn;
+	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
 	for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
-	for (NSInteger i = 0; i < nn; i ++) {
-		NSInteger j = random() % (nPop - i) + i, k = ibuf[j];
-		if (i != j) ibuf[j] = ibuf[i];
-		Agent *a = &_agents[k];
-		if (i < pconf.asym) {
+	[self doItExclusivelyForRandomIndexes:ibuf n:nn block:^(NSInteger i, NSInteger idx) {
+		Agent *a = &ags[idx];
+		if (i < pconfp->asym) {
 			a->daysInfected = d_random() * fmin(a->daysToRecover, a->daysToDie);
 			if (a->daysInfected < a->daysToOnset) a->health = Asymptomatic;
 			else {
 				a->health = Symptomatic;
 				a->daysDiseased = a->daysInfected - a->daysToOnset;
-				pconf.symp ++;
+				pconfp->symp ++;
 			}
 			a->virusVariant = 0;
 		} else {
@@ -664,7 +680,7 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 			a->daysInfected = d_random() * a->imExpr;
 			a->virusVariant = 0;
 		}
-	}
+	}];
 	free(ibuf);
 	pconf.qAsym = (pconf.asym -= pconf.symp) * worldParams.qAsymp / 100;
 	pconf.qSymp = pconf.symp * worldParams.qSymp / 100;

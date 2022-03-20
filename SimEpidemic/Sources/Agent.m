@@ -120,9 +120,6 @@ void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp) {
 	a->prf = d_random();
 	switch (wp->wrkPlcMode) {
 		case WrkPlcNone:
-		a->x = random_coord(wp);
-		a->y = random_coord(wp);
-		break;
 		case WrkPlcUniform:
 		a->orgPt = (CGPoint){(a->x = random_coord(wp)), (a->y = random_coord(wp))};
 		break;

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="15705" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="19529" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15705"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="19529"/>
     </dependencies>
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="NSApplication">
@@ -268,10 +268,16 @@ CA
                                     <action selector="openStatPenel:" target="-1" id="G92-Fo-D9Z"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Vax &amp; Variants ..." keyEquivalent="v" id="OZv-qF-IHL">
+                            <menuItem title="Variants &amp; Vaccines ..." keyEquivalent="v" id="OZv-qF-IHL">
                                 <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
                                     <action selector="openVaxAndVariantsPanel:" target="-1" id="f0V-nw-4KE"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Regular Gatherings ..." keyEquivalent="g" id="FKk-fo-2FP">
+                                <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                <connections>
+                                    <action selector="openGatheringsPanel:" target="-1" id="PW2-lh-UNe"/>
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="LTg-3n-CLi"/>

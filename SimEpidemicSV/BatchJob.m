@@ -9,6 +9,7 @@
 #import "BatchJob.h"
 #import "noGUI.h"
 #import "SaveState.h"
+#import "../SimEpidemic/Sources/Gatherings.h"
 #import "../SimEpidemic/Sources/StatPanel.h"
 #import "../SimEpidemic/Sources/Scenario.h"
 #import "../SimEpidemic/Sources/SaveDoc.h"
@@ -278,6 +279,8 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	loadVV = info[@"loadVariantsAndVaccines"];
 	moreVaccines = info[@"vaccines"];
 	moreVariants = info[@"variants"];
+	loadGatherings = info[@"loadGatherings"];
+	moreGatherings = info[@"gatherings"];
 	if (_nIteration <= 1) _nIteration = 1;
 	NSArray<NSString *> *output = info[@"out"];
 	NSInteger n = output.count, nn = 0, nd = 0, nD = 0;
@@ -327,7 +330,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	} @catch (NSString *msg) {
 		MY_LOG("Job info directory %@ %@.", jobDirPath, msg); return NO;
 	} @catch (NSError *error) {
-		MY_LOG("%@", error.localizedDescription); return NO;
+		MY_LOG("%@ %@", error.localizedDescription, error.localizedFailureReason); return NO;
 	}
 	return YES;
 }
@@ -384,7 +387,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 			[runningTrials[number] saveStateTo:
 				[NSString stringWithFormat:@"%@_%@", _ID, number]];
 	} @catch (NSError *error) {
-		MY_LOG("%@", error.localizedDescription);
+		MY_LOG("%@ %@", error.localizedDescription, error.localizedFailureReason);
 	} @catch (NSString *msg) { MY_LOG("%@", msg); }
 // check next trial
 	[lock lock];
@@ -406,19 +409,43 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 			world.vaccineList = vvDict[@"vaccineList"];
 			world.variantList = vvDict[@"variantList"];
 		}
-	} else {
-		if (moreVaccines != nil) {
-			MutableDictArray moreV = mutablized_array_of_dicts(moreVaccines);
-			add_vv_list(world.vaccineList, moreV);
-			correct_vaccine_list(world.variantList, world.vaccineList);
-		}
-		if (moreVariants != nil) {
-			MutableDictArray moreV = mutablized_array_of_dicts(moreVariants);
-			add_vv_list(world.variantList, moreV);
-			correct_variant_list(world.variantList, world.vaccineList);
-		}
+	}
+	if (moreVaccines != nil) {
+		MutableDictArray moreV = mutablized_array_of_dicts(moreVaccines);
+		add_vv_list(world.vaccineList, moreV);
+		correct_vaccine_list(world.variantList, world.vaccineList);
+	}
+	if (moreVariants != nil) {
+		MutableDictArray moreV = mutablized_array_of_dicts(moreVariants);
+		add_vv_list(world.variantList, moreV);
+		correct_variant_list(world.variantList, world.vaccineList);
 	}
 	[world setupVaxenAndVariantsFromLists];
+}
+- (void)organizeGatheringsList:(World *)world {
+	if (loadGatherings != nil) {
+		MutableDictArray list = gatherings_list_from_path(loadGatherings);
+		if (list != nil) world.gatheringsList = list;
+	}
+	if (moreGatherings != nil) {
+		if (world.gatheringsList == nil) world.gatheringsList = moreGatherings;
+		else {
+			NSMutableDictionary *md = NSMutableDictionary.new;
+			for (NSDictionary *item in world.gatheringsList) {
+				NSString *nm = item[@"name"];
+				if (nm != nil) md[nm] = item;
+			}
+			NSMutableArray *ma = NSMutableArray.new;
+			for (NSDictionary *item in moreGatherings) {
+				NSString *nm = item[@"name"];
+				NSMutableDictionary *dst = md[nm];
+				if (dst != nil) for (NSString *key in item) dst[key] = item[key];
+				else [ma addObject:item];
+			}
+			[world.gatheringsList addObjectsFromArray:ma];
+		}
+		[world resetRegGatInfo];
+	}
 }
 - (BOOL)runNextTrial {	// called only from JobController's tryNewTrial:
 	World *world = nil;
@@ -456,6 +483,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 			}
 		}
 		[self organizeVariantsAndVaccines:world];
+		[self organizeGatheringsList:world];
 		NSNumber *trialNumb = @(++ nextTrialNumber);
 		runningTrials[trialNumb] = world;
 		if (nextTrialNumber >= _nIteration)
@@ -470,7 +498,8 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 			MY_LOG("Trial %@/%ld of job %@ started on world %@.",
 				trialNumb, nIte, jobID, world.ID);
 		});
-	} @catch (NSError *error) { failedReason = error.localizedDescription;
+	} @catch (NSError *error) { failedReason = [NSString stringWithFormat:@"%@ %@",
+		error.localizedDescription, error.localizedFailureReason];
 	} @catch (NSException *excp) { failedReason = excp.reason;
 	} @catch (NSString *msg) { failedReason = msg; }
 	if (failedReason != nil) {
@@ -535,8 +564,8 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	NSError *error;
 	NSDictionary *jobInfo = [NSJSONSerialization JSONObjectWithData:
 		jobData options:0 error:&error];
-	if (jobInfo == nil)
-		@throw [NSString stringWithFormat:@"417 %@", error.localizedDescription];
+	if (jobInfo == nil) @throw [NSString stringWithFormat:@"417 %@ %@",
+		error.localizedDescription, error.localizedFailureReason];
 	BatchJob *job = [BatchJob.alloc initWithInfo:jobInfo ID:nil];
 	if (job == nil) @throw @"500 Couldn't make a batch job.";
 	MY_LOG("%@ Job %@ was submitted.", ip4_string(ip4addr), job.ID);

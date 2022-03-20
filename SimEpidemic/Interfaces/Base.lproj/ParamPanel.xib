@@ -2013,6 +2013,17 @@
                         <action selector="chooseTrcVaccineType:" target="-2" id="Z3U-D0-H2w"/>
                     </connections>
                 </popUpButton>
+                <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="glf-6h-7G2">
+                    <rect key="frame" x="228" y="268" width="128" height="32"/>
+                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    <buttonCell key="cell" type="push" title="Gatherings ..." bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="BZ1-xd-mgB">
+                        <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="openGatheringsPanel:" target="-1" id="dAz-rA-8Fe"/>
+                    </connections>
+                </button>
             </subviews>
             <constraints>
                 <constraint firstAttribute="trailing" secondItem="o0O-74-jyk" secondAttribute="trailing" constant="102" id="0QN-3x-QYO"/>

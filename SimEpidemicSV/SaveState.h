@@ -15,6 +15,7 @@ extern NSString *save_state_dir(void);
 extern NSString *save_state_file_path(NSString *fname);
 extern NSString *fullpath_of_load_state(NSString *fname);
 extern NSDictionary *variants_vaccines_from_path(NSString *fname);
+extern MutableDictArray gatherings_list_from_path(NSString *fname);
 extern void correct_vaccine_list(MutableDictArray vaList, MutableDictArray vrList);
 extern void correct_variant_list(MutableDictArray vrList, MutableDictArray vaList);
 
@@ -31,9 +32,12 @@ extern void correct_variant_list(MutableDictArray vrList, MutableDictArray vaLis
 - (void)getState;
 - (void)putState;
 - (void)loadVariantsAndVaccines;
+- (void)loadGatherings;
 - (void)getVaccineList;
 - (void)setVaccineList;
 - (void)getVariantList;
 - (void)setVariantList;
+- (void)getGatheringsList;
+- (void)setGatheringsList;
 @end
 NS_ASSUME_NONNULL_END

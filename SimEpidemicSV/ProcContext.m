@@ -274,7 +274,7 @@ static NSString *bad_request_message(NSString *req) {
 		code = 200;
 	} @catch (NSError *error) {
 		@throw [NSString stringWithFormat:
-			@"404 File access: %@", error.localizedDescription];
+			@"404 File access: %@ %@", error.localizedDescription, error.localizedFailureReason];
 	} @catch (NSString *msg) { @throw msg; }
 }
 static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerStr) {
@@ -409,7 +409,8 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	} @catch (NSException *excp) {
 		[self setErrorMessage:[@"500 " stringByAppendingString:excp.reason]];
 	} @catch (NSError *error) {
-		[self setErrorMessage:[@"500 " stringByAppendingString:error.localizedDescription]];
+		[self setErrorMessage:[NSString stringWithFormat:@"500 %@ %@",
+			error.localizedDescription, error.localizedFailureReason]];
 	} @catch (NSNumber *num) { }
 //
 	@try {
@@ -856,7 +857,8 @@ void init_context(void) {
 		COM(getWorldID), COM(closeWorld), COM(newWorld),
 		COM(getParams), COM(setParams),
 		COM(getVaccineList), COM(setVaccineList), COM(getVariantList), COM(setVariantList),
-		COM(loadVariantsAndVaccines),
+		COM(loadVariantsAndVaccines), COM(loadGatherings),
+		COM(getGatheringsList), COM(setGatheringsList),
 		COM(start), COM(step), COM(stop), COM(reset), COM(addInfected),
 		COM(getIndexes), COM(getDistribution),
 		COM(getPopulation), COM(getPopulation2),

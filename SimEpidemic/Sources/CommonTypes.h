@@ -168,6 +168,9 @@ typedef struct GatheringRec {
 	NSPoint p;
 	NSInteger nAgents;
 	struct AgentRec **agents;
+#ifndef NOGUI
+	NSInteger type;	// random = 0, or regular = 1,2,...
+#endif
 } Gathering;
 
 typedef enum {

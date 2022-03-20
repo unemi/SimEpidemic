@@ -28,20 +28,55 @@ void affect_to_agent(Gathering *gat, Agent *a) {
 void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect) {
 	NSRect rect = {gat->p.x - gat->size, gat->p.y - gat->size, gat->size * 2., gat->size * 2.};
 	if (NSIntersectsRect(rect, dRect)) {
-		[[NSColor colorWithCalibratedRed:rgb[0] green:rgb[1] blue:rgb[2]
+		CGFloat RGB[3]; memcpy(RGB, rgb, sizeof(RGB));
+		if (gat->type > 0) for (NSInteger i = 0; i < 3; i ++) RGB[i] = 1.;
+		[[NSColor colorWithCalibratedRed:RGB[0] green:RGB[1] blue:RGB[2]
 			alpha:gat->strength * .005] setFill];
 		[[NSBezierPath bezierPathWithOvalInRect:rect] fill];
 	}
 }
 #endif
 
-static void collect_participants(Gathering *gat, Agent **pop,
-	NSMutableArray<NSNumber *> *agents, RuntimeParams *rp,
-	NSInteger row, NSInteger left, NSInteger right) {
+@implementation World (GatheringExtantion)
+- (void)resetRegGatInfo {
+	Agent *agents = self.agents;
+	NSInteger nPop = worldParams.initPop;
+	regGatInfo = NSMutableDictionary.new;
+	for (NSDictionary *item in self.gatheringsList) {
+		NSString *name = item[@"name"];
+		NSNumber *num = item[@"npp"];
+		if (name == nil || num == nil) continue;
+		NSInteger n = num.doubleValue * nPop / 1e5;
+		NSMutableArray *p = [NSMutableArray arrayWithCapacity:n];
+		[self doItExclusivelyForRandomIndexes:NULL n:n block:^(NSInteger i, NSInteger k) {
+			Agent *a = &agents[k];
+			[p addObject:[NSValue valueWithPoint:(NSPoint){a->x, a->y}]];
+		}];
+		regGatInfo[name] = p;
+		rndPopOffset = (rndPopOffset + n) % nPop;
+	}
+}
+- (void)reviseRegGatNppOfName:(NSString *)name npp:(CGFloat)npp {
+	NSInteger nPop = worldParams.initPop;
+	NSInteger n = npp * nPop / 1e5;
+	NSMutableArray *info = regGatInfo[name];
+	if (info == nil) regGatInfo[name] = [NSMutableArray arrayWithCapacity:n];
+	else if (info.count >= n) return;
+	else n -= info.count;
+	Agent *agents = self.agents;
+	[self doItExclusivelyForRandomIndexes:NULL n:n block:^(NSInteger i, NSInteger k) {
+		[info addObject:[NSValue valueWithPoint:agents[k].orgPt]];
+	}];
+	rndPopOffset = (rndPopOffset + n) % nPop;
+}
+- (void)collectParticipants:(Gathering *)gat
+	agentsIDs:(NSMutableArray<NSNumber *> *)agents
+	row:(NSInteger)row left:(NSInteger)left right:(NSInteger)right test:(BOOL (^)(Agent *))test {
+	Agent **pmap = self.Pop;
 	for (NSInteger ix = left; ix < right; ix ++)
-		for (Agent *a = pop[row + ix]; a; a = a->next)
-			if (a->health != Symptomatic &&
-				d_random() < modified_prob(a->gatFreq, &rp->gatFreq) / 100.) {
+		for (Agent *a = pmap[row + ix]; a; a = a->next)
+			if (a->health != Symptomatic && (test == nil || test(a)) &&
+				d_random() < modified_prob(a->gatFreq, &runtimeParams.gatFreq) / 100.) {
 				[agents addObject:@(a->ID)];
 				a->gathering = gat;
 			}
@@ -50,8 +85,32 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 	NSInteger right = ceil(fmin(wSize, x) / grid);
 	return (right <= mesh)? right : mesh;
 }
-
-@implementation World (GatheringExtantion)
+- (void)collectParticipants:(Gathering *)gat test:(BOOL (^)(Agent *))test {
+	WorldParams *wp = &worldParams;
+	CGFloat grid = (CGFloat)wp->worldSize / wp->mesh, r = gat->size + SURROUND;
+	NSInteger bottom = floor(fmax(0., gat->p.y - r) / grid),
+		top = floor(fmin(wp->worldSize, gat->p.y + r) / grid),
+		center = round(gat->p.y / grid);
+	if (top >= wp->mesh) top = wp->mesh - 1;
+	if (center >= wp->mesh) center = wp->mesh - 1;
+	NSMutableArray<NSNumber *> *agents = NSMutableArray.new;
+	for (NSInteger iy = bottom; iy < center; iy ++) {
+		CGFloat dy = gat->p.y - (iy + 1) * grid, dx = sqrt(r * r - dy * dy);
+		[self collectParticipants:gat agentsIDs:agents row:iy * wp->mesh
+			left:floor(fmax(0., gat->p.x - dx) / grid)
+			right:ix_right(wp->worldSize, wp->mesh, gat->p.x + dx, grid) test:test];
+	}
+	for (NSInteger iy = top; iy >= center; iy --) {
+		CGFloat dy = gat->p.y - iy * grid, dx = sqrt(r * r - dy * dy);
+		[self collectParticipants:gat agentsIDs:agents row:iy * wp->mesh
+			left:floor(fmax(0., gat->p.x - dx) / grid)
+			right:ix_right(wp->worldSize, wp->mesh, gat->p.x + dx, grid) test:test];
+	}
+	gat->nAgents = agents.count;
+	gat->agents = realloc(gat->agents, sizeof(void *) * gat->nAgents);
+	for (NSInteger i = 0; i < gat->nAgents; i ++)
+		gat->agents[i] = self.agents + agents[i].integerValue;
+}
 - (void)setupGathering:(Gathering *)gat {
 	WorldParams *wp = &worldParams;
 	RuntimeParams *rp = &runtimeParams;
@@ -66,31 +125,37 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 			self.agents[random() % wp->initPop].orgPt;
 	if (wp->wrkPlcMode == WrkPlcCentered) gat->size *= centered_bias((CGPoint){
 		gat->p.x / wSize * 2. - 1., gat->p.y / wSize * 2. - 1. }) * M_SQRT2;
-	CGFloat grid = (CGFloat)wSize / wp->mesh, r = gat->size + SURROUND;
-	NSInteger bottom = floor(fmax(0., gat->p.y - r) / grid),
-		top = floor(fmin(wp->worldSize, gat->p.y + r) / grid),
-		center = round(gat->p.y / grid);
-	if (top >= wp->mesh) top = wp->mesh - 1;
-	if (center >= wp->mesh) center = wp->mesh - 1;
-	NSMutableArray<NSNumber *> *agents = NSMutableArray.new;
-	Agent **pmap = self.Pop;
-	for (NSInteger iy = bottom; iy < center; iy ++) {
-		CGFloat dy = gat->p.y - (iy + 1) * grid, dx = sqrt(r * r - dy * dy);
-		collect_participants(gat, pmap, agents, rp, iy * wp->mesh,
-			floor(fmax(0., gat->p.x - dx) / grid),
-			ix_right(wp->worldSize, wp->mesh, gat->p.x + dx, grid));
+	[self collectParticipants:gat test:nil];
+#ifndef NOGUI
+	gat->type = 0;
+#endif
+}
+- (Gathering *)setupRegGathering:(Gathering *)gat info:(NSMutableDictionary *)info {
+	CGFloat size = [info[@"size"] doubleValue],
+		duration = [info[@"duration"] doubleValue],
+		strength = [info[@"strength"] doubleValue],
+		minAge, maxAge;
+	NSInteger n = [info[@"n"] integerValue];
+	NSNumber *num;
+	minAge = ((num = info[@"minAge"]) == nil)? 0. : num.doubleValue;
+	maxAge = ((num = info[@"maxAge"]) == nil)? 200. : num.doubleValue;
+	NSEnumerator<NSValue *> *ptEnm = regGatInfo[info[@"name"]].objectEnumerator;
+#ifndef NOGUI
+	NSInteger gatType = [self.gatheringsList indexOfObject:info] + 1;
+#endif
+	for (NSInteger i = 0; i < n && gat != NULL; i ++, gat = gat->next) {
+		gat->size = size;
+		gat->duration = duration;
+		gat->strength = strength;
+		gat->p = ptEnm.nextObject.pointValue;
+		[self collectParticipants:gat test:^BOOL(Agent *a)
+			{ return a->age >= minAge && a->age <= maxAge; }];
+#ifndef NOGUI
+		gat->type = gatType;
+#endif
 	}
-	for (NSInteger iy = top; iy >= center; iy --) {
-		CGFloat dy = gat->p.y - iy * grid,
-			dx = sqrt(r * r - dy * dy);
-		collect_participants(gat, pmap, agents, rp, iy * wp->mesh,
-			floor(fmax(0., gat->p.x - dx) / grid),
-			ix_right(wp->worldSize, wp->mesh, gat->p.x + dx, grid));
-	}
-	gat->nAgents = agents.count;
-	gat->agents = realloc(gat->agents, sizeof(void *) * gat->nAgents);
-	for (NSInteger i = 0; i < gat->nAgents; i ++)
-		gat->agents[i] = self.agents + agents[i].integerValue;
+	info[@"n"] = nil;
+	return gat;
 }
 static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 	return (gat->duration -= 24./stepsPerDay) <= 0.;
@@ -122,10 +187,28 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 		}
 	}
 	if (gatToFree != NULL) gatToFree->prev = NULL;
+
+	NSInteger nRegGat = 0;
+	MutableDictArray regGatToBeFired = NSMutableArray.new;
+	for (NSMutableDictionary *gatItem in self.gatheringsList) {
+		CGFloat stpCnt = [gatItem[@"stpCnt"] doubleValue],
+			freq = [gatItem[@"freq"] doubleValue];
+		if (freq <= 0.) continue;
+		if ((stpCnt -= 1.) <= 0.) {
+			[regGatToBeFired addObject:gatItem];
+			stpCnt += 7 * worldParams.stepsPerDay / freq;
+			NSInteger nGats = [gatItem[@"npp"] doubleValue] * worldParams.initPop / 1e5;
+			gatItem[@"n"] = @(nGats);
+			nRegGat += nGats;
+		}
+		gatItem[@"stpCnt"] = @(stpCnt);
+	}
+
 //	calculate the number of gathering circles
 //	using random number in exponetial distribution.
-	NSInteger nNewGat = round(rp->gatFr / wp->stepsPerDay
-		* wp->worldSize * wp->worldSize / GAT_DENS * - log(d_random() * .9999 + .0001));
+	NSInteger nRndGat = round(rp->gatFr / wp->stepsPerDay
+		* wp->worldSize * wp->worldSize / GAT_DENS * - log(d_random() * .9999 + .0001)),
+		nNewGat = nRndGat + nRegGat;
 //	if (rp->step % wp->stepsPerDay == wp->stepsPerDay - 1)
 //		printf("%ld %.2f %ld\n", rp->step / wp->stepsPerDay, rp->gatFr, nNewGat);
 	Gathering *newGats;
@@ -144,11 +227,12 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 		}
 	} else if (nNewGat <= 0) return;
 	else newGats = gatToFree;
-	Gathering *tail = NULL;
-	for (Gathering *gat = newGats; gat != NULL; gat = gat->next) {
+	Gathering *tail = NULL, *gat = newGats;
+	for (NSInteger i = 0; i < nRndGat && gat != NULL; i ++, gat = gat->next)
 		[self setupGathering:gat];
-		if (gat->next == NULL) tail = gat;
-	}
+	for (NSMutableDictionary *gatItem in regGatToBeFired)
+		gat = [self setupRegGathering:gat info:gatItem];
+	for (tail = newGats; tail->next != NULL; tail = tail->next) ;
 	tail->next = gatherings;
 	if (gatherings != NULL) gatherings->prev = tail;
 	gatherings = newGats;

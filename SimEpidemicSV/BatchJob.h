@@ -25,8 +25,8 @@ extern void check_batch_jobs_to_restart(void);
 	NSInteger nextTrialNumber;
 	NSArray<NSString *> *output_n, *output_d, *output_D;
 	NSString *jobDirPath;
-	NSString *popDistMap, *loadVV;
-	MutableDictArray moreVaccines, moreVariants;
+	NSString *popDistMap, *loadVV, *loadGatherings;
+	MutableDictArray moreVaccines, moreVariants, moreGatherings;
 	BOOL stateDependencyIsOK;
 	BOOL shouldSaveSeverityStats, shouldSaveVariantsStats, shouldSaveState;
 }

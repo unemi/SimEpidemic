@@ -271,19 +271,37 @@ void connection_thread(void) {
 			^{ interaction_thread(desc, name.sin_addr.s_addr); }];
 	}
 }
+static NSString *check_writeable_file(NSString *path) {
+	NSFileManager *fmn = NSFileManager.defaultManager;
+	if ([fmn isWritableFileAtPath:path]) return nil;
+	NSString *dirPath = path.stringByDeletingLastPathComponent;
+	NSError *error;
+	BOOL isDir;
+	if ([fmn fileExistsAtPath:dirPath isDirectory:&isDir]) {
+		if (!isDir) return [NSString stringWithFormat:@"%@ is not a directory.", dirPath];
+		if (![fmn isWritableFileAtPath:dirPath])
+			return [NSString stringWithFormat:@"%@ has no writing permission.", dirPath];
+	} else if (![fmn createDirectoryAtPath:dirPath withIntermediateDirectories:YES
+		attributes:nil error:&error]) return [NSString stringWithFormat:
+			@"Couldn't make %@ as %@ %@", dirPath,
+			error.localizedDescription, error.localizedFailureReason];
+	return nil;
+}
 static NSConditionLock *loggingLock = nil;
 static NSMutableString *loggingString = nil;
 static void logging_thread(void) {
 	static NSDateFormatter *dateForm = nil;
 	if (loggingLock == nil) loggingLock = NSConditionLock.new;
-	for (int cnt = 0; cnt < 18;) {
+	NSString *errMsg = nil;
+	while (errMsg == nil) {
 		[loggingLock lockWhenCondition:1];
-		@autoreleasepool { @try {
-			NSError *error;
+		@try {
 			NSFileManager *fmn = NSFileManager.defaultManager;
+			NSError *error;
 			NSDictionary *fInfo = [fmn attributesOfItemAtPath:logFilePath error:&error];
-			if (fInfo == nil) @throw error;
-			if ([fInfo[NSFileSize] integerValue] > (1L<<20)) {
+			if (fInfo == nil) {
+				if (error.code != NSFileReadNoSuchFileError) @throw error;
+			} else if (fInfo.fileSize > (1L<<20)) {
 				if (dateForm == nil) {
 					dateForm = NSDateFormatter.new;
 					dateForm.dateFormat = @"yyyyMMddHHmmss";
@@ -292,30 +310,23 @@ static void logging_thread(void) {
 					logFilePath.stringByDeletingPathExtension,
 					[dateForm stringFromDate:NSDate.date]];
 				if (![fmn moveItemAtPath:logFilePath toPath:newPath error:&error])
-					@throw error;
+					os_log(OS_LOG_DEFAULT, "Couldn't rename large logfile to %@.", newPath);
 			}
-		} @catch (NSError *err) {
-			if ([err.domain isEqualToString:NSCocoaErrorDomain]
-			  && err.code == NSFileReadNoSuchFileError)
-			os_log(OS_LOG_DEFAULT, "Logfile, %@ will be newly created.",
-				logFilePath.lastPathComponent);
-			else os_log(OS_LOG_DEFAULT, "Logfile, %@", err.localizedDescription);
-		} @catch (NSException *excp) {
-			os_log(OS_LOG_DEFAULT, "Logfile, %@", excp.reason);
-		}}
-		FILE *logFile = fopen(logFilePath.UTF8String, "a");
-		NSInteger cond = 0;
-		if (logFile != NULL) {
-			fputs(loggingString.UTF8String, logFile);
-			fclose(logFile);
-			[loggingString deleteCharactersInRange:(NSRange){0, loggingString.length}];
-		} else cond = 1;
-		[loggingLock unlockWithCondition:cond];
-		if (cond == 1) { sleep(10); cnt ++; }
-		else cnt = 0;
+			FILE *logFile = fopen(logFilePath.UTF8String, "a");
+			if (logFile != NULL) {
+				fputs(loggingString.UTF8String, logFile);
+				fclose(logFile);
+				[loggingString deleteCharactersInRange:(NSRange){0, loggingString.length}];
+			} else @throw @"couldn't open it to append a message.";
+		} @catch (NSError *err) { errMsg = [NSString stringWithFormat:@"%@ %@",
+			err.localizedDescription, err.localizedFailureReason];
+		} @catch (NSException *excp) { errMsg = excp.reason;
+		} @catch (NSString *msg) { errMsg = msg;
+		}
+		[loggingLock unlockWithCondition:0];
 	}
+	os_log(OS_LOG_DEFAULT, "Gave up logging because %@.", errMsg);
 	loggingLock = nil;
-	os_log(OS_LOG_DEFAULT, "Gave up logging.");
 }
 void my_log(const char *fmt, ...) {
 	if (loggingLock == nil) return;	// logging thread isn't running.
@@ -471,6 +482,10 @@ int main(int argc, const char * argv[]) {
 	dataDirectory = adjust_dir_path(dataDirectory);
 	logFilePath = data_hostname_path(
 		[NSString stringWithFormat:@"%@_%04d.txt", logFilename, port]);
+	NSString *errMsg = check_writeable_file(logFilePath);
+	if (errMsg != nil) {
+		MY_LOG("Couldn't write logfile. %@", errMsg);
+		terminateApp(EXIT_PID_FILE); }
 	[NSThread detachNewThreadWithBlock:^{ logging_thread(); }];
 	MY_LOG_DEBUG("fileDir=%s\ndataDir=%s\n",
 		fileDirectory.UTF8String, dataDirectory.UTF8String);
@@ -491,8 +506,7 @@ int main(int argc, const char * argv[]) {
 	codeMeaning = code_meaning_map();
 	extToMime = ext_mime_map();
 	indexNames = index_name_map();
-	distributionNames =
-		@[@"incubasionPeriod", @"recoveryPeriod", @"fatalPeriod", @"infects"];
+	distributionNames = @[@"incubasionPeriod", @"recoveryPeriod", @"fatalPeriod", @"infects"];
 	indexNameToIndex = index_name_to_index();
 	testINameToIdx = test_index_name_to_index();
 //
@@ -508,9 +522,13 @@ int main(int argc, const char * argv[]) {
 	NSError *error;
 	NSString *pidPath = data_hostname_path(
 		[NSString stringWithFormat:@"%@_%04d", pidFilename, port]);
+	if ((errMsg = check_writeable_file(pidPath)) != nil) {
+		MY_LOG("Couldn't write pid. %@", errMsg);
+		terminateApp(EXIT_PID_FILE); }
 	if (![@(getpid()).stringValue writeToFile:pidPath
 		atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
-		MY_LOG("Couldn't write pid. %@", error.localizedDescription);
+		MY_LOG("Couldn't write pid. %@ %@",
+			error.localizedDescription, error.localizedFailureReason);
 		terminateApp(EXIT_PID_FILE); }
 //
 	defaultWorlds = NSMutableDictionary.new;

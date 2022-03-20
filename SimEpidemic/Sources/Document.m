@@ -20,6 +20,7 @@
 #import "DataPanel.h"
 #import "ParamPanel.h"
 #import "VVPanel.h"
+#import "GatPanel.h"
 
 RainbowColorHB rainbow_color(NSInteger x, NSInteger n) {
 	RainbowColorHB rc = { x * .875 / n, .8 };
@@ -66,6 +67,7 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 	NSSize orgWindowSize, orgViewSize;
 	NSMutableDictionary *orgViewInfo, *nnObjects;
 	VVPanel *vvPanel;
+	GatPanel *gatPanel;
 }
 @end
 
@@ -444,6 +446,10 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 - (IBAction)openVaxAndVariantsPanel:(id)sender {
 	if (vvPanel == nil) vvPanel = [VVPanel.alloc initWithWorld:world];
 	[vvPanel showWindow:sender];
+}
+- (IBAction)openGatheringsPanel:(id)sender {
+	if (gatPanel == nil) gatPanel = [GatPanel.alloc initWithWorld:world];
+	[gatPanel showWindow:sender];
 }
 //
 - (void)openScenarioFromURL:(NSURL *)url {

@@ -406,17 +406,15 @@ static void check_vvlist(NSMutableArray *ma, NSArray *varList, NSDictionary *key
 	return [self setupVVInfoWithPlist:md];
 }
 - (IBAction)copy:(id)sender {
-	NSString *str = [NSString.alloc initWithData:
-		[self dataOfVVInfo:NO] encoding:NSUTF8StringEncoding];
 	NSPasteboard *pb = NSPasteboard.generalPasteboard;
 	[pb declareTypes:@[NSPasteboardTypeString] owner:NSApp];
-	[pb setString:str forType:NSPasteboardTypeString];
+	[pb setData:[self dataOfVVInfo:NO] forType:NSPasteboardTypeString];
 }
 - (IBAction)paste:(id)sender {
-	NSString *str = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
-	if (str == nil) return;
+	NSData *data = [NSPasteboard.generalPasteboard dataForType:NSPasteboardTypeString];
+	if (data == nil) return;
 	@try {
-		[self setupVVInfoWithData:[str dataUsingEncoding:NSUTF8StringEncoding] isPlist:NO];
+		[self setupVVInfoWithData:data isPlist:NO];
 	} @catch (NSObject *obj) { error_msg(obj, self.window, NO); }
 }
 - (IBAction)saveDocument:(id)sender {

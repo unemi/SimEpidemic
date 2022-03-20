@@ -123,6 +123,17 @@ NSDictionary *variants_vaccines_from_path(NSString *fname) {
 	self.vaccineList = dict[@"vaccineList"];
 	self.variantList = dict[@"variantList"];
 }
+MutableDictArray gatherings_list_from_path(NSString *fname) {
+	NSString *filePath = data_file_path(@"GatheringsList", fname);
+	NSData *data = [NSData dataWithContentsOfFile:filePath];
+	if (data == nil) @throw [NSString stringWithFormat:@"Couldn't find \"%@\".", fname];
+	NSError *error;
+	MutableDictArray list = [NSJSONSerialization JSONObjectWithData:data
+		options:NSJSONReadingMutableContainers error:&error];
+	if (list == nil) @throw [error.localizedDescription stringByAppendingString:
+		@"gatherings list."];
+	return list;
+}
 @end
 
 @implementation ProcContext (SaveStateExtension)
@@ -172,6 +183,11 @@ NSDictionary *variants_vaccines_from_path(NSString *fname) {
 	[self checkWorld];
 	[world loadVarianatsAndVaccinesFrom:[self nameArgument]];
 }
+- (void)loadGatherings {
+	[self checkWorld];
+	MutableDictArray list = gatherings_list_from_path([self nameArgument]);
+	if (list != nil) world.gatheringsList = list;
+}
 - (void)getVaccineList {
 	[self checkWorld];
 	[self getInfo:world.vaccineList];
@@ -197,5 +213,17 @@ NSDictionary *variants_vaccines_from_path(NSString *fname) {
 	if (list == nil) @throw @"417 No data for variant list.";
 	correct_variant_list(list, world.vaccineList);
 	world.variantList = list;
+}
+- (void)getGatheringsList {
+	[self checkWorld];
+	[self getInfo:world.gatheringsList];
+}
+- (void)setGatheringsList {
+	[self checkWorld];
+	NSMutableArray *list = (NSMutableArray *)[self
+		plistFromJSONArgument:NSJSONReadingMutableContainers
+		class:NSMutableArray.class type:@"gatherings list"];
+	if (list == nil) @throw @"417 No data for gatherings list.";
+	world.gatheringsList = list;
 }
 @end

@@ -84,6 +84,20 @@
 			<key>LSTypeIsPackage</key>
 			<integer>0</integer>
 		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sEpG</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>GatIcon</string>
+			<key>CFBundleTypeName</key>
+			<string>SimEpidemic Gatherings</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -106,7 +120,7 @@
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2020, 2021 Tatsuo Unemi. All rights reserved.</string>
+	<string>Copyright © 2020-22 Tatsuo Unemi. All rights reserved.</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>

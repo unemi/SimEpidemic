@@ -12,6 +12,10 @@
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *VaccineListChanged, *VariantListChanged;
+@interface NSMutableArray (CopyVVListExtension)
+- (NSMutableArray *)vvListCopy;
+- (BOOL)isEqultToVVList:(NSArray<NSDictionary *> *)list;
+@end
 
 @interface ShotIntervalView : NSTableCellView
 @property IBOutlet NSButton *checkBox;

@@ -30,8 +30,10 @@ unsigned long current_time_us(void) {
 #ifndef NOGUI
 void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
 	NSString *message = [obj isKindOfClass:NSString.class]? (NSString *)obj :
-		[obj isKindOfClass:NSError.class]? [NSString stringWithFormat:
-			@"%@ (%ld)", ((NSError *)obj).localizedDescription, ((NSError *)obj).code] :
+		[obj isKindOfClass:NSError.class]? [NSString stringWithFormat:@"%@ %@ (%ld)",
+			((NSError *)obj).localizedDescription,
+			((NSError *)obj).localizedFailureReason,
+			((NSError *)obj).code] :
 		[obj isKindOfClass:NSException.class]? ((NSException *)obj).reason :
 		[NSString stringWithFormat:@"%@ (%@)", obj.description, obj.className];
 	NSAlert *alt = NSAlert.new;
