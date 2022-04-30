@@ -10,10 +10,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class World;
+extern NSString *nnRegGatChanged;
+
+@class Document;
 @interface GatPanel : NSWindowController
-	<NSWindowDelegate,NSTableViewDataSource,NSTableViewDelegate>
-- (instancetype)initWithWorld:(World *)wd;
+	<NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate, NSMenuItemValidation>
+- (instancetype)initWithDocument:(Document *)doc;
 @end
 
 NS_ASSUME_NONNULL_END

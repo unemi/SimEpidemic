@@ -12,6 +12,7 @@
 
 @interface PopDist () {
 	NSUndoManager *undoManager;
+	NSInteger nPoints;
 }
 @end
 
@@ -20,6 +21,7 @@
 - (void)windowDidLoad {
     [super windowDidLoad];
     undoManager = NSUndoManager.new;
+    nPoints = nPointsDgt.integerValue;
     if (_image != nil) imgView.image = _image;
 }
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
@@ -28,6 +30,15 @@
 - (void)windowDidBecomeKey:(NSNotification *)notification {
 	pasteBtn.enabled = [NSPasteboard.generalPasteboard
 		canReadObjectForClasses:@[NSImage.class] options:nil];
+}
+- (IBAction)changeNPoints:(NSTextField *)sender {
+	NSInteger newValue = nPointsDgt.integerValue, orgValue = nPoints;
+	if (newValue == orgValue) return;
+	nPoints = newValue;
+	[undoManager registerUndoWithTarget:nPointsDgt handler:^(NSTextField *target) {
+		target.integerValue = orgValue;
+		[target sendAction:target.action to:target.target];
+	}];
 }
 - (void)changeParamValueSlider:(NSSlider *)sld digits:(NSTextField *)dgt sender:(NSControl *)sender {
 	CGFloat newValue = sender.doubleValue, orgValue;
@@ -38,10 +49,11 @@
 		orgValue = sld.doubleValue;
 		sld.doubleValue = newValue;
 	}
-	[undoManager registerUndoWithTarget:self handler:^(id  _Nonnull target) {
-		sld.doubleValue = orgValue;
-		dgt.doubleValue = orgValue;
-	}];
+	if (orgValue != newValue)
+		[undoManager registerUndoWithTarget:self handler:^(PopDist *target) {
+			sld.doubleValue = orgValue;
+			[target changeParamValueSlider:sld digits:dgt sender:sld];
+		}];
 }
 - (IBAction)changeEdgeEffect:(NSControl *)sender {
 	[self changeParamValueSlider:edgeSld digits:edgeDgt sender:sender];
@@ -51,6 +63,9 @@
 }
 - (IBAction)changeInterporateExponent:(NSControl *)sender {
 	[self changeParamValueSlider:intExpSld digits:intExpDgt sender:sender];
+}
+- (IBAction)changeLogGamma:(NSControl *)sender {
+	[self changeParamValueSlider:gammaSld digits:gammaDgt sender:sender];
 }
 typedef struct { CGFloat x, y, z; } PointInfo;
 - (void)setPopDistImage:(NSImage *)image {
@@ -64,12 +79,12 @@ typedef struct { CGFloat x, y, z; } PointInfo;
 	else if (orgImage != nil && image == nil) saveBtn.enabled = NO;
 }
 - (IBAction)makeImage:(id)sender {
-	NSInteger N = nPointsDgt.integerValue;
 	CGFloat edgeEffect = edgeSld.doubleValue;
 	CGFloat centerBias = centerSld.doubleValue;
 	CGFloat intExp = intExpSld.doubleValue;
-	PointInfo *pts = malloc(sizeof(PointInfo) * N);
-	for (NSInteger i = 0; i < N; i ++) {
+	CGFloat gamma = pow(2., gammaSld.doubleValue);
+	PointInfo *pts = malloc(sizeof(PointInfo) * nPoints);
+	for (NSInteger i = 0; i < nPoints; i ++) {
 		PointInfo *p = pts + i;
 		p->x = d_random();
 		p->y = d_random();
@@ -82,7 +97,7 @@ typedef struct { CGFloat x, y, z; } PointInfo;
 		CGFloat yy = (y + .5) / imgRep.pixelsHigh;
 		CGFloat xx = (x + .5) / imgRep.pixelsWide;
 		CGFloat s = 0., ws = 0.;
-		for (NSInteger i = 0; i < N; i ++) {
+		for (NSInteger i = 0; i < nPoints; i ++) {
 			PointInfo *p = pts + i;
 			CGFloat dx = xx - p->x;
 			CGFloat dy = yy - p->y;
@@ -93,7 +108,7 @@ typedef struct { CGFloat x, y, z; } PointInfo;
 		}
 		CGFloat dw = fmin(fmin(xx, 1. - xx), fmin(yy, 1. - yy));
 		pxMap[y * imgRep.bytesPerRow / sizeof(float) + x] =
-			pow(s / (ws + pow(dw, -2.) * edgeEffect), 2.);
+			pow(pow(s / (ws + pow(dw, -2.) * edgeEffect), 2.), gamma);
 	}
 	NSImage *image = [NSImage.alloc initWithSize:imgRep.size];
 	[image addRepresentation:imgRep];

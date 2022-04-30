@@ -18,6 +18,8 @@ extern void in_main_thread(dispatch_block_t block);
 extern NSPredicate *predicate_in_item(NSObject *item, NSString **comment);
 extern NSObject *scenario_element_from_property(NSObject *prop);
 extern void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat steps);
+extern void set_reg_gat_value(MutableDictArray gatInfo, NSString *key,
+	NSNumber *goal, CGFloat steps);
 #ifndef NOGUI
 extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
 #endif

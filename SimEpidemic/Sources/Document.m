@@ -41,6 +41,7 @@ RainbowColorHB rainbow_color(NSInteger x, NSInteger n) {
 }
 - (void)showWindowWithParent:(NSWindow *)parentWindow {
 	[self setupParentWindow:parentWindow];
+	self.nextResponder = parentWindow;
 	[self showWindow:self];
 }
 - (void)windowDidBecomeKey:(NSNotification *)notification {
@@ -73,6 +74,13 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 
 @implementation Document
 @synthesize world;
+- (void)applyBlockToAllPanels:(void (^)(NSWindowController *))block {
+	NSWindowController *winCon[] = {scenarioPanel, paramPanel, dataPanel, vvPanel, gatPanel};
+	for (NSInteger i = 0; i < 5; i ++) if (winCon[i] != nil) block(winCon[i]);
+	if (world.statInfo.statPanels != nil)
+		for (NSInteger i = world.statInfo.statPanels.count - 1; i >= 0; i --)
+			block(world.statInfo.statPanels[i]);
+}
 - (void)setPanelTitle:(NSWindow *)panel {
 	NSString *orgTitle = panel.title;
 	NSScanner *scan = [NSScanner scannerWithString:orgTitle];
@@ -82,11 +90,9 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 }
 - (void)setDisplayName:(NSString *)name {
 	[super setDisplayName:name];
-	NSWindowController *winCon[] = {scenarioPanel, paramPanel, dataPanel};
-	for (NSInteger i = 0; i < 3; i ++)
-		if (winCon[i] != nil) [self setPanelTitle:winCon[i].window];
-	for (StatPanel *panel in world.statInfo.statPanels)
-		[self setPanelTitle:panel.window];
+	Document * __weak doc = self;
+	[self applyBlockToAllPanels:^(NSWindowController *winCon)
+		{ [doc setPanelTitle:winCon.window]; }];
 }
 - (void)reviseColors {
 	view.needsDisplay = YES;
@@ -205,12 +211,7 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 		world.loopMode = LoopEndByUser;
 		[world popLock]; [world popUnlock];
 	}
-	if (scenarioPanel != nil) [scenarioPanel close];
-	if (paramPanel != nil) [paramPanel close];
-	if (dataPanel != nil) [dataPanel close];
-	if (world.statInfo.statPanels != nil)
-		for (NSInteger i = world.statInfo.statPanels.count - 1; i >= 0; i --)
-			[world.statInfo.statPanels[i] close];
+	[self applyBlockToAllPanels:^(NSWindowController *winCon) { [winCon close]; }];
 	NSNotificationCenter *ntfCenter = NSNotificationCenter.defaultCenter;
 	for (NSString *nn in nnObjects) {
 		if ([nnObjects[nn] isKindOfClass:NSNumber.class])
@@ -444,12 +445,12 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 }
 - (IBAction)openStatPenel:(id)sender { [world.statInfo openStatPanel:view.window]; }
 - (IBAction)openVaxAndVariantsPanel:(id)sender {
-	if (vvPanel == nil) vvPanel = [VVPanel.alloc initWithWorld:world];
-	[vvPanel showWindow:sender];
+	if (vvPanel == nil) vvPanel = [VVPanel.alloc initWithDocument:self];
+	[vvPanel showWindowWithParent:view.window];
 }
 - (IBAction)openGatheringsPanel:(id)sender {
-	if (gatPanel == nil) gatPanel = [GatPanel.alloc initWithWorld:world];
-	[gatPanel showWindow:sender];
+	if (gatPanel == nil) gatPanel = [GatPanel.alloc initWithDocument:self];
+	[gatPanel showWindowWithParent:view.window];
 }
 //
 - (void)openScenarioFromURL:(NSURL *)url {
@@ -481,11 +482,9 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 		for (NSWindow *child in children)
 			[view.window removeChildWindow:child];
 	} else if (children == nil || children.count == 0) {
-		if (paramPanel != nil) [paramPanel setupParentWindow:view.window];
-		if (scenarioPanel != nil) [scenarioPanel setupParentWindow:view.window];
-		if (dataPanel != nil) [dataPanel setupParentWindow:view.window];
-		for (StatPanel *stp in world.statInfo.statPanels)
-			[stp setupParentWindow:view.window];
+		NSWindow * __weak myWindow = view.window;
+		[self applyBlockToAllPanels:^(NSWindowController *winCon)
+			{ [winCon setupParentWindow:myWindow]; }];
 	}
 }
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem {

@@ -12,10 +12,6 @@
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *VaccineListChanged, *VariantListChanged;
-@interface NSMutableArray (CopyVVListExtension)
-- (NSMutableArray *)vvListCopy;
-- (BOOL)isEqultToVVList:(NSArray<NSDictionary *> *)list;
-@end
 
 @interface ShotIntervalView : NSTableCellView
 @property IBOutlet NSButton *checkBox;
@@ -26,18 +22,18 @@ extern NSString *VaccineListChanged, *VariantListChanged;
 @property (assign) NSArray<NSDictionary *> *list;
 @end
 
-@class World;
+@class Document;
 @interface VVPanel : NSWindowController
-	<NSWindowDelegate,NSTableViewDataSource,NSTableViewDelegate> {
+	<NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate, NSMenuItemValidation> {
 	IBOutlet NSTableView *variantTable, *vaccineTable;
 	IBOutlet NSButton *rmVariantBtn, *rmVaccineBtn, *addVaccineBtn;
 	IBOutlet NSTextField *vcn1stEffcDgt, *vcnMaxEffcDgt, *vcnMaxEffcSDgt,
 		*vcnEDelayDgt, *vcnEPeriodDgt, *vcnEDecayDgt, *vcnSvEffcDgt;
 	IBOutlet NSSlider *vcn1stEffcSld, *vcnMaxEffcSld, *vcnMaxEffcSSld,
 		*vcnEDelaySld, *vcnEPeriodSld, *vcnEDecaySld, *vcnSvEffcSld;
-	IBOutlet NSButton *applyBtn;
+	IBOutlet NSButton *pasteBtn, *applyBtn;
 }
-- (instancetype)initWithWorld:(World *)wd;
+- (instancetype)initWithDocument:(Document *)doc;
 - (void)adjustApplyBtnEnabled;
 @end
 

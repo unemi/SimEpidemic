@@ -11,6 +11,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+extern NSDictionary *item_template(void);
 extern void affect_to_agent(Gathering *gat, Agent *a);
 #ifndef NOGUI
 extern void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect);

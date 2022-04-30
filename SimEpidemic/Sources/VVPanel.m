@@ -7,6 +7,7 @@
 //
 
 #import "VVPanel.h"
+#import "Document.h"
 #import "World.h"
 #import "SaveDoc.h"
 #define VAR_PNL_EXCOLS 3
@@ -40,6 +41,7 @@ NSString *VariantListChanged = @"VariantListChanged";
 @end
 
 @interface VVPanel () {
+	Document * __weak document;
 	World * __weak world;
 	MutableDictArray variantList, vaccineList;
 	NSUndoManager *undoManager;
@@ -51,15 +53,15 @@ NSString *VariantListChanged = @"VariantListChanged";
 @end
 
 @implementation VVPanel
-- (NSString *)windowNibName { return @"VirusVariantPanel"; }
-- (instancetype)initWithWorld:(World *)wd {
-	if (!(self = [super init])) return nil;
+- (instancetype)initWithDocument:(Document *)doc {
+	if (!(self = [super initWithWindowNibName:@"VirusVariantPanel"])) return nil;
 	undoManager = NSUndoManager.new;
-	variantList = wd.variantList.vvListCopy;
-	vaccineList = wd.vaccineList.vvListCopy;
+	document = doc;
+	world = doc.world;
+	variantList = world.variantList.vvListCopy;
+	vaccineList = world.vaccineList.vvListCopy;
 	for (NSInteger i = 0; i < vaccineList.count; i ++)
 		vaccineList[i][@".orgIndex"] = @(i);
-	world = wd;
 	return self;
 }
 static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) {
@@ -80,6 +82,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	[vaccineTable addTableColumn:tblColVax];
 }
 - (void)windowDidLoad {
+	[document setPanelTitle:self.window];
 	vaxNextID = vrnNextID = 1;
 	NSTableColumn *colVir = [variantTable tableColumnWithIdentifier:@"variant0"],
 		*colVax = [vaccineTable tableColumnWithIdentifier:@"variant0"];
@@ -108,9 +111,6 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	}
 	[variantTable reloadData];
 	[vaccineTable reloadData];
-}
-- (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
-	return undoManager;
 }
 - (void)adjustApplyBtnEnabled {
 	applyBtn.enabled = ! (world.running || (
@@ -191,6 +191,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	[variantTable reloadData];
 	[vaccineTable reloadData];
 	[self adjustApplyBtnEnabled];
+	rmVariantBtn.enabled = variantTable.selectedRow >= 0;
 }
 - (IBAction)addVariant:(id)sender {
 	NSInteger row = variantTable.selectedRow;
@@ -226,6 +227,7 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	}];
 	[vaccineTable reloadData];
 	[self adjustApplyBtnEnabled];
+	rmVaccineBtn.enabled = vaccineTable.selectedRow >= 0;
 }
 - (IBAction)addVaccine:(id)sender {
 	NSInteger row = vaccineTable.selectedRow;
@@ -236,6 +238,10 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 }
 - (IBAction)removeVaccine:(id)sender {
 	[self removeVaccinesAtIndexes:vaccineTable.selectedRowIndexes];
+}
+- (void)delete:(id)sender {
+	if (variantTable.selectedRow >= 0) [self removeVariant:sender];
+	if (vaccineTable.selectedRow >= 0) [self removeVaccine:sender];
 }
 - (void)assignObject:(NSObject *)newValue dict:(NSMutableDictionary *)dict key:(NSString *)key
 	tableView:(NSTableView *)tableView row:(NSInteger)row col:(NSInteger)col {
@@ -409,6 +415,7 @@ static void check_vvlist(NSMutableArray *ma, NSArray *varList, NSDictionary *key
 	NSPasteboard *pb = NSPasteboard.generalPasteboard;
 	[pb declareTypes:@[NSPasteboardTypeString] owner:NSApp];
 	[pb setData:[self dataOfVVInfo:NO] forType:NSPasteboardTypeString];
+	pasteBtn.enabled = YES;
 }
 - (IBAction)paste:(id)sender {
 	NSData *data = [NSPasteboard.generalPasteboard dataForType:NSPasteboardTypeString];
@@ -452,6 +459,25 @@ static void check_vvlist(NSMutableArray *ma, NSArray *varList, NSDictionary *key
 		} @catch (NSObject *obj) { error_msg(obj, self.window, NO); return; }
 	}];
 }
+//
+- (void)checkPasteButton {
+	pasteBtn.enabled = [NSPasteboard.generalPasteboard
+		canReadItemWithDataConformingToTypes:@[NSPasteboardTypeString]];
+}
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
+	if (menuItem.action == @selector(delete:)) return
+		variantTable.selectedRow > 0 || vaccineTable.selectedRow > 0;
+	else if (menuItem.action == @selector(paste:)) return
+		[NSPasteboard.generalPasteboard canReadItemWithDataConformingToTypes:
+			@[NSPasteboardTypeString]];
+	return YES;
+}
+- (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
+	return undoManager;
+}
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+	[self checkPasteButton];
+}
 // TableView Data Source
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
 	return (tableView == variantTable)? variantList.count : vaccineList.count;
@@ -488,8 +514,9 @@ static void check_vvlist(NSMutableArray *ma, NSArray *varList, NSDictionary *key
 		row > 0 || [tableColumn.identifier hasPrefix:@"variant"];
 }
 - (void)tableViewSelectionDidChange:(NSNotification *)notification {
-	[rmVariantBtn setEnabled:variantTable.selectedRow > 0];
-	[rmVaccineBtn setEnabled:vaccineTable.selectedRow > 0];
+	NSTableView *tblView = notification.object;
+	((tblView == variantTable)? rmVariantBtn : rmVaccineBtn).enabled
+		= tblView.selectedRow > 0;
 }
 @end
 

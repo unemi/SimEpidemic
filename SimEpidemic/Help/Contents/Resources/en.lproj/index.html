@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex" />
+  <meta name="AppleTitle" content="模擬感染 ヘルプ" />
+  <meta name="AppleIcon" content="../SimEpidemicAppIcon128.png" />
+</head>
+<style>
+  body {
+    margin:0;
+  }
+  .wrapper {
+    width: 800px;
+  }
+  nav {
+    box-sizing: border-box;
+    width: 200px;
+    font-size: 9pt;
+    float: left;
+    height: 100vh;
+    overflow: scroll;
+    background-color: black;
+    margin: 0 0px 0 0;
+    padding: 0px 25px 0 15px;
+  }
+
+  .contents {
+    float: left;
+    box-sizing: border-box;
+    height: 100vh;
+    width: 600px;
+    overflow: scroll;
+    padding: 0 50px 20px 30px;
+  }
+
+  .img {
+    width: calc(100%-300px);
+  }
+  .main_img {
+    width: 100%;
+  }
+
+  .menu-head-cb {
+    display:none;
+  }
+  .menu-head {
+    display: block;
+    margin: 5px;
+    color: white;
+  }
+  .menu-head::before {
+    content: "▶︎ "
+  }
+  .menu-head-cb:checked ~ .menu-head::before {
+    content: "▼ "
+  }
+  .menu-content {
+    height: 0;
+    overflow: hidden;
+    transition: height 0.2s ease-in-out;
+  }
+  .menu-head-cb:checked ~ .menu-content {
+  }
+  .menu-item {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 5px 17px;
+    margin:0;
+    border-radius: 5px;
+    color: white;
+  }
+  .menu-link {
+    display:block;
+    text-decoration: none;
+    color: white;
+  }
+  .focused {
+    background-color: gray;
+  }
+
+  .sect-title {
+    font-size: 12pt;
+  }
+  .content {
+    width: 100%;
+    font-size: 10pt;
+    padding-bottom: 20px;
+    border-bottom: solid 1px gray;
+  }
+  .note {
+    font-size: 8pt;
+  }
+</style>
+<script type="text/javascript">
+  function selectMenuItem(e) {
+    const menuItems = document.getElementsByClassName("menu-item");
+    for(let item of menuItems) {
+      item.classList.remove("focused");
+    }
+    this.classList.add("focused");
+  }
+  window.onload = () => {
+    const menuItems = document.getElementsByClassName("menu-item");
+    for(let item of menuItems) {
+      item.addEventListener("click", selectMenuItem);
+    }
+    const cbs = document.getElementsByClassName("menu-head-cb");
+    for (let cb of cbs) {
+      cb.addEventListener("input", ()=>{
+        const contents = cb.parentElement.getElementsByClassName("menu-content");
+        let height = 0;
+        for (let child of contents[0].children) {
+          height += child.offsetHeight;
+        }
+        contents[0].style.height = cb.checked ? height + "px": "0px";
+      });
+      cb.checked = false;
+    }
+  };
+</script>
+<body>
+  <div class="wrapper">
+
+  <nav>
+    <section class="menu">
+      <input type="checkbox" class="menu-head-cb" id="mh2">
+      <label for="mh2" class="menu-head">
+        Start simulation
+      </label>
+      <div class="menu-content">
+        <div class="menu-item">
+          <a href="#c11" class="menu-link">
+            Build and save the simulation world
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c12" class="menu-link">
+            Show window
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c13" class="menu-link">
+            Open tab
+          </a>
+        </div>
+      </div>
+    </section>
+    <section class="menu">
+      <input type="checkbox" class="menu-head-cb" id="mh3">
+      <label for="mh3" class="menu-head">
+        Switch the animation on/off
+      </label>
+      <div class="menu-content">
+        <div class="menu-item">
+          <a href="#c31" class="menu-link">
+            item
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c32" class="menu-link">
+            item
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c33" class="menu-link">
+            item
+          </a>
+        </div>
+      </div>
+    </section>
+    <section class="menu">
+      <input type="checkbox" class="menu-head-cb" id="mh4">
+      <label for="mh4" class="menu-head">
+        Setting parameters
+      </label>
+      <div class="menu-content">
+        <div class="menu-item">
+          <a href="#c41" class="menu-link">
+            Initial and current values
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c42" class="menu-link">
+            User and factory defaults
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c43" class="menu-link">
+            Save and load parameters
+          </a>
+        </div>
+      </div>
+    </section>
+    <section class="menu">
+      <input type="checkbox" class="menu-head-cb" id="mh5">
+      <label for="mh5" class="menu-head">
+        Setting the scenario
+      </label>
+      <div class="menu-content">
+        <div class="menu-item">
+          <a href="#c51" class="menu-link">
+            item
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c52" class="menu-link">
+            item
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c53" class="menu-link">
+            item
+          </a>
+        </div>
+      </div>
+    </section>
+    <section class="menu">
+      <input type="checkbox" class="menu-head-cb" id="mh6">
+      <label for="mh6" class="menu-head">
+        シミュレーション結果を確認する
+      </label>
+      <div class="menu-content">
+        <div class="menu-item">
+          <a href="#c61" class="menu-link">
+            item
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c62" class="menu-link">
+            item
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c63" class="menu-link">
+            item
+          </a>
+        </div>
+      </div>
+    </section>
+    <section class="menu">
+      <input type="checkbox" class="menu-head-cb" id="mh7">
+      <label for="mh7" class="menu-head">
+        パラメータの詳細を理解する
+      </label>
+      <div class="menu-content">
+        <div class="menu-item">
+          <a href="#c71" class="menu-link">
+            「世界」のパラメータ
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c72" class="menu-link">
+            「移動」のパラメータ
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c73" class="menu-link">
+            「発症機序」のパラメータ
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c74" class="menu-link">
+            「対策」のパラメータ
+          </a>
+        </div>
+        <div class="menu-item">
+          <a href="#c75" class="menu-link">
+            「検査とワクチン」のパラメータ
+          </a>
+        </div>
+      </div>
+    </section>
+  </nav>
+  <div class="contents">
+    <h1>模擬感染ヘルプ</h1>
+    <section class="content">
+      <p>
+        模擬感染は感染症の流行をシミュレーションするソフトウェアです．
+        一つの動き回る点が一人の人間を模しており，
+        感染した個体と感染していない個体が近づくと確率的に感染が起こります．
+        感染した個体は，無症状者として潜伏期間を過ごした後，発症しないまま回復するか，
+        発症して有症状者となり回復もしくは死亡します．
+        有症状者は病院に隔離される場合もあります．
+        また，一度感染して回復した個体，ワクチン接種済みの個体は免疫を獲得し，
+        感染・重症化しづらくなります．
+      </p>
+      <p> 模擬感染では，感染確率や潜伏期間の分布，ワクチンの効果などのパラメータを
+        細かく設定することができます．
+        さらに，時間経過などの条件によってパラメータを変更したり，感染者を増やしたりできる
+        シナリオ機能によって，「感染者が増えたら集会を制限する」といった
+        シミュレーションも可能です．
+        パラメータとシナリオを設定してシミュレーションを開始したら，
+        感染者数や重症度分布の変化を観察しましょう．
+        </p>
+        <p>
+          Please visit our
+          <a href="http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/index.html">
+          Web Site
+          </a>
+          for more detail.
+        </p>
+    <span class="note">This Help was built based on SimEpidemic version 1.9.2(3).</span>
+    </section>
+  <h2>
+        シミュレーションを開始する
+  </h2>
+  <section class="content">
+    <div class="img">
+    <img class="main_img" src="img/main_window.png" alt="">
+    </div>
+  </section>
+  <section class="content">
+    <h2 class="sect-title" id="c11">
+            シミュレーション世界を作成・保存する
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  <section class="content">
+    <h2 class="sect-title" id="c12">
+            ウィンドウを表示する
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  <section class="content">
+    <h2 class="sect-title" id="c13">
+            ウィンドウをタブで開く
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  <h2>
+        アニメーションの表示を変更する
+  </h2>
+  <h2>
+        パラメータを調整する
+  </h2>
+  <section class="content">
+    <h2 class="sect-title" id="c13">
+          初期値と現在値
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  <section class="content">
+    <h2 class="sect-title" id="c13">
+          既定値と出荷既定値
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  <section class="content">
+    <h2 class="sect-title" id="c13">
+          パラメータの保存と読み込み
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  <h2>
+      シナリオを設定する
+  </h2>
+  <h2>
+        シミュレーション結果を確認する
+  </h2>
+  <h2>
+        パラメータの詳細を理解する
+  </h2>
+  <section class="content">
+    <h2 class="sect-title" id="param">
+      「世界」のパラメータ
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  <section class="content">
+    <h2 class="sect-title" id="param">
+            「移動」のパラメータ
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  <section class="content">
+    <h2 class="sect-title" id="param">
+    </h2>
+    <div class="description">
+    </div>
+  </section>
+  </div>
+  </div>
+</body>
+</html>

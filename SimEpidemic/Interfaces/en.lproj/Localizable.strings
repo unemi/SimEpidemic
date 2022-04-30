@@ -18,6 +18,7 @@
 "gatheringSize" = "gatherings size";
 "gatheringDuration" = "gatherings duration";
 "gatheringStrength" = "gatherings strength";
+"regularGatherings" = "regular gatherings";
 "contactTracing" = "contact tracing";
 "testDelay" = "test delay";
 "testInterval" = "test interval";
@@ -30,7 +31,11 @@
 "vaccinePriority" = "priority order";
 "vaccineRegularity" = "priority regularity";
 "vaccineFinalRate" = "final vaccination rate";
-
+"regGatNPP" = "NPP";
+"regGatFrequency" = "Frequency";
+"regGatDuration" = "Duration";
+"regGatSize" = "Size";
+"regGatStrength" = "Strength";
 "PreConditionWord" = "";
 "AnimeStepsFormat" = "Draw in each %ld steps.";
 "HistogramFormat" = "%@\nSamples %ld\nMin %ld, Max %ld\nMedian %ld\nAverage %.2f";

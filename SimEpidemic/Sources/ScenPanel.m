@@ -13,6 +13,7 @@
 #import "StatPanel.h"
 #import "ParamPanel.h"
 #import "VVPanel.h"
+#import "GatPanel.h"
 
 @implementation StatInfo (PredicateExtension)
 - (NSInteger)days { return days; }
@@ -96,12 +97,17 @@ static NSTextField *label_field(NSString *message) {
 	[msg sizeToFit];
 	return msg;
 }
-#define BUTTON_CELL_SIZE {135, 24}
+static void setup_popup_menu(NSPopUpButton *popup, NSInteger n, NSString *(^block)(NSInteger)) {
+ 	NSInteger nItems = popup.numberOfItems, idx = 0;
+	for (; idx < nItems && idx < n; idx ++) [popup itemAtIndex:idx].title = block(idx);
+	for (; idx < nItems; idx ++) [popup removeItemAtIndex:popup.numberOfItems - 1];
+	for (; idx < n; idx ++) [popup addItemWithTitle:block(idx)];
+}
+#define BUTTON_CELL_SIZE {128, 24}
 #define LINEN_CELL_SIZE {30, 24}
-#define CELL_SIZE {346, 24}
+#define CELL_SIZE {504, 24}
 @interface ButtonsCellView : NSTableCellView
 @property (readonly) NSArray<NSButton *> *buttons;
-
 @end
 @implementation ButtonsCellView
 - (instancetype)initWithItem:(ScenarioItem *)pItem titles:(NSArray *)titles {
@@ -122,66 +128,92 @@ static NSTextField *label_field(NSString *message) {
 }
 @end
 
-static NSArray<NSString *> *param_menu_info(void) {
-	static NSString *info[] = {
-		// move
-		@"mass", @"friction", @"avoidance", @"maxSpeed", @"",
-		// pathogenesis
-		@"infectionProberbility", @"infectionDistance",
-	//	@"incubation", @"contagionDelay", @"contagionPeak",
-	//	@"fatality", @"recovery", @"immunity",
-		@"",
-		// measures
-		@"distancingStrength", @"distancingObedience",
-		@"mobilityFrequency", @"mobilityDistance",
-		@"gatheringFrequency", @"gatheringSize", @"gatheringDuration", @"gatheringStrength",
-		@"contactTracing", @"",
-		// tests
-		@"testDelay", @"testProcess", @"testInterval",
-		@"testSensitivity", @"testSpecificity",
-		@"subjectAsymptomatic", @"subjectSymptomatic", @"",
-		@"vaccinePerformRate", @"vaccinePriority", @"vaccineRegularity", @"",
-		@"vaccineFinalRate",
-	nil };
+enum { CatMovement, CatInfection, CatMeasures, CatRegGat, CatTests, CatVax };
+static NSArray<NSString *> *make_menu_info(NSString * const *info) {
+	NSInteger cnt = 0;
+	while (info[cnt] != nil) cnt ++;
+	return [NSArray arrayWithObjects:info count:cnt];
+}
+static NSInteger regGatItemIdx = -1;
+static NSArray<NSString *> *cat_name_info(void) {
+	static NSString *info[] = { @"movement", @"infection", @"measures",
+		@"regularGatherings", @"tests", @"vaccination", nil };
 	static NSArray<NSString *> *array = nil;
 	if (array == nil) {
-		NSInteger cnt = 0;
-		while (info[cnt] != nil) cnt ++;
-		array = [NSArray arrayWithObjects:info count:cnt];
+		array = make_menu_info(info);
+		for (NSInteger i = 0; info[i] != nil; i ++)
+			if ([info[i] isEqualToString:@"regularGatherings"])
+				{ regGatItemIdx = i; break; }
 	}
 	return array;
 }
-static NSArray<NSString *> *vcnPr_menu_info(void) {
-	static NSString *info[] = {
-		@"Random", @"Elder", @"Center", @"Density",
-	nil };
-	static NSArray<NSString *> *array = nil;
-	if (array == nil) {
-		NSInteger cnt = 0;
-		while (info[cnt] != nil) cnt ++;
-		array = [NSArray arrayWithObjects:info count:cnt];
+static NSArray<NSArray<NSString *> *> *param_name_info(void) {
+	static NSString *mvInfo[] = { @"mass", @"friction", @"avoidance", @"maxSpeed", nil },
+	*ptInfo[] = { @"infectionProberbility", @"infectionDistance", nil },
+	*msInfo[] = { @"distancingStrength", @"distancingObedience",
+		@"mobilityFrequency", @"mobilityDistance",
+		@"gatheringFrequency", @"gatheringSize", @"gatheringDuration", @"gatheringStrength",
+		@"contactTracing", nil },
+	*rgInfo[] = { @"regGatNPP", @"regGatFrequency", @"regGatDuration",
+		@"regGatSize", @"regGatStrength", nil },
+	*tsInfo[] = { @"testDelay", @"testProcess", @"testInterval",
+		@"testSensitivity", @"testSpecificity",
+		@"subjectAsymptomatic", @"subjectSymptomatic", nil },
+	*vxInfo[] = { @"vaccinePerformRate", @"vaccinePriority", @"vaccineRegularity",
+		@"vaccineFinalRate", nil };
+	static NSString * const *prmNames[] = { mvInfo, ptInfo, msInfo, rgInfo, tsInfo, vxInfo, nil };
+	static NSArray<NSArray<NSString *> *> *arrays = nil;
+	if (arrays == nil) {
+		NSInteger nCats = 0; while (prmNames[nCats] != nil) nCats ++;
+		NSArray<NSString *> *arrs[nCats];
+		for (NSInteger i = 0; i < nCats; i ++) {
+			NSInteger nItems = 0;
+			for (NSString * const *p = prmNames[i]; *p != nil; p ++) nItems ++;
+			arrs[i] = [NSArray arrayWithObjects:prmNames[i] count:nItems];
+		}
+		arrays = [NSArray arrayWithObjects:arrs count:nCats];
 	}
+	return arrays;
+}
+static NSArray<NSString *> *reg_gat_keys(void) {
+	static NSArray<NSString *> *array = nil;
+	if (array == nil) array = @[@"npp", @"freq", @"duration", @"size", @"strength"];
+	return array;
+}
+static NSArray<NSString *> *vcnPr_menu_info(void) {
+	static NSString *info[] = { @"Random", @"Elder", @"Center", @"Density", nil };
+	static NSArray<NSString *> *array = nil;
+	if (array == nil) array = make_menu_info(info);
 	return array;
 }
 static void make_popUpMenu(NSPopUpButton *popUp, NSArray<NSString *> *titles) {
 	for (NSString *title in titles) {
-		if (title.length == 0)
-			[popUp.menu addItem:NSMenuItem.separatorItem];
+		if (title.length == 0) [popUp.menu addItem:NSMenuItem.separatorItem];
 		else [popUp addItemWithTitle:NSLocalizedString(title, nil)];
 	}
 }
 typedef enum {
 	SPTypeScalar, SPTypeDistribution, SPTypeVaxScalar, SPTypeVaxPriority,
-	SPTypeVaxFnlRt
+	SPTypeVaxFnlRt, SPTypeRegGathering
 } ScenParameterType;
+typedef struct { unsigned char cat, name; } ParamMenuIndex;
 
-@interface ParamItem : ScenarioItem
-@property NSInteger index;
+@interface ParamItem : ScenarioItem <NSMenuItemValidation> {
+	NSMenuItem *regGatItem;
+}
+@property ParamMenuIndex index;
 @property DistInfo distInfo;
-@property NSInteger vcnType, priority, ageSpanIdx;
+@property NSInteger vcnType, priority, ageSpanIdx, gatIndex;
 - (void)chooseVcnType:(NSPopUpButton *)sender;
 - (void)choosePriority:(NSPopUpButton *)sender;
 - (void)chooseAgeSpan:(NSPopUpButton *)sender;
+- (void)chooseGat:(NSPopUpButton *)sender;
+@end
+
+@interface GatNamePopUpButton : NSPopUpButton {
+	id ntfObserver;
+}
+@property (weak) World *world;
 @end
 
 @interface ParameterCellView : NSTableCellView {
@@ -189,9 +221,26 @@ typedef enum {
 	ParamItem * __weak item;
 	NSTextField *label, *transLabel, *daysUnitLabel;
 }
-@property (readonly) NSPopUpButton *namePopUp, *vcnTypePopUp, *vcnPriorityPopUp, *vcnAgeSpanPopUp;
+@property (readonly) NSPopUpButton *categoryPopUp, *namePopUp,
+	*vcnTypePopUp, *vcnPriorityPopUp, *vcnAgeSpanPopUp;
+@property (readonly) GatNamePopUpButton *gatNamePopUp;
 @property (readonly) NSButton *distBtn;
 @property (readonly) NSTextField *digits, *days;
+- (void)adjustGatNamePopUp;
+@end
+@implementation GatNamePopUpButton
+- (void)viewDidMoveToWindow {
+	if (self.window != nil) {
+		ParameterCellView *view = (ParameterCellView *)self.superview;
+		ntfObserver = [NSNotificationCenter.defaultCenter addObserverForName:nnRegGatChanged
+			object:_world queue:nil usingBlock:^(NSNotification * _Nonnull note) {
+			[view adjustGatNamePopUp];
+		}];
+	} else if (ntfObserver != nil) {
+		[NSNotificationCenter.defaultCenter removeObserver:ntfObserver];
+		ntfObserver = nil;
+	}
+}
 @end
 
 @implementation ParameterCellView
@@ -201,8 +250,11 @@ typedef enum {
 	world = wd;
 	item = itm;
 	set_subview((label = label_field(@"Parameters")), self, YES);
+	_categoryPopUp = NSPopUpButton.new;
+	make_popUpMenu(_categoryPopUp, cat_name_info());
+	set_subview(_categoryPopUp, self, YES);
 	_namePopUp = NSPopUpButton.new;
-	make_popUpMenu(_namePopUp, param_menu_info());
+	make_popUpMenu(_namePopUp, param_name_info()[0]);
 	set_subview(_namePopUp, self, YES);
 	set_subview(label_field(@"⇐"), self, YES);
 	_digits = NSTextField.new;
@@ -227,22 +279,41 @@ typedef enum {
 	[self addSubview:ctrl];
 }
 - (void)showArgControl:(NSControl *)ctrl {
-	[self showControl:ctrl among:(_vcnPriorityPopUp == nil)?
-		@[_digits, _distBtn] : @[_digits, _distBtn, _vcnPriorityPopUp]];
+	NSMutableArray *ma = [NSMutableArray arrayWithArray:@[_digits, _distBtn]];
+	if (_vcnPriorityPopUp != nil) [ma addObject:_vcnPriorityPopUp];
+	[self showControl:ctrl among:ma];
 }
 - (void)showLabelControl:(NSControl *)ctrl {
 	NSMutableArray *ma = [NSMutableArray arrayWithObject:label];
 	if (_vcnTypePopUp != nil) [ma addObject:_vcnTypePopUp];
 	if (_vcnAgeSpanPopUp != nil) [ma addObject:_vcnAgeSpanPopUp];
+	if (_gatNamePopUp != nil) [ma addObject:_gatNamePopUp];
 	[self showControl:ctrl among:ma];
 }
-static NSPopUpButton *make_mini_popup(NSRect xFrame, NSRect yFrame) {
-	NSPopUpButton *popup = [NSPopUpButton.alloc initWithFrame:
-		(NSRect){xFrame.origin.x, yFrame.origin.y, xFrame.size.width, yFrame.size.height}];
+static NSPopUpButton *setup_mini_popup(
+	NSRect xFrame, NSRect yFrame, NSPopUpButton *(^creator)(NSRect)) {
+	NSPopUpButton *popup = creator(
+		(NSRect){xFrame.origin.x, yFrame.origin.y, xFrame.size.width, yFrame.size.height});
 	popup.bezelStyle = NSBezelStyleRoundRect;
 	popup.controlSize = NSControlSizeSmall;
 	popup.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
 	return popup;
+}
+static NSPopUpButton *make_mini_popup(NSRect xFrame, NSRect yFrame) {
+	return setup_mini_popup(xFrame, yFrame, ^(NSRect frame){
+		return [NSPopUpButton.alloc initWithFrame:frame]; });
+}
+static GatNamePopUpButton *make_gat_name_popup(NSRect xFrame, NSRect yFrame) {
+	return (GatNamePopUpButton *)setup_mini_popup(xFrame, yFrame, ^(NSRect frame){
+		return [GatNamePopUpButton.alloc initWithFrame:frame]; });
+}
+- (void)adjustGatNamePopUp {
+	MutableDictArray gatList = world.gatheringsList;
+	if (gatList == nil || gatList.count == 0)
+		{ [_gatNamePopUp removeAllItems]; return; }
+	setup_popup_menu(_gatNamePopUp, gatList.count, ^(NSInteger i) {
+		NSString *name = gatList[i][@"name"];
+		return [name hasPrefix:@"__"]? [NSString stringWithFormat:@"No.%ld", i + 1] : name; } );
 }
 - (void)adjustView:(ScenParameterType)pType {
 	switch (pType) {
@@ -277,9 +348,19 @@ static NSPopUpButton *make_mini_popup(NSRect xFrame, NSRect yFrame) {
 		}
 		[self showLabelControl:_vcnAgeSpanPopUp];
 		break;
+		case SPTypeRegGathering:
+		if (_gatNamePopUp == nil) {
+			_gatNamePopUp = make_gat_name_popup(label.frame, _namePopUp.frame);
+			_gatNamePopUp.target = item;
+			_gatNamePopUp.action = @selector(chooseGat:);
+			_gatNamePopUp.world = world;
+		}
+		[self adjustGatNamePopUp];
+		[self showLabelControl:_gatNamePopUp];
 	}
 	switch (pType) {
 		case SPTypeScalar: case SPTypeVaxScalar: case SPTypeVaxFnlRt:
+		case SPTypeRegGathering:
 		[self showArgControl:_digits];
 		break;
 		case SPTypeDistribution:
@@ -462,14 +543,8 @@ static NSNumberFormatter *absIntFormatter = nil, *percentFormatter;
 }
 - (void)variantListChanged:(NSNotification *)note {
 	World *world = note.object;
-	NSArray<NSMenuItem *> *items = _variantPopUp.itemArray;
-	NSInteger idx = 0;
-	for (; idx < items.count && idx < world.variantList.count; idx ++)
-		items[idx].title = world.variantList[idx][@"name"];
-	for (; idx < items.count; idx ++)
-		[_variantPopUp removeItemAtIndex:_variantPopUp.numberOfItems - 1];
-	for (; idx < world.variantList.count; idx ++)
-		[_variantPopUp addItemWithTitle:world.variantList[idx][@"name"]];
+	setup_popup_menu(_variantPopUp, world.variantList.count,
+		^NSString *(NSInteger idx) { return world.variantList[idx][@"name"]; });
 }
 @end
 
@@ -516,21 +591,32 @@ static void check_images(void) {
 	[super setupButtonView:@[removeImage]];
 	ParameterCellView *view = [ParameterCellView.alloc initWithWorld:scen.world item:self];
 	self.view = view;
-	NSPopUpButton *namePopUp = view.namePopUp;
+	NSPopUpButton *ctPopUp = view.categoryPopUp, *namePopUp = view.namePopUp;
 	NSButton *distBtn = view.distBtn;
-	namePopUp.target = distBtn.target = self;
-	namePopUp.action = @selector(chooseParameter:);
+	ctPopUp.target = namePopUp.target = distBtn.target = self;
+	ctPopUp.action = @selector(chooseCategory:);
+	namePopUp.action = @selector(chooseParameterName:);
 	distBtn.action = @selector(distParamBeginSheet:);
+	regGatItem = [ctPopUp itemAtIndex:regGatItemIdx];
 	view.digits.doubleValue = scen.world.runtimeParamsP->PARAM_F1;
 	view.days.doubleValue = 0.;
 	view.days.delegate = view.digits.delegate = scen;
 	return self;
 }
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
+	if (menuItem == regGatItem) {
+		MutableDictArray gatList = scenario.world.gatheringsList;
+		return gatList != nil && gatList.count > 0;
+	} else return YES;
+}
 - (CGFloat)value { return ((ParameterCellView *)self.view).digits.doubleValue; }
 - (CGFloat)days { return ((ParameterCellView *)self.view).days.doubleValue; }
-- (ScenParameterType)paramType:(NSInteger)index prmIdxReturn:(NSInteger *)prmIdxP {
-	NSString *prmName = param_menu_info()[index];
-	if ([prmName hasPrefix:@"vaccine"]) {
+- (ScenParameterType)paramType:(ParamMenuIndex)index prmIdxReturn:(NSInteger *)prmIdxP {
+	NSString *prmName = param_name_info()[index.cat][index.name];
+	if ((index.cat) == regGatItemIdx) {
+		if (prmIdxP != NULL) *prmIdxP = index.name;
+		return SPTypeRegGathering;
+	} else if ([prmName hasPrefix:@"vaccine"]) {
 		if ([prmName hasSuffix:@"Priority"]) return SPTypeVaxPriority;
 		else if ([prmName hasSuffix:@"FinalRate"]) return SPTypeVaxFnlRt;
 		else {
@@ -543,17 +629,23 @@ static void check_images(void) {
 		return (prmIdx < IDX_D)? SPTypeScalar : SPTypeDistribution;
 	}
 }
-- (void)reviseNameMenuIfNeededTo:(NSInteger)newIndex {
+- (void)reviseNameMenuIfNeededTo:(ParamMenuIndex)newIndex {
+	ParameterCellView *view = (ParameterCellView *)self.view;
+	if (_index.cat != newIndex.cat) {
+		NSArray<NSString *> *titles = param_name_info()[newIndex.cat];
+		setup_popup_menu(view.namePopUp, titles.count,
+			^(NSInteger i) { return NSLocalizedString(titles[i], nil); });
+	}
 	NSUndoManager *ud = scenario.undoManager;
 	if (ud.undoing || ud.redoing) {
-		ParameterCellView *view = (ParameterCellView *)self.view;
-		[view.namePopUp selectItemAtIndex:newIndex];
+		[view.categoryPopUp selectItemAtIndex:newIndex.cat];
+		[view.namePopUp selectItemAtIndex:newIndex.name];
 		[view adjustView:[self paramType:newIndex prmIdxReturn:NULL]];
 	}
 	_index = newIndex;
 }
-- (void)setParamUndoable:(NSInteger)newIndex value:(CGFloat)newValue {
-	NSInteger orgIndex = _index;
+- (void)setParamUndoable:(ParamMenuIndex)newIndex value:(CGFloat)newValue {
+	ParamMenuIndex orgIndex = _index;
 	CGFloat orgValue = self.value;
 	[scenario.undoManager registerUndoWithTarget:self handler:
 		^(ParamItem *target) { [target setParamUndoable:orgIndex value:orgValue]; }];
@@ -564,8 +656,8 @@ static void check_images(void) {
 	((ParameterCellView *)self.view).distBtn.toolTip = [NSString stringWithFormat:
 		@"%.1f, %.1f, %.1f", _distInfo.min, _distInfo.max, _distInfo.mode];
 }
-- (void)setDistUndoable:(NSInteger)newIndex value:(DistInfo)newValue {
-	NSInteger orgIndex = _index;
+- (void)setDistUndoable:(ParamMenuIndex)newIndex value:(DistInfo)newValue {
+	ParamMenuIndex orgIndex = _index;
 	DistInfo orgValue = _distInfo;
 	[scenario.undoManager registerUndoWithTarget:self handler:
 		^(ParamItem *target) { [target setDistUndoable:orgIndex value:orgValue]; }];
@@ -573,15 +665,13 @@ static void check_images(void) {
 	_distInfo = newValue;
 	[self setToolTipForDistBtn];
 }
-- (void)setVaxPriorityUndoable:(NSInteger)newIndex {
-	NSInteger orgIndex = _index;
+- (void)setVaxPriorityUndoable:(ParamMenuIndex)newIndex {
+	ParamMenuIndex orgIndex = _index;
 	[scenario.undoManager registerUndoWithTarget:self handler:
 		^(ParamItem *target) { [target setVaxPriorityUndoable:orgIndex]; }];
 	[self reviseNameMenuIfNeededTo:newIndex];
 }
-- (void)chooseParameter:(NSPopUpButton *)sender {
-	NSInteger newIndex = sender.indexOfSelectedItem;
-	if (newIndex == _index) return;
+- (void)chooseParameter:(ParamMenuIndex)newIndex {
 	NSInteger prmIdx;
 	ScenParameterType pType = [self paramType:newIndex prmIdxReturn:&prmIdx];
 	[(ParameterCellView *)self.view adjustView:pType];
@@ -601,35 +691,52 @@ static void check_images(void) {
 		case SPTypeVaxFnlRt:
 		[self setParamUndoable:newIndex value:
 			rp->vcnFnlRt[(_ageSpanIdx < 0)? 0 : _ageSpanIdx].rate];
+		break;
+		case SPTypeRegGathering: {
+		NSDictionary *info = scenario.world.gatheringsList[_gatIndex];
+		NSString *key = reg_gat_keys()[prmIdx];
+		[self setParamUndoable:newIndex value:[info[key] doubleValue]];
+		} break;
 	}
+}
+- (void)chooseCategory:(NSPopUpButton *)sender {
+	NSInteger newCat = sender.indexOfSelectedItem;
+	if (newCat == _index.cat) return;
+	if (_index.name > 0)
+		[((ParameterCellView *)self.view).namePopUp selectItemAtIndex:0];
+	[self chooseParameter:(ParamMenuIndex){newCat, 0}];
+}
+- (void)chooseParameterName:(NSPopUpButton *)sender {
+	NSInteger newNameIdx = sender.indexOfSelectedItem;
+	if (newNameIdx == _index.name) return;
+	[self chooseParameter:(ParamMenuIndex){_index.cat, newNameIdx}];
 }
 - (void)distParamBeginSheet:(id)sender {
 	[scenario distParamBySheetWithItem:self value:&_distInfo];
 }
-- (void)chooseVcnType:(NSPopUpButton *)sender {
-	NSInteger orgChoice = _vcnType;
+- (NSInteger)chooseItemInPopUp:(NSPopUpButton *)sender orgChoice:(NSInteger)orgChoice {
 	[scenario.undoManager registerUndoWithTarget:self handler:^(ParamItem *target) {
 		[sender selectItemAtIndex:orgChoice];
-		[target chooseVcnType:sender]; }];
-	_vcnType = sender.indexOfSelectedItem;
+		[sender sendAction:sender.action to:target]; }];
+	return sender.indexOfSelectedItem;
+}
+- (void)chooseVcnType:(NSPopUpButton *)sender {
+	_vcnType = [self chooseItemInPopUp:sender orgChoice:_vcnType];
 }
 - (void)choosePriority:(NSPopUpButton *)sender {
-	NSInteger orgChoice = _priority;
-	[scenario.undoManager registerUndoWithTarget:self handler:^(ParamItem *target) {
-		[sender selectItemAtIndex:orgChoice];
-		[target choosePriority:sender]; }];
-	_priority = sender.indexOfSelectedItem;
+	_priority = [self chooseItemInPopUp:sender orgChoice:_priority];
 }
 - (void)chooseAgeSpan:(NSPopUpButton *)sender {
-	NSInteger orgChoice = _ageSpanIdx + 1;
-	[scenario.undoManager registerUndoWithTarget:self handler:^(ParamItem *target) {
-		[sender selectItemAtIndex:orgChoice];
-		[target chooseAgeSpan:sender]; }];
-	_ageSpanIdx = sender.indexOfSelectedItem - 1;
+	_ageSpanIdx = [self chooseItemInPopUp:sender orgChoice:_ageSpanIdx + 1] - 1;
+}
+- (void)chooseGat:(NSPopUpButton *)sender {
+	_gatIndex = [self chooseItemInPopUp:sender orgChoice:_gatIndex];
 }
 - (NSObject *)scenarioElement {
 	ParameterCellView *view = (ParameterCellView *)self.view;
-	NSString *key = param_menu_info()[view.namePopUp.indexOfSelectedItem];
+	NSInteger catIdx = view.categoryPopUp.indexOfSelectedItem;
+	NSInteger prmIdx = view.namePopUp.indexOfSelectedItem;
+	NSString *key = param_name_info()[catIdx][prmIdx];
 	NSObject *value;
 	CGFloat days = self.days;
 	if ([key hasPrefix:@"vaccine"]) {
@@ -638,6 +745,13 @@ static void check_images(void) {
 		key = [key hasSuffix:@"FinalRate"]? (_ageSpanIdx < 0)? key :
 			[key stringByAppendingFormat:@" %ld", _ageSpanIdx] :
 			[key stringByAppendingFormat:@" %@", view.vcnTypePopUp.titleOfSelectedItem];
+	} else if ([key hasPrefix:@"regGat"]) {
+		NSInteger idx = view.gatNamePopUp.indexOfSelectedItem;
+		MutableDictArray gatList = scenario.world.gatheringsList;
+		if (idx >= 0 && idx < gatList.count)
+			key = [NSString stringWithFormat:@"regGat %@ %@",
+				reg_gat_keys()[prmIdx], gatList[idx][@"name"]];
+		value = @(self.value);
 	} else value = (paramIndexFromKey[key].integerValue < IDX_D)? @(self.value) :
 		@[@(_distInfo.min), @(_distInfo.max), @(_distInfo.mode)];
 	return (days == 0.)? @[key, value] : @[key, value, @(days)];
@@ -1139,6 +1253,8 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 }
 - (void)windowDidLoad {
 	[super windowDidLoad];
+NSTableColumn *tc = [_outlineView tableColumnWithIdentifier:@"Content"];
+tc.width = (NSSize)CELL_SIZE.width;	// for OS's BUG?
 	self.window.alphaValue = panelsAlpha;
 	[_doc setPanelTitle:self.window];
 	removeBtn.toolTip = NSLocalizedString(@"Remove scenario from the simulator", nil);
@@ -1289,9 +1405,6 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 	} else return nil;
 }
 - (ParamItem *)paramItemWithKey:(NSString *)key value:(NSObject *)value days:(NSNumber *)days {
-	ParamItem *item = [ParamItem.alloc initWithScenario:self];
-	ParameterCellView *cView = (ParameterCellView *)item.view;
-	NSPopUpButton *prmPopUp = cView.namePopUp;
 	NSString *vaxName = nil;
 	BOOL isVax = NO, isAgeSpan = NO;
 	NSInteger ageSpanIdx = -1;
@@ -1309,10 +1422,47 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 		}
 		key = newKey;
 	}
-	NSInteger idx = [prmPopUp indexOfItemWithTitle:NSLocalizedString(key, nil)];
-	if (idx == -1) return nil;
-	item.index = idx;
-	[prmPopUp selectItemAtIndex:idx];
+	ParamMenuIndex idx = {0, 0};
+	NSString *gatName = nil;
+	NSArray<NSArray<NSString *> *> *info = param_name_info();
+	if ([key hasPrefix:@"regGat "]) {
+		idx.cat = [cat_name_info() indexOfObject:@"regularGatherings"];
+		NSArray<NSString *> *words = [key componentsSeparatedByString:@" "];
+		idx.name = (words.count > 1)? [reg_gat_keys() indexOfObject:words[1]] : 0;
+		if (words.count > 2) gatName = words[2];
+		else return nil;
+		MutableDictArray info = _world.gatheringsList;
+		if ([gatName hasPrefix:@"__"]) {
+			NSInteger idx = [gatName substringFromIndex:2].integerValue;
+			if (idx < 0 || idx >= info.count) {
+				error_msg([NSString stringWithFormat:
+					@"No regular gathering No.%ld is found.", idx + 1], self.window, NO);
+				return nil;
+			}
+		} else {
+			BOOL found = NO;
+			for (NSDictionary *gatItem in info) {
+				NSString *name = gatItem[@"name"];
+				if (name != nil && [gatName isEqualToString:name]) { found = YES; break; }
+			}
+			if (!found) {
+				error_msg([NSString stringWithFormat:
+					@"No regular gathering named %@ is found.", gatName], self.window, NO);
+				return nil;
+			}
+		}
+	} else {
+		BOOL cont = YES;
+		for (; idx.cat < info.count && cont; idx.cat ++)
+			for (idx.name = 0; idx.name < info[idx.cat].count; idx.name ++)
+				if ([key isEqualToString:info[idx.cat][idx.name]]) { cont = NO; break; }
+		if (cont) return nil;
+	}
+	ParamItem *item = [ParamItem.alloc initWithScenario:self];
+	ParameterCellView *cView = (ParameterCellView *)item.view;
+	[item reviseNameMenuIfNeededTo:idx];
+	[cView.categoryPopUp selectItemAtIndex:idx.cat];
+	[cView.namePopUp selectItemAtIndex:idx.name];
 	if (isVax) {
 		if (vaxName != nil) {
 			NSArray<NSDictionary *> *list = _world.vaccineList;
@@ -1335,6 +1485,12 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 	cView.days.doubleValue = (days == nil)? 0. : days.doubleValue;
 	[cView adjustView:[item paramType:idx prmIdxReturn:NULL]];
 	if (isAgeSpan) [cView.vcnAgeSpanPopUp selectItemAtIndex:ageSpanIdx + 1];
+	else if (gatName) {
+		NSPopUpButton *gnPopUp = cView.gatNamePopUp;
+		if ([gatName hasPrefix:@"__"])
+			[gnPopUp selectItemAtIndex:[gatName substringFromIndex:2].integerValue];
+		else [gnPopUp selectItemWithTitle:gatName];
+	}
 	return item;
 }
 - (CondItem *)condItemFromObject:(NSObject *)elm label:(NSString *)label {
@@ -1393,7 +1549,7 @@ NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 		} else if ([elm isKindOfClass:NSDictionary.class]) { // for upper compatibility
 			for (NSString *key in ((NSDictionary *)elm).keyEnumerator) {
 				item = [self paramItemWithKey:key value:((NSDictionary *)elm)[key] days:nil];
-				[ma addObject:item];
+				if (item != nil) [ma addObject:item];
 			}
 			item = nil;
 		} else if ([elm isKindOfClass:NSNumber.class]) { // for upper compatibility
@@ -1459,8 +1615,22 @@ static NSArray *plist_of_all_items(NSArray *itemList) {
 - (IBAction)revertToSaved:(id)sender {
 	if (savedPList != nil) [self setScenarioWithArray:savedPList];
 }
-- (IBAction)copyAsJSON:(id)sender {
+- (IBAction)copy:(id)sender {
 	copy_plist_as_JSON_text(plist_of_all_items(itemList), self.window);
+}
+- (IBAction)paste:(id)sender {
+	NSPasteboard *pb = NSPasteboard.generalPasteboard;
+	NSData *data = [pb dataForType:NSPasteboardTypeString];
+	if (data == nil) return;
+	NSError *error;
+	NSArray *object = [NSJSONSerialization JSONObjectWithData:data
+		options:0 error:&error];
+	if (object == nil) { error_msg(error, self.window, NO); return; }
+	if (![object isKindOfClass:NSArray.class])
+		{ error_msg(@"Property is invalid class.", self.window, NO); return; }
+	[self setScenarioWithArray:object];
+	self->savedPList = object;
+	self->applyBtn.enabled = YES;
 }
 - (IBAction)remove:(id)sender {
 	[_world setScenario:@[] index:0];

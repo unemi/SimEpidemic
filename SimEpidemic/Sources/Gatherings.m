@@ -11,6 +11,12 @@
 #define SURROUND 5
 #define GATHERING_FORCE .5
 
+NSDictionary *item_template(void) {
+	static NSDictionary *template = nil;
+	if (template == nil) template = @{@"minAge":@(0), @"maxAge":@(130),
+		@"npp":@(100), @"freq":@(5), @"duration":@(2), @"size":@(8),@"strength":@(80)};
+	return template;
+}
 void affect_to_agent(Gathering *gat, Agent *a) {
 	if (a->isWarping || a->health == Symptomatic) {
 		a->gathering = NULL;
@@ -42,11 +48,11 @@ void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect) {
 	Agent *agents = self.agents;
 	NSInteger nPop = worldParams.initPop;
 	regGatInfo = NSMutableDictionary.new;
-	for (NSDictionary *item in self.gatheringsList) {
-		NSString *name = item[@"name"];
-		NSNumber *num = item[@"npp"];
-		if (name == nil || num == nil) continue;
-		NSInteger n = num.doubleValue * nPop / 1e5;
+	for (NSMutableDictionary *item in self.gatheringsList) {
+		NSString *name = item[@"name"]; if (name == nil) continue;
+		NSDictionary *initParams = item[@"initParams"];
+		if (initParams != nil) for (NSString *key in initParams) item[key] = initParams[key];
+		NSInteger n = [item[@"npp"] doubleValue] * nPop / 1e5;
 		NSMutableArray *p = [NSMutableArray arrayWithCapacity:n];
 		[self doItExclusivelyForRandomIndexes:NULL n:n block:^(NSInteger i, NSInteger k) {
 			Agent *a = &agents[k];

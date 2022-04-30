@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		230C805D281CCDDE000C19C1 /* Help in Resources */ = {isa = PBXBuildFile; fileRef = 230C805C281CCDDE000C19C1 /* Help */; };
 		2310A3142587486F00201F0C /* SaveDoc.m in Sources */ = {isa = PBXBuildFile; fileRef = 2310A3132587486F00201F0C /* SaveDoc.m */; };
 		2310A31625879C8100201F0C /* DataCompress.m in Sources */ = {isa = PBXBuildFile; fileRef = 235B7E7A2509F6800016090F /* DataCompress.m */; };
 		231E00102461497000BFBE9E /* MyView.m in Sources */ = {isa = PBXBuildFile; fileRef = 231E000F2461497000BFBE9E /* MyView.m */; };
@@ -87,6 +88,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		230C805C281CCDDE000C19C1 /* Help */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Help; sourceTree = "<group>"; };
 		230F7BC52789E8EE0002A563 /* install.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; name = install.sh; path = SimEpidemicSV/install.sh; sourceTree = SOURCE_ROOT; };
 		2310A3122587486F00201F0C /* SaveDoc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SaveDoc.h; sourceTree = "<group>"; };
 		2310A3132587486F00201F0C /* SaveDoc.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SaveDoc.m; sourceTree = "<group>"; };
@@ -243,6 +245,7 @@
 			children = (
 				235D65772462555500487784 /* Sources */,
 				235D65762462552300487784 /* Interfaces */,
+				230C805C281CCDDE000C19C1 /* Help */,
 				232055F82457D2C7005ADCCF /* Assets.xcassets */,
 				232055FD2457D2C7005ADCCF /* Info.plist */,
 				232055FE2457D2C7005ADCCF /* main.m */,
@@ -289,6 +292,8 @@
 				232055F32457D2C6005ADCCF /* Document.m */,
 				23DAF066251737FB00C41E76 /* Gatherings.h */,
 				23DAF067251737FB00C41E76 /* Gatherings.m */,
+				23BC70BF27D8E07A00740BF3 /* GatPanel.h */,
+				23BC70C027D8E07A00740BF3 /* GatPanel.m */,
 				231E000E2461497000BFBE9E /* MyView.h */,
 				231E000F2461497000BFBE9E /* MyView.m */,
 				23D6E02B24D59DDD00A5D604 /* Scripting.h */,
@@ -309,8 +314,6 @@
 				238A8F28246694D300604BF4 /* StatPanel.m */,
 				23A9C7FC26CBDA5C006F7DDE /* VVPanel.h */,
 				23A9C7FD26CBDA5C006F7DDE /* VVPanel.m */,
-				23BC70BF27D8E07A00740BF3 /* GatPanel.h */,
-				23BC70C027D8E07A00740BF3 /* GatPanel.m */,
 				23B4E4E1262E8F3B0058BCCC /* World.h */,
 				23B4E4E2262E8F3B0058BCCC /* World.m */,
 			);
@@ -432,7 +435,7 @@
 		232055E42457D2C5005ADCCF /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1320;
+				LastUpgradeCheck = 1330;
 				ORGANIZATIONNAME = "Tatsuo Unemi";
 				TargetAttributes = {
 					232055EB2457D2C5005ADCCF = {
@@ -484,6 +487,7 @@
 				23F16F6626CC9E5C005CCF2B /* VirusVariantPanel.xib in Resources */,
 				231E25C8247401060005A381 /* loupeMinus.pdf in Resources */,
 				233D9DF324869F9B00498A77 /* Localizable.strings in Resources */,
+				230C805D281CCDDE000C19C1 /* Help in Resources */,
 				232055F92457D2C7005ADCCF /* Assets.xcassets in Resources */,
 				233D9DEA24869F7D00498A77 /* DataPanel.xib in Resources */,
 				233D9DE724869F7300498A77 /* Scenario.xib in Resources */,
@@ -788,6 +792,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				VALID_ARCHS = "$(ARCHS_STANDARD)";
 			};

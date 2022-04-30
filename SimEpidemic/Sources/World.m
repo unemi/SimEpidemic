@@ -266,12 +266,9 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 	} else return nil;
 }
 - (NSString *)varNameFromKey:(NSString *)key vcnTypeReturn:(int *)vcnTypeP {
-	NSScanner *scan = [NSScanner scannerWithString:key];
-	NSString *varName;
-	[scan scanUpToString:@" " intoString:&varName];
-	*vcnTypeP = scan.atEnd? 0 :
-		[self vcnTypeFromName:[key substringFromIndex:scan.scanLocation + 1]];
-	return varName;
+	NSArray<NSString *> *words = [key componentsSeparatedByString:@" "];
+	*vcnTypeP = (words.count < 2)? 0 : [self vcnTypeFromName:words[1]];
+	return (words.count > 0)? words[0] : nil;
 }
 - (void)allocateMemory {
 	[self freeGatherings:gatherings];
@@ -885,6 +882,23 @@ void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat steps) {
 	dp->max += (arr[1].doubleValue - dp->max) / steps;
 	dp->mode += (arr[2].doubleValue - dp->mode) / steps;
 }
+void set_reg_gat_value(MutableDictArray gatInfo, NSString *key, NSNumber *goal, CGFloat steps) {
+//NSLog(@"SRGV %@ %@ %.2f", key, goal, steps);
+	NSArray<NSString *> *words = [key componentsSeparatedByString:@" "];
+	if (words.count < 3) return;
+	NSString *attr = words[1], *name = words[2];
+	NSMutableDictionary *item = nil;
+	if ([name hasPrefix:@"__"]) {
+		NSInteger idx = [name substringFromIndex:2].integerValue;
+		if (idx >= 0 && idx < gatInfo.count) item = gatInfo[idx];
+	} else for (NSMutableDictionary *elm in gatInfo)
+		if ([name isEqualToString:elm[@"name"]]) { item = elm; break; }
+	if (item == nil) return;
+	CGFloat value = [item[attr] doubleValue];
+	value += (goal.doubleValue - value) / steps;
+	item[attr] = @(value);
+//NSLog(@"SRGV %@ %@ <- %.2f", name, attr, value);
+}
 static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority priority) {
 	if ((a->health == Susceptible || (a->health == Asymptomatic && !a->isOutOfField)
 		|| (a->health == Vaccinated && priority == VcnPrBooster))
@@ -926,10 +940,13 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 			CGFloat *targetVar = NULL,
 				stepsLeft = entry[1].doubleValue * worldParams.stepsPerDay - runtimeParams.step;
 			NSNumber *idxNum;
+			BOOL isRegGat = NO;
 			if (![key hasPrefix:@"vaccine"]) {
-				NSInteger idx = paramIndexFromKey[key].integerValue;
-				if (idx < IDX_D) targetVar = &runtimeParams.PARAM_F1 + idx;
-				else targetDist = &runtimeParams.PARAM_D1 + idx - IDX_D;
+				if (!(isRegGat = [key hasPrefix:@"regGat "])) {
+					NSInteger idx = paramIndexFromKey[key].integerValue;
+					if (idx < IDX_D) targetVar = &runtimeParams.PARAM_F1 + idx;
+					else targetDist = &runtimeParams.PARAM_D1 + idx - IDX_D;
+				}
 			} else if ((idxNum = paramIndexFromKey[key]) != nil) {
 				NSInteger idx = idxNum.integerValue;
 				if (idx >= IDX_R && idx < IDX_E)
@@ -941,17 +958,17 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 				VaccinationInfo *vInfo = &runtimeParams.vcnInfo[vcnType];
 				if ([varName hasSuffix:@"Rate"]) targetVar = &vInfo->performRate;
 				else if ([varName hasSuffix:@"Regularity"]) targetVar = &vInfo->regularity;
-				else continue;
 			}
 			if (stepsLeft <= 1.) {
 				[keyToRemove addObject:key];
-				if (targetVar != NULL) *targetVar = entry[0].doubleValue;
-				else if (targetDist != NULL) set_dist_values(targetDist,
-					(NSArray<NSNumber *> *)entry[0], 1.);
-			} else if (targetVar != NULL)
+				stepsLeft = 1.;
+			}
+			if (targetVar != NULL)
 				*targetVar += (entry[0].doubleValue - *targetVar) / stepsLeft;
 			else if (targetDist != NULL)
 				set_dist_values(targetDist, (NSArray<NSNumber *> *)entry[0], stepsLeft);
+			else if (isRegGat)
+				set_reg_gat_value(_gatheringsList, key, entry[0], stepsLeft);
 		}
 #ifndef NOGUI
 		[NSNotificationCenter.defaultCenter postNotificationName:nnParamChanged

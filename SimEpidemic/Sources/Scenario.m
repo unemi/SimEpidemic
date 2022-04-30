@@ -145,6 +145,8 @@ static NSInteger age_span_index_from_key(NSString *key) {
 						}
 					}
 				}
+			} else if ([key hasPrefix:@"regGat "]) {
+				set_reg_gat_value(self.gatheringsList, key, (NSNumber *)md[key], 1.);
 			} else { // parameters other than vaccination
 				if ((idxNum = paramIndexFromKey[key]) == nil) continue;
 				NSInteger idx = idxNum.integerValue;

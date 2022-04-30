@@ -422,27 +422,48 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	}
 	[world setupVaxenAndVariantsFromLists];
 }
+static MutableDictArray correct_gat_list(MutableDictArray list) {
+	NSDictionary *temp = item_template();
+	if (![list isKindOfClass:NSMutableArray.class])
+		list = [NSMutableArray arrayWithArray:list];
+	for (NSInteger i = list.count - 1; i >= 0; i --)
+		if (![list[i] isKindOfClass:NSMutableDictionary.class]) {
+			if ([list[i] isKindOfClass:NSDictionary.class])
+				list[i] = [NSMutableDictionary dictionaryWithDictionary:list[i]];
+			else [list removeObjectAtIndex:i];
+	}
+	for (NSMutableDictionary *item in list) {
+		NSMutableDictionary *initPrm = item[@"initParams"];
+		if (initPrm == nil) initPrm = item[@"initParams"] = NSMutableDictionary.new;
+		for (NSString *key in temp) {
+			if (item[key] == nil) item[key] = temp[key];
+			if (initPrm[key] == nil) initPrm[key] = temp[key];
+		}
+	}
+	return list;
+}
 - (void)organizeGatheringsList:(World *)world {
 	if (loadGatherings != nil) {
 		MutableDictArray list = gatherings_list_from_path(loadGatherings);
-		if (list != nil) world.gatheringsList = list;
+		if (list != nil) world.gatheringsList = correct_gat_list(list);
 	}
 	if (moreGatherings != nil) {
-		if (world.gatheringsList == nil) world.gatheringsList = moreGatherings;
+		if (world.gatheringsList == nil)
+			world.gatheringsList = correct_gat_list(moreGatherings);
 		else {
 			NSMutableDictionary *md = NSMutableDictionary.new;
 			for (NSDictionary *item in world.gatheringsList) {
 				NSString *nm = item[@"name"];
 				if (nm != nil) md[nm] = item;
 			}
-			NSMutableArray *ma = NSMutableArray.new;
-			for (NSDictionary *item in moreGatherings) {
+			MutableDictArray ma = NSMutableArray.new;
+			for (NSMutableDictionary *item in moreGatherings) {
 				NSString *nm = item[@"name"];
-				NSMutableDictionary *dst = md[nm];
+				NSMutableDictionary *dst = (nm != nil)? md[nm] : nil;
 				if (dst != nil) for (NSString *key in item) dst[key] = item[key];
 				else [ma addObject:item];
 			}
-			[world.gatheringsList addObjectsFromArray:ma];
+			[world.gatheringsList addObjectsFromArray:correct_gat_list(ma)];
 		}
 		[world resetRegGatInfo];
 	}

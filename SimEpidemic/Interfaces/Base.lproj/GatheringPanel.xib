@@ -9,6 +9,9 @@
         <customObject id="-2" userLabel="File's Owner" customClass="GatPanel">
             <connections>
                 <outlet property="applyBtn" destination="I1U-mJ-ZVF" id="N2a-1H-Yhe"/>
+                <outlet property="crntPrmRdBtn" destination="EN5-vJ-gfP" id="41g-Wd-fad"/>
+                <outlet property="initPrmRdBtn" destination="3ig-Dl-NXi" id="7Qx-hi-abP"/>
+                <outlet property="pasteBtn" destination="eMH-9R-ngB" id="s0R-b4-BEQ"/>
                 <outlet property="remBtn" destination="1pX-yx-p5M" id="vbp-Sp-gB6"/>
                 <outlet property="saveBtn" destination="1Jx-RG-TMb" id="FT9-iO-wCa"/>
                 <outlet property="tableView" destination="Zv0-ZZ-Sd6" id="dwI-8d-UBf"/>
@@ -17,7 +20,7 @@
         </customObject>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
         <customObject id="-3" userLabel="Application" customClass="NSObject"/>
-        <window title="Regular Gatherings" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="QvC-M9-y7g" customClass="NSPanel">
+        <window title="Regular Gatherings" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="QvC-M9-y7g">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="196" y="240" width="590" height="208"/>
@@ -409,11 +412,11 @@
                             <font key="font" metaFont="system"/>
                         </buttonCell>
                         <connections>
-                            <action selector="removeItem:" target="-2" id="6tB-2P-9M0"/>
+                            <action selector="delete:" target="-2" id="yeY-YX-e6v"/>
                         </connections>
                     </button>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="1Jx-RG-TMb">
-                        <rect key="frame" x="13" y="13" width="88" height="32"/>
+                        <rect key="frame" x="161" y="13" width="88" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <buttonCell key="cell" type="push" title="Save ..." bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="M7O-dF-j1G">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -424,7 +427,7 @@
                         </connections>
                     </button>
                     <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Yrt-Do-dLR">
-                        <rect key="frame" x="99" y="13" width="88" height="32"/>
+                        <rect key="frame" x="247" y="13" width="88" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <buttonCell key="cell" type="push" title="Load ..." bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="57c-2X-qL3">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -432,6 +435,50 @@
                         </buttonCell>
                         <connections>
                             <action selector="loadDocument:" target="-2" id="XwI-lf-kZT"/>
+                        </connections>
+                    </button>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" tag="1" translatesAutoresizingMaskIntoConstraints="NO" id="3ig-Dl-NXi">
+                        <rect key="frame" x="81" y="48.5" width="57" height="20"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <buttonCell key="cell" type="radio" title="Initial" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" state="on" inset="2" id="Mwz-26-Uwj">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="switchInitOrCurrent:" target="-2" id="LgZ-Dd-ZkU"/>
+                        </connections>
+                    </button>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" tag="1" translatesAutoresizingMaskIntoConstraints="NO" id="EN5-vJ-gfP">
+                        <rect key="frame" x="143" y="48.5" width="62" height="20"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <buttonCell key="cell" type="radio" title="Current" bezelStyle="regularSquare" imagePosition="left" alignment="left" controlSize="small" inset="2" id="nkt-HZ-NqZ">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="switchInitOrCurrent:" target="-2" id="TZb-2m-g48"/>
+                        </connections>
+                    </button>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="D9U-h8-La5">
+                        <rect key="frame" x="13" y="13" width="76" height="32"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <buttonCell key="cell" type="push" title="Copy" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="2Ap-dl-7tm">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="copy:" target="-2" id="Qtd-RH-917"/>
+                        </connections>
+                    </button>
+                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="eMH-9R-ngB">
+                        <rect key="frame" x="87" y="13" width="76" height="32"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <buttonCell key="cell" type="push" title="Paste" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="sgy-4u-vuL">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="paste:" target="-2" id="UzC-m7-HP2"/>
                         </connections>
                     </button>
                 </subviews>
