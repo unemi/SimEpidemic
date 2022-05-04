@@ -20,7 +20,7 @@ static NSInteger age_span_index_from_key(NSString *key) {
 	return (idx < 0)? 0 : (idx > MAX_N_AGE_SPANS)? MAX_N_AGE_SPANS - 1 : idx;
 }
 - (void)reviseFinalVaxRate:(CGFloat)newRate index:(NSInteger)spanIdx {
-	VaccineFinalRate *fr = runtimeParams.vcnFnlRt + spanIdx;
+	VaccinationRate *fr = runtimeParams.vcnFnlRt + spanIdx;
 	NSInteger npop = spanNPop[spanIdx], n = round(npop * (newRate - fr->rate));
 	if (n == 0) return;
 	NSInteger *IDs = malloc(sizeof(NSInteger) * npop);
@@ -113,7 +113,7 @@ static NSInteger age_span_index_from_key(NSString *key) {
 					CGFloat newRate = fmax(0., fmin(1., ((NSNumber *)md[key]).doubleValue / 100.));
 					NSInteger spanIdx = age_span_index_from_key(key);
 					if (spanIdx < 0) {
-						VaccineFinalRate *fr = runtimeParams.vcnFnlRt;
+						VaccinationRate *fr = runtimeParams.vcnFnlRt;
 						NSInteger orgN = 0, nSubPop = 0;
 						for (NSInteger idx = 0; idx < nAgeSpans; idx ++)
 							if (fr[idx].rate > 0.) {

@@ -10,7 +10,6 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class Document;
 @interface PopDist : NSWindowController <NSWindowDelegate> {
 	IBOutlet NSTextField *nPointsDgt, *edgeDgt, *centerDgt, *intExpDgt, *gammaDgt;
 	IBOutlet NSSlider *edgeSld, *centerSld, *intExpSld, *gammaSld;

@@ -228,6 +228,12 @@ static NSString *check_paramname_in_chng_prm_elm(NSArray *prop) {
 			[scan scanUpToString:@" " intoString:&suffix];
 			if ([@[@"PerformRate", @"Priority", @"Regularity", @"FinalRate"]
 				indexOfObject:suffix] == NSNotFound) @throw @"unknown parameter name";
+		} else if ([paramName hasPrefix:@"regGat "]) {
+			NSArray<NSString *> *args = [paramName componentsSeparatedByString:@" "];
+			if (args.count < 2) @throw @"invalid parameter form";
+			if ([@[@"minAge", @"maxAge",
+				@"duration", @"freq", @"npp", @"size", @"strength", @"participation"]
+				indexOfObject:args[1]] == NSNotFound) @throw @"unknown parameter name";
 		} else @throw @"unknown parameter name";
 	} @catch (NSString *msg) {
 		return [NSString stringWithFormat:@"\"%@\" is %@.", paramName, msg]; }
@@ -436,8 +442,11 @@ static MutableDictArray correct_gat_list(MutableDictArray list) {
 		NSMutableDictionary *initPrm = item[@"initParams"];
 		if (initPrm == nil) initPrm = item[@"initParams"] = NSMutableDictionary.new;
 		for (NSString *key in temp) {
-			if (item[key] == nil) item[key] = temp[key];
-			if (initPrm[key] == nil) initPrm[key] = temp[key];
+			NSObject *obj = item[key], *objI = initPrm[key];
+			if (obj == nil && objI == nil)
+				item[key] = initPrm[key] = temp[key];
+			else if (obj == nil) item[key] = objI;
+			else if (objI == nil) initPrm[key] = obj;
 		}
 	}
 	return list;

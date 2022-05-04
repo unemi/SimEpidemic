@@ -41,7 +41,7 @@ NSString *fnParamsPList = @"initParams.plist";
 static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*fnTestees = @"testees.gz", *fnWarps = @"warps.gz", *fnGatherings = @"gatherings.gz",
 	*fnGatSpotsFixed = @"gatSpotsFixed.gz", *fnRegGatPoints = @"regGatPoints.gz",
-	*fnRndPopIndexes = @"rndPopIndexes.gz",
+	*fnRndPopIndexes = @"rndPopIndexes.gz", *fnAgentsRnds = @"agentsRandomNumbers.gz",
 	*fnVaccineQueue = @"vaccineQueue.gz",
 	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
 	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
@@ -587,6 +587,9 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	if (rndPopIndexes != nil) md[fnRndPopIndexes] = [NSFileWrapper.alloc
 		initRegularFileWithContents:[[NSData dataWithBytesNoCopy:rndPopIndexes
 			length:sizeof(NSInteger) * worldParams.initPop freeWhenDone:NO] zippedData]];
+	md[fnAgentsRnds] = [NSFileWrapper.alloc
+		initRegularFileWithContents:[[NSData dataWithBytesNoCopy:agentsRnd
+			length:sizeof(CGFloat) * worldParams.initPop freeWhenDone:NO] zippedData]];
 
 	mdata = [NSMutableData dataWithLength:
 		sizeof(VaccineQueueSave) + sizeof(NSInteger) * (nPop * N_VCN_QUEQUE - 1)];
@@ -796,6 +799,15 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	rndPopIndexes = realloc(rndPopIndexes, data.length);
 	memcpy(rndPopIndexes, data.bytes, data.length);
 }
+- (BOOL)readAgentsRndFromFileWrapper:(NSFileWrapper *)fw {
+	if (!fw.regularFile) return NO;
+	NSData *data = [fw.regularFileContents unzippedData];
+	if (data.length < sizeof(CGFloat) * worldParams.initPop)
+		@throw @"Data for agentsRnd is too short.";
+	agentsRnd = realloc(agentsRnd, data.length);
+	memcpy(agentsRnd, data.bytes, data.length);
+	return YES;
+}
 #ifdef NOGUI
 - (NSFileWrapper *)fileWrapperOfWorld {
 	NSMutableDictionary *dict = NSMutableDictionary.new;
@@ -850,6 +862,9 @@ static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
 	if ((fw = dict[fnGatSpotsFixed]) != nil) [self readGatheringSpotsFromFileWrapper:fw];
 	if ((fw = dict[fnRegGatPoints]) != nil) [self readRegGatInfoFromFileWrapper:fw info:pDict];
 	if ((fw = dict[fnRndPopIndexes]) != nil) [self readRndPopIndexesFromFileWrapper:fw];
+	BOOL agentRndOK = NO;
+	if ((fw = dict[fnAgentsRnds]) != nil) agentRndOK = [self readAgentsRndFromFileWrapper:fw];
+	if (!agentRndOK) for (NSInteger i = 0; i < worldParams.initPop; i ++) agentsRnd[i] = d_random();
 
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {

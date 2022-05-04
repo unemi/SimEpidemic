@@ -208,8 +208,18 @@ NSBitmapImageRep *make_bm_with_image(NSImage *image) {
 void setup_home_with_map(Agent *agents, WorldParams *wp, NSImage *image) {
 	NSBitmapImageRep *imgRep = make_bm_with_image(image);
 	float *pd = (float *)imgRep.bitmapData;
+	BOOL pdModified = NO;
+	if (wp->popDistMapLog2Gamma != 0.) {
+		pdModified = YES;
+		float *pdOrg = pd;
+		pd = (float *)malloc(sizeof(float) * PopDistMapRes * PopDistMapRes);
+		float gamma = powf(2., wp->popDistMapLog2Gamma);
+		for (NSInteger i = 0; i < PopDistMapRes * PopDistMapRes; i ++)
+			pd[i] = powf(pdOrg[i], gamma);
+	}
 	NSPoint *pts = malloc(sizeof(NSPoint) * wp->initPop);
 	pop_dist_alloc(0, 0, PopDistMapRes, pts, wp->initPop, pd);
+	if (pdModified) free(pd);
 	for (NSInteger i = 0; i < wp->initPop - 1; i ++) {
 		NSInteger j = random() % (wp->initPop - i) + i;
 		if (i != j) { NSPoint p = pts[i]; pts[i] = pts[j]; pts[j] = p; }

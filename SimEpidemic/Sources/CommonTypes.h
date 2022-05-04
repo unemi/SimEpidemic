@@ -72,7 +72,7 @@ typedef struct {
 typedef struct {
 	NSInteger upperAge;
 	CGFloat rate;
-} VaccineFinalRate;
+} VaccinationRate;
 
 typedef struct {
 	CGFloat reproductivity, toxicity;
@@ -108,7 +108,7 @@ typedef struct {
 	TracingOperation trcOpe; // How to treat the contacts, tests or vaccination, or both
 	sint32 trcVcnType;	// vaccine type for tracing vaccination
 	VaccinationInfo vcnInfo[MAX_N_VAXEN];
-	VaccineFinalRate vcnFnlRt[MAX_N_AGE_SPANS];
+	VaccinationRate vcnFnlRt[MAX_N_AGE_SPANS];
 	NSInteger step;
 } RuntimeParams;
 
@@ -116,6 +116,7 @@ typedef struct {
 	NSInteger initPop, worldSize, mesh, stepsPerDay;
 	CGFloat infected, recovered;	// initial ratio in population
 	CGFloat qAsymp, qSymp;	// initial ratio of separation for each health state
+	CGFloat popDistMapLog2Gamma; // log_2 gamma correction for population density map
 	CGFloat gatSpotFixed; // number of fixed gathering spots per population
 	CGFloat avClstrRate, avClstrGran, avTestRate;	// Anti-Vax
 	CGFloat rcvBias, rcvTemp; // coefficients to calculate recovery from age

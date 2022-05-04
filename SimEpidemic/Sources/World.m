@@ -294,6 +294,7 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 		_agents = realloc(_agents, sizeof(Agent) * nPop);
 		vcnQueue = realloc(vcnQueue, sizeof(NSInteger) * nPop * N_VCN_QUEQUE);
 		ageSpanIDs = realloc(ageSpanIDs, sizeof(NSInteger) * nPop);
+		agentsRnd = realloc(agentsRnd, sizeof(CGFloat) * nPop);
 	}
 	memset(_agents, 0, sizeof(Agent) * nPop);
 	if (testQueTail != nil) {
@@ -628,6 +629,7 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 		reset_agent(a, ages[i], &runtimeParams, &worldParams);
 		a->ID = i;
 		a->distancing = (i < nDist);
+		agentsRnd[i] = d_random();
 	}
 	free(ages);
 	[self organizeAgeSpanInfo];
@@ -661,6 +663,7 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 	pconf.susc = nPop - nn;
 	NSInteger *ibuf = malloc(sizeof(NSInteger) * nPop);
 	for (NSInteger i = 0; i < nPop; i ++) ibuf[i] = i;
+	CGFloat imnMaxDur = runtimeParams.imnMaxDur;
 	[self doItExclusivelyForRandomIndexes:ibuf n:nn block:^(NSInteger i, NSInteger idx) {
 		Agent *a = &ags[idx];
 		if (i < pconfp->asym) {
@@ -674,6 +677,7 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 			a->virusVariant = 0;
 		} else {
 			a->health = Recovered;
+			a->imExpr = d_random() * imnMaxDur;
 			a->daysInfected = d_random() * a->imExpr;
 			a->virusVariant = 0;
 		}

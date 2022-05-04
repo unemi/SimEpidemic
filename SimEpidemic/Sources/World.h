@@ -70,6 +70,7 @@ typedef struct {
 	NSInteger *rndPopIndexes, rndPopOffset;
 	NSData *gatSpotsFixed;
 	NSMutableDictionary<NSString *, NSMutableArray *> *regGatInfo;
+	CGFloat *agentsRnd;
 }
 @property LoopMode loopMode;
 @property NSInteger stopAtNDays;

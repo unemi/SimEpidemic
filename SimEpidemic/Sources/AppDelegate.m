@@ -204,6 +204,7 @@ ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"initialRecovered", {.f = { 0., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineAsymptomatic", {.f = { 20., 0., 100.}}},
 	{ ParamTypeRate, @"quarantineSymptomatic", {.f = { 50., 0., 100.}}},
+	{ ParamTypeRate, @"popDistMapLog2Gamma", {.f = { 0., -3., 3.}}},
 	{ ParamTypeRate, @"gatheringSpotFixed", {.f = { 0., 0., 100.}}},
 //	{ ParamTypeRate, @"vaccineAntiRate", {.f = { 30., 0., 100.}}},
 	{ ParamTypeRate, @"antiVaxClusterRate", {.f = { 60., 0., 100.}}},
@@ -227,7 +228,7 @@ ParamInfo paramInfo[] = {
 
 	{ ParamTypeNone, nil }
 };
-static VaccineFinalRate defaultVaxFnlRt[MAX_N_AGE_SPANS] = {
+static VaccinationRate defaultVaxFnlRt[MAX_N_AGE_SPANS] = {
 	{2, 0.}, {12, 0.}, {15, .9}, {20, .7}, {50, .8}, {65, .85}, {200, .9},
 	{-1, 0.}
 };
@@ -268,7 +269,7 @@ static void add_vax_info(NSMutableDictionary *md, VaccinationInfo *vp) {
 	}
 	if (ma.count > 0) md[keyVaccinationInfo] = ma;
 }
-static void add_final_vax(NSMutableDictionary *md, VaccineFinalRate *vp) {
+static void add_final_vax(NSMutableDictionary *md, VaccinationRate *vp) {
 	NSMutableArray *ma = NSMutableArray.new;
 	for (NSInteger idx = 0; idx < MAX_N_AGE_SPANS; idx ++) {
 		[ma addObjectsFromArray:@[@(vp[idx].upperAge), @(vp[idx].rate * 100.)]];
@@ -499,7 +500,7 @@ static NSInteger
 	defaultRuntimeParams.vcnInfo[1].priority = VcnPrNone;
 	NSInteger upper = 0;
 	for (NSInteger i = 0; i < MAX_N_AGE_SPANS; i ++) {
-		if (upper < 0) defaultVaxFnlRt[i] = (VaccineFinalRate){-1, 0.};
+		if (upper < 0) defaultVaxFnlRt[i] = (VaccinationRate){-1, 0.};
 		else if (defaultVaxFnlRt[i].upperAge > 150) upper = -1;
 	}
 	memcpy(defaultRuntimeParams.vcnFnlRt, defaultVaxFnlRt, sizeof(defaultVaxFnlRt));

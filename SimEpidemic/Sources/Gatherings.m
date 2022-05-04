@@ -14,7 +14,8 @@
 NSDictionary *item_template(void) {
 	static NSDictionary *template = nil;
 	if (template == nil) template = @{@"minAge":@(0), @"maxAge":@(130),
-		@"npp":@(100), @"freq":@(5), @"duration":@(2), @"size":@(8),@"strength":@(80)};
+		@"npp":@(100), @"freq":@(5), @"duration":@(2), @"size":@(8),@"strength":@(80),
+		@"participation":@(50)};
 	return template;
 }
 void affect_to_agent(Gathering *gat, Agent *a) {
@@ -81,8 +82,7 @@ void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect) {
 	Agent **pmap = self.Pop;
 	for (NSInteger ix = left; ix < right; ix ++)
 		for (Agent *a = pmap[row + ix]; a; a = a->next)
-			if (a->health != Symptomatic && (test == nil || test(a)) &&
-				d_random() < modified_prob(a->gatFreq, &runtimeParams.gatFreq) / 100.) {
+			if (a->health != Symptomatic && test(a)) {
 				[agents addObject:@(a->ID)];
 				a->gathering = gat;
 			}
@@ -131,7 +131,9 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 			self.agents[random() % wp->initPop].orgPt;
 	if (wp->wrkPlcMode == WrkPlcCentered) gat->size *= centered_bias((CGPoint){
 		gat->p.x / wSize * 2. - 1., gat->p.y / wSize * 2. - 1. }) * M_SQRT2;
-	[self collectParticipants:gat test:nil];
+	DistInfo *prmGatFreq = &runtimeParams.gatFreq;
+	[self collectParticipants:gat test:^BOOL(Agent *a)
+		{ return d_random() < modified_prob(a->gatFreq, prmGatFreq) / 100.; }];
 #ifndef NOGUI
 	gat->type = 0;
 #endif
@@ -140,6 +142,7 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 	CGFloat size = [info[@"size"] doubleValue],
 		duration = [info[@"duration"] doubleValue],
 		strength = [info[@"strength"] doubleValue],
+		joinRate = [info[@"participation"] doubleValue] / 100.,
 		minAge, maxAge;
 	NSInteger n = [info[@"n"] integerValue];
 	NSNumber *num;
@@ -154,8 +157,12 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 		gat->duration = duration;
 		gat->strength = strength;
 		gat->p = ptEnm.nextObject.pointValue;
-		[self collectParticipants:gat test:^BOOL(Agent *a)
-			{ return a->age >= minAge && a->age <= maxAge; }];
+		CGFloat *rndP = agentsRnd;
+		[self collectParticipants:gat test:^BOOL(Agent *a) {
+			return a->age >= minAge && a->age <= maxAge && rndP[a->ID] < joinRate; }];
+#ifdef DEBUG
+	printf("%s %ld\n", [(NSString *)info[@"name"] UTF8String], gat->nAgents);
+#endif
 #ifndef NOGUI
 		gat->type = gatType;
 #endif

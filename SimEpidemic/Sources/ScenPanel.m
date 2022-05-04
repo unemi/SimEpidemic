@@ -177,7 +177,8 @@ static NSArray<NSArray<NSString *> *> *param_name_info(void) {
 }
 static NSArray<NSString *> *reg_gat_keys(void) {
 	static NSArray<NSString *> *array = nil;
-	if (array == nil) array = @[@"npp", @"freq", @"duration", @"size", @"strength"];
+	if (array == nil) array =
+		@[@"npp", @"freq", @"duration", @"size", @"strength", @"participation"];
 	return array;
 }
 static NSArray<NSString *> *vcnPr_menu_info(void) {
@@ -337,7 +338,7 @@ static GatNamePopUpButton *make_gat_name_popup(NSRect xFrame, NSRect yFrame) {
 			_vcnAgeSpanPopUp = make_mini_popup(label.frame, _namePopUp.frame);
 			[_vcnAgeSpanPopUp addItemWithTitle:NSLocalizedString(@"Subj.", nil)];
 			NSInteger low = 0;
-			for (VaccineFinalRate *fr = world.initParamsP->vcnFnlRt; fr->upperAge < 150; fr ++) {
+			for (VaccinationRate *fr = world.initParamsP->vcnFnlRt; fr->upperAge < 150; fr ++) {
 				[_vcnAgeSpanPopUp addItemWithTitle:[NSString stringWithFormat:
 					@"%ld - %ld", low, fr->upperAge]];
 				low = fr->upperAge + 1;

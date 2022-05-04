@@ -173,6 +173,7 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	[dDigitW adjustDigitsToCurrentValue];
 	[self adjustVcnInfoControls:0];
 	[wrkPlcModePopUp selectItemAtIndex:wp->wrkPlcMode];
+	popDistGammaDgt.enabled = popDistGammaSld.enabled = (wp->wrkPlcMode >= WrkPlcCentered);
 	vaxFnlRtHelpTxt.hidden = targetParams == world.runtimeParamsP;
 	nAgeSpans = 0;
 	for (; nAgeSpans < MAX_N_AGE_SPANS; nAgeSpans ++)
@@ -272,10 +273,12 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		DDGT(gatFreqMinDgt, gatFreqMaxDgt, gatFreqModeDgt)];
 	iDigits = @[initPopDgt, worldSizeDgt, meshDgt];
 	iSteppers = @[initPopStp, worldSizeStp, meshStp];
-	rDigits = @[initInfcDgt, initRecvDgt, initQAsymDgt, initQSympDgt, gatSptFxDgt,
+	rDigits = @[initInfcDgt, initRecvDgt, initQAsymDgt, initQSympDgt,
+		popDistGammaDgt, gatSptFxDgt,
 		vaClstrRtDgt, vaClstrGrDgt, vaTestRtDgt,
 		rcvBiasDgt, rcvTempDgt, rcvUpperDgt, rcvLowerDgt];
-	rSliders = @[initInfcSld, initRecvSld, initQAsymSld, initQSympSld, gatSptFxSld,
+	rSliders = @[initInfcSld, initRecvSld, initQAsymSld, initQSympSld,
+		popDistGammaSld, gatSptFxSld,
 		vaClstrRtSld, vaClstrGrSld, vaTestRtSld,
 		rcvBiasSld, rcvTempSld, rcvUpperSld, rcvLowerSld];
     for (NSInteger idx = 0; idx < fDigits.count; idx ++) {
@@ -364,6 +367,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		[target sendAction:target.action to:target.target];
 	}];
 	wp->wrkPlcMode = newValue;
+	popDistGammaDgt.enabled = popDistGammaSld.enabled = (newValue >= WrkPlcCentered);
 	[self checkUpdate];
 }
 - (IBAction)chooseTracingOperation:(id)sender {
@@ -646,7 +650,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 	} else {
 		NSInteger col = ID.integerValue;
 		if (col < 0 || col >= nAgeSpans) return nil;
-		VaccineFinalRate *fr = &targetParams->vcnFnlRt[col];
+		VaccinationRate *fr = &targetParams->vcnFnlRt[col];
 		view = [tableView makeViewWithIdentifier:@"0" owner:self];
 		if (row > 0) {
 			view.textField.formatter = percentForm;
@@ -682,7 +686,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 }
 - (void)setRateOf:(NSInteger)col value:(CGFloat)newValue {
 	NSTabView *tabV = tabView;
-	VaccineFinalRate *fr = &targetParams->vcnFnlRt[col];
+	VaccinationRate *fr = &targetParams->vcnFnlRt[col];
 	CGFloat orgValue = fr->rate;
 	[undoManager registerUndoWithTarget:vcnTypePopUp handler:^(NSControl *target) {
 		reveal_me_in_tabview(target, tabV);
@@ -696,13 +700,13 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 - (void)changeRate:(NSTextField *)control {
 	NSInteger col = [vaxFnlRtTable columnForView:control.superview] - 1;
 	if (col < 0 || col > MAX_N_AGE_SPANS) return;
-	VaccineFinalRate *fr = &targetParams->vcnFnlRt[col];
+	VaccinationRate *fr = &targetParams->vcnFnlRt[col];
 	CGFloat newA = control.doubleValue;
 	if (fr->rate != newA) [self setRateOf:col value:newA];
 }
 - (void)setUpperAgeOf:(NSInteger)col value:(NSInteger)newValue {
 	NSTabView *tabV = tabView;
-	VaccineFinalRate *fr = &targetParams->vcnFnlRt[col];
+	VaccinationRate *fr = &targetParams->vcnFnlRt[col];
 	NSInteger orgValue = fr->upperAge;
 	[undoManager registerUndoWithTarget:vcnTypePopUp handler:^(NSControl *target) {
 		reveal_me_in_tabview(target, tabV);
@@ -716,7 +720,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 - (void)changeUpperAge:(NSTextField *)control {
 	NSInteger col = [vaxFnlRtTable columnForView:control.superview] - 1;
 	if (col < 0 || col > MAX_N_AGE_SPANS) return;
-	VaccineFinalRate *fr = &targetParams->vcnFnlRt[col];
+	VaccinationRate *fr = &targetParams->vcnFnlRt[col];
 	NSInteger newA = control.integerValue;
 	if (newA <= fr[-1].upperAge || newA >= fr[1].upperAge) return;
 	if (fr->upperAge != newA) [self setUpperAgeOf:col value:newA];
@@ -724,7 +728,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 typedef struct { NSInteger upperAge; CGFloat rate[2]; } VaxAgeSpanInfo;
 - (void)unifyTwoColumns:(NSInteger)col {
 	NSTabView *tabV = tabView;
-	VaccineFinalRate *fr = targetParams->vcnFnlRt;
+	VaccinationRate *fr = targetParams->vcnFnlRt;
 	VaxAgeSpanInfo org = { fr[col].upperAge, fr[col].rate, fr[col + 1].rate };
 	[undoManager registerUndoWithTarget:vcnTypePopUp handler:^(NSControl *target) {
 		reveal_me_in_tabview(target, tabV);
@@ -733,7 +737,7 @@ typedef struct { NSInteger upperAge; CGFloat rate[2]; } VaxAgeSpanInfo;
 	fr[col].rate = (fr[col].rate + fr[col + 1].rate) / 2.;
 	fr[col].upperAge = fr[col + 1].upperAge;
 	for (NSInteger i = col + 1; i < nAgeSpans; i ++) fr[i] = fr[i + 1];
-	fr[-- nAgeSpans] = (VaccineFinalRate){ -1, 0. };
+	fr[-- nAgeSpans] = (VaccinationRate){ -1, 0. };
 	[vaxFnlRtTable reloadDataForRowIndexes:
 		[NSIndexSet indexSetWithIndexesInRange:(NSRange){0, 2}] columnIndexes:
 		[NSIndexSet indexSetWithIndexesInRange:(NSRange){col + 1, nAgeSpans - col + 1}]];
@@ -744,7 +748,7 @@ typedef struct { NSInteger upperAge; CGFloat rate[2]; } VaxAgeSpanInfo;
 		reveal_me_in_tabview(target, tabV);
 		[self unifyTwoColumns:col];
 	}];
-	VaccineFinalRate *fr = targetParams->vcnFnlRt;
+	VaccinationRate *fr = targetParams->vcnFnlRt;
 	for (NSInteger i = (nAgeSpans < MAX_N_AGE_SPANS)? nAgeSpans : MAX_N_AGE_SPANS - 1;
 		i > col; i --) fr[i] = fr[i - 1];
 	fr[col].upperAge = info.upperAge;
@@ -761,7 +765,7 @@ typedef struct { NSInteger upperAge; CGFloat rate[2]; } VaxAgeSpanInfo;
 }
 - (IBAction)splitColumn:(NSMenuItem *)sender {
 	NSInteger col = sender.tag;
-	VaccineFinalRate *fr = targetParams->vcnFnlRt;
+	VaccinationRate *fr = targetParams->vcnFnlRt;
 	if (col >= 0 && col < nAgeSpans) [self splitColumnIntoTwo:col value:(VaxAgeSpanInfo){
 		(((col == 0)? 0 : fr[col - 1].upperAge) +
 		 ((fr[col].upperAge >= 150)? 105 : fr[col].upperAge)) / 2,
