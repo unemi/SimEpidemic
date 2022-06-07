@@ -35,13 +35,12 @@ static NSString *keyFormatVersion = @"formatVersion", *keyIncubation = @"incubat
 	*keyStatType = @"statType", *keyWantDblDay = @"wantDoublingDay",
 	*keyTimeEvoBits = @"timeEvoBits";
 static NSString *keyVariantList = @"variantList", *keyVaccineList = @"vaccineList",
-	*keyGatheringsList = @"gatheringsList", *keyGatheringsRegInfo = @"gatheringsRegInfo",
-	*keyRndPopIdxFull = @"rndPopIdxFull", *keyRndPopIdxOffset = @"rndPopIdxOffset";
+	*keyGatheringsList = @"gatheringsList";
 NSString *fnParamsPList = @"initParams.plist";
 static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*fnTestees = @"testees.gz", *fnWarps = @"warps.gz", *fnGatherings = @"gatherings.gz",
 	*fnGatSpotsFixed = @"gatSpotsFixed.gz", *fnRegGatPoints = @"regGatPoints.gz",
-	*fnRndPopIndexes = @"rndPopIndexes.gz", *fnAgentsRnds = @"agentsRandomNumbers.gz",
+	*fnAgentsRnds = @"agentsRandomNumbers.gz",
 	*fnVaccineQueue = @"vaccineQueue.gz",
 	*fnStatIndexes = @"statIndexes.gz", *fnStatTransit = @"statTransit.gz",
 	*fnStatInfo = @"statInfo.plist", *fnHistograms = @"hitograms.plist",
@@ -438,11 +437,7 @@ MutableDictArray mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
 	}
 	return ma;
 }
-/*	BOOL rndPopIndexesFull;
-	NSInteger *rndPopIndexes, rndPopOffset;
-	NSData *gatSpotsFixed;
-	NSMutableDictionary<NSString *, NSMutableArray *> *regGatInfo;
-**/
+
 @implementation World (SaveDocExtension)
 - (void)addParams:(NSMutableDictionary *)dict {
 	if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
@@ -452,21 +447,8 @@ MutableDictArray mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
 	if (scenario != nil) dict[keyScenario] = [self scenarioPList];
 	dict[keyVariantList] = self.variantList;
 	dict[keyVaccineList] = self.vaccineList;
-	if (self.gatheringsList != nil && self.gatheringsList.count > 0) {
+	if (self.gatheringsList != nil && self.gatheringsList.count > 0)
 		dict[keyGatheringsList] = self.gatheringsList;
-		NSMutableDictionary *md = NSMutableDictionary.new;
-		NSMutableArray *nmList = NSMutableArray.new;
-		for (NSString *name in regGatInfo) {
-			md[name] = @(regGatInfo[name].count);
-			[nmList addObject:name];
-		}
-		if (nmList.count > 0) {
-			md[@"_nameList"] = nmList;
-			dict[keyGatheringsRegInfo] = md;
-		}
-	}
-	dict[keyRndPopIdxFull] = @(rndPopIndexesFull);
-	dict[keyRndPopIdxOffset] = @(rndPopOffset);
 }
 #define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
 z(orgPt); z(daysInfected); z(daysDiseased); z(severity);\
@@ -573,20 +555,24 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	if (gatSpotsFixed != nil) md[fnGatSpotsFixed] = [NSFileWrapper.alloc
 		initRegularFileWithContents:[gatSpotsFixed zippedData]];
 	
-	NSInteger nPoints = 0;
-	for (NSArray *prArr in regGatInfo.objectEnumerator) nPoints += prArr.count;
-	NSDictionary *info = dict[keyGatheringsRegInfo];
-	if (nPoints > 0 && info != nil) {
-		mdata = [NSMutableData dataWithLength:sizeof(NSPoint) * nPoints];
-		NSPoint *pt = (NSPoint *)mdata.mutableBytes;
-		for (NSString *name in (NSArray *)info[@"_nameList"])
-			for (NSValue *value in regGatInfo[name]) *(pt ++) = value.pointValue;
-		md[fnRegGatPoints] = [NSFileWrapper.alloc initRegularFileWithContents:[mdata zippedData]];
+	if (regGatInfo != nil && regGatInfo.count > 0) {
+		NSMutableDictionary *prop = [NSMutableDictionary dictionaryWithCapacity:regGatInfo.count];
+		for (NSString *name in regGatInfo) {
+			NSArray *places = regGatInfo[name];
+			NSMutableArray *ma = [NSMutableArray arrayWithCapacity:places.count];
+			for (NSDictionary *item in places) {
+				NSPoint pt = [(NSValue *)item[@"point"] pointValue];
+				[ma addObject:@{@"point":@[@(pt.x), @(pt.y)], @"member":item[@"member"]}];
+			}
+			prop[name] = ma;
+		}
+		NSError *error;
+		NSData *data = [NSPropertyListSerialization dataWithPropertyList:prop
+			format:NSPropertyListBinaryFormat_v1_0 options:0 error:&error];
+		if (data == nil) @throw error;
+		md[fnRegGatPoints] = [NSFileWrapper.alloc initRegularFileWithContents:[data zippedData]];
 	}
 	
-	if (rndPopIndexes != nil) md[fnRndPopIndexes] = [NSFileWrapper.alloc
-		initRegularFileWithContents:[[NSData dataWithBytesNoCopy:rndPopIndexes
-			length:sizeof(NSInteger) * worldParams.initPop freeWhenDone:NO] zippedData]];
 	md[fnAgentsRnds] = [NSFileWrapper.alloc
 		initRegularFileWithContents:[[NSData dataWithBytesNoCopy:agentsRnd
 			length:sizeof(CGFloat) * worldParams.initPop freeWhenDone:NO] zippedData]];
@@ -658,8 +644,6 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	if (vvLoaded) [self setupVaxenAndVariantsFromLists];
 	if ((seq = dict[keyGatheringsList]) != nil)
 		self.gatheringsList = mutablized_array_of_dicts(seq);
-	if ((num = dict[keyRndPopIdxFull]) != nil) rndPopIndexesFull = num.boolValue;
-	if ((num = dict[keyRndPopIdxOffset]) != nil) rndPopOffset = num.integerValue;
 	return dict;
 }
 #define CP_L(m) a->m = as[i].m
@@ -775,29 +759,25 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	NSData *data = [fw.regularFileContents unzippedData];
 	if (data.length >= sizeof(NSPoint)) gatSpotsFixed = data;
 }
-- (void)readRegGatInfoFromFileWrapper:(NSFileWrapper *)fw info:(NSDictionary *)info {
-	if (!fw.regularFile || info == nil) return;
-	NSArray *nmList = info[@"_nameList"];
-	if (nmList == nil) @throw @"Couldn't find the name list of regular gatherings.";
-	NSData *data = [fw.regularFileContents unzippedData];
-	NSPoint *pt = (NSPoint *)data.bytes;
-	regGatInfo = NSMutableDictionary.new;
-	for (NSString *name in nmList) {
-		NSInteger nPoints = [info[name] integerValue];
-		if (nPoints <= 0) continue;
-		NSMutableArray *ma = [NSMutableArray arrayWithCapacity:nPoints];
-		for (NSInteger i = 0; i < nPoints; i ++, pt ++)
-			[ma addObject:[NSValue valueWithPoint:*pt]];
-		regGatInfo[name] = ma;
-	}
-}
-- (void)readRndPopIndexesFromFileWrapper:(NSFileWrapper *)fw {
+- (void)readRegGatInfoFromFileWrapper:(NSFileWrapper *)fw {
 	if (!fw.regularFile) return;
 	NSData *data = [fw.regularFileContents unzippedData];
-	if (data.length < sizeof(NSInteger) * worldParams.initPop)
-		@throw @"Data for rndPopIndexes is too short.";
-	rndPopIndexes = realloc(rndPopIndexes, data.length);
-	memcpy(rndPopIndexes, data.bytes, data.length);
+	NSError *error;
+	NSDictionary *prop = [NSPropertyListSerialization propertyListWithData:data
+		options:0 format:NULL error:&error];
+	if (prop == nil) @throw error;
+	regGatInfo = NSMutableDictionary.new;
+	for (NSString *name in prop) {
+		NSArray<NSDictionary *> *places = prop[name];
+		NSDictionary *plcArr[places.count];
+		for (NSInteger i = 0;  i < places.count; i ++) {
+			NSDictionary *item = places[i];
+			NSArray<NSNumber *> *ptArr = item[@"point"];
+			plcArr[i] = @{@"member":item[@"member"], @"point":
+				[NSValue valueWithPoint:(NSPoint){ptArr[0].doubleValue, ptArr[1].doubleValue}]};
+		}
+		regGatInfo[name] = [NSArray arrayWithObjects:plcArr count:places.count];
+	}
 }
 - (BOOL)readAgentsRndFromFileWrapper:(NSFileWrapper *)fw {
 	if (!fw.regularFile) return NO;
@@ -860,12 +840,13 @@ static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
 	if ((fw = dict[fnSeverityStats]) != nil) copy_data_from_fw(fw, statInfo.sspData);
 	if ((fw = dict[fnVariantsStats]) != nil) copy_data_from_fw(fw, statInfo.variantsData);
 	if ((fw = dict[fnGatSpotsFixed]) != nil) [self readGatheringSpotsFromFileWrapper:fw];
-	if ((fw = dict[fnRegGatPoints]) != nil) [self readRegGatInfoFromFileWrapper:fw info:pDict];
-	if ((fw = dict[fnRndPopIndexes]) != nil) [self readRndPopIndexesFromFileWrapper:fw];
+	if ((fw = dict[fnRegGatPoints]) != nil) [self readRegGatInfoFromFileWrapper:fw];
 	BOOL agentRndOK = NO;
 	if ((fw = dict[fnAgentsRnds]) != nil) agentRndOK = [self readAgentsRndFromFileWrapper:fw];
-	if (!agentRndOK) for (NSInteger i = 0; i < worldParams.initPop; i ++) agentsRnd[i] = d_random();
-
+	if (!agentRndOK) {
+		if (agentsRnd == NULL) agentsRnd = malloc(sizeof(CGFloat) * worldParams.initPop);
+		for (NSInteger i = 0; i < worldParams.initPop; i ++) agentsRnd[i] = d_random();
+	}
 	NSMutableArray *statProcs = NSMutableArray.new;
 	if ((fw = dict[fnStatInfo]) != nil) [statProcs addObject:^(StatInfo *st) {
 		[st setStatInfoFromPList:plist_from_data(fw.regularFileContents)]; }];
@@ -881,8 +862,7 @@ static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
 	if (statInfo != nil) for (void (^block)(StatInfo *) in statProcs) block(statInfo);
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO;
 	} @catch (NSString *msg) {
-		if (outError != NULL) *outError = [NSError errorWithDomain:@"SimEpi" code:1
-			userInfo:@{NSLocalizedFailureReasonErrorKey:NSLocalizedString(msg, nil)}];
+		if (outError != NULL) *outError = error_obj(1, msg, @"");
 		return NO;
 	}
 	return YES;
@@ -1007,8 +987,7 @@ static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
 	}
 	} @catch (NSError *error) { if (outError != NULL) *outError = error; return NO;
 	} @catch (NSString *msg) {
-		if (outError != NULL) *outError = [NSError errorWithDomain:@"SimEpi" code:1
-			userInfo:@{NSLocalizedFailureReasonErrorKey:NSLocalizedString(msg, nil)}];
+		if (outError != NULL) *outError = error_obj(1, msg, @"");
 		return NO;
 	}
 	return YES;

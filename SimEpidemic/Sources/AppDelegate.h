@@ -43,6 +43,7 @@ extern NSArray<NSString *> *paramKeys;
 extern NSArray<NSNumberFormatter *> *paramFormatters;
 extern NSDictionary<NSString *, NSString *> *paramKeyFromName;
 extern NSDictionary<NSString *, NSNumber *> *paramIndexFromKey;
+extern NSError *error_obj(NSInteger code, NSString *desc, NSString *reason);
 extern NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp);
 extern void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *d);
 extern NSMutableDictionary *param_diff_dict(

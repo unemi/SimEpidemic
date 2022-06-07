@@ -31,13 +31,17 @@
 "vaccinePriority" = "priority order";
 "vaccineRegularity" = "priority regularity";
 "vaccineFinalRate" = "final vaccination rate";
-"regGatNPP" = "NPP";
-"regGatFrequency" = "Frequency";
-"regGatDuration" = "Duration";
-"regGatSize" = "Size";
-"regGatStrength" = "Strength";
+"regGatFrequency" = "frequency";
+"regGatDuration" = "duration";
+"regGatStrength" = "strength";
+"regGatParticipation" = "participation";
 "PreConditionWord" = "";
+"dailyInfection" = "daily infection";
+"dailySymptomatic" = "daily stmptomatic";
+"dailyRecovery" = "daily recovery";
+"dailyDeath" = "daily death";
+"weeklyPositive" = "weekly positive";
+"weeklyPositiveRate" = "weekly positive rate";
 "AnimeStepsFormat" = "Draw in each %ld steps.";
 "HistogramFormat" = "%@\nSamples %ld\nMin %ld, Max %ld\nMedian %ld\nAverage %.2f";
-
 "ParamTransitionPre" = "in";

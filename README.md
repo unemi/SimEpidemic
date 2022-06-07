@@ -2,7 +2,7 @@
 Individual-based Epidemic Simulator (2020-22)
 
 - As a part of [project](http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/) by Tatsuo Unemi, under cooperation with Saki Nawata and Masaaki Miyashita.
-- Supported by Cabinet Secretariat of Japanese Government.
+- Supported by Cabinet Secretariat of Japanese Government and JSPS KAKENHI Grant Number JP21K12064.
 
 This is an individual-based simulator to help understanding the dynamics of epidemic, spread of infectous disease, mainly targetting SARS-CoV-2.
 

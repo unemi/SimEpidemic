@@ -42,7 +42,7 @@ NSString *nnRegGatChanged = @"RegularGatheringsChanged";
 	MutableDictArray gatheringsList;
 	BOOL isCurrentValue;
 	IBOutlet NSTableView *tableView;
-	IBOutlet NSButton *pasteBtn, *remBtn, *saveBtn, *applyBtn,
+	IBOutlet NSButton *copyBtn, *pasteBtn, *remBtn, *saveBtn, *applyBtn,
 		*crntPrmRdBtn, *initPrmRdBtn;
 }
 @end
@@ -66,7 +66,7 @@ NSString *nnRegGatChanged = @"RegularGatheringsChanged";
 		&& (world.gatheringsList != nil || gatheringsList.count > 0);
 }
 - (void)checkSaveBtn {
-    saveBtn.enabled = gatheringsList.count > 0;
+    copyBtn.enabled = saveBtn.enabled = gatheringsList.count > 0;
 }
 - (void)windowDidLoad {
     [super windowDidLoad];
@@ -96,8 +96,10 @@ NSString *nnRegGatChanged = @"RegularGatheringsChanged";
     [self checkApplyBtn];
 }
 - (IBAction)addItem:(id)sender {
-	NSMutableDictionary *item = [NSMutableDictionary dictionaryWithDictionary:item_template()];
-	item[@"initParams"] = [NSMutableDictionary dictionaryWithDictionary:item_template()];
+	NSMutableDictionary *item = [NSMutableDictionary dictionaryWithDictionary:item_template()],
+		*initParams = NSMutableDictionary.new;
+	for (NSString *name in variable_gat_params()) initParams[name] = item[name];
+	item[@"initParams"] = initParams;
 	[self addItems:@[item] atIndexes:[NSIndexSet indexSetWithIndex:gatheringsList.count]];
 }
 - (IBAction)delete:(id)sender {
@@ -129,7 +131,7 @@ NSString *nnRegGatChanged = @"RegularGatheringsChanged";
 		if (k >= 0) error_msg([NSString stringWithFormat:
 			@"\"%@\" is already used for No.%ld.", name, k], self.window, NO);
 		else [self assignObject:name forID:ID inItem:item];
-	} else if (isCurrentValue)
+	} else if (isCurrentValue || ![variable_gat_params() containsObject:ID])
 		[self assignObject:@(sender.doubleValue) forID:ID inItem:item];
 	else {
 		NSMutableDictionary<NSString *, NSNumber *> *initParams = item[@"initParams"];
@@ -153,19 +155,14 @@ NSString *nnRegGatChanged = @"RegularGatheringsChanged";
 		options:NSJSONReadingMutableContainers error:errorp];
 	if (items == nil) return NO;
 	if (![items isKindOfClass:NSArray.class]) {
-		*errorp = [NSError errorWithDomain:@"SimEpi" code:2
-			userInfo:@{NSLocalizedDescriptionKey:
-			NSLocalizedString(@"It is not an array.", nil),
-			NSLocalizedFailureReasonErrorKey:items.class.description}];
+		*errorp = error_obj(2, @"It is not an array.", items.class.description);
 		return NO;
 	}
 	for (NSObject *elm in items) if (![elm isKindOfClass:NSDictionary.class]) {
-		*errorp = [NSError errorWithDomain:@"SimEpi" code:2
-			userInfo:@{NSLocalizedDescriptionKey:
-			NSLocalizedString(@"An element is not a dictionary.", nil),
-			NSLocalizedFailureReasonErrorKey:elm.class.description}];
+		*errorp = error_obj(2, @"An element is not a dictionary.", elm.class.description);
 		return NO;
 	}
+	correct_gathering_list(items);
 	NSIndexSet *idxes = (tableView.selectedRow >= 0)? [tableView selectedRowIndexes] :
 		[NSIndexSet indexSetWithIndexesInRange:(NSRange){gatheringsList.count, items.count}];
 	[self addItems:items atIndexes:idxes];
@@ -212,10 +209,8 @@ NSString *nnRegGatChanged = @"RegularGatheringsChanged";
 		error_msg(error, self.window, NO);
 }
 - (IBAction)apply:(id)sender {
-	NSInteger i = 0;
 	world.gatheringsList = gatheringsList.gatListCopy;
-	for (NSMutableDictionary *item in world.gatheringsList)
-		if (item[@"name"] == nil) item[@"name"] = [NSString stringWithFormat:@"__%04ld", i++];
+	correct_gathering_names(world.gatheringsList);
 	[world resetRegGatInfo];
 	applyBtn.enabled = NO;
     [NSNotificationCenter.defaultCenter postNotificationName:nnRegGatChanged object:world];
@@ -252,8 +247,10 @@ NSString *nnRegGatChanged = @"RegularGatheringsChanged";
 		canReadItemWithDataConformingToTypes:@[NSPasteboardTypeString]];
 }
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
-	if (menuItem.action == @selector(delete:))
-		return tableView.selectedRow >= 0; 
+	if (menuItem.action == @selector(delete:) || menuItem.action == @selector(cut:))
+		return tableView.selectedRow >= 0;
+	else if (menuItem.action == @selector(copy:)
+		|| menuItem.action == @selector(saveDocument:)) return gatheringsList.count > 0;
 	else if (menuItem.action == @selector(paste:)) return
 		[NSPasteboard.generalPasteboard canReadItemWithDataConformingToTypes:
 			@[NSPasteboardTypeString]];
@@ -282,8 +279,8 @@ NSString *nnRegGatChanged = @"RegularGatheringsChanged";
 		NSString *name = rowDict[ID];
 		txtFld.stringValue = (name == nil)? @"---" : name;
 	} else {
-		NSNumber *num = isCurrentValue? rowDict[ID] :
-			(NSDictionary *)(rowDict[@"initParams"])[ID];
+		NSNumber *num = (isCurrentValue || ![variable_gat_params() containsObject:ID])?
+			rowDict[ID] : (NSDictionary *)(rowDict[@"initParams"])[ID];
 		if (num == nil) txtFld.stringValue = @"---";
 		else txtFld.doubleValue = num.doubleValue;
 	}

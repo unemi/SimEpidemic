@@ -429,7 +429,6 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	[world setupVaxenAndVariantsFromLists];
 }
 static MutableDictArray correct_gat_list(MutableDictArray list) {
-	NSDictionary *temp = item_template();
 	if (![list isKindOfClass:NSMutableArray.class])
 		list = [NSMutableArray arrayWithArray:list];
 	for (NSInteger i = list.count - 1; i >= 0; i --)
@@ -438,17 +437,7 @@ static MutableDictArray correct_gat_list(MutableDictArray list) {
 				list[i] = [NSMutableDictionary dictionaryWithDictionary:list[i]];
 			else [list removeObjectAtIndex:i];
 	}
-	for (NSMutableDictionary *item in list) {
-		NSMutableDictionary *initPrm = item[@"initParams"];
-		if (initPrm == nil) initPrm = item[@"initParams"] = NSMutableDictionary.new;
-		for (NSString *key in temp) {
-			NSObject *obj = item[key], *objI = initPrm[key];
-			if (obj == nil && objI == nil)
-				item[key] = initPrm[key] = temp[key];
-			else if (obj == nil) item[key] = objI;
-			else if (objI == nil) initPrm[key] = obj;
-		}
-	}
+	correct_gathering_list(list);
 	return list;
 }
 - (void)organizeGatheringsList:(World *)world {

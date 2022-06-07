@@ -53,16 +53,20 @@
 	unsigned char *outBuf = malloc(CHUNK);
 	strm.avail_in = (uInt)self.length;
 	strm.next_in = (z_const Bytef *)self.bytes;
+	BOOL finished = NO;
 	do {
 		strm.next_out = outBuf + dataLen;
 		strm.avail_out = (restLen = bufLen - dataLen);
 		ret = inflate(&strm, Z_NO_FLUSH);
 		dataLen += restLen - strm.avail_out;
-		if (ret == Z_STREAM_END) break;
-		else if (ret != Z_OK) { free(outBuf); @throw @(ret); }
-		if (ret != Z_STREAM_END && strm.avail_out < CHUNK)
-			outBuf = realloc(outBuf, (bufLen += CHUNK));
-	} while (ret != Z_STREAM_END);
+		switch (ret) {
+			case Z_STREAM_END: finished = YES; break;
+			case Z_OK: finished = strm.avail_in <= 0; break;
+			default: free(outBuf); @throw @(ret);
+		}
+		if (!finished && strm.avail_out < CHUNK / 2)
+			outBuf = realloc(outBuf, (bufLen += CHUNK / 2));
+	} while (!finished);
 	(void)inflateEnd(&strm);
 	NSData *data = [NSData dataWithBytes:outBuf length:dataLen];
 	free(outBuf);

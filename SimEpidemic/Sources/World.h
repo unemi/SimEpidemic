@@ -66,10 +66,9 @@ typedef struct {
 	CGFloat vcnSubjRem[MAX_N_VAXEN];
 	NSInteger spanNPop[MAX_N_AGE_SPANS], ageSpanIdxs[MAX_N_AGE_SPANS], *ageSpanIDs;
 	int nAgeSpans;
-	BOOL rndPopIndexesFull;
-	NSInteger *rndPopIndexes, rndPopOffset;
+	float *popDistMapData;
 	NSData *gatSpotsFixed;
-	NSMutableDictionary<NSString *, NSMutableArray *> *regGatInfo;
+	NSMutableDictionary<NSString *, NSArray *> *regGatInfo;
 	CGFloat *agentsRnd;
 }
 @property LoopMode loopMode;
@@ -109,8 +108,7 @@ typedef struct {
 - (void)resetBoostQueue;
 - (void)resetVaccineQueue;
 - (void)organizeAgeSpanInfo;
--(void)doItExclusivelyForRandomIndexes:(NSInteger *)ibuf n:(NSInteger)n
-	block:(void (^)(NSInteger, NSInteger))block;
+- (void)makeDistribution:(NSPoint *)pts n:(NSInteger)n;
 - (BOOL)resetPop;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
 - (void)discardMemory;

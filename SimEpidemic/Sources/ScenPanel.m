@@ -13,6 +13,7 @@
 #import "StatPanel.h"
 #import "ParamPanel.h"
 #import "VVPanel.h"
+#import "Gatherings.h"
 #import "GatPanel.h"
 
 @implementation StatInfo (PredicateExtension)
@@ -56,16 +57,25 @@ static void set_subview(NSControl *cnt, NSView *parent, BOOL leftToRight) {
 //		cnt.controlSize = [cnt isKindOfClass:NSButton.class]?
 //			NSControlSizeSmall : NSControlSizeMini;
 		cnt.font = [NSFont systemFontOfSize:NSFont.smallSystemFontSize];
-		if ([cnt isKindOfClass:NSPopUpButton.class])
+		if ([cnt isKindOfClass:NSPopUpButton.class]) {
 			((NSButton *)cnt).bezelStyle = NSBezelStyleRoundRect;
+			CGFloat maxW = -1.; NSString *widestTitle = @"";
+			for (NSString *title in ((NSPopUpButton *)cnt).itemTitles) {
+				CGFloat w = [title sizeWithAttributes:
+					@{NSFontAttributeName:cnt.font}].width;
+				if (maxW < w) { maxW = w; widestTitle = title; } 
+			}
+			[((NSPopUpButton *)cnt) selectItemWithTitle:widestTitle];
+		}
 		if (!leftToRight && [cnt isMemberOfClass:NSButton.class])
 			((NSButton *)cnt).bezelStyle = NSBezelStyleInline;
 	}
 	[cnt sizeToFit];
 	if ([cnt isKindOfClass:NSPopUpButton.class]) {
 		NSSize size = cnt.frame.size;
-		size.width -= 28;
+		size.width -= 16;
 		[cnt setFrameSize:size];
+		[((NSPopUpButton *)cnt) selectItemAtIndex:0];
 	}
 	if (leftToRight) {
 		CGFloat rMax = 0.;
@@ -154,8 +164,8 @@ static NSArray<NSArray<NSString *> *> *param_name_info(void) {
 		@"mobilityFrequency", @"mobilityDistance",
 		@"gatheringFrequency", @"gatheringSize", @"gatheringDuration", @"gatheringStrength",
 		@"contactTracing", nil },
-	*rgInfo[] = { @"regGatNPP", @"regGatFrequency", @"regGatDuration",
-		@"regGatSize", @"regGatStrength", nil },
+	*rgInfo[] = { @"regGatFrequency", @"regGatDuration",
+		@"regGatStrength", @"regGatParticipation", nil },
 	*tsInfo[] = { @"testDelay", @"testProcess", @"testInterval",
 		@"testSensitivity", @"testSpecificity",
 		@"subjectAsymptomatic", @"subjectSymptomatic", nil },
@@ -174,12 +184,6 @@ static NSArray<NSArray<NSString *> *> *param_name_info(void) {
 		arrays = [NSArray arrayWithObjects:arrs count:nCats];
 	}
 	return arrays;
-}
-static NSArray<NSString *> *reg_gat_keys(void) {
-	static NSArray<NSString *> *array = nil;
-	if (array == nil) array =
-		@[@"npp", @"freq", @"duration", @"size", @"strength", @"participation"];
-	return array;
 }
 static NSArray<NSString *> *vcnPr_menu_info(void) {
 	static NSString *info[] = { @"Random", @"Elder", @"Center", @"Density", nil };
@@ -695,7 +699,7 @@ static void check_images(void) {
 		break;
 		case SPTypeRegGathering: {
 		NSDictionary *info = scenario.world.gatheringsList[_gatIndex];
-		NSString *key = reg_gat_keys()[prmIdx];
+		NSString *key = variable_gat_params()[prmIdx];
 		[self setParamUndoable:newIndex value:[info[key] doubleValue]];
 		} break;
 	}
@@ -751,7 +755,7 @@ static void check_images(void) {
 		MutableDictArray gatList = scenario.world.gatheringsList;
 		if (idx >= 0 && idx < gatList.count)
 			key = [NSString stringWithFormat:@"regGat %@ %@",
-				reg_gat_keys()[prmIdx], gatList[idx][@"name"]];
+				variable_gat_params()[prmIdx], gatList[idx][@"name"]];
 		value = @(self.value);
 	} else value = (paramIndexFromKey[key].integerValue < IDX_D)? @(self.value) :
 		@[@(_distInfo.min), @(_distInfo.max), @(_distInfo.mode)];
@@ -1226,8 +1230,9 @@ static void adjust_num_menu(NSPopUpButton *pb, NSInteger n) {
 NSLog(@"%@ %@", note.name, um.undoing? @"undo" : um.redoing? @"redo" : @"none");
 #endif
 }
-- (void)adjustControls:(BOOL)undoOrRedo {
-	if (undoOrRedo) appliedCount = -1;
+- (void)adjustControls:(nullable NSUndoManager *)undoManager {
+	if (undoManager != nil && (undoManager.isUndoing || undoManager.isRedoing)) appliedCount = -1;
+	copyBtn.enabled = saveBtn.enabled = itemList.count > 0;
 	removeBtn.enabled = !_world.running && (_world.scenario != nil && _world.scenario.count > 0);
 	applyBtn.enabled = !_world.running && modificationCount != appliedCount;
 }
@@ -1263,7 +1268,7 @@ tc.width = (NSSize)CELL_SIZE.width;	// for OS's BUG?
 	distParamSheet.alphaValue = .9;
 	[self makeDocItemList];
 	appliedCount = modificationCount;
-	[self adjustControls:NO];
+	[self adjustControls:nil];
 }
 - (NSInteger)numberOfItems { return itemList.count; }
 - (void)removeItem:(ScenarioItem *)item {
@@ -1287,6 +1292,7 @@ tc.width = (NSSize)CELL_SIZE.width;	// for OS's BUG?
 	if (new.count > 0) [_outlineView insertItemsAtIndexes:
 		[NSIndexSet indexSetWithIndexesInRange:(NSRange){0, new.count}]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
+	[self adjustControls:_undoManager];
 }
 - (void)checkSelection {
 	NSInteger row = _outlineView.selectedRow;
@@ -1332,6 +1338,7 @@ tc.width = (NSSize)CELL_SIZE.width;	// for OS's BUG?
 	[_outlineView removeItemsAtIndexes:[NSIndexSet indexSetWithIndex:idx]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
 	[self checkSelection];
+	[self adjustControls:_undoManager];
 }
 - (void)insertItem:(ScenarioItem *)item atIndex:(NSInteger)idx {
 	[_undoManager registerUndoWithTarget:self handler:
@@ -1344,6 +1351,7 @@ tc.width = (NSSize)CELL_SIZE.width;	// for OS's BUG?
 	[_outlineView insertItemsAtIndexes:[NSIndexSet indexSetWithIndex:idx]
 		inParent:nil withAnimation:NSTableViewAnimationEffectFade];
 	[self checkSelection];
+	[self adjustControls:_undoManager];
 }
 - (void)addTopLevelItem:(ScenarioItem *)item {
 	NSInteger row = _outlineView.selectedRow, index;
@@ -1425,11 +1433,10 @@ tc.width = (NSSize)CELL_SIZE.width;	// for OS's BUG?
 	}
 	ParamMenuIndex idx = {0, 0};
 	NSString *gatName = nil;
-	NSArray<NSArray<NSString *> *> *info = param_name_info();
 	if ([key hasPrefix:@"regGat "]) {
 		idx.cat = [cat_name_info() indexOfObject:@"regularGatherings"];
 		NSArray<NSString *> *words = [key componentsSeparatedByString:@" "];
-		idx.name = (words.count > 1)? [reg_gat_keys() indexOfObject:words[1]] : 0;
+		idx.name = (words.count > 1)? [variable_gat_params() indexOfObject:words[1]] : 0;
 		if (words.count > 2) gatName = words[2];
 		else return nil;
 		MutableDictArray info = _world.gatheringsList;
@@ -1448,15 +1455,17 @@ tc.width = (NSSize)CELL_SIZE.width;	// for OS's BUG?
 			}
 			if (!found) {
 				error_msg([NSString stringWithFormat:
-					@"No regular gathering named %@ is found.", gatName], self.window, NO);
+					@"No regular gathering named \"%@\" is found.", gatName], self.window, NO);
 				return nil;
 			}
 		}
 	} else {
 		BOOL cont = YES;
-		for (; idx.cat < info.count && cont; idx.cat ++)
-			for (idx.name = 0; idx.name < info[idx.cat].count; idx.name ++)
-				if ([key isEqualToString:info[idx.cat][idx.name]]) { cont = NO; break; }
+		NSArray<NSArray<NSString *> *> *info = param_name_info();
+		for (unsigned char ct = 0; ct < info.count && cont; ct ++)
+			for (idx.name = 0; idx.name < info[ct].count; idx.name ++)
+				if ([key isEqualToString:info[ct][idx.name]])
+					{ idx.cat = ct; cont = NO; break; }
 		if (cont) return nil;
 	}
 	ParamItem *item = [ParamItem.alloc initWithScenario:self];
@@ -1675,7 +1684,23 @@ static NSArray *plist_of_all_items(NSArray *itemList) {
 	[distParamSheet setFrameOrigin:(NSPoint){pt.x - distParamSheet.frame.size.width / 2, pt.y}];
 	[distParamSheet makeKeyAndOrderFront:nil];
 }
+//
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
+	SEL action = menuItem.action;
+	if (action == @selector(delete:) || action == @selector(cut:))
+		return _outlineView.selectedRow >= 0;
+	else if (action == @selector(copy:) || action == @selector(saveDocument:))
+		return itemList.count > 0;
+	else if (action == @selector(paste:))
+		return [NSPasteboard.generalPasteboard
+			canReadItemWithDataConformingToTypes:@[NSPasteboardTypeString]];
+	return YES;
+}
 // NSWindowDelagate methods
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+	pasteBtn.enabled = [NSPasteboard.generalPasteboard
+		canReadItemWithDataConformingToTypes:@[NSPasteboardTypeString]];
+}
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)window {
 	return _undoManager;
 }

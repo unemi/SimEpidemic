@@ -225,6 +225,12 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		memcmp(targetParams, &userDefaultRuntimeParams, sizeof(RuntimeParams)) ||
 		memcmp(world.tmpWorldParamsP, &userDefaultWorldParams, sizeof(WorldParams));
 }
+- (void)adjustAllControlls {
+	for (NSInteger i = 0; i < dDigits.count; i ++)
+		dDigits[i].distInfo = &targetParams->PARAM_D1 + i;
+	[self adjustControls];
+	[self checkUpdate];
+}
 - (void)doubleClickVaxFnlTbl:(id)sender {
 	NSLog(@"doubleClickVaxFnlTbl %ld %ld", vaxFnlRtTable.clickedRow, vaxFnlRtTable.clickedColumn);
 }
@@ -292,10 +298,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		s.minValue = fmt.minimum.doubleValue;
 		s.maxValue = fmt.maximum.doubleValue;
 	}
-	for (NSInteger i = 0; i < dDigits.count; i ++) {
-		dDigits[i].index = i;
-		dDigits[i].distInfo = &targetParams->PARAM_D1 + i;
-	}
+	for (NSInteger i = 0; i < dDigits.count; i ++) dDigits[i].index = i;
     for (NSInteger idx = 0; idx < iDigits.count; idx ++) {
 		NSTextField *d = iDigits[idx];
 		NSStepper *s = iSteppers[idx];
@@ -335,8 +338,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 	clearUDBtn.enabled = hasUserDefaults =
 		memcmp(&userDefaultRuntimeParams, &defaultRuntimeParams, sizeof(RuntimeParams))
 	 || memcmp(&userDefaultWorldParams, &defaultWorldParams, sizeof(WorldParams));
-    [self adjustControls];
-	[self checkUpdate];
+    [self adjustAllControlls];
     [doc setPanelTitle:self.window];
 //
 	gatSptFxDgt.toolTip = gatSptFxSld.toolTip = NSLocalizedString(@"per population", nil);
@@ -490,10 +492,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 				[target performClick:nil];
 		}];
 		targetParams = newTarget;
-		for (NSInteger i = 0; i < dDigits.count; i ++)
-			dDigits[i].distInfo = &targetParams->PARAM_D1 + i;
-		[self adjustControls];
-		[self checkUpdate];
+		[self adjustAllControlls];
 	}
 }
 - (IBAction)saveDocument:(id)sender {
@@ -537,6 +536,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 #endif
 	[undoManager registerUndoWithTarget:self handler:
 		^(ParamPanel *target) { [target copyParamsFromDict:pDiff]; }];
+	[self adjustAllControlls];
 }
 - (IBAction)paste:(id)sender {
 	NSString *str = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];

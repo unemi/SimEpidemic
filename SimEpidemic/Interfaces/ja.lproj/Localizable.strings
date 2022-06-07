@@ -106,11 +106,10 @@
 "gatheringSize" = "集会の大きさ";
 "gatheringDuration" = "集会の長さ";
 "gatheringStrength" = "集会の強さ";
-"regGatNPP" = "人口当たりの数";
 "regGatFrequency" = "頻度";
 "regGatDuration" = "期間";
-"regGatSize" = "大きさ";
 "regGatStrength" = "強さ";
+"regGatParticipation" = "参加率";
 "Value..." = "値...";
 "Scattered" = "散在";
 "Cluster at center" = "中央に集団";

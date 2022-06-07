@@ -37,7 +37,8 @@ extern CGFloat centered_bias(CGPoint p);
 extern void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp);
 extern NSBitmapImageRep *make_pop_dist_bm(void);
 extern NSBitmapImageRep *make_bm_with_image(NSImage *image);
-extern void setup_home_with_map(Agent *agents, WorldParams *wp, NSImage *image);
+extern void pop_dist_alloc(NSInteger x, NSInteger y, NSInteger w,
+	NSPoint *pts, NSInteger n, float *pd);
 extern void reset_for_step(Agent *a);
 extern void add_to_list(Agent *a, Agent **list);
 extern void remove_from_list(Agent *a, Agent **list);

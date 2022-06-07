@@ -319,7 +319,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 				if (![scan scanUpToString:@"?" intoString:&path])
 					@throw bad_request_message(req);
 				if ([path hasSuffix:@"/"])
-					path = [workStr stringByAppendingPathComponent:@"index.html"];
+					path = [path stringByAppendingPathComponent:@"index.html"];
 				if (path.pathExtension.length > 0)
 					{ [self respondFile:[path substringFromIndex:1]]; @throw @0; }
 				[self checkCommand:(command = [path substringFromIndex:1])];

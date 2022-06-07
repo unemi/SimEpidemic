@@ -276,6 +276,17 @@ static void shrink_data_in_half(NSMutableData *data, NSInteger unit) {
 
 	if (steps % stepsPerDay == 0) memset(&transDaily, 0, sizeof(StatData));
 	steps ++;
+	StatData tmpStat;
+	memset(&tmpStat, 0, sizeof(StatData));
+	for (Agent *a = qlist; a; a = a->next) {
+		NSInteger qIdx = (a->health == Symptomatic)? QuarantineSymp : QuarantineAsym;
+		if (a->gotAtHospital) {
+			transDaily.cnt[qIdx] ++;
+			a->gotAtHospital = NO;
+		} else if (a->health == Asymptomatic && a->newHealth == Symptomatic)
+			transDaily.cnt[QuarantineSymp] ++;
+		tmpStat.cnt[qIdx] ++;
+	}
 	NSInteger unitJ = 8;
 	StatData *tmpStats, *tmpTrans;
 	tmpStats = malloc(sizeof(StatData) * unitJ * 2);
@@ -288,22 +299,11 @@ static void shrink_data_in_half(NSMutableData *data, NSInteger unit) {
 		if (j < unitJ - 1) [_world addOperation:block]; else block();
 	}
 	[_world waitAllOperations];
-	StatData tmpStat;
-	memset(&tmpStat, 0, sizeof(StatData));
 	for (NSInteger j = 0; j < unitJ; j ++) for (NSInteger i = 0; i < NIntIndexes; i ++) {
 		tmpStat.cnt[i] += tmpStats[j].cnt[i];
 		transDaily.cnt[i] += tmpTrans[j].cnt[i];
 	}
 	free(tmpStats);
-	for (Agent *a = qlist; a; a = a->next) {
-		NSInteger qIdx = (a->health == Symptomatic)? QuarantineSymp : QuarantineAsym;
-		if (a->gotAtHospital) {
-			transDaily.cnt[qIdx] ++;
-			a->gotAtHospital = NO;
-		} else if (a->health == Asymptomatic && a->newHealth == Symptomatic)
-			transDaily.cnt[QuarantineSymp] ++;
-		tmpStat.cnt[qIdx] ++;
-	}
 
 	for (NSInteger i = 0; i < NIntTestTypes; i ++) {
 		transDaily.cnt[i + NStateIndexes] += testCount[i];

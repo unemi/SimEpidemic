@@ -27,6 +27,11 @@ unsigned long current_time_us(void) {
 	if (startTime < 0) startTime = tv.tv_sec;
 	return (tv.tv_sec - startTime) * 1000000L + tv.tv_usec;
 }
+NSError *error_obj(NSInteger code, NSString *desc, NSString *reason) {
+	return [NSError errorWithDomain:@"SimEpi" code:code
+			userInfo:@{NSLocalizedDescriptionKey:NSLocalizedString(desc, nil),
+			NSLocalizedFailureReasonErrorKey:reason}];
+}
 #ifndef NOGUI
 void error_msg(NSObject *obj, NSWindow *window, BOOL critical) {
 	NSString *message = [obj isKindOfClass:NSString.class]? (NSString *)obj :

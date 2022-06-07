@@ -11,9 +11,11 @@
 "ycz-Ob-bWh.headerCell.title" = "場所数";
 "ycz-Ob-bWh.headerToolTip" = "十万人当たりの開催場所の数";
 "eQk-5D-Cbf.headerCell.title" = "時間";
-"eQk-5D-Cbf.headerToolTip" = "ステップ数";
+"eQk-5D-Cbf.headerToolTip" = "継続時間";
 "HOj-gQ-nZV.headerCell.title" = "サイズ";
 "fK0-wH-Feo.headerCell.title" = "強さ";
+"Din-BG-ZoX.headerCell.title" = "参加率";
+"Din-BG-ZoX.headerToolTip" = "参加対象者中の参加率";
 "Mwz-26-Uwj.title" = "初期値";
 "nkt-HZ-NqZ.title" = "現在値";
 "2Ap-dl-7tm.title" = "コピー";

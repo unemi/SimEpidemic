@@ -12,6 +12,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSDictionary *item_template(void);
+extern NSArray *variable_gat_params(void);
+extern void correct_gathering_names(MutableDictArray list);
+extern void correct_gathering_list(MutableDictArray list);
 extern void affect_to_agent(Gathering *gat, Agent *a);
 #ifndef NOGUI
 extern void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect);
@@ -19,7 +22,6 @@ extern void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect);
 
 @interface World (GatheringExtantion)
 - (void)resetRegGatInfo;
-- (void)reviseRegGatNppOfName:(NSString *)name npp:(CGFloat)npp;
 - (void)manageGatherings;
 @end
 

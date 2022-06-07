@@ -150,41 +150,38 @@ void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp) {
 	a->gatFreq = random_with_corr(&dInfo, ae, rp->gatAct/100.);
 	a->firstDoseDate = -1.;
 }
-static float pop_dist_sum(NSInteger x, NSInteger y, NSInteger w, float *pd) {
-	float s = 0;
-	for (int i = 0; i < w; i ++) for (int j = 0; j < w; j ++)
-		s += pd[(y + i) * PopDistMapRes + x + j];
+#define PDSmallest 4
+static CGFloat pop_dist_sum(NSInteger x, NSInteger y, NSInteger w, float *pd) {
+	CGFloat s = 0;
+	for (NSInteger i = y; i < y + w; i ++) for (NSInteger j = x; j < x + w; j ++)
+		s += pd[i * PopDistMapRes + j];
 	return s;
 }
-static void pop_dist_alloc(NSInteger x, NSInteger y, NSInteger w,
+void pop_dist_alloc(NSInteger x, NSInteger y, NSInteger w,
 	NSPoint *pts, NSInteger n, float *pd) {
-	if (n <= 1) {
-		pts[0] = (NSPoint){x + d_random() * w, y + d_random() * w};
-	} else if (w <= 4) {
+	if (n < 1) { return;
+	} else if (w <= PDSmallest) {
 		for (NSInteger i = 0; i < n; i ++)
 			pts[i] = (NSPoint){x + d_random() * w, y + d_random() * w};
-	} else {
-		NSInteger v = w / 2, m = 0;
-		NSInteger xx[] = {x, x, x + v, x + v}, yy[] = {y, y + v, y, y + v}, nn[4];
-		struct AAndIdx { float a; NSInteger idx; } aa[4];
-		float s = 0.;
-		for (NSInteger i = 0; i < 4; i ++)
-			s += aa[i].a = pop_dist_sum(xx[i], yy[i], v, pd);
-		for (NSInteger i = 0; i < 4; i ++) {
-			aa[i].a = n * aa[i].a / s;
-			m += nn[i] = aa[i].a;
-			aa[i].a -= nn[i];
-			aa[i].idx = i;
+	} else if (n == 1) {
+		CGFloat sx = 0., sy = 0., sd = 0.;
+		for (NSInteger i = y; i < y + w; i ++) for (NSInteger j = x; j < x + w; j ++) {
+			CGFloat d = pd[i * PopDistMapRes + j];
+			sx += d * j; sy += d * i; sd += d;
 		}
-		qsort_b(aa, 4, sizeof(struct AAndIdx), ^int(const void *a, const void *b) {
-			struct AAndIdx *c = (struct AAndIdx *)a, *d = (struct AAndIdx *)b;
-			return (c->a > d->a)? -1 : (c->a < d->a)? 1 : 0;
-		});
-		for (NSInteger i = 0; m < n; m ++, i = (i + 1) % 4) nn[aa[i].idx] ++;
+		pts[0] = (NSPoint){sx / sd + PDSmallest * (d_random() - .5),
+			sy / sd + PDSmallest * (d_random() - .5)};
+	} else {
+		w /= 2;
+		NSInteger xx[] = {x, x, x + w, x + w}, yy[] = {y, y + w, y, y + w};
+		CGFloat s = 0., a[4];
+		for (NSInteger i = 0; i < 4; i ++)
+			s += a[i] = pop_dist_sum(xx[i], yy[i], w, pd);
 		NSPoint *pt = pts;
-		for (NSInteger i = 0; i < 4; i ++) if (nn[i] > 0) {
-			pop_dist_alloc(xx[i], yy[i], v, pt, nn[i], pd);
-			pt += nn[i];
+		for (NSInteger i = 0; i < 4; i ++) {
+			NSInteger m = round(n * a[i] / s);
+			pop_dist_alloc(xx[i], yy[i], w, pt, m, pd);
+			n -= m; s -= a[i]; pt += m;
 		}
 	}
 }
@@ -204,33 +201,6 @@ NSBitmapImageRep *make_bm_with_image(NSImage *image) {
 	else { [NSColor.grayColor setFill]; [NSBezierPath fillRect:rct]; }
 	NSGraphicsContext.currentContext = orgCtx;
 	return imgRep;
-}
-void setup_home_with_map(Agent *agents, WorldParams *wp, NSImage *image) {
-	NSBitmapImageRep *imgRep = make_bm_with_image(image);
-	float *pd = (float *)imgRep.bitmapData;
-	BOOL pdModified = NO;
-	if (wp->popDistMapLog2Gamma != 0.) {
-		pdModified = YES;
-		float *pdOrg = pd;
-		pd = (float *)malloc(sizeof(float) * PopDistMapRes * PopDistMapRes);
-		float gamma = powf(2., wp->popDistMapLog2Gamma);
-		for (NSInteger i = 0; i < PopDistMapRes * PopDistMapRes; i ++)
-			pd[i] = powf(pdOrg[i], gamma);
-	}
-	NSPoint *pts = malloc(sizeof(NSPoint) * wp->initPop);
-	pop_dist_alloc(0, 0, PopDistMapRes, pts, wp->initPop, pd);
-	if (pdModified) free(pd);
-	for (NSInteger i = 0; i < wp->initPop - 1; i ++) {
-		NSInteger j = random() % (wp->initPop - i) + i;
-		if (i != j) { NSPoint p = pts[i]; pts[i] = pts[j]; pts[j] = p; }
-	}
-	CGFloat a = (CGFloat)wp->worldSize / PopDistMapRes;
-	for (NSInteger i = 0; i < wp->initPop; i ++) {
-		NSPoint *pt = &agents[i].orgPt;
-		agents[i].x = pt->x = pts[i].x * a;
-		agents[i].y = pt->y = wp->worldSize - 1 - pts[i].y * a;
-	}
-	free(pts);
 }
 void reset_for_step(Agent *a) {
 	a->fx = a->fy = 0.;

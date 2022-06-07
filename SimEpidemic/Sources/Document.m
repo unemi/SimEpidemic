@@ -120,8 +120,7 @@ NSString *nnScenarioText = @"nnScenatioText", *nnParamChanged = @"nnParamChanged
 	[world setScenario:newScen index:0];
 	[world setupPhaseInfo];
 	[self adjustScenarioText:nil];
-	[scenarioPanel adjustControls:
-		self.undoManager.undoing || self.undoManager.redoing];
+	[scenarioPanel adjustControls:self.undoManager];
 }
 - (void)showCurrentStatistics {
 	StatData *stat = world.statInfo.statistics;
@@ -310,7 +309,7 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 		self->view.needsDisplay = YES;
 		self->startBtn.title = NSLocalizedString(@"Start", nil);
 		self->stepBtn.enabled = YES;
-		[self->scenarioPanel adjustControls:NO];
+		[self->scenarioPanel adjustControls:nil];
 	});
 }
 - (IBAction)startStop:(id)sender {
@@ -319,7 +318,7 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 		startBtn.title = NSLocalizedString(@"Stop", nil);
 		stepBtn.enabled = NO;
 		world.loopMode = LoopRunning;
-		[scenarioPanel adjustControls:NO];
+		[scenarioPanel adjustControls:nil];
 		[vvPanel adjustApplyBtnEnabled];
 		[NSThread detachNewThreadSelector:
 			@selector(runningLoop) toTarget:self withObject:nil];
@@ -327,7 +326,7 @@ void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window) {
 		startBtn.title = NSLocalizedString(@"Start", nil);
 		stepBtn.enabled = YES;
 		world.loopMode = LoopEndByUser;
-		[scenarioPanel adjustControls:NO];
+		[scenarioPanel adjustControls:nil];
 		[vvPanel adjustApplyBtnEnabled];
 	}
 }

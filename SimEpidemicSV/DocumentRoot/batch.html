@@ -18,14 +18,17 @@ function getJobID(ifrm) {
 <h2>Submission</h2>
 <form method="post" action="/submitJob" target="submission">
 	<textarea name="job" rows="10" cols="60">
-{"stopAt":200,"n":4,
+{"stopAt":200,"n":2,
+"gatherings":[
+{"name":"kinderGarden","minAge":3,"maxAge":6,"participation":80,
+  "duration":4,"freq":5,"npp":30,"size":20,"strength":50},
+{"name":"office","minAge":18,"maxAge":65,"participation":50,
+  "duration":12,"freq":5,"npp":3,"size":80,"strength":80}],
 "params":{"vaccinePerformRate":8,"vaccinePriority":0},
-"gatherings":[{"duration":2,"freq":5,"maxAge":130,"minAge":0,"npp":100,"size":8,"strength":80},
-{"duration":2,"freq":5,"maxAge":130,"minAge":0,"name":"School","npp":100,"size":8,"strength":80}],
 "out":[
 	"asymptomatic","symptomatic","recovered","died",
 	"dailyTestPositive","dailyTestNegative","reproductionRate",
-	"incubasionPeriod","recoveryPeriod","fatalPeriod","infects"]}
+	"incubasionPeriod","recoveryPeriod","fatalPeriod","infects","saveState"]}
 	</textarea>
 	<input type="submit" value="投入">
 	</form>

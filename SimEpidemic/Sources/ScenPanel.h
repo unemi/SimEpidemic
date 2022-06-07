@@ -46,10 +46,11 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 - (void)replaceElementWithItem:(CondElmItem *)newElement;
 @end
 
-@interface Scenario : NSWindowController 
-	<NSWindowDelegate, NSTextFieldDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate> {
+@interface Scenario : NSWindowController
+	<NSWindowDelegate, NSTextFieldDelegate, NSMenuItemValidation,
+		NSOutlineViewDataSource, NSOutlineViewDelegate> {
 	IBOutlet NSButton *shiftUpBtn, *shiftDownBtn, *deselectBtn;
-	IBOutlet NSButton *removeBtn, *applyBtn;
+	IBOutlet NSButton *copyBtn, *pasteBtn, *saveBtn, *removeBtn, *applyBtn;
 	IBOutlet NSWindow *distParamSheet;
 	IBOutlet NSTextField *minDgt, *maxDgt, *modeDgt;
 	NSMutableArray<ScenarioItem *> *itemList;
@@ -61,7 +62,7 @@ typedef enum { VarAbsolute, VarNIndividuals, VarRate } VariableType;
 @property (readonly) NSNumberFormatter *intFormatter;
 - (instancetype)initWithDoc:(Document *)dc;
 - (void)makeDocItemList;
-- (void)adjustControls:(BOOL)undoOrRedo;
+- (void)adjustControls:(nullable NSUndoManager *)undoManager;
 - (NSInteger)numberOfItems;
 - (void)removeItem:(ScenarioItem *)item;
 - (CondElmItem *)itemWithPredicate:(NSPredicate *)predicate parent:(ScenarioItem *)parent;
