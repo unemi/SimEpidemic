@@ -903,6 +903,17 @@
                         <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                     </textFieldCell>
                 </textField>
+                <button toolTip="Apple the world size now." verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="7GL-Bs-A63">
+                    <rect key="frame" x="272" y="548" width="73" height="31"/>
+                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    <buttonCell key="cell" type="push" title="Size" bezelStyle="rounded" alignment="center" controlSize="small" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Qcy-F7-efr">
+                        <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                        <font key="font" metaFont="smallSystem"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="applyWorldSize:" target="-2" id="Hc2-7R-JaY"/>
+                    </connections>
+                </button>
             </subviews>
             <constraints>
                 <constraint firstItem="qdF-A5-7L3" firstAttribute="top" secondItem="uH4-r7-iYi" secondAttribute="top" constant="219" id="0DJ-EM-cGO"/>

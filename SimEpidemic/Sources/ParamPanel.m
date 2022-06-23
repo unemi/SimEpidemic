@@ -231,9 +231,9 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 	[self adjustControls];
 	[self checkUpdate];
 }
-- (void)doubleClickVaxFnlTbl:(id)sender {
-	NSLog(@"doubleClickVaxFnlTbl %ld %ld", vaxFnlRtTable.clickedRow, vaxFnlRtTable.clickedColumn);
-}
+//- (void)doubleClickVaxFnlTbl:(id)sender {
+//	NSLog(@"doubleClickVaxFnlTbl %ld %ld", vaxFnlRtTable.clickedRow, vaxFnlRtTable.clickedColumn);
+//}
 #define DDGT(d1,d2,d3) [DistDigits.alloc initWithDigits:@[d1,d2,d3]\
  tabView:tabView callBack:proc]
 - (void)windowDidLoad {
@@ -620,6 +620,9 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 }
 - (IBAction)openVaxAndVariantsPanel:(id)sender {
 	[doc openVaxAndVariantsPanel:sender];
+}
+- (IBAction)applyWorldSize:(id)sender {
+	[world applyWorldSize];
 }
 // tabview delegate
 - (void)tabView:(NSTabView *)tabView willSelectTabViewItem:(NSTabViewItem *)tabViewItem {

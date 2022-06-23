@@ -68,7 +68,7 @@ typedef struct {
 	int nAgeSpans;
 	float *popDistMapData;
 	NSData *gatSpotsFixed;
-	NSMutableDictionary<NSString *, NSArray *> *regGatInfo;
+	NSMutableDictionary<NSString *, NSMutableArray *> *regGatInfo;
 	CGFloat *agentsRnd;
 }
 @property LoopMode loopMode;
@@ -111,6 +111,7 @@ typedef struct {
 - (void)makeDistribution:(NSPoint *)pts n:(NSInteger)n;
 - (BOOL)resetPop;
 - (void)testInfectionOfAgent:(Agent *)agent reason:(TestType)reason;
+- (void)applyWorldSize;
 - (void)discardMemory;
 - (int)variantTypeFromName:(NSString *)varName;
 - (void)addInfected:(NSInteger)n location:(InfecLocation)location variant:(int)variantType;

@@ -123,6 +123,7 @@ typedef struct {
 	CGFloat rcvUpper, rcvLower; // boundaries of period to start recovery
 	CGFloat vcn1stEffc, vcnMaxEffc, vcnEffcSymp;
 	CGFloat	vcnEDelay, vcnEPeriod, vcnEDecay, vcnSvEffc; // standard vaccine efficacy
+	CGFloat infecDistBias;	// coefficient for furthest distance of infection
 	WrkPlcMode wrkPlcMode;
 } WorldParams;
 

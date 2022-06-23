@@ -223,9 +223,10 @@ ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"vaccineMaxEfficacy", {.f = { 90., 0., 100.}}},
 	{ ParamTypeRate, @"vaccineEfficacySymp", {.f = { 95., 0., 100.}}},
 	{ ParamTypeRate, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
-	{ ParamTypeRate, @"vaccineEffectPeriod", {.f = { 200., 50., 500.}}},
-	{ ParamTypeRate, @"vaccineEffectDecay", {.f = { 100., 0., 500.}}},
+	{ ParamTypeRate, @"vaccineEffectPeriod", {.f = { 30., 0., 500.}}},
+	{ ParamTypeRate, @"vaccineEffectDecay", {.f = { 120., 0., 500.}}},
 	{ ParamTypeRate, @"vaccineSvEfficacy", {.f = { 90., 0., 99.}}},
+	{ ParamTypeRate, @"infectionDistanceBias", {.f = { 1.2, 0., 10.}}},
 
 	{ ParamTypeEnum, @"tracingOperation", {.e = {0, 2}}},
 	{ ParamTypeEnum, @"vaccineTypeForTracingVaccination", {.e = {0, MAX_N_VAXEN - 1}}},
@@ -307,7 +308,7 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict) {
 	ParamPointers pp = param_pointers(rp, wp);
 	NSInteger initInfected = -1;
-	for (NSString *key in dict.keyEnumerator) {
+	for (NSString *key in dict) {
 		NSNumber *idxNum = paramIndexFromKey[key];
 		if (idxNum == nil) {
 			if ([key isEqualToString:keyInitialInfected] && wp != NULL) // for upper compatibility.

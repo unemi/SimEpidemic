@@ -30,7 +30,7 @@ static CGFloat penalty[] = {
 	1., // 416
 	1., // 417 Expectation Failed
 };
-#define BLOCK_EXPIRE (3600*24*2)
+#define BLOCK_EXPIRE (3600*24*7)
 #define CODE_MAX 417
 #define DECAY_BY_SEC .99999
 #define BLOCK_TH 3.
@@ -58,8 +58,8 @@ static CGFloat request_penalty(NSString *request) {
 		acceptable = regexp_array(@[@"\\AGET /apple-touch-icon\\.png ",
 			@"\\AGET /apple-touch-icon-precomposed\\.png "]);
 		prohibited = regexp_array(@[@"\\A\\P{Lu}", @"\\A\\p{Lu}\\P{Lu}",
-			@"\\AGET /wp-content/", @"\\APOST /api/", @"\\A\\p{Lu}+ /boaform/",
-			@"\\AGET /php", @"\\AGET /currentsetting.htm",
+			@"\\AGET /wp-content/", @"\\A\\p{Lu}+ /boaform/",
+			@"\\AGET /php", @"\\AGET /solr/",
 			@"\\.php[ \\?]", @"\\.cgi[ \\?]", @"\\AGET /[\\.\\?]"]);
 	}
 	NSRange srcRng = {0, request.length};
@@ -132,7 +132,7 @@ static uint32 *setup_IP_list(char **a) {
 }
 BOOL should_block_it(uint32 ipaddr) {
 	static char *blackIPList[] = {
-		"193.27.229.26", "45.137.23.152", "45.146.165.37",
+		"193.106.191.48", "193.27.229.26", "45.137.23.152", "45.146.165.37",
 		"62.233.50.179", "109.237.103.118", "109.237.103.123", NULL };
 	static char *whiteIPList[] = { "127.0.0.1", NULL };
 	static uint32 *blackList = NULL, *whiteList = NULL; 

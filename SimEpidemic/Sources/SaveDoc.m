@@ -765,7 +765,7 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	NSError *error;
 	NSDictionary *prop = [NSPropertyListSerialization propertyListWithData:data
 		options:0 format:NULL error:&error];
-	if (prop == nil) @throw error;
+	if (prop == nil) return; //@throw error;
 	regGatInfo = NSMutableDictionary.new;
 	for (NSString *name in prop) {
 		NSArray<NSDictionary *> *places = prop[name];
@@ -776,7 +776,7 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 			plcArr[i] = @{@"member":item[@"member"], @"point":
 				[NSValue valueWithPoint:(NSPoint){ptArr[0].doubleValue, ptArr[1].doubleValue}]};
 		}
-		regGatInfo[name] = [NSArray arrayWithObjects:plcArr count:places.count];
+		regGatInfo[name] = [NSMutableArray arrayWithObjects:plcArr count:places.count];
 	}
 }
 - (BOOL)readAgentsRndFromFileWrapper:(NSFileWrapper *)fw {

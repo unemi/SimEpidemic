@@ -737,6 +737,62 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 #endif
 	return changed;
 }
+- (void)applyWorldSize {
+	WorldParams *orgP = &worldParams, *newP = &tmpWorldParams;
+	if (orgP->worldSize == newP->worldSize) return;
+	[popLock lock];
+	CGFloat mag = (CGFloat)newP->worldSize / orgP->worldSize;
+	NSInteger nPop = orgP->initPop, unitJ = nCores; if (unitJ > 20) unitJ = 20;
+	Agent *agents = _agents;
+	NSMutableArray *maa = NSMutableArray.new;
+	for (NSInteger j = 0; j < unitJ; j ++) {
+		NSInteger start = j * nPop / unitJ, end = (j + 1) * nPop / unitJ;
+		NSMutableArray *ma = NSMutableArray.new;
+		[maa addObject:ma];
+		[self addOperation:^{ for (NSInteger i = start; i < end; i ++) {
+			Agent *a = &agents[i];
+			NSInteger orgIdx = index_in_pop(a, orgP);
+			a->x *= mag; a->y *= mag; a->vx *= mag; a->vy *= mag;
+			a->orgPt.x *= mag; a->orgPt.y *= mag;
+			if (!a->isOutOfField) {
+				NSInteger newIdx = index_in_pop(a, newP);
+				if (orgIdx != newIdx) [ma addObject:@[@(i), @(orgIdx), @(newIdx)]];
+		}}}];
+	}
+	for (Gathering *gat = gatherings; gat; gat = gat->next) {
+		gat->p.x *= mag; gat->p.y *= mag; gat->size *= mag;
+	}
+	for (NSNumber *key in _WarpList.allKeys) {
+		WarpInfo info = _WarpList[key].warpInfoValue;
+		info.goal.x *= mag; info.goal.y *= mag;
+		_WarpList[key] = [NSValue valueWithWarpInfo:info];
+	}
+	if (gatSpotsFixed != nil) {
+		NSInteger len = gatSpotsFixed.length;
+		NSPoint *pt = malloc(len);
+		memcpy(pt, gatSpotsFixed.bytes, len);
+		for (NSInteger i = 0; i < len / sizeof(NSPoint); i ++) {
+			pt[i].x *= mag; pt[i].y *= mag;
+		}
+		gatSpotsFixed = [NSData dataWithBytesNoCopy:pt length:len freeWhenDone:YES];
+	}
+	for (NSMutableArray *gatList in regGatInfo.objectEnumerator)
+	for (NSInteger i = 0; i < gatList.count; i ++) {
+		NSDictionary *item = gatList[i];
+		NSPoint pt = ((NSValue *)item[@"point"]).pointValue;
+		pt.x = mag; pt.y *= mag;
+		[gatList replaceObjectAtIndex:i withObject:
+			@{@"point":[NSValue valueWithPoint:pt], @"member":item[@"member"]}];
+	}
+	[self waitAllOperations];
+	for (NSArray *arr in maa) for (NSArray<NSNumber *> *vec in arr) {
+		Agent *a = &agents[vec[0].integerValue];
+		remove_from_list(a, &_Pop[vec[1].integerValue]);
+		add_to_list(a, &_Pop[vec[2].integerValue]);
+	}
+	worldParams.worldSize = tmpWorldParams.worldSize;
+	[popLock unlock];
+}
 MutableDictArray default_variants(void) {
 	return [NSMutableArray arrayWithObject:
 		[NSMutableDictionary dictionaryWithDictionary:

@@ -40,6 +40,7 @@ extern NSBitmapImageRep *make_bm_with_image(NSImage *image);
 extern void pop_dist_alloc(NSInteger x, NSInteger y, NSInteger w,
 	NSPoint *pts, NSInteger n, float *pd);
 extern void reset_for_step(Agent *a);
+extern NSInteger index_in_pop(Agent *a, WorldParams *p);
 extern void add_to_list(Agent *a, Agent **list);
 extern void remove_from_list(Agent *a, Agent **list);
 extern void add_agent(Agent *a, WorldParams *wp, Agent **Pop);

@@ -209,7 +209,7 @@ void reset_for_step(Agent *a) {
 	a->newHealth = a->health;
 	a->newNInfects = 0;
 }
-static NSInteger index_in_pop(Agent *a, WorldParams *p) {
+NSInteger index_in_pop(Agent *a, WorldParams *p) {
 	NSInteger iy = floor(a->y * p->mesh / p->worldSize);
 	NSInteger ix = floor(a->x * p->mesh / p->worldSize);
 	if (iy < 0) iy = 0; else if (iy >= p->mesh) iy = p->mesh - 1;
@@ -268,7 +268,7 @@ CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 		[self addNewCInfoA:a B:b tm:runtimeParams.step];
 	if (a->newHealth != a->health || !is_infected(b)) return;
 	CGFloat virusX = variantInfo[b->virusVariant].reproductivity,
-		infecDMax = runtimeParams.infecDst * sqrt(virusX);
+		infecDMax = runtimeParams.infecDst * pow(virusX, worldParams.infecDistBias);
 	if (d > infecDMax) return;
 	CGFloat exacerbate = exacerbation(virusX),
 		contagDelay = runtimeParams.contagDelay / exacerbate,
@@ -496,7 +496,7 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		return;
 	}
 #endif
-	NSInteger orgIdx = index_in_pop(a, wp);
+	info->moveFrom = index_in_pop(a, wp);
 	if (a->distancing) {
 		CGFloat dst = 1.0 + rp->dstST / 5.0;
 		a->fx *= dst;
@@ -533,8 +533,7 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		{ a->y = AGENT_RADIUS * 2 - a->y; a->vy = - a->vy; }
 	else if (a->y > wp->worldSize - AGENT_RADIUS)
 		{ a->y = (wp->worldSize - AGENT_RADIUS) * 2 - a->y; a->vy = - a->vy; }
-	NSInteger newIdx = index_in_pop(a, wp);
-	if (newIdx != orgIdx) { info->moveFrom = orgIdx; info->moveTo = newIdx; }
+	info->moveTo = index_in_pop(a, wp);
 }
 void step_agent_in_quarantine(Agent *a, ParamsForStep prms, StepInfo *info) {
 	switch (a->health) {

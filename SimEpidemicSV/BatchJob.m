@@ -466,6 +466,16 @@ static MutableDictArray correct_gat_list(MutableDictArray list) {
 		[world resetRegGatInfo];
 	}
 }
+#define CP_WP(m) dst->m = src->m;
+static void copy_allowed_world_params(World *world) {
+	[world applyWorldSize];
+	WorldParams *src = world.tmpWorldParamsP, *dst = world.worldParamsP;
+	CP_WP(rcvBias) CP_WP(rcvBias) CP_WP(rcvTemp) // coefficients to calculate recovery from age
+	CP_WP(rcvUpper) CP_WP(rcvLower) // boundaries of period to start recovery
+	CP_WP(vcn1stEffc) CP_WP(vcnMaxEffc) CP_WP(vcnEffcSymp)
+	CP_WP(vcnEDelay) CP_WP(vcnEPeriod) CP_WP(vcnEDecay) CP_WP(vcnSvEffc) // standard vaccine efficacy
+	CP_WP(infecDistBias)	// coefficient for furthest distance of infection
+}
 - (BOOL)runNextTrial {	// called only from JobController's tryNewTrial:
 	World *world = nil;
 	NSString *failedReason = nil;
@@ -493,8 +503,9 @@ static MutableDictArray correct_gat_list(MutableDictArray list) {
 			}
 			[world loadStateFrom:_loadState];
 			if (_parameters != nil) {
-				RuntimeParams *rp = world.runtimeParamsP;
-				set_params_from_dict(rp, NULL, _parameters);
+//				set_params_from_dict(world.runtimeParamsP, NULL, _parameters);
+				set_params_from_dict(world.runtimeParamsP, world.tmpWorldParamsP, _parameters);
+				copy_allowed_world_params(world);
 			}
 			if (_scenario != nil) {
 				[world setScenarioPList:_scenario];
