@@ -54,7 +54,7 @@ typedef struct {
 	CGFloat daysInfected, daysDiseased, severity;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
 	CGFloat firstDoseDate, agentImmunity;
-	CGFloat mass, mobFreq, gatFreq;
+	CGFloat massR, mobFreq, gatFreq;
 	CGFloat age, activeness;
 	HealthType health;
 	ForVaccine forVcn;

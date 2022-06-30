@@ -124,6 +124,7 @@ typedef struct {
 	CGFloat vcn1stEffc, vcnMaxEffc, vcnEffcSymp;
 	CGFloat	vcnEDelay, vcnEPeriod, vcnEDecay, vcnSvEffc; // standard vaccine efficacy
 	CGFloat infecDistBias;	// coefficient for furthest distance of infection
+	CGFloat contagBias; // exponent (%) for contageon
 	WrkPlcMode wrkPlcMode;
 } WorldParams;
 
@@ -189,7 +190,7 @@ typedef struct AgentRec {
 	CGFloat daysInfected, daysDiseased;
 	CGFloat daysToRecover, daysToOnset, daysToDie, imExpr;
 	CGFloat firstDoseDate, agentImmunity;
-	CGFloat mass;
+	CGFloat massR;
 	CGFloat mobFreq, gatFreq;	// frequency of participation in travel & gathering
 	CGFloat age, activeness;
 	CGFloat severity;

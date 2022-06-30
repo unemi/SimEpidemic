@@ -912,7 +912,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 726X5Z9867;
 				ENABLE_HARDENED_RUNTIME = NO;
-				GCC_OPTIMIZATION_LEVEL = fast;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				OTHER_CFLAGS = "-DNOGUI";
 				"OTHER_CFLAGS[arch=x86_64]" = (
 					"-march=cascadelake",

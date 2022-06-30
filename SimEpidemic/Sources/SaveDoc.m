@@ -22,7 +22,8 @@
 #import "Gatherings.h"
 #import "../../SimEpidemicSV/DataCompress.h"
 #import <zlib.h>
-#define FORMAT_VER 2
+#define FORMAT_VER 3
+#define READABLE_VER 2
 
 static NSString *keyFormatVersion = @"formatVersion", *keyIncubation = @"incubation",
 	*keyRecovery = @"recovery", *keyFatality = @"fatality", *keyInfects = @"infects",
@@ -453,7 +454,7 @@ MutableDictArray mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
 #define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
 z(orgPt); z(daysInfected); z(daysDiseased); z(severity);\
 z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr); z(firstDoseDate); z(agentImmunity);\
-z(mass); z(mobFreq); z(gatFreq); z(age); z(activeness);\
+z(massR); z(mobFreq); z(gatFreq); z(age); z(activeness);\
 z(health); z(forVcn); z(nInfects); z(virusVariant); z(vaccineType);\
 z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(lastTested);
 
@@ -670,6 +671,10 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	}
 	[self organizeAgeSpanInfo];
 }
+- (void)revisePop {	// for adjustment from format version 2.
+	for (NSInteger i = 0; i < worldParams.initPop; i ++)
+		self.agents[i].massR /= runtimeParams.mass;
+}
 - (void)readContactsFromFileWrapper:(NSFileWrapper *)fw {
 	if (!fw.regularFile) return;
 	NSData *data = [fw.regularFileContents unzippedData];
@@ -828,9 +833,12 @@ static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
 	NSDictionary *pDict = [self readParamsFromDict:plist_from_data(fw.regularFileContents)];
 	NSNumber *num = pDict[keyFormatVersion];
 	if ((num == nil && dict[fnStatIndexes] != nil)
-		|| num.integerValue < FORMAT_VER) @throw @"The file format seems to be old.";
+		|| num.integerValue < READABLE_VER) @throw @"The file format seems to be old.";
 	else if (num.integerValue > FORMAT_VER) @throw @"The file format is too new.";
-	if ((fw = dict[fnPopulation]) != nil) [self readPopFromFileWrapper:fw];
+	if ((fw = dict[fnPopulation]) != nil) {
+		[self readPopFromFileWrapper:fw];
+		if (num.integerValue < FORMAT_VER) [self revisePop];
+	}
 	if ((fw = dict[fnContacts]) != nil) [self readContactsFromFileWrapper:fw];
 	if ((fw = dict[fnTestees]) != nil) [self readTestsFromFileWrapper:fw];
 	if ((fw = dict[fnWarps]) != nil) [self readWarpsFromFileWrapper:fw];

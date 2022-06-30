@@ -475,6 +475,7 @@ static void copy_allowed_world_params(World *world) {
 	CP_WP(vcn1stEffc) CP_WP(vcnMaxEffc) CP_WP(vcnEffcSymp)
 	CP_WP(vcnEDelay) CP_WP(vcnEPeriod) CP_WP(vcnEDecay) CP_WP(vcnSvEffc) // standard vaccine efficacy
 	CP_WP(infecDistBias)	// coefficient for furthest distance of infection
+	CP_WP(contagBias)
 }
 - (BOOL)runNextTrial {	// called only from JobController's tryNewTrial:
 	World *world = nil;

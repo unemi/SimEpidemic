@@ -223,10 +223,11 @@ ParamInfo paramInfo[] = {
 	{ ParamTypeRate, @"vaccineMaxEfficacy", {.f = { 90., 0., 100.}}},
 	{ ParamTypeRate, @"vaccineEfficacySymp", {.f = { 95., 0., 100.}}},
 	{ ParamTypeRate, @"vaccineEffectDelay", {.f = { 14., 0., 30.}}},
-	{ ParamTypeRate, @"vaccineEffectPeriod", {.f = { 30., 0., 500.}}},
+	{ ParamTypeRate, @"vaccineEffectPeriod", {.f = { 7., 0., 60.}}},
 	{ ParamTypeRate, @"vaccineEffectDecay", {.f = { 120., 0., 500.}}},
 	{ ParamTypeRate, @"vaccineSvEfficacy", {.f = { 90., 0., 99.}}},
-	{ ParamTypeRate, @"infectionDistanceBias", {.f = { 1.2, 0., 10.}}},
+	{ ParamTypeRate, @"infectionDistanceBias", {.f = { 0.9, 0., 5.}}},
+	{ ParamTypeRate, @"contagionBias", {.f = { 33., 0., 200.}}},
 
 	{ ParamTypeEnum, @"tracingOperation", {.e = {0, 2}}},
 	{ ParamTypeEnum, @"vaccineTypeForTracingVaccination", {.e = {0, MAX_N_VAXEN - 1}}},

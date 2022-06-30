@@ -143,7 +143,7 @@ void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp) {
 	a->severity = 0.;
 	a->activeness = random_mk(rp->actMode / 100., rp->actKurt / 100.);
 	a->gathering = NULL;
-	a->mass = rp->mass * pow(rp->massAct, (.5 - a->activeness) / .5);
+	a->massR = pow(rp->massAct, (.5 - a->activeness) / .5);
 	struct ActivenessEffect ae = {a->activeness, rp->actMode/100.};
 	DistInfo dInfo = {0., 1., .5};
 	a->mobFreq = random_with_corr(&dInfo, ae, rp->mobAct/100.);
@@ -261,7 +261,6 @@ static void attracted(Agent *a, Agent *b) {
 		a->best = b;
 	}
 }
-CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 - (void)checkInfectionA:(Agent *)a B:(Agent *)b dist:(CGFloat)d {
 	if (d < runtimeParams.infecDst &&
 		was_hit(worldParams.stepsPerDay, runtimeParams.cntctTrc / 100.))
@@ -270,7 +269,7 @@ CGFloat exacerbation(CGFloat repro) { return pow(repro, 1./3.); }
 	CGFloat virusX = variantInfo[b->virusVariant].reproductivity,
 		infecDMax = runtimeParams.infecDst * pow(virusX, worldParams.infecDistBias);
 	if (d > infecDMax) return;
-	CGFloat exacerbate = exacerbation(virusX),
+	CGFloat exacerbate = pow(virusX, worldParams.contagBias/100.),
 		contagDelay = runtimeParams.contagDelay / exacerbate,
 		contagPeak = runtimeParams.contagPeak / exacerbate;
 	if (b->daysInfected <= contagDelay) return;
@@ -359,7 +358,7 @@ static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepIn
 		return NO;
 	}
 	VariantInfo *vrInfo = prms.vrInfo + a->virusVariant;
-	CGFloat excrbt = exacerbation(vrInfo->reproductivity);
+	CGFloat excrbt = pow(vrInfo->reproductivity, 1./3.);
 	CGFloat daysToRecv = (1. - a->agentImmunity) * a->daysToRecover;
 	if (a->isOutOfField) daysToRecv *= 1. - prms.rp->therapyEffc / 100.;
 	if (a->health == Asymptomatic) {
@@ -449,17 +448,18 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		case Vaccinated: if (a->vaccineTicket) vaccinate(a, prms);
 		else {
 			CGFloat daysVaccinated = (CGFloat)rp->step / wp->stepsPerDay - a->firstDoseDate;
-			NSInteger span = prms.vxInfo[a->vaccineType].interval;
-			if (daysVaccinated < span)	// only the first dose
-				a->agentImmunity = daysVaccinated * wp->vcn1stEffc / 100. / span;
-			else if (daysVaccinated < wp->vcnEDelay + span)	// not fully vaccinated yet
-				a->agentImmunity = ((daysVaccinated - span)
+			NSInteger interval = prms.vxInfo[a->vaccineType].interval;
+			CGFloat timeUntil = interval;
+			if (daysVaccinated < timeUntil)	// only the first dose
+				a->agentImmunity = daysVaccinated * wp->vcn1stEffc / 100. / interval;
+			else if (daysVaccinated < (timeUntil += wp->vcnEDelay))	// not fully vaccinated yet
+				a->agentImmunity = ((daysVaccinated - interval)
 					* (wp->vcnMaxEffc - wp->vcn1stEffc) / wp->vcnEDelay + wp->vcn1stEffc) / 100.;
-			else if (daysVaccinated < wp->vcnEDelay + span + wp->vcnEDecay) // full
+			else if (daysVaccinated < (timeUntil += wp->vcnEPeriod)) // full
 				a->agentImmunity = wp->vcnMaxEffc / 100.;
-			else if (daysVaccinated < wp->vcnEDelay + span + wp->vcnEPeriod) // Decay
-				a->agentImmunity = (wp->vcnEDelay + span + wp->vcnEPeriod - daysVaccinated)
-					/ (wp->vcnEPeriod - wp->vcnEDecay) * wp->vcnMaxEffc / 100.;
+			else if (daysVaccinated < (timeUntil += wp->vcnEDecay)) // Decay
+				a->agentImmunity =
+					(timeUntil - daysVaccinated) / wp->vcnEDecay * wp->vcnMaxEffc / 100.;
 			else expire_immunity(a, rp, wp);
 		} break;
 		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
@@ -504,7 +504,7 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 	}
 	a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 	a->fy += wall(a->y) - wall(wp->worldSize - a->y);
-	CGFloat mass = a->mass / 100.;
+	CGFloat mass = rp->mass * a->massR / 100.;
 	if (a->health == Symptomatic) mass *= 20.; 
 	if (a->best != NULL && !a->distancing) {
 		CGFloat dx = a->best->x - a->x;
