@@ -53,8 +53,10 @@ NS_ASSUME_NONNULL_BEGIN
 		*popDistGammaDgt, *gatSptFxDgt;
 	IBOutlet NSSlider *initInfcSld, *initRecvSld, *initQAsymSld, *initQSympSld,
 		*popDistGammaSld, *gatSptFxSld;
-	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *backHmDgt, *gatFrDgt, *gatRndDgt, *cntctTrcDgt;
-	IBOutlet NSSlider *dstSTSld, *dstOBSld, *backHmSld, *gatFrSld, *gatRndSld, *cntctTrcSld;
+	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *backHmDgt,
+		*gatFrDgt, *gatRndDgt, *gatActBsDgt, *cntctTrcDgt;
+	IBOutlet NSSlider *dstSTSld, *dstOBSld, *backHmSld,
+		*gatFrSld, *gatRndSld, *gatActBsSld, *cntctTrcSld;
 	IBOutlet NSTextField *tstDelayDgt, *tstProcDgt, *tstIntvlDgt, *tstSensDgt, *tstSpecDgt,
 		*tstSbjAsyDgt, *tstSbjSymDgt, *tstCapaDgt, *tstDlyLimDgt;
 	IBOutlet NSSlider *tstDelaySld, *tstProcSld, *tstIntvlSld, *tstSensSld, *tstSpecSld,

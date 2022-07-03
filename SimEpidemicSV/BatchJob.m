@@ -543,25 +543,31 @@ static void copy_allowed_world_params(World *world) {
 - (void)setNextTrialNumber:(NSInteger)number {
 	nextTrialNumber = number;
 }
-- (NSDictionary *)jobStatus {
+- (NSDictionary *)jobStatus:(BOOL)withWorldIDs {
 	[lock lock];
 	NSInteger nowProcessed = runningTrials.count;
-#ifdef DEBUGz
-	NSNumber *steps[nowProcessed * 2];
-#else
 	NSNumber *steps[nowProcessed];
-#endif
+	NSString *worldIDs[nowProcessed];
 	NSInteger n = 0;
 	for (World *world in runningTrials.objectEnumerator) {
-		steps[n ++] = @(world.runtimeParamsP->step);
+		worldIDs[n] = world.ID;
 #ifdef DEBUGz
-		steps[n ++] = @(world.phaseInStep);
+		steps[n ++] = @[@(world.runtimeParamsP->step), @(world.phaseInStep)];
+#else
+		steps[n ++] = @(world.runtimeParamsP->step);
 #endif
 	}
 	[lock unlock];
-	return @{@"notYet":@(_nIteration - nextTrialNumber),
-		@"nowProcessed":[NSArray arrayWithObjects:steps count:n],
-		@"finished":@(nextTrialNumber - nowProcessed) };
+	NSString *keys[] = {@"notYet", @"nowProcessed", @"finished", @"worldIDs"};
+	NSObject *objs[] = {@(_nIteration - nextTrialNumber),
+		[NSArray arrayWithObjects:steps count:n],
+		@(nextTrialNumber - nowProcessed), nil};
+	NSInteger nElms = 3;
+	if (withWorldIDs) {
+		nElms = 4;
+		objs[3] = [NSArray arrayWithObjects:worldIDs count:n];
+	}
+	return [NSDictionary dictionaryWithObjects:objs forKeys:keys count:nElms];
 }
 - (void)stop {
 	[lock lock];
@@ -615,7 +621,10 @@ static void copy_allowed_world_params(World *world) {
 	return job;
 }
 - (void)getJobStatus {
-	[self setJSONDataAsResponse:self.targetJob.jobStatus];
+	NSString *worldOption = query[@"worlds"];
+	BOOL withWorldIDs = worldOption != nil &&
+		([worldOption caseInsensitiveCompare:@"on"] == NSOrderedSame || worldOption.boolValue);
+	[self setJSONDataAsResponse:[self.targetJob jobStatus:withWorldIDs]];
 }
 - (void)getJobQueueStatus {
 	NSMutableDictionary *md = NSMutableDictionary.new;

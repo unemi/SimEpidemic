@@ -173,6 +173,7 @@ ParamInfo paramInfo[] = {
 	{ ParamTypeFloat, @"backHomeRate", {.f = { 75., 0., 100.}}},
 	{ ParamTypeFloat, @"gatheringFrequency", {.f = { 50., 0., 100.}}},
 	{ ParamTypeFloat, @"gatheringSpotRandom", {.f = { 50., 0., 100.}}},
+	{ ParamTypeFloat, @"gatheringActiveBias", {.f = { 0., 0., 100.}}},
 	{ ParamTypeFloat, @"contactTracing", {.f = { 20., 0., 100.}}},
 	{ ParamTypeFloat, @"testDelay", {.f = { 1., 0., 10.}}},
 	{ ParamTypeFloat, @"testProcess", {.f = { 1., 0., 10.}}},

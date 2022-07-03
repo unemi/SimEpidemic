@@ -254,7 +254,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		actModeDgt, actKurtDgt, massActDgt, mobActDgt, gatActDgt,
 		incubActDgt, fatalActDgt, immueActDgt, therapyEffcDgt,
 		contagDDgt, contagPDgt, infecDgt, infecDstDgt,
-		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, gatRndDgt, cntctTrcDgt,
+		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, gatRndDgt, gatActBsDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt, tstCapaDgt, tstDlyLimDgt,
 		imnMaxDurDgt, imnMaxDurSvDgt, imnMaxEffcDgt, imnMaxEffcSvDgt];
@@ -262,7 +262,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, immueActSld, therapyEffcSld,
 		contagDSld, contagPSld, infecSld, infecDstSld,
-		dstSTSld, dstOBSld, backHmSld, gatFrSld, gatRndSld, cntctTrcSld,
+		dstSTSld, dstOBSld, backHmSld, gatFrSld, gatRndSld, gatActBsSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld, tstCapaSld, tstDlyLimSld,
 		imnMaxDurSld, imnMaxDurSvSld, imnMaxEffcSld, imnMaxEffcSvSld];

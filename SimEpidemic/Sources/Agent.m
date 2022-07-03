@@ -285,6 +285,8 @@ static void attracted(Agent *a, Agent *b) {
 	CGFloat timeFactor = fmin(1., (b->daysInfected - contagDelay) /
 			(fmin(contagPeak, b->daysToOnset) - contagDelay));
 	CGFloat distanceFactor = fmin(1., pow((infecDMax - d) / 2., 2.));
+	if (a->gathering != NULL && a->gathering == b->gathering && runtimeParams.gatActiveBias > 0.)
+		distanceFactor += (1. - distanceFactor) * runtimeParams.gatActiveBias;
 	CGFloat infecProb = (virusX < 1.)? runtimeParams.infec / 100. * virusX :
 		1. - (1. - runtimeParams.infec / 100.) / virusX;
 	if (was_hit(worldParams.stepsPerDay,
@@ -510,6 +512,8 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		CGFloat dx = a->best->x - a->x;
 		CGFloat dy = a->best->y - a->y;
 		CGFloat d = fmax(.01, hypot(dx, dy)) * 20.;
+		if (a->gathering != NULL && rp->gatActiveBias > 0.)
+			d /= pow(2., a->activeness * rp->gatActiveBias / 100.);
 		a->fx += dx / d;
 		a->fy += dy / d;
 	}
@@ -519,6 +523,13 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 	a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
 	CGFloat v = hypot(a->vx, a->vy);
 	CGFloat maxV = rp->maxSpeed * 20. / wp->stepsPerDay;
+	if (a->gathering != NULL && rp->gatActiveBias > 0.) {
+		CGFloat ab = a->activeness * rp->gatActiveBias / 100.;
+		CGFloat th = atan2(a->vy, a->vx) + (d_random() - .5) * ab * M_PI;
+		v *= 1. + ab;
+		a->vx = v * cos(th);
+		a->vy = v * sin(th);
+	}
 	if (v > maxV) { 
 		a->vx *= maxV / v; 
 		a->vy *= maxV / v;

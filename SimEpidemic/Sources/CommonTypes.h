@@ -95,6 +95,7 @@ typedef struct {
 	CGFloat dstST, dstOB; // Distancing strength and obedience
 	CGFloat backHmRt; // probability per day for travelers to go back home
 	CGFloat gatFr, gatRndRt;	// Gathering's frequency, random spot rate (%)
+	CGFloat gatActiveBias;	// Activeness bias in gatherings (%)
 	CGFloat cntctTrc; // Contact tracing
 	CGFloat tstDelay, tstProc, tstInterval, tstSens, tstSpec; // test delay, process, interval, sensitivity, and specificity
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.

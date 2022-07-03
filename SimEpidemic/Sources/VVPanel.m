@@ -92,9 +92,11 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 	if (vaccineList.count >= MAX_N_VAXEN) addVaccineBtn.enabled = NO;
 	vaccineTable.headerView.needsDisplay = YES;
 	vcnDgts = @[vcn1stEffcDgt, vcnMaxEffcDgt, vcnMaxEffcSDgt,
-		vcnEDelayDgt, vcnEPeriodDgt, vcnEDecayDgt, vcnSvEffcDgt];
+		vcnEDelayDgt, vcnEPeriodDgt, vcnEDecayDgt, vcnSvEffcDgt,
+		infecDistBiasDgt, contagDlyDgt];
 	vcnSlds = @[vcn1stEffcSld, vcnMaxEffcSld, vcnMaxEffcSSld,
-		vcnEDelaySld, vcnEPeriodSld, vcnEDecaySld, vcnSvEffcSld];
+		vcnEDelaySld, vcnEPeriodSld, vcnEDecaySld, vcnSvEffcSld,
+		infecDistBiasSld, contagDlySld];
 	CGFloat *p = &world.tmpWorldParamsP->vcn1stEffc;
 	ParamInfo *prmInfo = paramInfo;
 	while (prmInfo->key != nil &&
@@ -104,8 +106,13 @@ static void copy_tableColumn_properties(NSTableColumn *dst, NSTableColumn *src) 
 		vcnDgts[i].target = vcnSlds[i].target = self;
 		vcnDgts[i].action = vcnSlds[i].action = @selector(changeFValue:);
 		if (prmInfo->key != nil) {
-			vcnSlds[i].minValue = prmInfo[i].v.f.minValue;
-			vcnSlds[i].maxValue = prmInfo[i].v.f.maxValue;
+			NSNumberFormatter *fmt = (NSNumberFormatter *)vcnDgts[i].formatter;
+			CGFloat minV = vcnSlds[i].minValue = prmInfo[i].v.f.minValue;
+			CGFloat maxV = vcnSlds[i].maxValue = prmInfo[i].v.f.maxValue;
+			fmt.minimum = @(minV);
+			fmt.maximum = @(maxV);
+			NSInteger nFrac = (maxV < 10.)? 3 : (maxV <= 100.)? 2 : 1;
+			fmt.minimumFractionDigits = fmt.maximumFractionDigits = nFrac;
 		}
 		vcnDgts[i].doubleValue = vcnSlds[i].doubleValue = p[i];
 	}
