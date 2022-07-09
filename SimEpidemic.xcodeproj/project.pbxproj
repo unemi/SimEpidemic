@@ -281,11 +281,11 @@
 		235D65772462555500487784 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				231E000D246125AD00BFBE9E /* CommonTypes.h */,
 				232790B824587B670017AEC2 /* Agent.h */,
 				232790B924587B670017AEC2 /* Agent.m */,
 				232055EF2457D2C6005ADCCF /* AppDelegate.h */,
 				232055F02457D2C6005ADCCF /* AppDelegate.m */,
-				231E000D246125AD00BFBE9E /* CommonTypes.h */,
 				233420CF2468156200C93F8E /* DataPanel.h */,
 				233420D02468156200C93F8E /* DataPanel.m */,
 				232055F22457D2C6005ADCCF /* Document.h */,

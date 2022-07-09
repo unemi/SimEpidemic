@@ -18,7 +18,21 @@ function getJobID(ifrm) {
 <h2>Submission</h2>
 <form method="post" action="/submitJob" target="submission">
 	<textarea name="job" rows="10" cols="60">
-{"stopAt":200,"n":2,
+{"stopAt":400,"n":1,
+"vaccines":[
+  {"name":"PfBNT","Original":0.53},
+  {"name":"Boost","Original":0.75,"intervalOn":false}],
+"params":{"vaccinationInfo":[{"performRate":10,"priority":1}]},
+"scenario":[
+"days >= 200",["vaccinePriority Boost",4],
+["vaccinePerformRate Boost",8,1]
+],
+"out":[
+	"asymptomatic","symptomatic","recovered","died","vaccinated","vaccination",
+	"dailyTestPositive","dailyTestNegative","reproductionRate",
+	"incubasionPeriod","recoveryPeriod","fatalPeriod","infects","saveState"]}
+	</textarea>
+<!-- {"stopAt":200,"n":2,
 "gatherings":[
 {"name":"kinderGarden","minAge":3,"maxAge":6,"participation":80,
   "duration":4,"freq":5,"npp":30,"size":20,"strength":50},
@@ -29,7 +43,20 @@ function getJobID(ifrm) {
 	"asymptomatic","symptomatic","recovered","died",
 	"dailyTestPositive","dailyTestNegative","reproductionRate",
 	"incubasionPeriod","recoveryPeriod","fatalPeriod","infects","saveState"]}
-	</textarea>
+{"stopAt":600,"n":1,"loadState":"Omicron2204AC345_6",
+"vaccines":[
+  {"name":"PfBNT","Omicron":0.53},
+  {"name":"Boost","Omicron":0.75,"Original":0.9,"Alpha":0.9,"Delta":0.9,
+   "intervalOn":false}],
+"scenario":[
+"days > 345",["vaccinePriority Boost",4],
+["vaccinePerformRate Boost",1,1]
+],
+"out":[
+	"asymptomatic","symptomatic","recovered","died",
+	"dailyTestPositive","dailyTestNegative","reproductionRate",
+	"incubasionPeriod","recoveryPeriod","fatalPeriod","infects","saveState"]}
+-->
 	<input type="submit" value="投入">
 	</form>
 <iframe name="submission" height=24 onload="getJobID(this);"></iframe>

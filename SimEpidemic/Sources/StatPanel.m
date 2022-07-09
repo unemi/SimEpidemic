@@ -85,6 +85,8 @@ static void free_stat_mem(StatData **memp) {
 	_NInfectsHist = NSMutableArray.new;
 	_sspData = [NSMutableData dataWithLength:sizeof(NSInteger) * SSP_MaxSteps * SSP_NRanks];
 	_variantsData = [NSMutableData dataWithLength:sizeof(NSInteger) * MAX_N_REC * MAX_N_VARIANTS];
+	_vaccinesData = [NSMutableData dataWithLength:sizeof(NSInteger) * MAX_N_REC
+		* NAllVcnNowTypes * N_AGE_RANKS];
 #ifndef NOGUI
 	imgBm = malloc(IMG_WIDTH * IMG_HEIGHT * 4);
 	scenarioPhases = NSMutableArray.new;
@@ -97,7 +99,7 @@ static void free_stat_mem(StatData **memp) {
 - (void)discardMemory {
 	_world = nil;
 	[statLock lock];
-	_sspData = _variantsData = nil;
+	_sspData = _variantsData = _vaccinesData = nil;
 	free_stat_mem(&_statistics);
 	free_stat_mem(&_transit);
 	[statLock unlock];
@@ -164,6 +166,7 @@ static void free_stat_mem(StatData **memp) {
 //	_NInfectsHist[0].cnt = nInitInfec;
 	memset(_sspData.mutableBytes, 0, _sspData.length);
 	memset(_variantsData.mutableBytes, 0, _variantsData.length);
+	memset(_vaccinesData.mutableBytes, 0, _vaccinesData.length);
 #ifndef NOGUI
 	memset(imgBm, 0, IMG_WIDTH * IMG_HEIGHT * 4);
 	[scenarioPhases removeAllObjects];
@@ -181,6 +184,21 @@ static void free_stat_mem(StatData **memp) {
 		for (NSInteger i = 0; i <= n; i ++) [h addObject:MyCounter.new];
 	}
 	[h[ds] inc];
+}
+- (void)cummulateVcnRecord:(NSInteger *)cntSrc {
+	NSInteger *cntDst = (NSInteger *)_vaccinesData.mutableBytes;
+	NSInteger stp = _world.runtimeParamsP->step, idx = stp, span = 1;
+	while (idx > MAX_N_REC) { span <<= 1; idx >>= 1; }
+	if (idx == MAX_N_REC) {
+		for (NSInteger i = 0; i < MAX_N_REC; i += 2)
+		for (NSInteger j = 0; j < N_ELMS_VCN_REC; j ++) cntDst[i / 2 * N_ELMS_VCN_REC + j] =
+			cntDst[i * N_ELMS_VCN_REC + j] + cntDst[(i + 1) * N_ELMS_VCN_REC + j];
+		span <<= 1; idx >>= 1;
+	}
+	NSInteger nCum = stp % span;
+	cntDst += idx * N_ELMS_VCN_REC;
+	if (nCum == 0) memcpy(cntDst, cntSrc, sizeof(NSInteger) * N_ELMS_VCN_REC);
+	else for (NSInteger j = 0; j < N_ELMS_VCN_REC; j ++) cntDst[j] += cntSrc[j];
 }
 #ifndef NOGUI
 - (void)setPhaseInfo:(NSArray<NSNumber *> *)info {
@@ -684,6 +702,68 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 		drawAtPoint:(NSPoint){6., (bounds.size.height + NSFont.systemFontSize) / 2.}
 		withAttributes:textAttributes];
 }
+- (void)drawVaccinationRecord:(NSInteger)viewType bounds:(NSRect)bounds {
+	NSInteger *recData = (NSInteger *)_vaccinesData.bytes;
+	NSInteger step = _world.runtimeParamsP->step, idx = step, span = 1, total[N_AGE_RANKS];
+	memset(total, 0, sizeof(total));
+	@try {
+		if (steps <= 0) @throw @0;
+		NSRect dRect = drawing_area(bounds);
+		while (idx >= MAX_N_REC) { span <<= 1; idx >>= 1; }
+		NSInteger (^getter)(NSInteger, NSInteger);
+		if (viewType == 0) getter = ^(NSInteger type, NSInteger ix) {
+			NSInteger sum = 0, *p = recData + ix * N_ELMS_VCN_REC + type * N_AGE_RANKS;
+			for (NSInteger j = 0; j < N_AGE_RANKS; j ++) sum += p[j];
+			return sum;
+		};
+		else if (viewType <= N_AGE_RANKS) getter = ^(NSInteger type, NSInteger ix) {
+			return recData[ix * N_ELMS_VCN_REC + type * N_AGE_RANKS + viewType - 1]; };
+		else getter = ^(NSInteger ageRank, NSInteger ix) {
+			NSInteger sum = 0, *p = recData +
+				ix * N_ELMS_VCN_REC + (viewType - N_AGE_RANKS - 2) * N_AGE_RANKS;
+			for (NSInteger j = 0; j < N_AGE_RANKS - ageRank; j ++) sum += p[j];
+			return sum;
+		};
+		NSInteger maxY = 0;
+		for (NSInteger j = 0; j <= idx; j ++) maxY += getter(0, j);
+		if (maxY == 0) @throw @1;
+		NSInteger nTypes = (viewType <= N_AGE_RANKS)? NAllVcnNowTypes : N_AGE_RANKS;
+		NSBezierPath *path = NSBezierPath.new;
+		for (NSInteger i = 0; i < nTypes; i ++) {
+			NSInteger y = 0;
+			for (NSInteger j = 0; j <= idx; j ++) {
+				NSInteger newY = y + getter(i, j);
+				if (newY == 0) continue;
+				if (j == 0) [path moveToPoint:dRect.origin];
+				else if (y == 0) [path moveToPoint:(NSPoint){
+					dRect.origin.x + (j - 1) * dRect.size.width / idx,
+					dRect.origin.y}];
+				y = newY;
+				[path lineToPoint:(NSPoint){
+					dRect.origin.x + j * dRect.size.width / idx,
+					dRect.origin.y + y * dRect.size.height / maxY}];
+			}
+			if (y == 0) continue;
+			[path lineToPoint:(NSPoint){NSMaxX(dRect), NSMinY(dRect)}];
+			RainbowColorHB hb = rainbow_color((nTypes - 1 - i), nTypes);
+			[[NSColor colorWithHue:hb.hue saturation:.75 brightness:hb.brightness alpha:1.] setFill];
+			[path fill];
+			[path removeAllPoints];
+			total[i] = y;
+		}
+	} @catch (id dummy) {}
+	draw_tics(bounds, (CGFloat)step / _world.worldParamsP->stepsPerDay);
+	if (viewType <= N_AGE_RANKS)
+		[[NSString stringWithFormat:@"%@ %ld\n%@ %ld\n%@ %ld",
+				NSLocalizedString(@"First", nil), total[0],
+				NSLocalizedString(@"Second", nil), total[1],
+				NSLocalizedString(@"Booster", nil), total[2]]
+		drawAtPoint:(NSPoint){6., (bounds.size.height - NSFont.systemFontSize) / 2.}
+		withAttributes:textAttributes];
+	else [[NSString stringWithFormat:@"%@ %ld", NSLocalizedString(@"total count", nil), total[0]]
+		drawAtPoint:(NSPoint){6., (bounds.size.height + NSFont.systemFontSize) / 2.}
+		withAttributes:textAttributes];
+}
 - (void)drawWithType:(StatType)type info:(TimeEvoInfo *)info bounds:(NSRect)bounds {
 	static NSNumberFormatter *decFormat = nil;
 	if (textAttributes == nil) {
@@ -745,6 +825,9 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 		case StatVariants:
 		[self drawCompositionData:_variantsData title:@"Virus variants"
 			ranks:MAX_N_VARIANTS drawRanks:MAX_N_VARIANTS bounds:bounds];
+		break;
+		case StatVaccination:
+		[self drawVaccinationRecord:info->vcnRecType bounds:bounds];
 		break;
 		case StatPeriods:
 		show_period_hist(_IncubPHist, 0, bounds.size, @"Incubation Period");
@@ -886,10 +969,12 @@ static void show_period_hist(NSMutableArray<MyCounter *> *hist,
 - (IBAction)flushView:(id)sender {
 	if (sender == typePopUp) {
 		NSInteger idx = typePopUp.indexOfSelectedItem;
-		if ((idxSelectionBtn.enabled = (idx == StatTimeEvo))) {
+		if (!(idxSelectionBtn.hidden = (idx != StatTimeEvo))) {
 			if (idxSelectionBtn.state) [idxSelectionSheet makeKeyAndOrderFront:nil];
 		} else if (idxSelectionBtn.state) [idxSelectionSheet close];
-	}
+		vcnRecPopUp.hidden = (idx != StatVaccination);
+	} else if (sender == vcnRecPopUp)
+		timeEvoInfo.vcnRecType = vcnRecPopUp.indexOfSelectedItem;
 	view.needsDisplay = YES;
 }
 - (IBAction)openCloseIdxSheet:(id)sender {

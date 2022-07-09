@@ -28,7 +28,8 @@ extern void check_batch_jobs_to_restart(void);
 	NSString *popDistMap, *loadVV, *loadGatherings;
 	MutableDictArray moreVaccines, moreVariants, moreGatherings;
 	BOOL stateDependencyIsOK;
-	BOOL shouldSaveSeverityStats, shouldSaveVariantsStats, shouldSaveState;
+	BOOL shouldSaveSeverityStats, shouldSaveVariantsStats,
+		shouldSaveVcnRecord, shouldSaveState;
 }
 @property (readonly) NSString *ID, *loadState;
 @property (readonly) NSDictionary<NSString *, NSNumber *> *parameters;

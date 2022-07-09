@@ -420,44 +420,48 @@ void going_back_home(Agent *a) {
 	a->fx += f.x;
 	a->fy += f.y;
 }
-static void vaccinate(Agent *a, ParamsForStep prms) {
+static void vaccinate(Agent *a, ParamsForStep prms, StepInfo *info) {
 	a->newHealth = Vaccinated;
 	a->vaccineTicket = NO;
 	CGFloat fdd = (CGFloat)prms.rp->step / prms.wp->stepsPerDay;
 	if (a->firstDoseDate >= 0.) {	// booster shot
 		a->firstDoseDate = fdd - prms.vxInfo[a->vaccineType].interval;
+		info->vcnNowType = VcnNowBoost;
 	} else {	// first dose
 		a->daysToRecover *= 1. - prms.wp->vcnEffcSymp / 100.;
 		a->firstDoseDate = fdd;
+		info->vcnNowType = VcnNowFirst;
 	}
 }
 void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 	RuntimeParams *rp = prms.rp;
 	WorldParams *wp = prms.wp;
 	switch (a->health) {
-		case Susceptible: if (a->vaccineTicket) vaccinate(a, prms); break;
+		case Susceptible: if (a->vaccineTicket) vaccinate(a, prms, info); break;
 		case Symptomatic: a->daysInfected += 1. / wp->stepsPerDay;
 		a->daysDiseased += 1. / wp->stepsPerDay;
 		if (patient_step(a, prms, NO, info)) return;
 		else if (a->daysDiseased >= rp->tstDelay && was_hit(wp->stepsPerDay, rp->tstSbjSym / 100.))
 			info->testType = TestAsSymptom;
 		break;
-		case Asymptomatic: if (a->vaccineTicket) vaccinate(a, prms);
+		case Asymptomatic: if (a->vaccineTicket) vaccinate(a, prms, info);
 		else {
 			a->daysInfected += 1. / wp->stepsPerDay;
 			if (patient_step(a, prms, NO, info)) return;
 		} break;
-		case Vaccinated: if (a->vaccineTicket) vaccinate(a, prms);
+		case Vaccinated: if (a->vaccineTicket) vaccinate(a, prms, info);
 		else {
 			CGFloat daysVaccinated = (CGFloat)rp->step / wp->stepsPerDay - a->firstDoseDate;
 			NSInteger interval = prms.vxInfo[a->vaccineType].interval;
 			CGFloat timeUntil = interval;
 			if (daysVaccinated < timeUntil)	// only the first dose
 				a->agentImmunity = daysVaccinated * wp->vcn1stEffc / 100. / interval;
-			else if (daysVaccinated < (timeUntil += wp->vcnEDelay))	// not fully vaccinated yet
+			else if (daysVaccinated < (timeUntil += wp->vcnEDelay))	{ // not fully vaccinated yet
 				a->agentImmunity = ((daysVaccinated - interval)
 					* (wp->vcnMaxEffc - wp->vcn1stEffc) / wp->vcnEDelay + wp->vcn1stEffc) / 100.;
-			else if (daysVaccinated < (timeUntil += wp->vcnEPeriod)) // full
+				if (interval > 0 && daysVaccinated < interval + 1. / wp->stepsPerDay)	// second dose
+					info->vcnNowType = VcnNowSecond;
+			} else if (daysVaccinated < (timeUntil += wp->vcnEPeriod)) // full
 				a->agentImmunity = wp->vcnMaxEffc / 100.;
 			else if (daysVaccinated < (timeUntil += wp->vcnEDecay)) // Decay
 				a->agentImmunity =

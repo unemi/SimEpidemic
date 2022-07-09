@@ -34,6 +34,7 @@ typedef struct { Agent *agent; NSInteger newIdx; } MoveToIdxInfo;
 typedef struct { Agent *agent; WarpType mode; NSPoint goal; } WarpInfo;
 typedef struct { Agent *agent; HistogramType type; CGFloat days; } HistInfo;
 typedef struct { Agent *agent; TestType reason; } TestInfo;
+typedef struct { Agent *agent; VcnNowType type; } VcnNowInfo;
 typedef struct { Agent *agent; CGFloat dist; } DistanceInfo;
 typedef struct {
 	RuntimeParams *rp;
@@ -144,5 +145,6 @@ DEC_VAL(MoveToIdxInfo, valueWithMoveToIdxInfo, moveToIdxInfoValue)
 DEC_VAL(WarpInfo, valueWithWarpInfo, warpInfoValue)
 DEC_VAL(HistInfo, valueWithHistInfo, histInfoValue)
 DEC_VAL(TestInfo, valueWithTestInfo, testInfoValue)
+DEC_VAL(VcnNowInfo, valueWithVcnNowInfo, vcnNowInfoValue)		
 DEC_VAL(DistanceInfo, valueWithDistanceInfo, distanceInfo)
 @end

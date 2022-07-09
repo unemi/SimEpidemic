@@ -978,7 +978,8 @@ void set_reg_gat_value(MutableDictArray gatInfo, NSString *key, NSNumber *goal, 
 static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority priority) {
 	if ((a->health == Susceptible || (a->health == Asymptomatic && !a->isOutOfField)
 		|| (a->health == Vaccinated && priority == VcnPrBooster))
-		&& a->forVcn == VcnAccept && !a->vaccineTicket) {
+		&& a->forVcn == VcnAccept && !a->vaccineTicket
+		&& (priority == VcnPrBooster || a->firstDoseDate < 0)) {
 		a->vaccineTicket = YES; a->vaccineType = vcnType; return YES;
 	} else return NO;
 }
@@ -1221,11 +1222,10 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 	INC_PHASE
 	unitJ = 8;
 	Agent **popMap = _Pop;
-	NSMutableArray<NSValue *> *infectors[unitJ];
-	NSMutableArray<NSValue *> *movers[unitJ];
-	NSMutableArray<NSValue *> *warps[unitJ];
-	NSMutableArray<NSValue *> *hists[unitJ];
-	NSMutableArray<NSValue *> *tests[unitJ];
+	NSMutableArray<NSValue *> *infectors[unitJ], *movers[unitJ], *warps[unitJ],
+		*hists[unitJ], *tests[unitJ];
+	NSInteger vcnNows[unitJ][N_ELMS_VCN_REC];
+	memset(vcnNows[0], 0, sizeof(vcnNows));
 	for (NSInteger j = 0; j < unitJ; j ++) {
 		NSInteger start = j * nCells / unitJ;
 		NSInteger end = (j + 1) * nCells / unitJ;
@@ -1234,6 +1234,7 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 		NSMutableArray<NSValue *> *warp = warps[j] = NSMutableArray.new;
 		NSMutableArray<NSValue *> *hist = hists[j] = NSMutableArray.new;
 		NSMutableArray<NSValue *> *test = tests[j] = NSMutableArray.new;
+		NSInteger *vcnNow = vcnNows[j];
 		void (^block)(void) = ^{
 			StepInfo info;
 			for (NSInteger i = start; i < end; i ++) {
@@ -1256,6 +1257,11 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 						valueWithHistInfo:(HistInfo){a, info.histType, info.histDays}]];
 					if (info.testType != TestNone) [test addObject:[NSValue
 						valueWithTestInfo:(TestInfo){a, info.testType}]];
+					if (info.vcnNowType != VcnNowNone) {
+						NSInteger ageRk = a->age / (100 / (N_AGE_RANKS - 1));
+						if (ageRk >= N_AGE_RANKS) ageRk = N_AGE_RANKS - 1;
+						vcnNow[(info.vcnNowType - VcnNowFirst) * N_AGE_RANKS + ageRk] ++;
+					}
 					if (a->newNInfects > 0) {
 						[infec addObject:[NSValue valueWithInfect:
 							(InfectionCntInfo){a->nInfects, a->nInfects + a->newNInfects}]];
@@ -1271,7 +1277,10 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 		for (NSValue *v in histArray[i]) {
 			HistInfo info = v.histInfoValue;
 			[weakStatInfo cummulateHistgrm:info.type days:info.days];
-		} }];
+		}}];
+	for (NSInteger i = 1; i < unitJ; i ++)
+		for (NSInteger j = 0; j < N_ELMS_VCN_REC; j ++) vcnNows[0][j] += vcnNows[i][j];
+	[statInfo cummulateVcnRecord:vcnNows[0]];
 	for (NSInteger i = 0; i < unitJ; i ++) {
 		for (NSValue *v in warps[i]) [self addNewWarp:v.warpInfoValue];
 		for (NSValue *v in tests[i]) {
@@ -1480,5 +1489,6 @@ DEF_VAL(MoveToIdxInfo, valueWithMoveToIdxInfo, moveToIdxInfoValue)
 DEF_VAL(WarpInfo, valueWithWarpInfo, warpInfoValue)
 DEF_VAL(HistInfo, valueWithHistInfo, histInfoValue)
 DEF_VAL(TestInfo, valueWithTestInfo, testInfoValue)		
+DEF_VAL(VcnNowInfo, valueWithVcnNowInfo, vcnNowInfoValue)		
 DEF_VAL(DistanceInfo, valueWithDistanceInfo, distanceInfo)
 @end

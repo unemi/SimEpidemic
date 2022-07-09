@@ -118,3 +118,7 @@
 "The file format seems to be old." = "ファイル形式が古いようです。";
 "The file format is too new." = "新しいファイル形式のようです。";
 "per population" = "人口比";
+"First" = "１回目";
+"Second" = "２回目";
+"Booster" = "ブースタ";
+"total count" = "合計人数";

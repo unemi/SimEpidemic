@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="15705" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="20037" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="15705"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="20037"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -15,6 +15,7 @@
                 <outlet property="mvAvrgUnit" destination="lch-gn-iki" id="bA9-tj-Igu"/>
                 <outlet property="mvAvrgView" destination="FEk-tk-gRi" id="tvr-Jc-jNy"/>
                 <outlet property="typePopUp" destination="4i4-WY-mOi" id="stc-qi-xxe"/>
+                <outlet property="vcnRecPopUp" destination="oxC-u4-Zd9" id="zud-4T-1We"/>
                 <outlet property="view" destination="ck0-XU-Pp0" id="pOb-1L-a3g"/>
                 <outlet property="window" destination="F0z-JX-Cv5" id="gIp-Ho-8D9"/>
             </connections>
@@ -25,7 +26,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="809" y="653" width="640" height="209"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1057"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1055"/>
             <value key="minSize" type="size" width="400" height="200"/>
             <view key="contentView" id="se5-gp-TjO">
                 <rect key="frame" x="0.0" y="0.0" width="640" height="209"/>
@@ -58,6 +59,9 @@
                                     <menuItem title="Variants" id="IzK-1M-ZD6">
                                         <modifierMask key="keyEquivalentModifierMask"/>
                                     </menuItem>
+                                    <menuItem title="Vaccination" id="FMG-15-jeL">
+                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                    </menuItem>
                                     <menuItem title="Periods" id="Isv-8W-LbA">
                                         <modifierMask key="keyEquivalentModifierMask"/>
                                     </menuItem>
@@ -71,10 +75,10 @@
                             <action selector="flushView:" target="-2" id="41c-DF-TON"/>
                         </connections>
                     </popUpButton>
-                    <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="kdM-TS-n0Q">
+                    <button hidden="YES" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="kdM-TS-n0Q">
                         <rect key="frame" x="131" y="165" width="145" height="27"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <buttonCell key="cell" type="push" title="Open Indexes Sheet ..." alternateTitle="Close Indexes Sheet ..." bezelStyle="rounded" alignment="center" controlSize="small" enabled="NO" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="fcG-eK-P7a">
+                        <buttonCell key="cell" type="push" title="Open Indexes Sheet ..." alternateTitle="Close Indexes Sheet ..." bezelStyle="rounded" alignment="center" controlSize="small" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="fcG-eK-P7a">
                             <behavior key="behavior" pushIn="YES" changeContents="YES" lightByContents="YES"/>
                             <font key="font" metaFont="smallSystem"/>
                         </buttonCell>
@@ -82,6 +86,37 @@
                             <action selector="openCloseIdxSheet:" target="-2" id="CqE-TR-Xa8"/>
                         </connections>
                     </button>
+                    <popUpButton hidden="YES" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="oxC-u4-Zd9">
+                        <rect key="frame" x="133" y="168" width="132" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <popUpButtonCell key="cell" type="push" title="Whole ages" bezelStyle="rounded" alignment="left" controlSize="small" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="xou-rJ-kH7" id="rz8-1j-4Rf">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="smallSystem"/>
+                            <menu key="menu" id="PZJ-6q-sjR">
+                                <items>
+                                    <menuItem title="Whole ages" state="on" id="xou-rJ-kH7"/>
+                                    <menuItem title="0 - 9 yrs" id="8SQ-KI-gIT"/>
+                                    <menuItem title="10 - 19 yrs" id="5ym-OT-RQh"/>
+                                    <menuItem title="20 - 29 yrs" id="JsH-2i-kwa"/>
+                                    <menuItem title="30 - 39 yrs" id="yLc-z3-4Ep"/>
+                                    <menuItem title="40 - 49 yrs" id="4In-w3-T3z"/>
+                                    <menuItem title="50 - 59 yrs" id="ji1-ad-jZN"/>
+                                    <menuItem title="60 - 69 yrs" id="dDg-4z-N1B"/>
+                                    <menuItem title="70 - 79 yrs" id="0hB-rd-ggN"/>
+                                    <menuItem title="80 - 89 yrs" id="M1X-QR-d74"/>
+                                    <menuItem title="90 - 99 yrs" id="GMI-Pz-S11"/>
+                                    <menuItem title="100 - yrs" id="rDC-tG-BpJ"/>
+                                    <menuItem isSeparatorItem="YES" id="kSf-sh-AhB"/>
+                                    <menuItem title="First shot" id="Jsk-ra-f2x"/>
+                                    <menuItem title="Second shot" id="hKX-5H-Mzk"/>
+                                    <menuItem title="Booster shot" id="ESU-Fx-rdi"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                        <connections>
+                            <action selector="flushView:" target="-2" id="hHy-rf-SdY"/>
+                        </connections>
+                    </popUpButton>
                 </subviews>
             </view>
             <connections>
@@ -93,7 +128,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="196" y="207" width="504" height="175"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1057"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1055"/>
             <view key="contentView" id="6EC-Ts-6Pu">
                 <rect key="frame" x="0.0" y="0.0" width="504" height="175"/>
                 <autoresizingMask key="autoresizingMask"/>
@@ -106,10 +141,10 @@
                             <font key="font" metaFont="smallSystem"/>
                         </buttonCell>
                     </button>
-                    <customView ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="FEk-tk-gRi">
+                    <customView translatesAutoresizingMaskIntoConstraints="NO" id="FEk-tk-gRi">
                         <rect key="frame" x="146" y="37" width="154" height="24"/>
                         <subviews>
-                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Pl6-Oh-Ggt">
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Pl6-Oh-Ggt">
                                 <rect key="frame" x="-2" y="5" width="88" height="14"/>
                                 <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" title="Moving Average" id="DAQ-gx-pDj">
                                     <font key="font" metaFont="smallSystem"/>
@@ -117,14 +152,14 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
-                            <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="dSs-PL-9re">
-                                <rect key="frame" x="90" y="0.0" width="15" height="22"/>
+                            <stepper horizontalHuggingPriority="750" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="dSs-PL-9re">
+                                <rect key="frame" x="90" y="1" width="15" height="20"/>
                                 <stepperCell key="cell" controlSize="small" continuous="YES" alignment="left" maxValue="6" id="oOa-2G-snk"/>
                                 <connections>
                                     <action selector="stepMvAvrg:" target="-2" id="mvG-uX-8l8"/>
                                 </connections>
                             </stepper>
-                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="eM5-Se-uXx">
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="eM5-Se-uXx">
                                 <rect key="frame" x="109" y="5" width="19" height="14"/>
                                 <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" title="64" id="WoJ-9J-dHX">
                                     <font key="font" metaFont="smallSystem"/>
@@ -132,7 +167,7 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
-                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="lch-gn-iki">
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="lch-gn-iki">
                                 <rect key="frame" x="127" y="5" width="29" height="14"/>
                                 <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" title="days" id="nWn-Fp-ek5">
                                     <font key="font" metaFont="smallSystem"/>
@@ -142,9 +177,19 @@
                             </textField>
                         </subviews>
                         <constraints>
-                            <constraint firstItem="Pl6-Oh-Ggt" firstAttribute="leading" secondItem="FEk-tk-gRi" secondAttribute="leading" id="9gw-Ep-qVO"/>
+                            <constraint firstItem="Pl6-Oh-Ggt" firstAttribute="leading" secondItem="FEk-tk-gRi" secondAttribute="leading" id="0U4-4e-LhK"/>
+                            <constraint firstAttribute="bottom" secondItem="Pl6-Oh-Ggt" secondAttribute="bottom" constant="5" id="2YC-pc-r6b"/>
+                            <constraint firstAttribute="height" constant="24" id="BTt-l8-Nzz"/>
+                            <constraint firstItem="dSs-PL-9re" firstAttribute="leading" secondItem="Pl6-Oh-Ggt" secondAttribute="trailing" constant="8" symbolic="YES" id="Ns4-gY-MF6"/>
                             <constraint firstItem="dSs-PL-9re" firstAttribute="leading" secondItem="Pl6-Oh-Ggt" secondAttribute="trailing" constant="8" id="QFZ-yF-nMj"/>
+                            <constraint firstAttribute="width" priority="250" constant="154" id="cOs-Sg-Pho"/>
+                            <constraint firstItem="Pl6-Oh-Ggt" firstAttribute="top" secondItem="FEk-tk-gRi" secondAttribute="top" constant="5" id="cUY-q4-U0D"/>
+                            <constraint firstItem="dSs-PL-9re" firstAttribute="centerY" secondItem="lch-gn-iki" secondAttribute="centerY" id="kXk-ce-mqp"/>
+                            <constraint firstItem="dSs-PL-9re" firstAttribute="centerY" secondItem="eM5-Se-uXx" secondAttribute="centerY" id="sZt-uI-NAm"/>
                             <constraint firstItem="eM5-Se-uXx" firstAttribute="leading" secondItem="dSs-PL-9re" secondAttribute="trailing" constant="8" id="uss-vh-v2e"/>
+                            <constraint firstItem="dSs-PL-9re" firstAttribute="top" secondItem="eM5-Se-uXx" secondAttribute="top" id="xzG-1y-6rz"/>
+                            <constraint firstItem="dSs-PL-9re" firstAttribute="top" secondItem="lch-gn-iki" secondAttribute="top" id="ybZ-Wm-FpZ"/>
+                            <constraint firstItem="dSs-PL-9re" firstAttribute="top" secondItem="Pl6-Oh-Ggt" secondAttribute="top" id="zPu-rX-zTZ"/>
                             <constraint firstItem="lch-gn-iki" firstAttribute="leading" secondItem="eM5-Se-uXx" secondAttribute="trailing" constant="3" id="zuT-9x-yyY"/>
                         </constraints>
                     </customView>
@@ -299,7 +344,7 @@
                         </view>
                     </box>
                     <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="vuL-A7-Hxr" customClass="ULinedButton">
-                        <rect key="frame" x="369" y="34" width="117" height="18"/>
+                        <rect key="frame" x="368" y="36" width="116" height="16"/>
                         <buttonCell key="cell" type="check" title="Reproduction rate" bezelStyle="regularSquare" imagePosition="left" controlSize="small" lineBreakMode="truncatingTail" inset="2" id="I5I-HZ-xpF">
                             <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                             <font key="font" metaFont="smallSystem"/>
@@ -309,6 +354,8 @@
                 <constraints>
                     <constraint firstAttribute="bottom" secondItem="vuL-A7-Hxr" secondAttribute="bottom" constant="37" id="4Sh-Qa-do4"/>
                     <constraint firstAttribute="trailing" secondItem="vuL-A7-Hxr" secondAttribute="trailing" constant="20" id="9bQ-n3-5Yn"/>
+                    <constraint firstItem="FEk-tk-gRi" firstAttribute="leading" secondItem="6EC-Ts-6Pu" secondAttribute="leading" constant="146" id="RdI-4w-XuW"/>
+                    <constraint firstAttribute="bottom" secondItem="FEk-tk-gRi" secondAttribute="bottom" constant="37" id="yUS-8L-2yl"/>
                 </constraints>
             </view>
             <connections>

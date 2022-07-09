@@ -96,8 +96,9 @@ static NSInteger age_span_index_from_key(NSString *key) {
 				location:IfcLocScattered variant:0];
 		} else if ([item isKindOfClass:NSPredicate.class])	// predicate to stop
 			pred = (NSPredicate *)item;
-		if (pred != nil && ![pred evaluateWithObject:statInfo]) {
-			predicateToStop = pred; hasStopCond = YES; break;
+		if (pred != nil) {
+			if ([pred evaluateWithObject:statInfo]) pred = nil;
+			else { predicateToStop = pred; hasStopCond = YES; break; }
 		}
 	}
 	free(visitFlags);
@@ -109,7 +110,7 @@ static NSInteger age_span_index_from_key(NSString *key) {
 		NSNumber *idxNum;
 		for (NSString *key in md) {
 			if ([key hasPrefix:@"vaccine"]) {
-				if ([key hasPrefix:@"vaccineFinalRate"]) {
+				if ([key hasPrefix:keyVaccineFinalRate]) {
 					CGFloat newRate = fmax(0., fmin(1., ((NSNumber *)md[key]).doubleValue / 100.));
 					NSInteger spanIdx = age_span_index_from_key(key);
 					if (spanIdx < 0) {

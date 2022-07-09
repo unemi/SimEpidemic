@@ -73,10 +73,11 @@ typedef struct {
 @property (readonly) NSMutableArray<MyCounter *> *IncubPHist, *RecovPHist, *DeathPHist, *NInfectsHist;
 @property StatData *statistics, *transit;
 @property TestResultCount testResultCnt;	// weekly total
-@property NSMutableData *sspData, *variantsData;
+@property NSMutableData *sspData, *variantsData, *vaccinesData;
 
 - (void)reset:(PopulationHConf)popConf;
 - (void)cummulateHistgrm:(HistogramType)type days:(CGFloat)d;
+- (void)cummulateVcnRecord:(NSInteger *)cntSrc;
 - (BOOL)calcStatWithTestCount:(NSUInteger *)testCount
 	infects:(NSArray<NSArray<NSValue *> *> *)infects;
 #ifdef NOGUI
@@ -98,11 +99,13 @@ typedef struct {
 #ifndef NOGUI
 #define SSP_NDrawRanks 10
 typedef struct {
+	NSInteger vcnRecType;
 	NSInteger idxBits, nIndexes, windowSize;
 } TimeEvoInfo;
 
 typedef enum {
-	StatWhole, StatTimeEvo, StatSeverity, StatVariants, StatPeriods, StatSpreaders
+	StatWhole, StatTimeEvo, StatSeverity, StatVariants, StatVaccination,
+	StatPeriods, StatSpreaders
 } StatType;
 
 typedef enum {
@@ -131,7 +134,7 @@ typedef enum {
 @end
 
 @interface StatPanel : NSWindowController <NSWindowDelegate> {
-	IBOutlet NSPopUpButton *typePopUp;
+	IBOutlet NSPopUpButton *typePopUp, *vcnRecPopUp;
 	IBOutlet NSButton *idxSelectionBtn;
 	IBOutlet NSWindow *idxSelectionSheet;
 	IBOutlet NSView *mvAvrgView;

@@ -24,6 +24,13 @@ typedef enum {
 	TestTotal = TestNone
 } TestType;
 
+typedef enum {
+	VcnNowNone, VcnNowFirst, VcnNowSecond, VcnNowBoost,
+	NAllVcnNowTypes = VcnNowBoost
+} VcnNowType;
+#define N_AGE_RANKS 11
+#define N_ELMS_VCN_REC (NAllVcnNowTypes*N_AGE_RANKS)
+
 #define MAX_N_VAXEN 8
 #define MAX_N_VARIANTS 8
 #define MAX_N_AGE_SPANS 12

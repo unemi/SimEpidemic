@@ -84,13 +84,14 @@
 	}
 	return rows;
 }
-- (NSArray *)objectOfStatsInData:(NSData *)data unit:(NSInteger)unit {
-	NSInteger *stat = (NSInteger *)data.bytes, *p = stat;
-	NSInteger nSteps = days / skipDays;
+- (NSArray *)objectOfStatsInData:(NSData *)data unit:(NSInteger)unit days:(BOOL)isDays {
+	NSInteger *p = (NSInteger *)data.bytes, nSteps, nSkip;
+	if (isDays) { nSteps = days / skipDays; nSkip = skipDays; }
+	else { nSteps = steps / skip; nSkip = skip; }
 	NSMutableArray *rows = NSMutableArray.new;
 	NSNumber *row[unit + 1];
 	for (NSInteger i = 0; i < nSteps; i ++, p += unit) {
-		row[0] = @((i + 1) * skipDays);
+		row[0] = @((i + 1) * skip);
 		for (NSInteger j = 0; j < unit; j ++) row[j + 1] = @(p[j]);
 		[rows addObject:[NSArray arrayWithObjects:row count:unit + 1]];
 	}
@@ -302,6 +303,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 		} else if ([distributionNames containsObject:key]) aD[nD ++] = key;
 		else if ([key isEqualToString:@"severityStats"]) shouldSaveSeverityStats = YES;
 		else if ([key isEqualToString:@"variantsStats"]) shouldSaveVariantsStats = YES;
+		else if ([key isEqualToString:@"vaccination"]) shouldSaveVcnRecord = YES;
 		else if ([key isEqualToString:@"saveState"]) shouldSaveState = YES;
 	}
 	output_n = [NSArray arrayWithObjects:an count:nn];
@@ -379,16 +381,20 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 		if (shouldSaveSeverityStats)
 			[self makeDataFileWith:number type:@"severity" names:nil
 				makeObj:^(StatInfo *stInfo, NSArray *names)
-					{ return [stInfo objectOfStatsInData:stInfo.sspData unit:SSP_NRanks]; }];
+					{ return [stInfo objectOfStatsInData:stInfo.sspData unit:SSP_NRanks days:YES]; }];
 		if (shouldSaveVariantsStats) {
 			MutableDictArray vrList = runningTrials[number].variantList;
 			NSInteger nVariants = (vrList == nil)? 1 : vrList.count;
 			if (nVariants > MAX_N_VARIANTS) nVariants = MAX_N_VARIANTS;
 			[self makeDataFileWith:number type:@"variants" names:nil
 				makeObj:^(StatInfo *stInfo, NSArray *names) {
-				return [stInfo objectOfStatsInData:stInfo.variantsData unit:MAX_N_VARIANTS];
+				return [stInfo objectOfStatsInData:stInfo.variantsData unit:MAX_N_VARIANTS days:YES];
 			}];
 		}
+		if (shouldSaveVcnRecord)
+			[self makeDataFileWith:number type:@"vaccination" names:nil
+				makeObj:^(StatInfo *stInfo, NSArray *names) { return
+					[stInfo objectOfStatsInData:stInfo.vaccinesData unit:N_ELMS_VCN_REC days:NO]; }];
 		if (shouldSaveState)
 			[runningTrials[number] saveStateTo:
 				[NSString stringWithFormat:@"%@_%@", _ID, number]];
@@ -508,13 +514,11 @@ static void copy_allowed_world_params(World *world) {
 				set_params_from_dict(world.runtimeParamsP, world.tmpWorldParamsP, _parameters);
 				copy_allowed_world_params(world);
 			}
-			if (_scenario != nil) {
-				[world setScenarioPList:_scenario];
-				if (world.runtimeParamsP->step > 0) [world execScenario];
-			}
+			if (_scenario != nil) [world setScenarioPList:_scenario];
 		}
 		[self organizeVariantsAndVaccines:world];
 		[self organizeGatheringsList:world];
+		if (world.runtimeParamsP->step > 0) [world execScenario];
 		NSNumber *trialNumb = @(++ nextTrialNumber);
 		runningTrials[trialNumb] = world;
 		if (nextTrialNumber >= _nIteration)

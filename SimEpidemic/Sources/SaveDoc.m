@@ -50,7 +50,8 @@ static NSString *fnPopulation = @"population.gz", *fnContacts = @"contacts.gz",
 	*keyParamChangers = @"paramChangers",
 	*fnPopDensMap = @"populationDesityMap.gz",
 	*fnSeverityStats = @"severityStats.gz",
-	*fnVariantsStats = @"variantsStats.gz";
+	*fnVariantsStats = @"variantsStats.gz",
+	*fnVaccinationRecord = @"vaccinationRecord.gz";
 #ifndef NOGUI
 static NSString *fnStatImageBM = @"statImageBitmap.gz",
 	*fnUIInfo = @"UIInfo.plist",
@@ -340,6 +341,12 @@ static StatData *stat_chain_from_data(NSData *data) {
 	return (nSteps <= 0)? nil : [NSData dataWithBytes:self.variantsData.bytes
 		length:sizeof(NSInteger) * nSteps * MAX_N_VARIANTS];
 }
+- (NSData *)dataOfVaccinationRecord {
+	NSInteger idx = steps;
+	while (idx >= MAX_N_REC) idx >>= 1;
+	return (idx <= 0)? nil : [NSData dataWithBytes:self.vaccinesData.bytes
+		length:sizeof(NSInteger) * idx * N_ELMS_VCN_REC];
+}
 #ifndef NOGUI
 - (NSData *)dataOfImageBitmap {
 	return [NSData dataWithBytes:imgBm length:IMG_WIDTH * IMG_HEIGHT * 4];
@@ -596,6 +603,8 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 		md[fnSeverityStats] = [NSFileWrapper.alloc initRegularFileWithContents:[data zippedData]];
 	if ((data = [statInfo dataOfVariantsStats]) != nil)
 		md[fnVariantsStats] = [NSFileWrapper.alloc initRegularFileWithContents:[data zippedData]];
+	if ((data = [statInfo dataOfVaccinationRecord]) != nil)
+		md[fnVaccinationRecord] = [NSFileWrapper.alloc initRegularFileWithContents:[data zippedData]];
 #ifndef NOGUI
 	md[fnStatImageBM] = [NSFileWrapper.alloc initRegularFileWithContents:
 		[[statInfo dataOfImageBitmap] zippedData]];
@@ -847,6 +856,7 @@ static void copy_data_from_fw(NSFileWrapper *fw, NSMutableData *dstData) {
 	else [self resetVaccineQueueIfNecessary];
 	if ((fw = dict[fnSeverityStats]) != nil) copy_data_from_fw(fw, statInfo.sspData);
 	if ((fw = dict[fnVariantsStats]) != nil) copy_data_from_fw(fw, statInfo.variantsData);
+	if ((fw = dict[fnVaccinationRecord]) != nil) copy_data_from_fw(fw, statInfo.vaccinesData);
 	if ((fw = dict[fnGatSpotsFixed]) != nil) [self readGatheringSpotsFromFileWrapper:fw];
 	if ((fw = dict[fnRegGatPoints]) != nil) [self readRegGatInfoFromFileWrapper:fw];
 	BOOL agentRndOK = NO;

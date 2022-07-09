@@ -13,7 +13,8 @@ and the technical detail in Japanese at  [http://www.intlab.soka.ac.jp/~unemi/Si
 
 ## How to install the HTTP server version
 The HTTP server version is also in a form of universal binary.
-If the execution module "simepidemic" is immediately killed by zsh just after the invokation; please try to "archive" the product, export it into a local folder, then copy the product module "simepidemic" under Products/use/local/bin to the target server machine.
+If the execution module "simepidemic" is immediately killed by zsh just after the invokation;
+please try to "archive" the product, export it into a local folder, then copy the product module "simepidemic" under Products/usr/local/bin to the target server machine.
 A shell script SimEpidemicSV/install.sh might be helpful to learn how to install the binary.
 
 ## Subdirectories

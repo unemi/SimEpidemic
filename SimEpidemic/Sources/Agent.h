@@ -23,6 +23,7 @@ typedef struct {
 	WarpType warpType; NSPoint warpTo;
 	HistogramType histType; CGFloat histDays;
 	TestType testType;
+	VcnNowType vcnNowType;
 } StepInfo;
 
 @interface World (AgentExtension)
