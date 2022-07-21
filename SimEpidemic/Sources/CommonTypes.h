@@ -6,6 +6,7 @@
 //  Copyright © 2020 Tatsuo Unemi. All rights reserved.
 //
 #define VER_1_8
+#import <Cocoa/Cocoa.h>
 
 typedef enum {
 	Susceptible, Asymptomatic, Symptomatic, Recovered, Died,
@@ -108,6 +109,7 @@ typedef struct {
 	CGFloat tstSbjAsy, tstSbjSym; // Subjects for test of asymptomatic, and symptomatic. contacts are tested 100%.
 	CGFloat tstCapa, tstDlyLim; // Test capacity (per 1,000 persons per day), test delay limit (days)
 	CGFloat imnMaxDur, imnMaxDurSv, imnMaxEffc, imnMaxEffcSv;	// acquired immunity by infection
+	CGFloat immunityDcy; // Ratio of decay period for immunity by infection
 	DistInfo mobDist; // mass and warp distance
 	DistInfo incub, fatal; // incubation, fatality
 	DistInfo gatSZ, gatDR, gatST; // Event gatherings: size, duration, strength

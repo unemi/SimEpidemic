@@ -209,9 +209,9 @@ void reset_for_step(Agent *a) {
 	a->newHealth = a->health;
 	a->newNInfects = 0;
 }
-NSInteger index_in_pop(Agent *a, WorldParams *p) {
-	NSInteger iy = floor(a->y * p->mesh / p->worldSize);
-	NSInteger ix = floor(a->x * p->mesh / p->worldSize);
+NSInteger index_in_pop(CGFloat x, CGFloat y, WorldParams *p) {
+	NSInteger iy = floor(y * p->mesh / p->worldSize);
+	NSInteger ix = floor(x * p->mesh / p->worldSize);
 	if (iy < 0) iy = 0; else if (iy >= p->mesh) iy = p->mesh - 1;
 	if (ix < 0) ix = 0; else if (ix >= p->mesh) ix = p->mesh - 1;
 	return iy * p->mesh + ix;
@@ -240,7 +240,7 @@ if (!a->isOutOfField) {
 }
 #endif
 	a->isOutOfField = NO;
-	add_to_list(a, Pop + index_in_pop(a, wp));
+	add_to_list(a, Pop + index_in_pop(a->x, a->y, wp));
 }
 void remove_agent(Agent *a, WorldParams *wp, Agent **Pop) {
 #ifdef DEBUG
@@ -250,7 +250,7 @@ if (a->isOutOfField) {
 }
 #endif
 	a->isOutOfField = YES;
-	remove_from_list(a, Pop + index_in_pop(a, wp));
+	remove_from_list(a, Pop + index_in_pop(a->x, a->y, wp));
 }
 @implementation World (AgentExtension)
 static void attracted(Agent *a, Agent *b) {
@@ -306,7 +306,7 @@ static void attracted(Agent *a, Agent *b) {
 		dx[i] = b[i]->x - a->x; dy[i] = b[i]->y - a->y;
 		d[i] = sqrt((d2[i] = fmax(1e-4, dx[i] * dx[i] + dy[i] * dy[i])));
 	}
-	CGFloat viewRange = worldParams.worldSize / worldParams.mesh;
+	CGFloat viewRange = (CGFloat)worldParams.worldSize / worldParams.mesh;
 	NSInteger j = 0;
 	for (NSInteger i = 0; i < n; i ++) if (d[i] < viewRange) {
 		if (i > j) { dx[j] = dx[i]; dy[j] = dy[i]; d2[j] = d2[i]; d[j] = d[i]; }
@@ -326,6 +326,32 @@ static void attracted(Agent *a, Agent *b) {
 		attracted(bb[i], a);
 		[self checkInfectionA:a B:bb[i] dist:d[i]];
 		[self checkInfectionA:bb[i] B:a dist:d[i]];
+	}
+}
+- (void)avoidGatherings:(NSInteger)gIdx agents:(Agent **)a n:(NSInteger)n {
+	CGFloat dx[n], dy[n], d2[n], d[n];
+	Agent *aa[n];
+	NSArray<NSValue *> *gArr = gatMap[gIdx];
+	CGFloat viewRange = (CGFloat)worldParams.worldSize / worldParams.mesh;
+	for (NSValue *v in gArr) {
+		Gathering *gat = v.pointerValue;
+		NSPoint p = gat->p;
+		for (NSInteger i = 0; i < n; i ++) {
+			dx[i] = a[i]->x - p.x; dy[i] = a[i]->y - p.y;
+			d[i] = sqrt((d2[i] = fmax(1e-4, dx[i] * dx[i] + dy[i] * dy[i])));
+		}
+		NSInteger j = 0;
+		for (NSInteger i = 0; i < n; i ++) if (d[i] < viewRange && a[i]->gathering != gat) {
+			if (i > j) { dx[j] = dx[i]; dy[j] = dy[i]; d2[j] = d2[i]; d[j] = d[i]; }
+			aa[j] = a[i];
+			j ++;
+		}
+		if (j <= 0) continue;
+		CGFloat dd[j];
+		for (NSInteger i = 0; i < j; i ++) dd[i] = ((d[i] < viewRange * 0.8)? 1.0 :
+			(1 - d[i] / viewRange) / 0.2) / d[i] / d2[i] * gat->strength;
+		for (NSInteger i = 0; i < j; i ++)
+			{ aa[i]->fx += dx[i] * dd[i]; aa[i]->fy += dy[i] * dd[i]; }
 	}
 }
 @end
@@ -469,8 +495,12 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 			else expire_immunity(a, rp, wp);
 		} break;
 		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
-		if (a->daysInfected > a->imExpr) expire_immunity(a, rp, wp);
-		break;
+		if (a->daysInfected >= a->imExpr) expire_immunity(a, rp, wp);
+		else {
+			CGFloat imnDcy = rp->immunityDcy / 100.;
+			if (a->daysInfected >= a->imExpr * (1. - imnDcy)) a->agentImmunity *=
+				1. - 1. / (a->imExpr * imnDcy - a->daysInfected) / wp->stepsPerDay;
+		} break;
 		default: break;
 	}
 	if (a->health != Symptomatic && was_hit(wp->stepsPerDay, rp->tstSbjAsy / 100.))
@@ -502,7 +532,7 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		return;
 	}
 #endif
-	info->moveFrom = index_in_pop(a, wp);
+	info->moveFrom = index_in_pop(a->x, a->y, wp);
 	if (a->distancing) {
 		CGFloat dst = 1.0 + rp->dstST / 5.0;
 		a->fx *= dst;
@@ -548,7 +578,7 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		{ a->y = AGENT_RADIUS * 2 - a->y; a->vy = - a->vy; }
 	else if (a->y > wp->worldSize - AGENT_RADIUS)
 		{ a->y = (wp->worldSize - AGENT_RADIUS) * 2 - a->y; a->vy = - a->vy; }
-	info->moveTo = index_in_pop(a, wp);
+	info->moveTo = index_in_pop(a->x, a->y, wp);
 }
 void step_agent_in_quarantine(Agent *a, ParamsForStep prms, StepInfo *info) {
 	switch (a->health) {

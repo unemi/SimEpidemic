@@ -70,6 +70,7 @@ typedef struct {
 	float *popDistMapData;
 	NSData *gatSpotsFixed;
 	NSMutableDictionary<NSString *, NSMutableArray *> *regGatInfo;
+	NSMutableArray<NSMutableArray<NSValue *> *> *gatMap;
 	CGFloat *agentsRnd;
 }
 @property LoopMode loopMode;

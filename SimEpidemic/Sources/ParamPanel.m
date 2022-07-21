@@ -257,7 +257,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		dstSTDgt, dstOBDgt, backHmDgt, gatFrDgt, gatRndDgt, gatActBsDgt, cntctTrcDgt,
 		tstDelayDgt, tstProcDgt, tstIntvlDgt, tstSensDgt, tstSpecDgt,
 		tstSbjAsyDgt, tstSbjSymDgt, tstCapaDgt, tstDlyLimDgt,
-		imnMaxDurDgt, imnMaxDurSvDgt, imnMaxEffcDgt, imnMaxEffcSvDgt];
+		imnMaxDurDgt, imnMaxDurSvDgt, imnMaxEffcDgt, imnMaxEffcSvDgt, imnDecayRDgt];
 	fSliders = @[massSld, fricSld, avoidSld, maxSpdSld,
 		actModeSld, actKurtSld, massActSld, mobActSld, gatActSld,
 		incubActSld, fatalActSld, immueActSld, therapyEffcSld,
@@ -265,7 +265,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		dstSTSld, dstOBSld, backHmSld, gatFrSld, gatRndSld, gatActBsSld, cntctTrcSld,
 		tstDelaySld, tstProcSld, tstIntvlSld, tstSensSld, tstSpecSld,
 		tstSbjAsySld, tstSbjSymSld, tstCapaSld, tstDlyLimSld,
-		imnMaxDurSld, imnMaxDurSvSld, imnMaxEffcSld, imnMaxEffcSvSld];
+		imnMaxDurSld, imnMaxDurSvSld, imnMaxEffcSld, imnMaxEffcSvSld, imnDecayRSld];
 	ParamPanel __weak *pp = self;
 	void (^proc)(void) = ^{ [pp checkUpdate]; };
 	dDigits = @[

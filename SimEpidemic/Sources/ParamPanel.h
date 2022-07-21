@@ -38,6 +38,8 @@ NS_ASSUME_NONNULL_BEGIN
 	IBOutlet NSSlider *infecSld, *infecDstSld, *contagDSld, *contagPSld;
 	IBOutlet NSTextField *imnMaxDurDgt, *imnMaxDurSvDgt, *imnMaxEffcDgt, *imnMaxEffcSvDgt;
 	IBOutlet NSSlider *imnMaxDurSld, *imnMaxDurSvSld, *imnMaxEffcSld, *imnMaxEffcSvSld;
+	IBOutlet NSTextField *imnDecayRDgt;
+	IBOutlet NSSlider *imnDecayRSld;
 	IBOutlet NSTextField
 		*mobDistMinDgt, *mobDistMaxDgt, *mobDistModeDgt,
 		*incubMinDgt, *incubMaxDgt, *incubModeDgt,

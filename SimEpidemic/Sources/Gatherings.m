@@ -83,59 +83,83 @@ void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect) {
 @implementation World (GatheringExtantion)
 - (void)resetRegGatInfo {
 	regGatInfo = NSMutableDictionary.new;
-	for (NSMutableDictionary *item in self.gatheringsList) {
-		NSString *name = item[@"name"]; if (name == nil) continue;
+	NSInteger nGats =  self.gatheringsList.count, nPts[nGats], nTotalPts = 0;
+	memset(nPts, 0, sizeof(nPts));
+	for (NSInteger i = 0; i < nGats; i ++) {
+		NSMutableDictionary *item = self.gatheringsList[i];
+		if (item[@"name"] == nil) continue;
 		NSDictionary *initParams = item[@"initParams"];
 		if (initParams != nil) for (NSString *key in initParams) item[key] = initParams[key];
-		NSInteger nPoints = [item[@"npp"] doubleValue] * worldParams.initPop / 1e5;
-		if (nPoints > 0) {
-			NSPoint *pts = malloc(sizeof(NSPoint) * nPoints);
-			switch (worldParams.wrkPlcMode) {
-				case WrkPlcPopDistImg:
-					[self makeDistribution:pts n:nPoints]; break;
-				default: {
-					NSInteger nx = ceil(sqrt(nPoints));
-					for (NSInteger i = 0; i < nPoints; i ++) {
-						pts[i].x = worldParams.worldSize * (i % nx + .5) / nx;
-						pts[i].y = worldParams.worldSize * (i / nx + .5) / nx;
-				}}
-			}
-			CGFloat minAge = [item[@"minAge"] doubleValue];
-			CGFloat maxAge = [item[@"maxAge"] doubleValue];
-			Agent *agents = self.agents;
-			NSMutableArray<NSNumber *> *plcList[nPoints];
-			for (NSInteger i = 0; i < nPoints; i ++) plcList[i] = NSMutableArray.new;
-			for (NSInteger i = 0; i < worldParams.initPop; i ++)
-				if (agents[i].age >= minAge && agents[i].age < maxAge) {
-					NSPoint pt = agents[i].orgPt;
-					CGFloat minD = 1e10; NSInteger nearestPlc = -1;
-					for (NSInteger j = 0; j < nPoints; j ++) {
-						CGFloat d = pow(pt.x - pts[j].x, 2.) + pow(pt.y - pts[j].y, 2.);
-						if (minD > d) { minD = d; nearestPlc = j; }
-					}
-					if (nearestPlc >= 0) [plcList[nearestPlc] addObject:@(i)];
-			}
-			CGFloat exceptionRate = 1. - [item[@"participation"] doubleValue] / 100.;
-			NSMutableArray *gatInfo = NSMutableArray.new;
-			for (NSInteger i = 0; i < nPoints; i ++) {
-				NSMutableArray<NSNumber *> *candidates = plcList[i];
-				NSInteger nException = round(candidates.count * exceptionRate);
-				if (nException == candidates.count) continue;
-				for (NSInteger j = 0; j < nException; j ++)
-					[candidates removeObjectAtIndex:random() % candidates.count];
-				if (candidates.count > 0) {
-					NSMutableData *idData =
-						[NSMutableData dataWithLength:sizeof(NSInteger) * candidates.count];
-					for (NSInteger j = 0; j < candidates.count; j ++)
-						((NSInteger *)idData.mutableBytes)[j] = candidates[j].integerValue;
-					[gatInfo addObject:
-						@{@"point":[NSValue valueWithPoint:pts[i]], @"member":idData}];
-				}
-			}
-			free(pts);
-			if (gatInfo.count > 0) regGatInfo[name] = gatInfo;
-		}
+		item[@"nextTime"] = @0;
+		nTotalPts += nPts[i] = [item[@"npp"] doubleValue] * worldParams.initPop / 1e5;
 	}
+	if (nTotalPts <= 0) return;
+	NSPoint *points = malloc(sizeof(NSPoint) * nTotalPts);
+	switch (worldParams.wrkPlcMode) {
+		case WrkPlcPopDistImg:
+			[self makeDistribution:points n:nTotalPts]; break;
+		default: {
+			NSInteger nx = ceil(sqrt(nTotalPts));
+			for (NSInteger i = 0; i < nTotalPts; i ++) {
+				points[i].x = worldParams.worldSize * (i % nx + .5) / nx;
+				points[i].y = worldParams.worldSize * (i / nx + .5) / nx;
+		}}
+	}
+	for (NSInteger i = 0; i < nTotalPts - 1; i ++) {
+		NSInteger j = random() % (nTotalPts - i) + i;
+		if (j != i) { NSPoint p = points[i]; points[i] = points[j]; points[j] = p; }
+	}
+	NSPoint *ptsP = points;
+	for (NSInteger i = 0; i < nGats; ptsP += nPts[i], i ++) {
+		NSMutableDictionary *item = self.gatheringsList[i];
+		NSString *name = item[@"name"]; if (name == nil) continue;
+		CGFloat minAge = [item[@"minAge"] doubleValue];
+		CGFloat maxAge = [item[@"maxAge"] doubleValue];
+		Agent *agents = self.agents;
+		NSInteger nPoints = nPts[i];
+		if (nPoints <= 0) continue;
+		NSMutableArray<NSNumber *> *plcList[nPoints];
+		for (NSInteger i = 0; i < nPoints; i ++) plcList[i] = NSMutableArray.new;
+		for (NSInteger i = 0; i < worldParams.initPop; i ++)
+			if (agents[i].age >= minAge && agents[i].age < maxAge) {
+				NSPoint pt = agents[i].orgPt;
+				CGFloat minD = 1e10; NSInteger nearestPlc = -1;
+				for (NSInteger j = 0; j < nPoints; j ++) {
+					CGFloat d = pow(pt.x - ptsP[j].x, 2.) + pow(pt.y - ptsP[j].y, 2.);
+						if (minD > d) { minD = d; nearestPlc = j; }
+				}
+				if (nearestPlc >= 0) [plcList[nearestPlc] addObject:@(i)];
+			}
+		CGFloat exceptionRate = 1. - [item[@"participation"] doubleValue] / 100.;
+		NSMutableArray *gatInfo = NSMutableArray.new;
+		for (NSInteger i = 0; i < nPoints; i ++) {
+			NSMutableArray<NSNumber *> *candidates = plcList[i];
+			NSInteger nException = round(candidates.count * exceptionRate);
+			if (nException == candidates.count) continue;
+			for (NSInteger j = 0; j < nException; j ++)
+				[candidates removeObjectAtIndex:random() % candidates.count];
+			if (candidates.count > 0) {
+				NSMutableData *idData =
+					[NSMutableData dataWithLength:sizeof(NSInteger) * candidates.count];
+				for (NSInteger j = 0; j < candidates.count; j ++)
+					((NSInteger *)idData.mutableBytes)[j] = candidates[j].integerValue;
+				[gatInfo addObject:
+					@{@"point":[NSValue valueWithPoint:ptsP[i]], @"member":idData}];
+			}
+		}
+		if (gatInfo.count > 0) regGatInfo[name] = gatInfo;
+	}
+	free(points);
+#ifdef DEBUG
+for (NSString *name in regGatInfo) {
+	printf("%s(%ld)",name.UTF8String, regGatInfo[name].count);
+	for (NSDictionary *info in regGatInfo[name]) {
+		NSPoint p = ((NSValue *)info[@"point"]).pointValue;
+		printf(" (%.2f,%.2f)%ld", p.x, p.y, ((NSData *)info[@"member"]).length / sizeof(NSInteger));
+	}
+	printf("\n");
+}
+#endif
 }
 - (void)collectParticipants:(Gathering *)gat
 	agentsIDs:(NSMutableArray<NSNumber *> *)agents
@@ -143,7 +167,7 @@ void draw_gathering(Gathering *gat, CGFloat *rgb, NSRect dRect) {
 	Agent **pmap = self.Pop;
 	for (NSInteger ix = left; ix < right; ix ++)
 		for (Agent *a = pmap[row + ix]; a; a = a->next)
-			if (a->health != Symptomatic && test(a)) {
+			if (a->health != Symptomatic && test(a) && a->gathering == NULL) {
 				[agents addObject:@(a->ID)];
 				a->gathering = gat;
 			}
@@ -200,28 +224,41 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 #endif
 }
 - (Gathering *)setupRegGathering:(Gathering *)gat info:(NSMutableDictionary *)info {
-/*	CGFloat size = [info[@"size"] doubleValue],
+	CGFloat size = [info[@"size"] doubleValue],
 		duration = [info[@"duration"] doubleValue],
 		strength = [info[@"strength"] doubleValue],
-		joinRate = [info[@"participation"] doubleValue] / 100.,
-		minAge, maxAge;
+		jRate = [info[@"participation"] doubleValue],
+		initJRate = [((NSDictionary *)info[@"initParams"])[@"participation"] doubleValue];
 	NSInteger n = [info[@"n"] integerValue];
-	NSNumber *num;
-	minAge = ((num = info[@"minAge"]) == nil)? 0. : num.doubleValue;
-	maxAge = ((num = info[@"maxAge"]) == nil)? 200. : num.doubleValue;
-	NSPoint *pts = (NSPoint *)regGatInfo[info[@"name"]].bytes;
+	CGFloat joinRate = (jRate >= initJRate)? 1. : jRate / initJRate;
+	NSArray<NSDictionary *> *ptsAndMembers = regGatInfo[info[@"name"]];
+	NSInteger npm = ptsAndMembers.count;
 #ifndef NOGUI
 	NSInteger gatType = [self.gatheringsList indexOfObject:info] + 1;
 #endif
 	for (NSInteger i = 0; i < n && gat != NULL; i ++, gat = gat->next) {
+		NSDictionary *pm = ptsAndMembers[i % npm];
 		gat->size = size;
 		gat->duration = duration;
 		gat->strength = strength;
-		gat->p = pts[i];
-		CGFloat *rndP = agentsRnd;
-		[self collectParticipants:gat test:^BOOL(Agent *a) {
-			return a->age >= minAge && a->age < maxAge && rndP[a->ID] < joinRate; }];
-#ifdef DEBUG
+		gat->p = ((NSValue *)pm[@"point"]).pointValue;
+		NSData *idData = pm[@"member"];
+		NSInteger nIDs = idData.length / sizeof(NSInteger), nToJoin = round(nIDs * joinRate);
+		NSInteger *idxs = malloc(sizeof(NSInteger) * nIDs);
+		memcpy(idxs, idData.bytes, idData.length);
+		NSInteger nJoin = 0;
+		Agent *attendees[nToJoin];
+		for (NSInteger i = 0; i < nIDs && nJoin < nToJoin; i ++) {
+			NSInteger j = random() % (nIDs - i) + i;
+			Agent *a = self.agents + idxs[j];
+			idxs[j] = idxs[i];
+			if (a->health != Symptomatic && a->gathering == NULL) attendees[nJoin ++] = a;
+		}
+		gat->nAgents = nJoin;
+		gat->agents = realloc(gat->agents, sizeof(void *) * nJoin);
+		for (NSInteger i = 0; i < nJoin; i ++)
+			(gat->agents[i] = attendees[i])->gathering = gat;
+#ifdef DEBUGx
 	printf("%ld %s(%.1f,%.1f)%s", gat->nAgents,
 		[(NSString *)info[@"name"] UTF8String], gat->p.x, gat->p.y,
 		(i<n)? ", " : "\n");
@@ -231,7 +268,6 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 #endif
 	}
 	info[@"n"] = nil;
-*/
 	return gat;
 }
 static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
@@ -268,17 +304,17 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 	NSInteger nRegGat = 0;
 	MutableDictArray regGatToBeFired = NSMutableArray.new;
 	for (NSMutableDictionary *gatItem in self.gatheringsList) {
-		CGFloat stpCnt = [gatItem[@"stpCnt"] doubleValue],
-			freq = [gatItem[@"freq"] doubleValue];
+		CGFloat freq = [gatItem[@"freq"] doubleValue];
 		if (freq <= 0.) continue;
-		if ((stpCnt -= 1.) <= 0.) {
+		CGFloat nextTime = [gatItem[@"nextTime"] doubleValue];
+		if (nextTime <= runtimeParams.step) {
 			[regGatToBeFired addObject:gatItem];
-			stpCnt += 7 * worldParams.stepsPerDay / freq;
+			nextTime += 7 * worldParams.stepsPerDay / freq;
 			NSInteger nGats = [gatItem[@"npp"] doubleValue] * worldParams.initPop / 1e5;
 			gatItem[@"n"] = @(nGats);
 			nRegGat += nGats;
 		}
-		gatItem[@"stpCnt"] = @(stpCnt);
+		gatItem[@"nextTime"] = @(nextTime);
 	}
 
 //	calculate the number of gathering circles
@@ -288,30 +324,43 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 		nNewGat = nRndGat + nRegGat;
 //	if (rp->step % wp->stepsPerDay == wp->stepsPerDay - 1)
 //		printf("%ld %.2f %ld\n", rp->step / wp->stepsPerDay, rp->gatFr, nNewGat);
-	Gathering *newGats;
-	if (nNewGat < nFree) {
-		if (nNewGat <= 0) { [self freeGatherings:gatToFree]; return; }
-		newGats = gatToFree;
-		for (NSInteger i = nNewGat - 1; i > 0; i --) gatToFree = gatToFree->next;
-		[self freeGatherings:gatToFree->next];
-		gatToFree->next = NULL;
-	} else if (nNewGat > nFree) {
-		newGats = [self newNGatherings:nNewGat - nFree];
-		if (nFree > 0) {
-			freeTail->next = newGats;
-			newGats->prev = freeTail;
+	@try {
+		Gathering *newGats;
+		if (nNewGat < nFree) {
+			if (nNewGat <= 0) { [self freeGatherings:gatToFree]; @throw @0; }
 			newGats = gatToFree;
-		}
-	} else if (nNewGat <= 0) return;
-	else newGats = gatToFree;
-	Gathering *tail = NULL, *gat = newGats;
-	for (NSInteger i = 0; i < nRndGat && gat != NULL; i ++, gat = gat->next)
-		[self setupGathering:gat];
-	for (NSMutableDictionary *gatItem in regGatToBeFired)
-		gat = [self setupRegGathering:gat info:gatItem];
-	for (tail = newGats; tail->next != NULL; tail = tail->next) ;
-	tail->next = gatherings;
-	if (gatherings != NULL) gatherings->prev = tail;
-	gatherings = newGats;
+			for (NSInteger i = nNewGat - 1; i > 0; i --) gatToFree = gatToFree->next;
+			[self freeGatherings:gatToFree->next];
+			gatToFree->next = NULL;
+		} else if (nNewGat > nFree) {
+			newGats = [self newNGatherings:nNewGat - nFree];
+			if (nFree > 0) {
+				freeTail->next = newGats;
+				newGats->prev = freeTail;
+				newGats = gatToFree;
+			}
+		} else if (nNewGat <= 0) @throw @0;
+		else newGats = gatToFree;
+		Gathering *tail = NULL, *gat = newGats;
+		for (NSInteger i = 0; i < nRndGat && gat != NULL; i ++, gat = gat->next)
+			[self setupGathering:gat];
+		for (NSMutableDictionary *gatItem in regGatToBeFired)
+			gat = [self setupRegGathering:gat info:gatItem];
+		for (tail = newGats; tail->next != NULL; tail = tail->next) ;
+		tail->next = gatherings;
+		if (gatherings != NULL) gatherings->prev = tail;
+		gatherings = newGats;
+	} @catch (id _) {}
+//
+//	setup gathrings in grid map.
+	NSInteger nGrid = worldParams.mesh * worldParams.mesh;
+	if (gatMap == nil) {
+		gatMap = [NSMutableArray arrayWithCapacity:nGrid];
+		for (NSInteger i = 0; i < nGrid; i ++) [gatMap addObject:NSMutableArray.new];
+	} else for (NSMutableArray *elm in gatMap) [elm removeAllObjects];
+	for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) {
+		NSInteger idx = index_in_pop(gat->p.x, gat->p.y, &worldParams);
+		[gatMap[idx] addObject:[NSValue valueWithPointer:gat]];
+	}
 }
 @end

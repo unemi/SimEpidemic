@@ -751,11 +751,11 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 		[maa addObject:ma];
 		[self addOperation:^{ for (NSInteger i = start; i < end; i ++) {
 			Agent *a = &agents[i];
-			NSInteger orgIdx = index_in_pop(a, orgP);
+			NSInteger orgIdx = index_in_pop(a->x, a->y, orgP);
 			a->x *= mag; a->y *= mag; a->vx *= mag; a->vy *= mag;
 			a->orgPt.x *= mag; a->orgPt.y *= mag;
 			if (!a->isOutOfField) {
-				NSInteger newIdx = index_in_pop(a, newP);
+				NSInteger newIdx = index_in_pop(a->x, a->y, newP);
 				if (orgIdx != newIdx) [ma addObject:@[@(i), @(orgIdx), @(newIdx)]];
 		}}}];
 	}
@@ -952,6 +952,8 @@ MutableDictArray default_vaccines(void) {
 	Agent **apA = pop + pRange[iA].location, **apB = pop + pRange[iB].location;
 	for (NSInteger j = 0; j < pRange[iA].length; j ++)
 		[self interactsA:apA[j] Bs:apB n:pRange[iB].length];
+	[self avoidGatherings:iB agents:apA n:pRange[iA].length];
+	[self avoidGatherings:iA agents:apB n:pRange[iB].length];
 }
 void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat steps) {
 	dp->min += (arr[0].doubleValue - dp->min) / steps;
@@ -1009,6 +1011,8 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 	mCount ++;
 #endif
 	BOOL goHomeBack = worldParams.wrkPlcMode != WrkPlcNone && is_daytime(&worldParams, &runtimeParams);
+
+//	Apply parameter changers as in Scenario
 	if (paramChangers != nil && paramChangers.count > 0) {
 		NSMutableArray<NSString *> *keyToRemove = NSMutableArray.new;
 		for (NSString *key in paramChangers) {
@@ -1102,6 +1106,8 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 	}
 	if (!goHomeBack) [self manageGatherings];
 	ParamsForStep prms = { &runtimeParams, &worldParams, variantInfo, vaccineInfo };
+
+//	Vaccination
 	for (NSInteger idx = 0; idx < _vaccineList.count; idx ++) {
 		VaccinationInfo *vp = &prms.rp->vcnInfo[idx];
 		if (vp->performRate <= 0. || vp->priority == VcnPrNone) continue;
@@ -1126,6 +1132,8 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 	mtime[tmIdx ++] += tm2 - tm1;
 	tm1 = tm2;
 #endif
+
+// Interaction among agents
 	unitJ = isARM? 4 : (nCores <= 8)? nCores - 1 : 8;
     NSRange *pRng = pRange;
     for (NSInteger j = 0; j < unitJ; j ++) {
@@ -1133,10 +1141,11 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 		NSInteger end = (j + 1) * nCells / unitJ;
 		void (^block)(void) = ^{
 			for (NSInteger i = start; i < end; i ++) {
-				Agent **ap = popL + pRng[i].location;
 				NSRange rng = pRng[i];
+				Agent **ap = popL + rng.location;
 				for (NSInteger j = 1; j < rng.length; j ++)
 					[self interactsA:ap[j] Bs:ap n:j];
+				[self avoidGatherings:i agents:ap n:rng.length];
 			}
 		};
 		if (j < unitJ - 1) [self addOperation:block]; else block();

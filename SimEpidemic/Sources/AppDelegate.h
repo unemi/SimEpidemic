@@ -8,6 +8,8 @@
 
 #import <Cocoa/Cocoa.h>
 #import "CommonTypes.h"
+#import "../ParamInfo.h"
+
 #define N_ENV_COLORS 5
 #define N_COLORS (NHealthTypes+N_ENV_COLORS)
 #define DEFAULT_WARP_OPACITY .5
@@ -16,22 +18,6 @@
 
 enum { ColBackground = NHealthTypes,
 	ColHospital, ColCemetery, ColText, ColGathering };
-typedef enum {
-	ParamTypeNone, ParamTypeFloat, ParamTypeDist,
-	ParamTypeInteger, ParamTypeRate, ParamTypeEnum, ParamTypeWEnum,
-	ParamTypeVaxFloat, ParamTypeVaxEnum
-} ParamType;
-typedef struct {
-	ParamType type;
-	NSString *key;
-	union {
-		struct { CGFloat defaultValue, minValue, maxValue; } f;
-		struct { CGFloat defMin, defMode, defMax; } d;
-		struct { NSInteger defaultValue, minValue, maxValue; } i;
-		struct { sint32 defaultValue, maxValue; } e;	// enumeration
-	} v;
-} ParamInfo;
-
 extern NSInteger nCores;
 extern BOOL isARM;
 extern unsigned long current_time_us(void);

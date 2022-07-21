@@ -57,12 +57,21 @@
 		23B89E57255BD70A00A95360 /* Agent.m in Sources */ = {isa = PBXBuildFile; fileRef = 232790B924587B670017AEC2 /* Agent.m */; };
 		23BBEEE52706D3D1003F983C /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BBEEE42706D3D0003F983C /* Scenario.m */; };
 		23BBEEE62706D3D1003F983C /* Scenario.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BBEEE42706D3D0003F983C /* Scenario.m */; };
+		23BC6F36287D3D3A003036D0 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BC6F35287D3D3A003036D0 /* AppDelegate.m */; };
+		23BC6F38287D3D3B003036D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 23BC6F37287D3D3B003036D0 /* Assets.xcassets */; };
+		23BC6F3B287D3D3B003036D0 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 23BC6F39287D3D3B003036D0 /* MainMenu.xib */; };
+		23BC6F3D287D3D3B003036D0 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BC6F3C287D3D3B003036D0 /* main.m */; };
+		23BC6F45287D63A1003036D0 /* MyController.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BC6F44287D63A1003036D0 /* MyController.m */; };
 		23BC70C227D8E07A00740BF3 /* GatPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BC70C027D8E07A00740BF3 /* GatPanel.m */; };
+		23C641652880486C00FCA3FD /* TrendView.m in Sources */ = {isa = PBXBuildFile; fileRef = 23C641642880486C00FCA3FD /* TrendView.m */; };
 		23D6E02D24D59DDD00A5D604 /* Scripting.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6E02C24D59DDD00A5D604 /* Scripting.m */; };
 		23D6EAE2260C4C6900D48F7E /* PopDist.xib in Resources */ = {isa = PBXBuildFile; fileRef = 23D6EAE0260C4C6900D48F7E /* PopDist.xib */; };
 		23D6EAE7260C562D00D48F7E /* PopDist.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D6EAE6260C562D00D48F7E /* PopDist.m */; };
 		23DAF068251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
 		23DAF069251737FB00C41E76 /* Gatherings.m in Sources */ = {isa = PBXBuildFile; fileRef = 23DAF067251737FB00C41E76 /* Gatherings.m */; };
+		23E14EFF287ED4A80086715A /* ParamInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 23E14EFE287ED4A80086715A /* ParamInfo.m */; };
+		23E14F00287ED4A80086715A /* ParamInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 23E14EFE287ED4A80086715A /* ParamInfo.m */; };
+		23E14F01287ED65F0086715A /* ParamInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 23E14EFE287ED4A80086715A /* ParamInfo.m */; };
 		23F16F6626CC9E5C005CCF2B /* VirusVariantPanel.xib in Resources */ = {isa = PBXBuildFile; fileRef = 23F16F6426CC9E5C005CCF2B /* VirusVariantPanel.xib */; };
 /* End PBXBuildFile section */
 
@@ -171,9 +180,21 @@
 		23B89E4C255BD61000A95360 /* simepiWorld */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiWorld; sourceTree = BUILT_PRODUCTS_DIR; };
 		23BBEEE32706D362003F983C /* Scenario.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scenario.h; sourceTree = "<group>"; };
 		23BBEEE42706D3D0003F983C /* Scenario.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Scenario.m; sourceTree = "<group>"; };
+		23BC6F32287D3D3A003036D0 /* SimepiScenario.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimepiScenario.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		23BC6F34287D3D3A003036D0 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		23BC6F35287D3D3A003036D0 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		23BC6F37287D3D3B003036D0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		23BC6F3A287D3D3B003036D0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		23BC6F3C287D3D3B003036D0 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		23BC6F3E287D3D3B003036D0 /* SimepiScenario.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SimepiScenario.entitlements; sourceTree = "<group>"; };
+		23BC6F42287D58D9003036D0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		23BC6F43287D63A1003036D0 /* MyController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MyController.h; sourceTree = "<group>"; };
+		23BC6F44287D63A1003036D0 /* MyController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MyController.m; sourceTree = "<group>"; };
 		23BC70BF27D8E07A00740BF3 /* GatPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GatPanel.h; sourceTree = "<group>"; };
 		23BC70C027D8E07A00740BF3 /* GatPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GatPanel.m; sourceTree = "<group>"; };
 		23C3FFE02557FB3F004906AE /* simepiBackend */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = simepiBackend; sourceTree = BUILT_PRODUCTS_DIR; };
+		23C641632880486C00FCA3FD /* TrendView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TrendView.h; sourceTree = "<group>"; };
+		23C641642880486C00FCA3FD /* TrendView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TrendView.m; sourceTree = "<group>"; };
 		23CAF41E26D1F49B00DCC929 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/VirusVariantPanel.strings; sourceTree = "<group>"; };
 		23D325F72722EBAC0083274B /* jp.ac.soka.unemi.simepidemicSV.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = jp.ac.soka.unemi.simepidemicSV.plist; sourceTree = "<group>"; };
 		23D6E02B24D59DDD00A5D604 /* Scripting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scripting.h; sourceTree = "<group>"; };
@@ -184,6 +205,8 @@
 		23D6EAE6260C562D00D48F7E /* PopDist.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PopDist.m; sourceTree = "<group>"; };
 		23DAF066251737FB00C41E76 /* Gatherings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Gatherings.h; sourceTree = "<group>"; };
 		23DAF067251737FB00C41E76 /* Gatherings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Gatherings.m; sourceTree = "<group>"; };
+		23E14EFD287ED4A80086715A /* ParamInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ParamInfo.h; sourceTree = "<group>"; };
+		23E14EFE287ED4A80086715A /* ParamInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ParamInfo.m; sourceTree = "<group>"; };
 		23F16F6526CC9E5C005CCF2B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/VirusVariantPanel.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -209,6 +232,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		23BC6F2F287D3D3A003036D0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		23C3FFDD2557FB3F004906AE /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -225,6 +255,7 @@
 				23135F4725B31CEE00BE0292 /* README.md */,
 				232055EE2457D2C5005ADCCF /* SimEpidemic */,
 				2365DEB72506145A006C2A95 /* SimEpidemicSV */,
+				23BC6F33287D3D3A003036D0 /* SimepiScenario */,
 				232055ED2457D2C5005ADCCF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -236,6 +267,7 @@
 				2365DEB62506145A006C2A95 /* simepidemic */,
 				23C3FFE02557FB3F004906AE /* simepiBackend */,
 				23B89E4C255BD61000A95360 /* simepiWorld */,
+				23BC6F32287D3D3A003036D0 /* SimepiScenario.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -243,6 +275,8 @@
 		232055EE2457D2C5005ADCCF /* SimEpidemic */ = {
 			isa = PBXGroup;
 			children = (
+				23E14EFD287ED4A80086715A /* ParamInfo.h */,
+				23E14EFE287ED4A80086715A /* ParamInfo.m */,
 				235D65772462555500487784 /* Sources */,
 				235D65762462552300487784 /* Interfaces */,
 				230C805C281CCDDE000C19C1 /* Help */,
@@ -357,6 +391,24 @@
 			path = DocumentRoot;
 			sourceTree = "<group>";
 		};
+		23BC6F33287D3D3A003036D0 /* SimepiScenario */ = {
+			isa = PBXGroup;
+			children = (
+				23BC6F42287D58D9003036D0 /* Info.plist */,
+				23BC6F34287D3D3A003036D0 /* AppDelegate.h */,
+				23BC6F35287D3D3A003036D0 /* AppDelegate.m */,
+				23BC6F43287D63A1003036D0 /* MyController.h */,
+				23BC6F44287D63A1003036D0 /* MyController.m */,
+				23BC6F37287D3D3B003036D0 /* Assets.xcassets */,
+				23BC6F39287D3D3B003036D0 /* MainMenu.xib */,
+				23BC6F3C287D3D3B003036D0 /* main.m */,
+				23BC6F3E287D3D3B003036D0 /* SimepiScenario.entitlements */,
+				23C641632880486C00FCA3FD /* TrendView.h */,
+				23C641642880486C00FCA3FD /* TrendView.m */,
+			);
+			path = SimepiScenario;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -412,6 +464,23 @@
 			productReference = 23B89E4C255BD61000A95360 /* simepiWorld */;
 			productType = "com.apple.product-type.tool";
 		};
+		23BC6F31287D3D3A003036D0 /* SimepiScenario */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 23BC6F41287D3D3B003036D0 /* Build configuration list for PBXNativeTarget "SimepiScenario" */;
+			buildPhases = (
+				23BC6F2E287D3D3A003036D0 /* Sources */,
+				23BC6F2F287D3D3A003036D0 /* Frameworks */,
+				23BC6F30287D3D3A003036D0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SimepiScenario;
+			productName = SimepiScenario;
+			productReference = 23BC6F32287D3D3A003036D0 /* SimepiScenario.app */;
+			productType = "com.apple.product-type.application";
+		};
 		23C3FFDF2557FB3F004906AE /* simepiBackend */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 23C3FFE62557FB3F004906AE /* Build configuration list for PBXNativeTarget "simepiBackend" */;
@@ -447,6 +516,9 @@
 					23B89E4B255BD61000A95360 = {
 						CreatedOnToolsVersion = 11.3.1;
 					};
+					23BC6F31287D3D3A003036D0 = {
+						CreatedOnToolsVersion = 13.4.1;
+					};
 					23C3FFDF2557FB3F004906AE = {
 						CreatedOnToolsVersion = 11.3.1;
 					};
@@ -470,6 +542,7 @@
 				2365DEB52506145A006C2A95 /* SimEpidemicSV */,
 				23C3FFDF2557FB3F004906AE /* simepiBackend */,
 				23B89E4B255BD61000A95360 /* simepiWorld */,
+				23BC6F31287D3D3A003036D0 /* SimepiScenario */,
 			);
 		};
 /* End PBXProject section */
@@ -498,6 +571,15 @@
 				233D9DED24869F8400498A77 /* StatPanel.xib in Resources */,
 				2373979A27DB0496002AD753 /* GatheringPanel.xib in Resources */,
 				23D6EAE2260C4C6900D48F7E /* PopDist.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		23BC6F30287D3D3A003036D0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23BC6F38287D3D3B003036D0 /* Assets.xcassets in Resources */,
+				23BC6F3B287D3D3B003036D0 /* MainMenu.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -548,6 +630,7 @@
 				233420D22468156200C93F8E /* DataPanel.m in Sources */,
 				232055F42457D2C6005ADCCF /* Document.m in Sources */,
 				232790BA24587B670017AEC2 /* Agent.m in Sources */,
+				23E14EFF287ED4A80086715A /* ParamInfo.m in Sources */,
 				23DAF068251737FB00C41E76 /* Gatherings.m in Sources */,
 				238A8F2A246694D300604BF4 /* StatPanel.m in Sources */,
 				2310A3142587486F00201F0C /* SaveDoc.m in Sources */,
@@ -571,6 +654,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				23E14F01287ED65F0086715A /* ParamInfo.m in Sources */,
 				23B4E4E4262E8F3B0058BCCC /* World.m in Sources */,
 				23BBEEE62706D3D1003F983C /* Scenario.m in Sources */,
 				2365DEC72506159A006C2A95 /* AppDelegate.m in Sources */,
@@ -597,6 +681,18 @@
 				23B89E55255BD6DB00A95360 /* StatPanel.m in Sources */,
 				23B89E56255BD6DB00A95360 /* Gatherings.m in Sources */,
 				23B89E53255BD66500A95360 /* Document.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		23BC6F2E287D3D3A003036D0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23BC6F45287D63A1003036D0 /* MyController.m in Sources */,
+				23BC6F3D287D3D3B003036D0 /* main.m in Sources */,
+				23BC6F36287D3D3A003036D0 /* AppDelegate.m in Sources */,
+				23E14F00287ED4A80086715A /* ParamInfo.m in Sources */,
+				23C641652880486C00FCA3FD /* TrendView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -716,6 +812,14 @@
 				23A9176D260B1F1000755061 /* ja */,
 			);
 			name = DropImageHere.pdf;
+			sourceTree = "<group>";
+		};
+		23BC6F39287D3D3B003036D0 /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				23BC6F3A287D3D3B003036D0 /* Base */,
+			);
+			name = MainMenu.xib;
 			sourceTree = "<group>";
 		};
 		23D6EAE0260C4C6900D48F7E /* PopDist.xib */ = {
@@ -953,6 +1057,68 @@
 			};
 			name = Release;
 		};
+		23BC6F3F287D3D3B003036D0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_ENTITLEMENTS = SimepiScenario/SimepiScenario.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 726X5Z9867;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SimepiScenario/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2022 Tatsuo Unemi. All rights reserved.";
+				INFOPLIST_KEY_NSMainNibFile = MainMenu;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimepiScenario;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		23BC6F40287D3D3B003036D0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_ENTITLEMENTS = SimepiScenario/SimepiScenario.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 726X5Z9867;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SimepiScenario/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2022 Tatsuo Unemi. All rights reserved.";
+				INFOPLIST_KEY_NSMainNibFile = MainMenu;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.ac.soka.unemi.SimepiScenario;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
 		23C3FFE42557FB3F004906AE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1010,6 +1176,15 @@
 			buildConfigurations = (
 				23B89E50255BD61000A95360 /* Debug */,
 				23B89E51255BD61000A95360 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		23BC6F41287D3D3B003036D0 /* Build configuration list for PBXNativeTarget "SimepiScenario" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				23BC6F3F287D3D3B003036D0 /* Debug */,
+				23BC6F40287D3D3B003036D0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
