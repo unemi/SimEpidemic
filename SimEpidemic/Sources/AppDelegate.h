@@ -21,6 +21,7 @@ enum { ColBackground = NHealthTypes,
 extern NSInteger nCores;
 extern BOOL isARM;
 extern unsigned long current_time_us(void);
+extern NSString *keyStartDate;
 extern NSString *keyVaxPerformRate, *keyVaxRegularity, *keyVaxPriority,
 	*keyVaccinationInfo, *keyVaccineFinalRate;
 extern RuntimeParams defaultRuntimeParams, userDefaultRuntimeParams;

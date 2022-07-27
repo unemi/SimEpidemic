@@ -261,7 +261,7 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 #ifdef DEBUGx
 	printf("%ld %s(%.1f,%.1f)%s", gat->nAgents,
 		[(NSString *)info[@"name"] UTF8String], gat->p.x, gat->p.y,
-		(i<n)? ", " : "\n");
+		(i<n-1)? ", " : "\n");
 #endif
 #ifndef NOGUI
 		gat->type = gatType;
@@ -302,21 +302,23 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 	if (gatToFree != NULL) gatToFree->prev = NULL;
 
 	NSInteger nRegGat = 0;
-	MutableDictArray regGatToBeFired = NSMutableArray.new;
-	for (NSMutableDictionary *gatItem in self.gatheringsList) {
-		CGFloat freq = [gatItem[@"freq"] doubleValue];
-		if (freq <= 0.) continue;
-		CGFloat nextTime = [gatItem[@"nextTime"] doubleValue];
-		if (nextTime <= runtimeParams.step) {
+	MutableDictArray regGatToBeFired = nil;
+	if (runtimeParams.step % worldParams.stepsPerDay == 1) {
+		regGatToBeFired = NSMutableArray.new;
+		for (NSMutableDictionary *gatItem in self.gatheringsList) {
+			NSInteger freq = [gatItem[@"freq"] integerValue];
+			if (freq <= 0) continue;
+			else if (freq < 7) {
+				NSInteger dayInWeek = (runtimeParams.step / worldParams.stepsPerDay
+					+ self.startDayInWeek + 6) % 7; // 0 - 6, 0 = Monday
+				if (dayInWeek >= freq) continue;	
+			}
 			[regGatToBeFired addObject:gatItem];
-			nextTime += 7 * worldParams.stepsPerDay / freq;
 			NSInteger nGats = [gatItem[@"npp"] doubleValue] * worldParams.initPop / 1e5;
 			gatItem[@"n"] = @(nGats);
 			nRegGat += nGats;
 		}
-		gatItem[@"nextTime"] = @(nextTime);
 	}
-
 //	calculate the number of gathering circles
 //	using random number in exponetial distribution.
 	NSInteger nRndGat = round(rp->gatFr / wp->stepsPerDay
@@ -344,7 +346,7 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 		Gathering *tail = NULL, *gat = newGats;
 		for (NSInteger i = 0; i < nRndGat && gat != NULL; i ++, gat = gat->next)
 			[self setupGathering:gat];
-		for (NSMutableDictionary *gatItem in regGatToBeFired)
+		if (nRegGat > 0) for (NSMutableDictionary *gatItem in regGatToBeFired)
 			gat = [self setupRegGathering:gat info:gatItem];
 		for (tail = newGats; tail->next != NULL; tail = tail->next) ;
 		tail->next = gatherings;

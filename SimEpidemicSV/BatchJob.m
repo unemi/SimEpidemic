@@ -481,7 +481,7 @@ static void copy_allowed_world_params(World *world) {
 	CP_WP(vcn1stEffc) CP_WP(vcnMaxEffc) CP_WP(vcnEffcSymp)
 	CP_WP(vcnEDelay) CP_WP(vcnEPeriod) CP_WP(vcnEDecay) CP_WP(vcnSvEffc) // standard vaccine efficacy
 	CP_WP(infecDistBias)	// coefficient for furthest distance of infection
-	CP_WP(contagBias)
+	CP_WP(contagBias) CP_WP(startDate)
 }
 - (BOOL)runNextTrial {	// called only from JobController's tryNewTrial:
 	World *world = nil;
@@ -510,8 +510,7 @@ static void copy_allowed_world_params(World *world) {
 			}
 			[world loadStateFrom:_loadState];
 			if (_parameters != nil) {
-//				set_params_from_dict(world.runtimeParamsP, NULL, _parameters);
-				set_params_from_dict(world.runtimeParamsP, world.tmpWorldParamsP, _parameters);
+				set_params_from_dict(world.runtimeParamsP, NULL, _parameters);
 				copy_allowed_world_params(world);
 			}
 			if (_scenario != nil) [world setScenarioPList:_scenario];

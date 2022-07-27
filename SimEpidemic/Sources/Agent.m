@@ -72,22 +72,6 @@ BOOL was_hit(NSInteger stepsPerDay, CGFloat prob) {
 BOOL is_infected(Agent *a) {
 	return a->health == Asymptomatic || a->health == Symptomatic;
 }
-static CGFloat random_coord(WorldParams *wp) {
-	return d_random() * (wp->worldSize - 6.) + 3.;
-}
-#define CENTERED_BIAS .25
-CGFloat centered_bias(CGPoint p) {	// p.x and p.y are in [-1,1]
-//	if p = (0, 0) then return a. if p = (1, 1) then return 1.
-	CGFloat a = CENTERED_BIAS / (1. - CENTERED_BIAS);
-	return a / (1. - (1. - a) * fmax(fabs(p.x), fabs(p.y)));
-}
-static CGPoint centered_point(WorldParams *wp) {
-	CGPoint p = {d_random() * 2. - 1., d_random() * 2. - 1.};
-	CGFloat v = centered_bias(p);
-	p.x = (p.x * v + 1.) * .5 * (wp->worldSize - 6.) + 3.;
-	p.y = (p.y * v + 1.) * .5 * (wp->worldSize - 6.) + 3.;
-	return p;
-}
 static void setup_acquired_immunity(Agent *a, RuntimeParams *p) {
 	CGFloat maxSeverity = a->daysToRecover * (1. - p->therapyEffc / 100.) / a->daysToDie;
 	a->imExpr = fmin(1., maxSeverity / (p->imnMaxDurSv / 100.)) * p->imnMaxDur;
@@ -118,17 +102,6 @@ void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp) {
 	memset(a, 0, sizeof(Agent));
 	a->app = d_random();
 	a->prf = d_random();
-	switch (wp->wrkPlcMode) {
-		case WrkPlcNone:
-		case WrkPlcUniform:
-		a->orgPt = (CGPoint){(a->x = random_coord(wp)), (a->y = random_coord(wp))};
-		break;
-		case WrkPlcCentered:
-		a->orgPt = centered_point(wp);
-		a->x = a->orgPt.x; a->y = a->orgPt.y;
-		break;
-		case WrkPlcPopDistImg: break;
-	}
 	CGFloat th = d_random() * M_PI * 2.;
 	a->vx = cos(th);
 	a->vy = sin(th);
@@ -349,7 +322,7 @@ static void attracted(Agent *a, Agent *b) {
 		if (j <= 0) continue;
 		CGFloat dd[j];
 		for (NSInteger i = 0; i < j; i ++) dd[i] = ((d[i] < viewRange * 0.8)? 1.0 :
-			(1 - d[i] / viewRange) / 0.2) / d[i] / d2[i] * gat->strength;
+			(1 - d[i] / viewRange) / 0.2) / d[i] / d2[i] * gat->strength * .2;
 		for (NSInteger i = 0; i < j; i ++)
 			{ aa[i]->fx += dx[i] * dd[i]; aa[i]->fy += dy[i] * dd[i]; }
 	}
@@ -432,19 +405,24 @@ static void go_warp(Agent *a, RuntimeParams *rp, WorldParams *wp, StepInfo *info
 	info->warpTo = newPt;
 	info->warpType = WarpInside;
 }
-#define HOMING_FORCE .2
-#define MAX_HOMING_FORCE 2.
 #define MIN_AWAY_TO_HOME 50.
-void going_back_home(Agent *a) {
-	CGPoint f = {(a->orgPt.x - a->x) * HOMING_FORCE, (a->orgPt.y - a->y) * HOMING_FORCE};
-	CGFloat fa = hypot(f.x, f.y);
-	if (fa > MIN_AWAY_TO_HOME * HOMING_FORCE) return;
-	if (fa > MAX_HOMING_FORCE) {
-		f.x *= MAX_HOMING_FORCE / fa;
-		f.y *= MAX_HOMING_FORCE / fa;
-	}
-	a->fx += f.x;
-	a->fy += f.y;
+//#define HOMING_FORCE .2
+//#define MAX_HOMING_FORCE 2.
+//void going_back_home(Agent *a) {
+//	CGPoint f = {(a->orgPt.x - a->x) * HOMING_FORCE, (a->orgPt.y - a->y) * HOMING_FORCE};
+//	CGFloat fa = hypot(f.x, f.y);
+//	if (fa > MIN_AWAY_TO_HOME * HOMING_FORCE) return;
+//	if (fa > MAX_HOMING_FORCE) {
+//		f.x *= MAX_HOMING_FORCE / fa;
+//		f.y *= MAX_HOMING_FORCE / fa;
+//	}
+//	a->fx += f.x;
+//	a->fy += f.y;
+//}
+void going_back_home(Agent *a, StepInfo *info, ParamsForStep prms) {
+	if (hypot(a->orgPt.x - a->x, a->orgPt.y - a->y) < MIN_AWAY_TO_HOME
+	 && was_hit(prms.wp->stepsPerDay / 3, prms.rp->backHmRt / 100.))
+		info->warpType = WalkBack;
 }
 static void vaccinate(Agent *a, ParamsForStep prms, StepInfo *info) {
 	a->newHealth = Vaccinated;
@@ -478,8 +456,9 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		case Vaccinated: if (a->vaccineTicket) vaccinate(a, prms, info);
 		else {
 			CGFloat daysVaccinated = (CGFloat)rp->step / wp->stepsPerDay - a->firstDoseDate;
-			NSInteger interval = prms.vxInfo[a->vaccineType].interval;
-			CGFloat timeUntil = interval;
+			VaccineInfo *vxInfo = &prms.vxInfo[a->vaccineType];
+			NSInteger interval = vxInfo->interval;
+			CGFloat timeUntil = interval, vcnEDecay = wp->vcnEDecay * vxInfo->effcDurRate;
 			if (daysVaccinated < timeUntil)	// only the first dose
 				a->agentImmunity = daysVaccinated * wp->vcn1stEffc / 100. / interval;
 			else if (daysVaccinated < (timeUntil += wp->vcnEDelay))	{ // not fully vaccinated yet
@@ -489,9 +468,9 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 					info->vcnNowType = VcnNowSecond;
 			} else if (daysVaccinated < (timeUntil += wp->vcnEPeriod)) // full
 				a->agentImmunity = wp->vcnMaxEffc / 100.;
-			else if (daysVaccinated < (timeUntil += wp->vcnEDecay)) // Decay
+			else if (daysVaccinated < (timeUntil += vcnEDecay)) // Decay
 				a->agentImmunity =
-					(timeUntil - daysVaccinated) / wp->vcnEDecay * wp->vcnMaxEffc / 100.;
+					(timeUntil - daysVaccinated) / vcnEDecay * wp->vcnMaxEffc / 100.;
 			else expire_immunity(a, rp, wp);
 		} break;
 		case Recovered: a->daysInfected += 1. / wp->stepsPerDay;
@@ -505,9 +484,8 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 	}
 	if (a->health != Symptomatic && was_hit(wp->stepsPerDay, rp->tstSbjAsy / 100.))
 		info->testType = TestAsSuspected;
-#define BACK_HOME_RATE_ON
-#ifdef BACK_HOME_RATE_ON
-	if (a->health != Symptomatic) {
+//
+	if (info->warpType != WalkBack && a->health != Symptomatic) {
 		if (goHomeBack &&
 			hypot(a->x - a->orgPt.x, a->y - a->orgPt.y) > fmax(rp->mobDist.min, MIN_AWAY_TO_HOME) &&
 			was_hit(wp->stepsPerDay / 3, rp->backHmRt / 100.)) {
@@ -520,18 +498,6 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 			return;
 		}
 	}
-#else
-	if (a->health != Symptomatic &&
-		was_hit(wp->stepsPerDay, modified_prob(a->mobFreq, &rp->mobFreq) / 1000.)) {
-		if (!goHomeBack) go_warp(a, rp, wp, info);
-		else if (hypot(a->x - a->orgPt.x, a->y - a->orgPt.y)
-			> fmax(rp->mobDist.min, MIN_AWAY_TO_HOME)) {
-			info->warpTo = a->orgPt;
-			info->warpType = WarpInside;
-		} else go_warp(a, rp, wp, info);
-		return;
-	}
-#endif
 	info->moveFrom = index_in_pop(a->x, a->y, wp);
 	if (a->distancing) {
 		CGFloat dst = 1.0 + rp->dstST / 5.0;
@@ -541,8 +507,8 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 	a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 	a->fy += wall(a->y) - wall(wp->worldSize - a->y);
 	CGFloat mass = rp->mass * a->massR / 100.;
-	if (a->health == Symptomatic) mass *= 20.; 
-	if (a->best != NULL && !a->distancing) {
+	if (a->health == Symptomatic) mass *= 20.;
+	if (a->best != NULL && !a->distancing && info->warpType == WarpNone) {
 		CGFloat dx = a->best->x - a->x;
 		CGFloat dy = a->best->y - a->y;
 		CGFloat d = fmax(.01, hypot(dx, dy)) * 20.;
@@ -557,7 +523,7 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 	a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
 	CGFloat v = hypot(a->vx, a->vy);
 	CGFloat maxV = rp->maxSpeed * 20. / wp->stepsPerDay;
-	if (a->gathering != NULL && rp->gatActiveBias > 0.) {
+	if (a->gathering != NULL && rp->gatActiveBias > 0. && info->warpType == WarpNone) {
 		CGFloat ab = a->activeness * rp->gatActiveBias / 100.;
 		CGFloat th = atan2(a->vy, a->vx) + (d_random() - .5) * ab * M_PI;
 		v *= 1. + ab;
@@ -567,6 +533,13 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 	if (v > maxV) { 
 		a->vx *= maxV / v; 
 		a->vy *= maxV / v;
+	}
+	if (info->warpType == WalkBack) {
+		NSInteger nightSteps = wp->stepsPerDay / 3;
+		CGFloat r = (nightSteps < 1)? 1 : (CGFloat)wp->stepsPerDay / nightSteps;
+		a->vx += ((a->orgPt.x - a->x) * r - a->vx) / 2.;
+		a->vy += ((a->orgPt.y - a->y) * r - a->vy) / 2.;
+		info->warpType = WarpNone;
 	}
 	a->x += a->vx / wp->stepsPerDay;
 	a->y += a->vy / wp->stepsPerDay;

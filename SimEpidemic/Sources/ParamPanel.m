@@ -171,6 +171,8 @@ static NSInteger stpInt_to_spd(NSInteger stpExp) {
 	stepsPerDayStp.integerValue = spd_to_stpInt(wp->stepsPerDay);
 	stepsPerDayDgt.integerValue = wp->stepsPerDay;
 	[dDigitW adjustDigitsToCurrentValue];
+	startDatePk.dateValue = [NSDate dateWithTimeIntervalSince1970:wp->startDate];
+	familySw.state = wp->familyOn;
 	[self adjustVcnInfoControls:0];
 	[wrkPlcModePopUp selectItemAtIndex:wp->wrkPlcMode];
 	popDistGammaDgt.enabled = popDistGammaSld.enabled = (wp->wrkPlcMode >= WrkPlcCentered);
@@ -467,7 +469,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 	RuntimeParams *rp = targetParams;
 	WorldParams *wp = world.tmpWorldParamsP;
 	confirm_operation(@"Will overwrites the current user's defaults.", self.window, ^{
-		NSDictionary<NSString *, NSNumber *> *dict = param_dict(rp, wp);
+		NSMutableDictionary *dict = param_dict(rp, wp);
 		NSUserDefaults *ud = NSUserDefaults.standardUserDefaults;
 		for (NSString *key in dict.keyEnumerator)
 			[ud setObject:dict[key] forKey:key];
@@ -521,7 +523,7 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		(NSEvent.modifierFlags & NSEventModifierFlagShift)?
 		param_diff_dict(targetParams, &userDefaultRuntimeParams,
 			world.tmpWorldParamsP, &userDefaultWorldParams) :
-		param_dict(targetParams, world.tmpWorldParamsP),
+		param_dict(targetParams, world.worldParamsP),
 		self.window);
 }
 - (void)copyParamsFromDict:(NSDictionary *)dict {
@@ -607,6 +609,21 @@ void adjust_vcnType_popUps(NSArray<NSPopUpButton *> *popUps, World *world) {
 		[pp setPopDistImage:orgImage];
 	}];
 	world.popDistImage = image;
+}
+- (IBAction)changeStartDate:(id)sender {
+	NSTimeInterval orgDate = world.tmpWorldParamsP->startDate;
+	[undoManager registerUndoWithTarget:startDatePk handler:^(NSDatePicker *dp) {
+		dp.dateValue = [NSDate dateWithTimeIntervalSince1970:orgDate];
+		[dp sendAction:dp.action to:dp.target];
+	}];
+	world.tmpWorldParamsP->startDate = startDatePk.dateValue.timeIntervalSince1970;
+}
+- (IBAction)switchOrgFamily:(id)sender {
+	[undoManager registerUndoWithTarget:familySw handler:^(NSButton *sw) {
+		sw.state = !sw.state;
+		[sw sendAction:sw.action to:sw.target];
+	}];
+	world.tmpWorldParamsP->familyOn = familySw.state;
 }
 - (IBAction)setupPopDistMap:(id)sender {
 	if (popDist == nil) {

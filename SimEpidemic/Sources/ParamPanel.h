@@ -55,6 +55,8 @@ NS_ASSUME_NONNULL_BEGIN
 		*popDistGammaDgt, *gatSptFxDgt;
 	IBOutlet NSSlider *initInfcSld, *initRecvSld, *initQAsymSld, *initQSympSld,
 		*popDistGammaSld, *gatSptFxSld;
+	IBOutlet NSDatePicker *startDatePk;
+	IBOutlet NSButton *familySw;
 	IBOutlet NSTextField *dstSTDgt, *dstOBDgt, *backHmDgt,
 		*gatFrDgt, *gatRndDgt, *gatActBsDgt, *cntctTrcDgt;
 	IBOutlet NSSlider *dstSTSld, *dstOBSld, *backHmSld,

@@ -11,7 +11,7 @@
 typedef enum {
 	ParamTypeNone, ParamTypeFloat, ParamTypeDist,
 	ParamTypeInteger, ParamTypeRate, ParamTypeEnum, ParamTypeWEnum,
-	ParamTypeVaxFloat, ParamTypeVaxEnum
+	ParamTypeBoolean, ParamTypeTimeInterval
 } ParamType;
 
 typedef struct {
@@ -22,6 +22,7 @@ typedef struct {
 		struct { CGFloat defMin, defMode, defMax; } d;
 		struct { NSInteger defaultValue, minValue, maxValue; } i;
 		struct { sint32 defaultValue, maxValue; } e;	// enumeration
+		struct { BOOL defaultValue; } b;
 	} v;
 } ParamInfo;
 

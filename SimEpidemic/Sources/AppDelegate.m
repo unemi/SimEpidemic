@@ -109,7 +109,7 @@ void save_property_data(NSString *fileType, NSWindow *window, NSObject *object) 
 			[NSJSONSerialization dataWithJSONObject:object
 				options:JSONFormat error:&error] :
 			[NSPropertyListSerialization dataWithPropertyList:object
-			format:NSPropertyListXMLFormat_v1_0 options:0 error:&error];
+				format:NSPropertyListXMLFormat_v1_0 options:0 error:&error];
 		if (data == nil) { error_msg(error, window, NO); return; }
 		if (![data writeToURL:sp.URL options:0 error:&error])
 			error_msg(error, window, NO);
@@ -151,6 +151,7 @@ static VaccinationRate defaultVaxFnlRt[MAX_N_AGE_SPANS] = {
 	{-1, 0.}
 };
 
+NSString *keyStartDate = @"startDate";
 NSString *keyVaxPerformRate = @"performRate", *keyVaxRegularity = @"regularity",
 	*keyVaxPriority = @"priority", *keyVaccinationInfo = @"vaccinationInfo",
 	*keyVaccineFinalRate = @"vaccineFinalRate";
@@ -167,6 +168,8 @@ typedef struct {
 	DistInfo *dp;
 	NSInteger *ip;
 	sint32 *ep, *hp;
+	BOOL *bp;
+	NSTimeInterval *tip;
 } ParamPointers;
 static ParamPointers param_pointers(RuntimeParams *rp, WorldParams *wp) {
 	return (ParamPointers) {
@@ -175,7 +178,9 @@ static ParamPointers param_pointers(RuntimeParams *rp, WorldParams *wp) {
 		(rp != NULL)? &rp->PARAM_D1 : NULL,
 		(wp != NULL)? &wp->PARAM_I1 : NULL,
 		(rp != NULL)? (sint32 *)&rp->PARAM_E1 : NULL,
-		(wp != NULL)? (sint32 *)&wp->PARAM_H1 : NULL
+		(wp != NULL)? (sint32 *)&wp->PARAM_H1 : NULL,
+		(wp != NULL)? (BOOL *)&wp->PARAM_B1 : NULL,
+		(wp != NULL)? &wp->PARAM_T1 : NULL
 	};
 }
 static void add_vax_info(NSMutableDictionary *md, VaccinationInfo *vp) {
@@ -196,6 +201,15 @@ static void add_final_vax(NSMutableDictionary *md, VaccinationRate *vp) {
 	}
 	if (ma.count > 0) md[keyVaccineFinalRate] = ma;
 }
+static NSDateFormatter *date_formatter_for_start_date(void) {
+	static NSDateFormatter *dtFmt = nil;
+	if (dtFmt == nil) {
+		dtFmt = NSDateFormatter.new;
+		dtFmt.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
+		dtFmt.dateFormat = @"yyyy-MM-dd";
+	}
+	return dtFmt;
+}
 NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 	NSMutableDictionary *md = NSMutableDictionary.new;
 	ParamPointers pp = param_pointers(rp, wp);
@@ -210,6 +224,11 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 		case ParamTypeRate: if (pp.tp != NULL) md[p->key] = @(*(pp.tp ++)); break;
 		case ParamTypeEnum: if (pp.ep != NULL) md[p->key] = @(*(pp.ep ++)); break;
 		case ParamTypeWEnum: if (pp.hp != NULL) md[p->key] = @(*(pp.hp ++)); break;
+		case ParamTypeBoolean: if (pp.bp != NULL) md[p->key] = @(*(pp.bp ++)); break;
+		case ParamTypeTimeInterval: if (pp.tip != NULL) md[p->key] =
+			[date_formatter_for_start_date() stringFromDate:
+				[NSDate dateWithTimeIntervalSince1970:*(pp.tip ++)]];
+NSLog(@"%@", md[p->key]);
 		default: break;
 	}
 	if (rp != NULL) {
@@ -277,7 +296,15 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 			if (pp.tp != NULL) pp.tp[index - IDX_R] = [dict[key] doubleValue];
 		} else if (index < IDX_H) {
 			if (pp.ep != NULL) pp.ep[index - IDX_E] = [dict[key] intValue];
-		} else if (pp.hp != NULL) pp.hp[index - IDX_H] = [dict[key] intValue];
+		} else if (index < IDX_B) {
+			if (pp.hp != NULL) pp.hp[index - IDX_H] = [dict[key] intValue];
+		} else if (index < IDX_T) {
+			if (pp.hp != NULL) pp.hp[index - IDX_B] = [dict[key] boolValue];
+		} else if (pp.tip != NULL) {
+			pp.tip[index - IDX_T] = [dict[key] isKindOfClass:NSString.class]?
+				[date_formatter_for_start_date() dateFromString:dict[key]].timeIntervalSince1970
+				: [dict[key] doubleValue];
+		}
 	}
 	// for upper compatibility.
 	if (initInfected >= 0) wp->infected = initInfected * 100. / wp->initPop;
@@ -309,6 +336,14 @@ NSMutableDictionary *param_diff_dict(
 		case ParamTypeWEnum: if (wpNew != NULL && wpOrg != NULL) {
 			if (*ppNew.hp != *ppOrg.hp) md[p->key] = @(*ppNew.hp);
 			ppNew.hp ++; ppOrg.hp ++;
+		} break;
+		case ParamTypeBoolean: if (wpNew != NULL && wpOrg != NULL) {
+			if (*ppNew.bp != *ppOrg.bp) md[p->key] = @(*ppNew.bp);
+			ppNew.bp ++; ppOrg.bp ++;
+		} break;
+		case ParamTypeTimeInterval: if (wpNew != NULL && wpOrg != NULL) {
+			if (*ppNew.tip != *ppOrg.tip) md[p->key] = @(*ppNew.tip);
+			ppNew.tip ++; ppOrg.tip ++;
 		} break;
 		default: break;
 	}
@@ -398,7 +433,13 @@ static NSInteger
 			sizeof(sint32), sizeof(TracingOperation));
 		exit(1);
 	}
-	NSInteger nF = 0, nD = 0, nI = 0, nR = 0, nE = 0, nH = 0;
+	for (ParamInfo *p = paramInfo; p->key != nil; p ++) if (p->type == ParamTypeTimeInterval) {
+		NSDateFormatter *dtFmt = date_formatter_for_start_date();
+		p->v.f.defaultValue = [dtFmt dateFromString:@"2020-12-16"].timeIntervalSince1970;
+		p->v.f.maxValue = [dtFmt dateFromString:@"2100-12-31"].timeIntervalSince1970;
+		break;
+	}
+	NSInteger nF = 0, nD = 0, nI = 0, nR = 0, nE = 0, nH = 0, nB = 0, nT = 0;
 	for (ParamInfo *p = paramInfo; p->key != nil; p ++) switch (p->type) {
 		case ParamTypeFloat:
 			(&defaultRuntimeParams.PARAM_F1)[nF ++] = p->v.f.defaultValue; break;
@@ -411,6 +452,10 @@ static NSInteger
 		case ParamTypeEnum: (&defaultRuntimeParams.PARAM_E1)[nE ++] = p->v.e.defaultValue;
 			break;
 		case ParamTypeWEnum: (&defaultWorldParams.PARAM_H1)[nH ++] = p->v.e.defaultValue;
+			break;
+		case ParamTypeBoolean: (&defaultWorldParams.PARAM_B1)[nB ++] = p->v.b.defaultValue;
+			break;
+		case ParamTypeTimeInterval: (&defaultWorldParams.PARAM_T1)[nT ++] = p->v.f.defaultValue;
 		default: break;
 	}
 	defaultRuntimeParams.vcnInfo[0].performRate = 0.;
@@ -424,7 +469,7 @@ static NSInteger
 	}
 	memcpy(defaultRuntimeParams.vcnFnlRt, defaultVaxFnlRt, sizeof(defaultVaxFnlRt));
 	
-	NSInteger nn = nF + nD + nI + nR + nE + nH;
+	NSInteger nn = nF + nD + nI + nR + nE + nH + nB + nT;
 	NSString *keys[nn], *names[nF];
 	NSNumber *indexes[nn];
 
@@ -475,7 +520,10 @@ static NSInteger
 			case ParamTypeInteger: indexes[i] = @(i - nF - nD + IDX_I); break;
 			case ParamTypeRate: indexes[i] = @(i - nF - nD - nI + IDX_R); break;
 			case ParamTypeEnum: indexes[i] = @(i - nF - nD - nI - nR + IDX_E); break;
-			case ParamTypeWEnum: indexes[i] = @(i - nF - nD - nI - nR - nE + IDX_H);
+			case ParamTypeWEnum: indexes[i] = @(i - nF - nD - nI - nR - nE + IDX_H); break;
+			case ParamTypeBoolean: indexes[i] = @(i - nF - nD - nI - nR - nE - nH + IDX_B); break;
+			case ParamTypeTimeInterval:
+				indexes[i] = @(i - nF - nD - nI - nR - nE - nH - nB + IDX_T);
 			default: break;
 		}
 	}
@@ -529,7 +577,7 @@ static NSInteger
 	if ((num = [ud objectForKey:keyAnimeSteps])) defaultAnimeSteps = num.integerValue;
 	for (NSInteger i = 0; i < N_COLORS; i ++)
 		if ((num = [ud objectForKey:colKeys[i]])) stateRGB[i] = num.integerValue;
-	NSInteger kF = 0, kD = 0, kI = 0, kR = 0, kE = 0, kH = 0;
+	NSInteger kF = 0, kD = 0, kI = 0, kR = 0, kE = 0, kH = 0, kB = 0, kT = 0;
 	for (ParamInfo *p = paramInfo; p->type != ParamTypeNone; p ++)
 	if ((obj = [ud objectForKey:p->key])) switch (p->type) {
 		case ParamTypeFloat: {
@@ -554,6 +602,12 @@ static NSInteger
 		break;
 		case ParamTypeWEnum: if ([obj isKindOfClass:NSNumber.class])
 			(&userDefaultWorldParams.PARAM_H1)[kH ++] = ((NSNumber *)obj).intValue;
+		break;
+		case ParamTypeBoolean: if ([obj isKindOfClass:NSNumber.class])
+			(&userDefaultWorldParams.PARAM_B1)[kB ++] = ((NSNumber *)obj).boolValue;
+		break;
+		case ParamTypeTimeInterval: if ([obj isKindOfClass:NSNumber.class])
+			(&userDefaultWorldParams.PARAM_T1)[kT ++] = ((NSNumber *)obj).doubleValue;
 		default: break;
 	}
 	if ((num = [ud objectForKey:keyWarpOpacity])) warpOpacity = num.doubleValue;

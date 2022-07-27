@@ -9,7 +9,7 @@
 #import <Cocoa/Cocoa.h>
 #import "World.h"
 #import "CommonTypes.h"
-#define AGENT_RADIUS .75
+#define AGENT_RADIUS .5
 #define AGENT_SIZE .665
 #define BIG_NUM 1e10
 #define PopDistMapRes 512
@@ -35,7 +35,6 @@ extern CGFloat d_random(void);
 extern CGFloat modified_prob(CGFloat x, DistInfo *p);
 extern CGFloat my_random(DistInfo *p);
 extern BOOL is_infected(Agent *a);
-extern CGFloat centered_bias(CGPoint p);
 extern void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp);
 extern NSBitmapImageRep *make_pop_dist_bm(void);
 extern NSBitmapImageRep *make_bm_with_image(NSImage *image);
@@ -48,7 +47,8 @@ extern void remove_from_list(Agent *a, Agent **list);
 extern void add_agent(Agent *a, WorldParams *wp, Agent **Pop);
 extern void remove_agent(Agent *a, WorldParams *p, Agent **Pop);
 extern void interacts(Agent *a, Agent **b, NSInteger n, RuntimeParams *rp, WorldParams *wp);
-extern void going_back_home(Agent *a);
+//extern void going_back_home(Agent *a);
+extern void going_back_home(Agent *a, StepInfo *info, ParamsForStep prms);
 extern void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info);
 extern BOOL warp_step(Agent *a, WorldParams *wp, World *world, WarpType mode, NSPoint goal);
 extern void step_agent_in_quarantine(Agent *a, ParamsForStep prms, StepInfo *info);

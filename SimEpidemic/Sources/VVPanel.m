@@ -501,7 +501,7 @@ static void check_vvlist(NSMutableArray *ma, NSArray *varList, NSDictionary *key
 		txtFld.stringValue = rowDict[ID];
 		txtFld.row = row;
 		txtFld.list = list;
-	} else if ([@[@"reproductivity", @"toxicity"] containsObject:ID]) {
+	} else if ([@[@"reproductivity", @"toxicity", @"efficacyDur"] containsObject:ID]) {
 		view.textField.doubleValue = [rowDict[ID] doubleValue];
 	} else if ([ID isEqualToString:@"interval"]) {
 		view.textField.integerValue = [rowDict[@"intervalDays"] integerValue];

@@ -41,10 +41,6 @@ void in_main_thread(dispatch_block_t block) {
 	if ([NSThread isMainThread]) block();
 	else dispatch_async(dispatch_get_main_queue(), block);
 }
-static BOOL is_daytime(WorldParams *wp, RuntimeParams *rp) {
-	return (wp->stepsPerDay < 3)? (rp->step % 2) == 0 :
-		(rp->step % wp->stepsPerDay) < wp->stepsPerDay * 2 / 3;
-}
 #ifdef DEBUG
 void my_exit(void) {
 #ifdef NOGUI
@@ -340,6 +336,8 @@ static NSPoint random_point_in_hospital(CGFloat worldSize) {
 		NSDictionary *dict = _vaccineList[i];
 		xInfo[i].interval = [dict[@"intervalOn"] boolValue]?
 			[dict[@"intervalDays"] integerValue] : 0;
+		NSNumber *num = dict[@"efficacyDur"];
+		xInfo[i].effcDurRate = (num != nil)? num.doubleValue : 1.;
 		for (NSInteger j = 0; j < nVariants; j ++)
 			xInfo[i].efficacy[j] = [dict[vrNames[j]] doubleValue];
 	}
@@ -570,6 +568,141 @@ static NSInteger AgePopSize[N_AGE_BANDS] = {	// 2021/3/1 Tokyo
 	113767, 96597, 90751, 96408, 88884, 86876, 71570, 66662, 59730, 49570, 41908,
 	35028, 29471, 23645, 18724, 14969, 10446, 7535, 5301, 3867, 2614, 1586, 962, 1448 
 };
+// 2020 (prediction) Simgle 48.3%, Couple 16.8%, Parents+Kids 22.9%, SingleP+Kids 7.5%, others 4.4%
+// https://www.toukei.metro.tokyo.lg.jp/syosoku/sy19rf0000.pdf
+enum { FamSingle, FamCouple, FamPsAndKids, FamSinglePAndKids, FamOthers,
+	nFamilyCategories };
+static CGFloat familyStats[nFamilyCategories] = { 0.483, 0.168, 0.229, 0.075, 0.044  };
+static CGFloat nKidsSingleP[] = { 0.760, 0.227, 0.013, 0. };
+static CGFloat nKidsParens[] = { 0.379, 0.460, 0.138, 0.019, 0.003, 0. };
+#define DEFAULT_N_FAMILIES_RATE .5
+#ifdef DEBUG
+static NSInteger myCnt = 0;
+#endif
+static CGFloat choose_age(NSInteger *agePop, NSInteger low, NSInteger high) {
+	NSInteger roulette[high - low], sum = 0;
+	for (NSInteger i = 0; i < high - low; i ++) roulette[i] = sum += agePop[low + i];
+	if (sum == 0) {
+#ifdef DEBUG
+		myCnt ++;
+#endif
+		return d_random() * (high - low) + low;
+	}
+	NSInteger nn = random() % sum, k;
+	for (k = low; k < high; k ++) if (nn < roulette[k - low]) break;
+	agePop[k] --;
+	return k + d_random();
+}
+static NSInteger imax(NSInteger a, NSInteger b) { return (a > b)? a : b; }
+static NSInteger imin(NSInteger a, NSInteger b) { return (a < b)? a : b; }
+#define MAX_FAM_MEMBS 8
+typedef struct {
+	NSInteger nFams;
+	CGFloat *ageList;
+	NSRange famTbl[MAX_FAM_MEMBS];
+} FamilyInfo;
+static void make_families(NSInteger nPop, FamilyInfo *famInfo) {
+	// Calculate the number of individuals for each age
+	NSInteger sum = 0, nn = nPop, agePop[N_AGE_BANDS];
+	for (NSInteger i = 0; i < N_AGE_BANDS; i ++) sum += AgePopSize[i];
+	for (NSInteger i = 0; i < N_AGE_BANDS; i ++) {
+		agePop[i] = (sum > 0)? (nn * AgePopSize[i] + sum / 2) / sum : 0;
+		sum -= AgePopSize[i];
+		nn -= agePop[i];
+	}
+	// Calculate the numer of families for each category
+	famInfo->nFams = round(nPop * DEFAULT_N_FAMILIES_RATE);
+	NSInteger nFams[nFamilyCategories];
+	sum = 0;
+	for (NSInteger i = 0; i < nFamilyCategories - 1; i ++)
+		sum += nFams[i] = round(famInfo->nFams * familyStats[i]);
+	nFams[nFamilyCategories - 1] = famInfo->nFams - sum;
+	// Calculate the number of families with kids
+	NSInteger nnS = 0; for (CGFloat *p = nKidsSingleP; *p > 0.; p ++) nnS ++;
+	NSInteger nnP = 0; for (CGFloat *p = nKidsParens; *p > 0.; p ++) nnP ++;
+	NSInteger nKidsS[nnS], nKidsP[nnP];
+	sum = 0; for (NSInteger i = 0; i < nnS - 1; i ++)
+		sum += nKidsS[i] = round(nFams[FamSinglePAndKids] * nKidsSingleP[i]);
+	nKidsS[nnS - 1] = nFams[FamSinglePAndKids] - sum;
+	sum = 0; for (NSInteger i = 0; i < nnP - 1; i ++)
+		sum += nKidsP[i] = round(nFams[FamPsAndKids] * nKidsParens[i]);
+	nKidsP[nnP - 1] = nFams[FamPsAndKids] - sum;
+
+	CGFloat *ages = famInfo->ageList;
+	famInfo->famTbl[1] = (NSRange){0, (nFams[FamCouple] + nKidsS[0]) * 2};
+	// Couples
+	for (NSInteger i = 0; i < nFams[FamCouple]; i ++, ages += 2) {
+		ages[0] = choose_age(agePop, 22, N_AGE_BANDS);
+		ages[1] = choose_age(agePop, imax(ages[0] - 12, 18), imin(ages[0] + 12, N_AGE_BANDS));
+	}
+#ifdef DEBUG
+if (myCnt > 0) printf("Couples:%ld\n",myCnt); myCnt = 0;
+#endif
+	// Single parent and one kid
+	for (NSInteger i = 0; i < nKidsS[0]; i ++, ages += 2) {
+		ages[0] = choose_age(agePop, 20, N_AGE_BANDS);
+		ages[1] = choose_age(agePop, imax(ages[0] - 45, 0), ages[0] - 18);
+	}
+#ifdef DEBUG
+if (myCnt > 0) printf("Sp+1:%ld\n",myCnt); myCnt = 0;
+#endif
+	// Three - Seven members
+	for (NSInteger j = 2; j < MAX_FAM_MEMBS - 1; j ++) {
+		famInfo->famTbl[j] = (NSRange){NSMaxRange(famInfo->famTbl[j - 1]), 0};
+		if (j - 1 < nnS) {
+			for (NSInteger i = 0; i < nKidsS[j - 1]; i ++, ages += j + 1) {
+				ages[0] = choose_age(agePop, 20, N_AGE_BANDS);
+				for (NSInteger k = 0; k < j; k ++)
+					ages[k + 1] = choose_age(agePop, imax(ages[0] - 40 - k * 2, 0), ages[0] - 18);
+			}
+			famInfo->famTbl[j].length = nKidsS[j - 1] * (j + 1);
+		}
+		if (j - 2 < nnP) {
+			for (NSInteger i = 0; i < nKidsP[j - 2]; i ++, ages += j + 1) {
+				ages[0] = choose_age(agePop, 20, N_AGE_BANDS);
+				ages[1] = choose_age(agePop, imax(ages[0] - 12, 20), imin(ages[0] + 12, N_AGE_BANDS));
+				for (NSInteger k = 0; k < j - 1; k ++)
+					ages[k + 2] = choose_age(agePop, imax(ages[0] - 40 - k * 2, 0), ages[0] - 18);
+			}
+			famInfo->famTbl[j].length += nKidsP[j - 2] * (j + 1);
+		}
+#ifdef DEBUG
+if (myCnt > 0) printf("p+%ld:%ld\n",j,myCnt); myCnt = 0;
+#endif
+	}
+	// Count big families (eight members)
+	NSInteger nFilled = NSMaxRange(famInfo->famTbl[MAX_FAM_MEMBS - 2]),
+		nFams8 = (nPop - nFilled - nFams[FamSingle]) / 8;
+	famInfo->famTbl[MAX_FAM_MEMBS - 1] = (NSRange){nFilled, nFams8 * 8};
+	// Singles
+	nFilled = NSMaxRange(famInfo->famTbl[MAX_FAM_MEMBS - 1]);
+	NSInteger nSingles = nPop - nFilled;
+	famInfo->famTbl[0] = (NSRange){nFilled, nSingles};
+	for (NSInteger i = 0; i < nSingles; i ++, ages ++)
+		*ages = choose_age(agePop, 18, N_AGE_BANDS);
+#ifdef DEBUG
+if (myCnt > 0) printf("Singles:%ld\n",myCnt); myCnt = 0;
+#endif
+	// Big families
+	for (NSInteger i = 0, j = N_AGE_BANDS - 1; i < nFams8; i ++) {
+		while (agePop[j] <= 0) j --; agePop[j] --;
+		ages[i * 8] = j * d_random();
+	}
+	for (NSInteger i = 0; i < nFams8; i ++, ages += 8) {
+		for (NSInteger k = 0; k < 7; k ++)
+			ages[k + 1] = choose_age(agePop, 0, N_AGE_BANDS);
+	}
+#ifdef DEBUG
+if (myCnt > 0) printf("BigFam:%ld\n",myCnt); myCnt = 0;
+#endif
+#ifdef DEBUG
+	sum = 0;
+	for (NSInteger i = 0; i < N_AGE_BANDS; i ++) if (agePop[i] > 0)
+		{ printf("%ld:%ld ",i,agePop[i]); sum += agePop[i]; }
+	printf("%sRest=%ld (%ld)\n", (sum == 0)? "" : "\n",
+		sum, NSMaxRange(famInfo->famTbl[0]));
+#endif
+}
 static void random_ages(CGFloat *ages, NSInteger n) {
 	NSInteger sum = 0, nn = n, agePop[N_AGE_BANDS];
 	for (NSInteger i = 0; i < N_AGE_BANDS; i ++) sum += AgePopSize[i];
@@ -607,15 +740,73 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 			popDistMapData[i] = powf(pd[i], gamma);
 	} else memcpy(popDistMapData, pd, sizeof(float) * PopDistMapRes * PopDistMapRes);
 }
+static inline CGFloat random_coord(WorldParams *wp) {
+	return d_random() * (wp->worldSize - 6.) + 3.;
+}
+#define CENTERED_BIAS .25
+CGFloat centered_bias(CGPoint p) {	// p.x and p.y are in [-1,1]
+//	if p = (0, 0) then return a. if p = (1, 1) then return 1.
+	CGFloat a = CENTERED_BIAS / (1. - CENTERED_BIAS);
+	return a / (1. - (1. - a) * fmax(fabs(p.x), fabs(p.y)));
+}
 - (void)makeDistribution:(NSPoint *)pts n:(NSInteger)n {
-	pop_dist_alloc(0, 0, PopDistMapRes, pts, n, popDistMapData);
-	CGFloat a = (CGFloat)worldParams.worldSize / PopDistMapRes;
-	for (NSInteger i = 0; i < n; i ++) {
-		pts[i].x = pts[i].x * a + .5;
-		pts[i].y = (worldParams.worldSize - 1. - pts[i].y * a) + .5;
+	WorldParams *wp = &worldParams;
+	switch (wp->wrkPlcMode) {
+		case WrkPlcNone: case WrkPlcUniform: for (NSInteger i = 0; i < n; i ++)
+			pts[i] = (NSPoint){random_coord(wp), random_coord(wp)};
+		break;
+		case WrkPlcCentered: for (NSInteger i = 0; i < n; i ++) {
+			CGPoint p = {d_random() * 2. - 1., d_random() * 2. - 1.};
+			CGFloat v = centered_bias(p);
+			p.x = (p.x * v + 1.) * .5 * (wp->worldSize - 6.) + 3.;
+			p.y = (p.y * v + 1.) * .5 * (wp->worldSize - 6.) + 3.;
+			pts[i] = p;
+		};
+		break;
+		case WrkPlcPopDistImg:
+		pop_dist_alloc(0, 0, PopDistMapRes, pts, n, popDistMapData);
+		CGFloat a = (CGFloat)worldParams.worldSize / PopDistMapRes;
+		for (NSInteger i = 0; i < n; i ++) {
+			pts[i].x = pts[i].x * a + .5;
+			pts[i].y = (worldParams.worldSize - 1. - pts[i].y * a) + .5;
+		}
 	}
 }
-- (void)setupHomeWithMap {
+- (void)setupFamilyHome:(FamilyInfo *)info places:(NSPoint *)plcs {
+	static CGFloat radius[3] = { .5, 0.577350269189626, M_SQRT1_2,  };
+	NSInteger famIdx = 0, agnIdx = 0;
+	NSInteger *agentIDs = malloc(sizeof(NSInteger) * nPop);
+	for (NSInteger i = 0; i < nPop; i ++) agentIDs[i] = i;
+	for (NSInteger im = 1; im <= MAX_FAM_MEMBS; im ++) {
+		NSRange rng = info->famTbl[im - 1];
+		for (NSInteger i = 0; i < rng.length; i += im, famIdx ++) {
+			NSInteger j = random() % (info->nFams - famIdx) + famIdx;
+			NSPoint pt = plcs[j];
+			plcs[j] = plcs[famIdx];
+			CGFloat angle = 0;
+			for (NSInteger k = 0; k < im; k ++, agnIdx ++) {
+				j = random() % (nPop - agnIdx) + agnIdx;
+				Agent *a = &_agents[agentIDs[j]];
+				agentIDs[j] = agentIDs[agnIdx];
+				reset_agent(a, info->ageList[rng.location + i + k], &runtimeParams, &worldParams);
+				a->familyID = (int)famIdx;
+				NSPoint p;
+				if (im <= 1) { a->x = pt.x; a->y = pt.y; a->orgPt = pt; }
+				else {
+					if (k == 0) angle = (d_random() - .5) * 2. * M_PI;
+					if (im < 5) {
+						CGFloat th = 2. * M_PI * k / im + angle, r = radius[im - 2];
+						p = (NSPoint){pt.x + r * cos(th), pt.y + r * sin(th)};
+					} else if (k == 0) { p = pt;
+					} else {
+						CGFloat th = 2. * M_PI * k / (im - 1) + angle;
+						p = (NSPoint){pt.x + cos(th), pt.y + sin(th)};
+					}
+					a->x = p.x; a->y = p.y; a->orgPt = p;
+	} } } }
+	free(agentIDs);
+}
+- (void)setupIndividualHome {
 	NSPoint *pts = malloc(sizeof(NSPoint) * worldParams.initPop);
 	[self makeDistribution:pts n:worldParams.initPop];
 	for (NSInteger i = 0; i < worldParams.initPop; i ++) {
@@ -624,6 +815,7 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 		_agents[i].x = pts[j].x;
 		_agents[i].y = pts[j].y;
 		if (i != j) pts[j] = pts[i];
+		_agents[i].familyID = (int)i;
 	}
 	free(pts);
 }
@@ -633,24 +825,42 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 		memcpy(&worldParams, &tmpWorldParams, sizeof(WorldParams));
 		changed = YES;
 	}
+	_startDate = [NSDate dateWithTimeIntervalSince1970:worldParams.startDate];
+	_startDayInWeek = [NSCalendar.currentCalendar
+		component:NSCalendarUnitWeekday fromDate:_startDate] - 1;
+#ifdef DEBUG
+printf("StartDtate: %s (%ld)\n", _startDate.description.UTF8String, _startDayInWeek);
+#endif
 	memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
 	[popLock lock];
 	[self allocateMemory];
 	if (worldParams.wrkPlcMode == WrkPlcPopDistImg) [self setupPopDistMapData];
 
-	CGFloat *ages = malloc(sizeof(CGFloat) * nPop);
-	random_ages(ages, nPop);
+	if (worldParams.familyOn) {
+		FamilyInfo fInfo;
+		fInfo.ageList = malloc(sizeof(CGFloat) * nPop);
+		make_families(nPop, &fInfo);
+		NSPoint *plcs = malloc(sizeof(NSPoint) * fInfo.nFams);
+		[self makeDistribution:plcs n:fInfo.nFams];
+		[self setupFamilyHome:&fInfo places:plcs];
+		free(fInfo.ageList);
+		free(plcs);
+	} else {
+		CGFloat *ages = malloc(sizeof(CGFloat) * nPop);
+		random_ages(ages, nPop);
+		for (NSInteger i = 0; i < nPop; i ++)
+			reset_agent(&_agents[i], ages[i], &runtimeParams, &worldParams);
+		free(ages);
+		[self setupIndividualHome];
+	}
 	NSInteger nDist = runtimeParams.dstOB / 100. * nPop;
 	for (NSInteger i = 0; i < nPop; i ++) {
 		Agent *a = &_agents[i];
-		reset_agent(a, ages[i], &runtimeParams, &worldParams);
 		a->ID = i;
 		a->distancing = (i < nDist);
 		agentsRnd[i] = d_random();
 	}
-	free(ages);
 	[self organizeAgeSpanInfo];
-	if (worldParams.wrkPlcMode == WrkPlcPopDistImg) [self setupHomeWithMap];
 	[self resetRegGatInfo];
 
 	NSInteger nn = nPop * worldParams.gatSpotFixed / 1000.;
@@ -802,7 +1012,8 @@ MutableDictArray default_variants(void) {
 MutableDictArray default_vaccines(void) {
 	return [NSMutableArray arrayWithObject:
 		[NSMutableDictionary dictionaryWithDictionary:
-		@{@"name":@"PfBNT", @"intervalOn":@YES, @"intervalDays":@(21),@"Original":@(1.)}]];
+		@{@"name":@"PfBNT", @"intervalOn":@YES, @"intervalDays":@(21),
+			@"efficacyDur":@(1.), @"Original":@(1.)}]];
 }
 - (instancetype)init {
 	if ((self = [super init]) == nil) return nil;
@@ -1000,6 +1211,10 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 #else
 #define INC_PHASE ;
 #endif
+static BOOL is_nighttime(WorldParams *wp, RuntimeParams *rp) {
+	return (wp->stepsPerDay < 3)? (rp->step % 2) == 0 :
+		(rp->step % wp->stepsPerDay) >= wp->stepsPerDay * 2 / 3;
+}
 - (void)doOneStep {
 	[popLock lock];
 #ifdef DEBUGz
@@ -1010,7 +1225,8 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 	NSInteger tmIdx = 0;
 	mCount ++;
 #endif
-	BOOL goHomeBack = worldParams.wrkPlcMode != WrkPlcNone && is_daytime(&worldParams, &runtimeParams);
+	BOOL goHomeBack = worldParams.wrkPlcMode != WrkPlcNone
+		&& is_nighttime(&worldParams, &runtimeParams);
 
 //	Apply parameter changers as in Scenario
 	if (paramChangers != nil && paramChangers.count > 0) {
@@ -1252,7 +1468,8 @@ static BOOL give_vcn_ticket_if_possible(Agent *a, int vcnType, VaccinePriority p
 				for (NSInteger j = 0; j < rng.length; j ++) {
 					Agent *a = ap[j];
 					memset(&info, 0, sizeof(info));
-					if (goHomeBack) going_back_home(a);
+//					if (goHomeBack) going_back_home(a);
+					if (goHomeBack) going_back_home(a, &info, prms);
 					else if (a->gathering != NULL) affect_to_agent(a->gathering, a);
 					step_agent(a, prms, goHomeBack, &info);
 					if (info.moveFrom != info.moveTo) {

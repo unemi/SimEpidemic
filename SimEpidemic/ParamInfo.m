@@ -97,6 +97,8 @@ ParamInfo paramInfo[] = {
 	{ ParamTypeEnum, @"tracingOperation", {.e = {0, 2}}},
 	{ ParamTypeEnum, @"vaccineTypeForTracingVaccination", {.e = {0, MAX_N_VAXEN - 1}}},
 	{ ParamTypeWEnum, @"workPlaceMode", {.e = {0, 3}}},
+	{ ParamTypeBoolean, @"familyModeOn", {.b = {NO}}},
+	{ ParamTypeTimeInterval, @"startTime", {.f = { 33., 0., 200.}}},
 
 	{ ParamTypeNone, nil }
 };

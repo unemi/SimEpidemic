@@ -41,7 +41,8 @@ typedef enum {
 #define NAllIndexes (ReproductRate+1)
 
 typedef enum {
-	WarpNone, WarpInside, WarpToHospital, WarpToCemeteryF, WarpToCemeteryH, WarpBack
+	WarpNone, WarpInside, WarpToHospital, WarpToCemeteryF, WarpToCemeteryH,
+	WarpBack, WalkBack
 } WarpType;
 
 typedef enum {
@@ -89,6 +90,7 @@ typedef struct {
 
 typedef struct {
 	NSInteger interval;
+	CGFloat effcDurRate;
 	CGFloat efficacy[MAX_N_VARIANTS];
 } VaccineInfo;
 
@@ -136,6 +138,8 @@ typedef struct {
 	CGFloat infecDistBias;	// coefficient for furthest distance of infection
 	CGFloat contagBias; // exponent (%) for contageon
 	WrkPlcMode wrkPlcMode;
+	BOOL familyOn;
+	NSTimeInterval startDate;	// time interval since 1970/1/1 0:00
 } WorldParams;
 
 #define PARAM_F1 mass
@@ -144,11 +148,15 @@ typedef struct {
 #define PARAM_R1 infected
 #define PARAM_E1 trcOpe
 #define PARAM_H1 wrkPlcMode
+#define PARAM_B1 familyOn
+#define PARAM_T1 startDate
 #define IDX_D 1000
 #define IDX_I 2000
 #define IDX_R 3000
 #define IDX_E 4000
 #define IDX_H 5000
+#define IDX_B 6000
+#define IDX_T 7000
 
 typedef struct {
 	NSInteger susc, asym, symp, recv, died;
@@ -205,7 +213,7 @@ typedef struct AgentRec {
 	CGFloat age, activeness;
 	CGFloat severity;
 	HealthType health;
-	int nInfects, virusVariant, vaccineType;
+	int nInfects, virusVariant, vaccineType, familyID;
 	BOOL distancing, isOutOfField, isWarping, inTestQueue, onRecovery;
 	NSInteger lastTested;
 	ContactInfo *contactInfoHead, *contactInfoTail;

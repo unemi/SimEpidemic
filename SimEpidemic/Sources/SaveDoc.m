@@ -22,7 +22,7 @@
 #import "Gatherings.h"
 #import "../../SimEpidemicSV/DataCompress.h"
 #import <zlib.h>
-#define FORMAT_VER 3
+#define FORMAT_VER 4
 #define READABLE_VER 2
 
 static NSString *keyFormatVersion = @"formatVersion", *keyIncubation = @"incubation",
@@ -449,7 +449,7 @@ MutableDictArray mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
 @implementation World (SaveDocExtension)
 - (void)addParams:(NSMutableDictionary *)dict {
 	if (stopAtNDays > 0) dict[keyDaysToStop] = @(stopAtNDays);
-	dict[keyParameters] = param_dict(&initParams, &worldParams);
+	dict[keyParameters] = param_dict(self.initParamsP, self.worldParamsP);
 	NSDictionary *dif = param_diff_dict(&runtimeParams, &initParams, NULL, NULL);
 	if (dif.count > 0) dict[keyCurrentParams] = dif;
 	if (scenario != nil) dict[keyScenario] = [self scenarioPList];
@@ -458,12 +458,13 @@ MutableDictArray mutablized_array_of_dicts(NSArray<NSDictionary *> *list) {
 	if (self.gatheringsList != nil && self.gatheringsList.count > 0)
 		dict[keyGatheringsList] = self.gatheringsList;
 }
-#define SAVE_AGENT_PROP(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
+#define SAVE_AGENT_PROP_V2(z) z(app); z(prf); z(x); z(y); z(vx); z(vy);\
 z(orgPt); z(daysInfected); z(daysDiseased); z(severity);\
 z(daysToRecover); z(daysToOnset); z(daysToDie); z(imExpr); z(firstDoseDate); z(agentImmunity);\
 z(massR); z(mobFreq); z(gatFreq); z(age); z(activeness);\
 z(health); z(forVcn); z(nInfects); z(virusVariant); z(vaccineType);\
 z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(lastTested);
+#define SAVE_AGENT_PROP(z) SAVE_AGENT_PROP_V2(z) z(familyID);
 
 #define CP_S(m) as[i].m = a->m
 - (void)addSavePop:(NSMutableDictionary *)md info:(NSMutableDictionary *)dict {
@@ -625,6 +626,7 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 		set_params_from_dict(&initParams, &worldParams, pDict);
 		memcpy(&tmpWorldParams, &worldParams, sizeof(WorldParams));
 		memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
+		
 	}
 	if ((pDict = dict[keyCurrentParams]) != nil)
 		set_params_from_dict(&runtimeParams, NULL, pDict);
@@ -661,23 +663,40 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	if (!fw.regularFile) return;
 	[self allocateMemory];
 	NSData *data = [fw.regularFileContents unzippedData];
-	if (data.length != sizeof(AgentSave) * worldParams.initPop)
+	if (data.length < sizeof(AgentSaveV2) * worldParams.initPop)
 		@throw @"Saved population data was short.";
-	const AgentSave *as = data.bytes;
-	for (NSInteger i = 0; i < worldParams.initPop; i ++) {
-		Agent *a = self.agents + i;
-		SAVE_AGENT_PROP(CP_L)
-		a->ID = i;
-		a->prev = a->next = NULL;
-		a->contactInfoHead = a->contactInfoTail = NULL;
-		a->newHealth = a->health;
-		a->isOutOfField = YES;
-		if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
-		else if (!a->isWarping) {
-			if (a->health == Died) add_to_list(a, self.CListP);
-			else add_to_list(a, self.QListP);
-		}
-	}
+	else if (data.length < sizeof(AgentSave) * worldParams.initPop) {	// ver.2 or 3
+		const AgentSaveV2 *as = data.bytes;
+		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
+			Agent *a = self.agents + i;
+			SAVE_AGENT_PROP_V2(CP_L)
+			a->familyID = (int)i;
+			a->ID = i;
+			a->prev = a->next = NULL;
+			a->contactInfoHead = a->contactInfoTail = NULL;
+			a->newHealth = a->health;
+			a->isOutOfField = YES;
+			if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
+			else if (!a->isWarping) {
+				if (a->health == Died) add_to_list(a, self.CListP);
+				else add_to_list(a, self.QListP);
+		}}
+	} else {
+		const AgentSave *as = data.bytes;
+		for (NSInteger i = 0; i < worldParams.initPop; i ++) {
+			Agent *a = self.agents + i;
+			SAVE_AGENT_PROP(CP_L)
+			a->ID = i;
+			a->prev = a->next = NULL;
+			a->contactInfoHead = a->contactInfoTail = NULL;
+			a->newHealth = a->health;
+			a->isOutOfField = YES;
+			if (!as[i].isOutOfField) add_agent(a, &worldParams, self.Pop);
+			else if (!a->isWarping) {
+				if (a->health == Died) add_to_list(a, self.CListP);
+				else add_to_list(a, self.QListP);
+			}
+	}}
 	[self organizeAgeSpanInfo];
 }
 - (void)revisePop {	// for adjustment from format version 2.

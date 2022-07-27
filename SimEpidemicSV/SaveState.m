@@ -72,10 +72,12 @@ void correct_vaccine_list(MutableDictArray vaList, MutableDictArray vrList) {
 			@throw @"Vaccine list includes object other than dictionary.";
 		NSString *name = dict[@"name"];
 		if (name == nil) @throw [NSString stringWithFormat:@"Element %ld has no name.", i];
-		NSNumber *num = dict[@"intervalDays"];
-		 if (num == nil || ![num isKindOfClass:NSNumber.class]) dict[@"intervalDays"] = @(21);
-		num = dict[@"intervalOn"];
-		if (num == nil || ![num isKindOfClass:NSNumber.class]) dict[@"intervalOn"] = @YES;
+		NSDictionary *defaultVals = @{
+			@"intervalDays":@(21), @"intervalOn":@YES, @"efficacyDur":@(1.) };
+		for (NSString *key in defaultVals) {
+			NSNumber *num = dict[key];
+			if (num == nil || ![num isKindOfClass:NSNumber.class]) dict[key] = defaultVals[key];
+		}
 		for (NSDictionary *vr in vrList) {
 			NSString *vrNm = vr[@"name"];
 			if (dict[vrNm] == nil) dict[vrNm] = @(1.);

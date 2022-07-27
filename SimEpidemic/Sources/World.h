@@ -20,6 +20,7 @@ extern NSObject *scenario_element_from_property(NSObject *prop);
 extern void set_dist_values(DistInfo *dp, NSArray<NSNumber *> *arr, CGFloat steps);
 extern void set_reg_gat_value(MutableDictArray gatInfo, NSString *key,
 	NSNumber *goal, CGFloat steps);
+extern CGFloat centered_bias(CGPoint p);
 #ifndef NOGUI
 extern void copy_plist_as_JSON_text(NSObject *plist, NSWindow *window);
 #endif
@@ -80,6 +81,8 @@ typedef struct {
 @property NSImage *popDistImage;
 @property MutableDictArray variantList, vaccineList;
 @property MutableDictArray gatheringsList;
+@property (readonly) NSDate *startDate;
+@property (readonly) NSInteger startDayInWeek; // 0 - 6, 0 = Sunday
 #ifdef DEBUGz
 @property NSInteger phaseInStep;
 #endif
