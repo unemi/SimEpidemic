@@ -228,7 +228,6 @@ NSMutableDictionary *param_dict(RuntimeParams *rp, WorldParams *wp) {
 		case ParamTypeTimeInterval: if (pp.tip != NULL) md[p->key] =
 			[date_formatter_for_start_date() stringFromDate:
 				[NSDate dateWithTimeIntervalSince1970:*(pp.tip ++)]];
-NSLog(@"%@", md[p->key]);
 		default: break;
 	}
 	if (rp != NULL) {
@@ -299,7 +298,7 @@ void set_params_from_dict(RuntimeParams *rp, WorldParams *wp, NSDictionary *dict
 		} else if (index < IDX_B) {
 			if (pp.hp != NULL) pp.hp[index - IDX_H] = [dict[key] intValue];
 		} else if (index < IDX_T) {
-			if (pp.hp != NULL) pp.hp[index - IDX_B] = [dict[key] boolValue];
+			if (pp.bp != NULL) pp.bp[index - IDX_B] = [dict[key] boolValue];
 		} else if (pp.tip != NULL) {
 			pp.tip[index - IDX_T] = [dict[key] isKindOfClass:NSString.class]?
 				[date_formatter_for_start_date() dateFromString:dict[key]].timeIntervalSince1970

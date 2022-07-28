@@ -290,25 +290,27 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 	moreGatherings = info[@"gatherings"];
 	if (_nIteration <= 1) _nIteration = 1;
 	NSArray<NSString *> *output = info[@"out"];
-	NSInteger n = output.count, nn = 0, nd = 0, nD = 0;
-	NSString *an[n], *ad[n], *aD[n];
-	for (NSString *key in output) {
-		if (indexNames[key] != nil || [key isEqualToString:@"reproductionRate"]) an[nn ++] = key;
-		else if ([key hasPrefix:@"daily"]) {
-			unichar uc = [key characterAtIndex:5];
-			if (uc < 'A' || uc > 'Z') continue;
-			NSString *newKey = key.stringByRemovingFirstWord;
-			if (indexNames[newKey] != nil || [key isEqualToString:@"testPositiveRate"])
-				ad[nd ++] = newKey;
-		} else if ([distributionNames containsObject:key]) aD[nD ++] = key;
-		else if ([key isEqualToString:@"severityStats"]) shouldSaveSeverityStats = YES;
-		else if ([key isEqualToString:@"variantsStats"]) shouldSaveVariantsStats = YES;
-		else if ([key isEqualToString:@"vaccination"]) shouldSaveVcnRecord = YES;
-		else if ([key isEqualToString:@"saveState"]) shouldSaveState = YES;
+	if (output != nil && output.count > 0) {
+		NSInteger n = output.count, nn = 0, nd = 0, nD = 0;
+		NSString *an[n], *ad[n], *aD[n];
+		for (NSString *key in output) {
+			if (indexNames[key] != nil || [key isEqualToString:@"reproductionRate"]) an[nn ++] = key;
+			else if ([key hasPrefix:@"daily"]) {
+				unichar uc = [key characterAtIndex:5];
+				if (uc < 'A' || uc > 'Z') continue;
+				NSString *newKey = key.stringByRemovingFirstWord;
+				if (indexNames[newKey] != nil || [key isEqualToString:@"testPositiveRate"])
+					ad[nd ++] = newKey;
+			} else if ([distributionNames containsObject:key]) aD[nD ++] = key;
+			else if ([key isEqualToString:@"severityStats"]) shouldSaveSeverityStats = YES;
+			else if ([key isEqualToString:@"variantsStats"]) shouldSaveVariantsStats = YES;
+			else if ([key isEqualToString:@"vaccination"]) shouldSaveVcnRecord = YES;
+			else if ([key isEqualToString:@"saveState"]) shouldSaveState = YES;
+		}
+		output_n = [NSArray arrayWithObjects:an count:nn];
+		output_d = [NSArray arrayWithObjects:ad count:nd];
+		output_D = [NSArray arrayWithObjects:aD count:nD];
 	}
-	output_n = [NSArray arrayWithObjects:an count:nn];
-	output_d = [NSArray arrayWithObjects:ad count:nd];
-	output_D = [NSArray arrayWithObjects:aD count:nD];
 	lock = NSLock.new;
 	runningTrials = NSMutableDictionary.new;
 	availableWorlds = NSMutableArray.new;
@@ -344,7 +346,7 @@ static void add_vv_list(MutableDictArray base, MutableDictArray new) {
 }
 - (void)makeDataFileWith:(NSNumber *)number type:(NSString *)type names:(NSArray *)names
 	makeObj:(NSObject * (^)(StatInfo *, NSArray *))makeObj {
-	if (names != nil && names.count <= 0) return;
+	if (names == nil || names.count <= 0) return;
 	NSError *error = nil;
 	@autoreleasepool {
 		NSData *data = [NSJSONSerialization dataWithJSONObject:
