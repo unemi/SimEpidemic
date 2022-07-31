@@ -18,20 +18,26 @@ function getJobID(ifrm) {
 <h2>Submission</h2>
 <form method="post" action="/submitJob" target="submission">
 	<textarea name="job" rows="10" cols="60">
-{"stopAt":50,"n":1,
-"vaccines":[
-  {"name":"PfBNT","Original":0.53},
-  {"name":"Boost","Original":0.75,"intervalOn":false}],
-"params":{"vaccinationInfo":[{"performRate":10,"priority":1}],
-  "workPlaceMode":1,"familyModeOn":true},
+{"stopAt":10,"n":1,"popDistMap":"pm1024C75.jpg",
+"params":{"populationSize":1000000,"worldSize":40000,"mesh":250,"popDistMapLog2Gamma":0.4,
+  "activenessMode":20,"antiVaxTestRate":50,"avoidance":20,"contagionBias":125,"distancingStrength":20,
+  "familyModeOn":true,"fatalityBias":10,"friction":95,"gatheringBias":80,"gatheringDuration":[3,12,6],
+  "gatheringFrequency":0,"gatheringParticipation":[0,50,20],"gatheringSize":[5,20,10],"gatheringSpotFixed":5,
+  "gatheringSpotRandom":5,"gatheringStrength":[5,25,10],"immuneMaxEffcSeverity":5,"immuneMaxPeriod":200,
+  "immuneMaxPrdSeverity":20,"immunityDecay":72,"incubation":[2,20,7],"incubationBias":10,"infectionDistance":3,
+  "infectionDistanceBias":0.8,"infectionProberbility":60,"initialInfectedRate":0.07,"mass":2,"mobilityBias":80,
+  "mobilityFrequency":[0,40,20],"quarantineAsymptomatic":3,"quarantineSymptomatic":70,"subjectAsymptomatic":0,
+  "subjectSymptomatic":60,"testCapacity":2.2,"vaccinationInfo":[{"performRate":0}],"vaccineEffectPeriod":6,
+  "workPlaceMode":3},
 "scenario":[
-"days >= 200",["vaccinePriority Boost",4],
-["vaccinePerformRate Boost",8,1]
+"days >= 2",["gatheringFrequency",50.0000,3],["gatheringSpotRandom",80,3],
+"days >= 8",["regGat freq kinderGarden",0],["regGat freq elementarySchool",0],["regGat freq highSchool",0],
+"days >= 13",["gatheringFrequency",10.0000,2],["regGat participation office",5],
+"days >= 19",["gatheringFrequency",40.0000,1],["gatheringSpotRandom",10,1],["regGat freq office",5],
+"days >= 21",["gatheringFrequency",5.0000,2],["gatheringSpotRandom",10,2],["mobilityFrequency",[0,20,4],2],["regGat participation office",20,2],["backHomeRate",90,2]
 ],
 "out":[
-	"asymptomatic","symptomatic","recovered","died","vaccinated","vaccination",
-	"dailyTestPositive","dailyTestNegative","reproductionRate",
-	"incubasionPeriod","recoveryPeriod","fatalPeriod","infects","saveState"]}
+	"dailyTestPositive","dailyTestNegative"]}
 	</textarea>
 <!-- {"stopAt":200,"n":2,
 "gatherings":[

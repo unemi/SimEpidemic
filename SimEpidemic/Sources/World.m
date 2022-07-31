@@ -100,7 +100,6 @@ NSString *keyParameters = @"parameters", *keyScenario = @"scenario",
 - (VariantInfo *)variantInfoP { return variantInfo; }
 - (CGFloat)stepsPerSec { return stepsPerSec; }
 - (BOOL)running { return loopMode == LoopRunning || loopMode == LoopPauseByCondition; }
-- (Gathering *)gatherings { return gatherings; }
 - (void)popLock { [popLock lock]; }
 - (void)popUnlock { [popLock unlock]; }
 - (StatInfo *)statInfo { return statInfo; }
@@ -174,12 +173,18 @@ NEW_DYMEM(ContactInfo, newCInfo0, newCInfo, cmemLock)
 	[gmemLock lock];
 	Gathering *g = gats;
 	while(g->next) {
-		free(g->agents);
+		free(g->agents); g->agents = NULL;
 		g = g->next;
 	}
-	free(g->agents);
+	free(g->agents); g->agents = NULL;
 	g->next = freeGMem; freeGMem = gats;
 	[gmemLock unlock];
+}
+- (void)freeAllGatherings {
+	if (_gatMap == NULL) return;
+	NSInteger nCells = nMesh * nMesh;
+	for (NSInteger i = 0; i < nCells; i ++) [self freeGatherings:_gatMap[i]];
+	memset(_gatMap, 0, sizeof(void *) * nCells);
 }
 - (Gathering *)newNGatherings:(NSInteger)n {
 	if (n <= 0) return NULL;
@@ -267,8 +272,7 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 	return (words.count > 0)? words[0] : nil;
 }
 - (void)allocateMemory {
-	[self freeGatherings:gatherings];
-	gatherings = NULL;
+	[self freeAllGatherings];
 	[cmemLock lock];
 	for (NSInteger i = 0; i < nPop; i ++)
 		if (_agents[i].contactInfoHead != NULL) {
@@ -282,8 +286,10 @@ NSPredicate *predicate_in_item(NSObject *item, NSString **comment) {
 		nMesh = worldParams.mesh;
 		_Pop = realloc(_Pop, sizeof(void *) * nCNew);
 		pRange = realloc(pRange, sizeof(NSRange) * nCNew);
+		_gatMap = realloc(_gatMap, sizeof(void *) * nCNew);
 	}
 	memset(_Pop, 0, sizeof(void *) * nMesh * nMesh);
+	memset(_gatMap, 0, sizeof(void *) * nMesh * nMesh);
 	if (nPop != worldParams.initPop) {
 		nPop = worldParams.initPop;
 		pop = realloc(pop, sizeof(void *) * nPop);
@@ -740,8 +746,14 @@ static void random_ages(CGFloat *ages, NSInteger n) {
 			popDistMapData[i] = powf(pd[i], gamma);
 	} else memcpy(popDistMapData, pd, sizeof(float) * PopDistMapRes * PopDistMapRes);
 }
+static inline CGFloat map_world_coord(CGFloat x, WorldParams *wp) {
+	return x * (wp->worldSize - 6.) + 3.;
+}
 static inline CGFloat random_coord(WorldParams *wp) {
-	return d_random() * (wp->worldSize - 6.) + 3.;
+	return map_world_coord(d_random(), wp);
+}
+static inline CGFloat biased_coord(CGFloat orgX, CGFloat bias, WorldParams *wp) {
+	return map_world_coord((orgX * bias + 1.) / 2., wp);
 }
 #define CENTERED_BIAS .25
 CGFloat centered_bias(CGPoint p) {	// p.x and p.y are in [-1,1]
@@ -758,13 +770,31 @@ CGFloat centered_bias(CGPoint p) {	// p.x and p.y are in [-1,1]
 		case WrkPlcCentered: for (NSInteger i = 0; i < n; i ++) {
 			CGPoint p = {d_random() * 2. - 1., d_random() * 2. - 1.};
 			CGFloat v = centered_bias(p);
-			p.x = (p.x * v + 1.) * .5 * (wp->worldSize - 6.) + 3.;
-			p.y = (p.y * v + 1.) * .5 * (wp->worldSize - 6.) + 3.;
-			pts[i] = p;
+			pts[i] = (NSPoint){biased_coord(p.x, v, wp), biased_coord(p.y, v, wp)};
 		};
 		break;
 		case WrkPlcPopDistImg:
-		pop_dist_alloc(0, 0, PopDistMapRes, pts, n, popDistMapData);
+		pop_dist_alloc(0, 0, PopDistMapRes, pts, n, popDistMapData, YES);
+		CGFloat a = (CGFloat)worldParams.worldSize / PopDistMapRes;
+		for (NSInteger i = 0; i < n; i ++) {
+			pts[i].x = pts[i].x * a + .5;
+			pts[i].y = (worldParams.worldSize - 1. - pts[i].y * a) + .5;
+		}
+	}
+}
+- (void)makeHomeDistribution:(NSPoint *)pts n:(NSInteger)n {
+	WorldParams *wp = &worldParams;
+	if (wp->wrkPlcMode != WrkPlcPopDistImg) {
+		make_lattice_postions(pts, n);
+		if (wp->wrkPlcMode != WrkPlcCentered) for (NSInteger i = 0; i < n; i ++)
+			pts[i] = (NSPoint){map_world_coord(pts[i].x, wp), map_world_coord(pts[i].y, wp)};
+		else for (NSInteger i = 0; i < n; i ++) {
+			pts[i] = (NSPoint){pts[i].x * 2. - 1., pts[i].y * 2. - 1.};
+			CGFloat v = centered_bias(pts[i]);
+			pts[i] = (NSPoint){biased_coord(pts[i].x, v, wp), biased_coord(pts[i].y, v, wp)};
+		}
+	} else {
+		pop_dist_alloc(0, 0, PopDistMapRes, pts, n, popDistMapData, NO);
 		CGFloat a = (CGFloat)worldParams.worldSize / PopDistMapRes;
 		for (NSInteger i = 0; i < n; i ++) {
 			pts[i].x = pts[i].x * a + .5;
@@ -773,7 +803,7 @@ CGFloat centered_bias(CGPoint p) {	// p.x and p.y are in [-1,1]
 	}
 }
 - (void)setupFamilyHome:(FamilyInfo *)info places:(NSPoint *)plcs {
-	static CGFloat radius[3] = { .5, 0.577350269189626, M_SQRT1_2,  };
+	static CGFloat radius[3] = { .5, 0.577350269189626, M_SQRT1_2 };
 	NSInteger famIdx = 0, agnIdx = 0;
 	NSInteger *agentIDs = malloc(sizeof(NSInteger) * nPop);
 	for (NSInteger i = 0; i < nPop; i ++) agentIDs[i] = i;
@@ -841,7 +871,7 @@ printf("StartDtate: %s (%ld)\n", _startDate.description.UTF8String, _startDayInW
 		fInfo.ageList = malloc(sizeof(CGFloat) * nPop);
 		make_families(nPop, &fInfo);
 		NSPoint *plcs = malloc(sizeof(NSPoint) * fInfo.nFams);
-		[self makeDistribution:plcs n:fInfo.nFams];
+		[self makeHomeDistribution:plcs n:fInfo.nFams];
 		[self setupFamilyHome:&fInfo places:plcs];
 		free(fInfo.ageList);
 		free(plcs);
@@ -969,7 +999,8 @@ printf("StartDtate: %s (%ld)\n", _startDate.description.UTF8String, _startDayInW
 				if (orgIdx != newIdx) [ma addObject:@[@(i), @(orgIdx), @(newIdx)]];
 		}}}];
 	}
-	for (Gathering *gat = gatherings; gat; gat = gat->next) {
+	for (NSInteger i = 0; i < worldParams.mesh * worldParams.mesh; i ++)
+	for (Gathering *gat = _gatMap[i]; gat; gat = gat->next) {
 		gat->p.x *= mag; gat->p.y *= mag; gat->size *= mag;
 	}
 	for (NSNumber *key in _WarpList.allKeys) {
@@ -1063,10 +1094,12 @@ MutableDictArray default_vaccines(void) {
 	}
 	[statInfo discardMemory];	// cut the recursive reference
 #endif
+	[self freeAllGatherings];
 	[memPool removeAllObjects];
 	free(_Pop);
 	free(pop);
 	free(_agents);
+	free(_gatMap);
 	free(vcnQueue);
 	free(ageSpanIDs);
 	self.popDistImage = nil;
@@ -1576,7 +1609,7 @@ static BOOL is_nighttime(WorldParams *wp, RuntimeParams *rp) {
 	tm2 = current_time_us();
 	mtime[tmIdx ++] += tm2 - tm1;
 	mtime[tmIdx] += tm2 - tm0;
-	if (mCount >= 500) {
+	if (mCount >= 6) {
 		printf("%ld, ", ++ mCount2);
 		for (NSInteger i = 0; i <= tmIdx; i ++) {
 			printf("%8.2f%c", (double)mtime[i] / mCount, (i < tmIdx)? ',' : '\n');

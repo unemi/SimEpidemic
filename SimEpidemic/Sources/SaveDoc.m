@@ -542,10 +542,12 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	}
 	
 	NSInteger nGatherings = 0;
-	for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) nGatherings ++;
+	for (NSInteger i = 0; i < worldParams.mesh * worldParams.mesh; i ++)
+	for (Gathering *gat = self.gatMap[i]; gat != NULL; gat = gat->next) nGatherings ++;
 	if (nGatherings > 0) {
 		NSInteger agentsCount = 0;
-		for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) {
+		for (NSInteger i = 0; i < worldParams.mesh * worldParams.mesh; i ++)
+		for (Gathering *gat = self.gatMap[i]; gat != NULL; gat = gat->next) {
 			NSInteger ac = 0;
 			for (NSInteger i = 0; i < gat->nAgents; i ++) if (gat->agents[i] != NULL) ac ++;
 			agentsCount += ac;
@@ -554,7 +556,8 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 			(sizeof(GatheringSave) - sizeof(NSInteger)) * nGatherings +
 			sizeof(NSInteger) * agentsCount];
 		GatheringSave *sv = mdata.mutableBytes;
-		for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) {
+		for (NSInteger i = 0; i < worldParams.mesh * worldParams.mesh; i ++)
+		for (Gathering *gat = self.gatMap[i]; gat != NULL; gat = gat->next) {
 			set_save_data(gat, sv);
 			sv = (GatheringSave *)((NSInteger *)(sv + 1) + sv->nAgents - 1);
 		}
@@ -626,7 +629,6 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 		set_params_from_dict(&initParams, &worldParams, pDict);
 		memcpy(&tmpWorldParams, &worldParams, sizeof(WorldParams));
 		memcpy(&runtimeParams, &initParams, sizeof(RuntimeParams));
-		
 	}
 	if ((pDict = dict[keyCurrentParams]) != nil)
 		set_params_from_dict(&runtimeParams, NULL, pDict);
@@ -753,9 +755,10 @@ z(distancing); z(isOutOfField); z(isWarping); z(inTestQueue); z(onRecovery); z(l
 	for (NSInteger nBytes = 0; nBytes < data.length; ) {
 		Gathering *gat = [self newNGatherings:1];
 		setup_with_saved_data(gat, sv, self.agents);
-		gat->next = gatherings; gat->prev = NULL;
-		if (gatherings) gatherings->prev = gat;
-		gatherings = gat;
+		NSInteger idx = index_in_pop(gat->p.x, gat->p.y, &worldParams);
+		gat->next = self.gatMap[idx]; gat->prev = NULL;
+		if (self.gatMap[idx] != NULL) self.gatMap[idx]->prev = gat;
+		self.gatMap[idx] = gat;
 		NSInteger sz = sizeof(GatheringSave) + sizeof(NSInteger) * (sv->nAgents - 1);
 		sv = (GatheringSave *)((char *)sv + sz);
 		nBytes += sz;

@@ -181,18 +181,22 @@ static NSInteger ix_right(NSInteger wSize, NSInteger mesh, CGFloat x, CGFloat gr
 	CGFloat grid = (CGFloat)wp->worldSize / wp->mesh, r = gat->size + SURROUND;
 	NSInteger bottom = floor(fmax(0., gat->p.y - r) / grid),
 		top = floor(fmin(wp->worldSize, gat->p.y + r) / grid),
-		center = round(gat->p.y / grid);
+		center = floor(gat->p.y / grid);
 	if (top >= wp->mesh) top = wp->mesh - 1;
 	if (center >= wp->mesh) center = wp->mesh - 1;
 	NSMutableArray<NSNumber *> *agents = NSMutableArray.new;
 	for (NSInteger iy = bottom; iy < center; iy ++) {
-		CGFloat dy = gat->p.y - (iy + 1) * grid, dx = sqrt(r * r - dy * dy);
+		CGFloat dy = (iy + 1) * grid - gat->p.y;
+		if (dy > r) continue;
+		CGFloat dx = sqrt(r * r - dy * dy);
 		[self collectParticipants:gat agentsIDs:agents row:iy * wp->mesh
 			left:floor(fmax(0., gat->p.x - dx) / grid)
 			right:ix_right(wp->worldSize, wp->mesh, gat->p.x + dx, grid) test:test];
 	}
 	for (NSInteger iy = top; iy >= center; iy --) {
-		CGFloat dy = gat->p.y - iy * grid, dx = sqrt(r * r - dy * dy);
+		CGFloat dy = gat->p.y - iy * grid;
+		if (dy > r) continue;
+		CGFloat dx = sqrt(r * r - dy * dy);
 		[self collectParticipants:gat agentsIDs:agents row:iy * wp->mesh
 			left:floor(fmax(0., gat->p.x - dx) / grid)
 			right:ix_right(wp->worldSize, wp->mesh, gat->p.x + dx, grid) test:test];
@@ -278,15 +282,17 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 #else
 #define GAT_DENS 1e5
 #endif
+
 - (void)manageGatherings {
 	Gathering *gatToFree = NULL, *freeTail = NULL, *nextGat;
 	NSInteger nFree = 0;
 	WorldParams *wp = &worldParams;
 	RuntimeParams *rp = &runtimeParams;
-	for (Gathering *gat = gatherings; gat != NULL; gat = nextGat) {
+	for (NSInteger i = 0; i < wp->mesh * wp->mesh; i ++)
+	for (Gathering *gat = self.gatMap[i]; gat != NULL; gat = nextGat) {
 		nextGat = gat->next;
 		if (step_gathering(gat, wp->stepsPerDay)) {	// if the gathering was expired ...
-			if (gatherings == gat) gatherings = nextGat;
+			if (self.gatMap[i] == gat) self.gatMap[i] = nextGat;
 			for (NSInteger i = 0; i < gat->nAgents; i ++) {
 				Agent *a = gat->agents[i];
 				if (a != NULL && a->gathering == gat) a->gathering = NULL;
@@ -343,26 +349,18 @@ static BOOL step_gathering(Gathering *gat, CGFloat stepsPerDay) {
 			}
 		} else if (nNewGat <= 0) @throw @0;
 		else newGats = gatToFree;
-		Gathering *tail = NULL, *gat = newGats;
+		Gathering *gat = newGats;
 		for (NSInteger i = 0; i < nRndGat && gat != NULL; i ++, gat = gat->next)
 			[self setupGathering:gat];
 		if (nRegGat > 0) for (NSMutableDictionary *gatItem in regGatToBeFired)
 			gat = [self setupRegGathering:gat info:gatItem];
-		for (tail = newGats; tail->next != NULL; tail = tail->next) ;
-		tail->next = gatherings;
-		if (gatherings != NULL) gatherings->prev = tail;
-		gatherings = newGats;
+		for (Gathering *gat = newGats; gat != NULL; gat = nextGat) {
+			nextGat = gat->next;
+			NSInteger idx = index_in_pop(gat->p.x, gat->p.y, &worldParams);
+			gat->next = self.gatMap[idx]; gat->prev = NULL;
+			if (self.gatMap[idx] != NULL) self.gatMap[idx]->prev = gat;
+			self.gatMap[idx] = gat;
+		}
 	} @catch (id _) {}
-//
-//	setup gathrings in grid map.
-	NSInteger nGrid = worldParams.mesh * worldParams.mesh;
-	if (gatMap == nil) {
-		gatMap = [NSMutableArray arrayWithCapacity:nGrid];
-		for (NSInteger i = 0; i < nGrid; i ++) [gatMap addObject:NSMutableArray.new];
-	} else for (NSMutableArray *elm in gatMap) [elm removeAllObjects];
-	for (Gathering *gat = gatherings; gat != NULL; gat = gat->next) {
-		NSInteger idx = index_in_pop(gat->p.x, gat->p.y, &worldParams);
-		[gatMap[idx] addObject:[NSValue valueWithPointer:gat]];
-	}
 }
 @end

@@ -38,8 +38,9 @@ extern BOOL is_infected(Agent *a);
 extern void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp);
 extern NSBitmapImageRep *make_pop_dist_bm(void);
 extern NSBitmapImageRep *make_bm_with_image(NSImage *image);
+extern void make_lattice_postions(NSPoint *pts, NSInteger n);
 extern void pop_dist_alloc(NSInteger x, NSInteger y, NSInteger w,
-	NSPoint *pts, NSInteger n, float *pd);
+	NSPoint *pts, NSInteger n, float *pd, BOOL isRandom);
 extern void reset_for_step(Agent *a);
 extern NSInteger index_in_pop(CGFloat x, CGFloat y, WorldParams *p);
 extern void add_to_list(Agent *a, Agent **list);

@@ -63,7 +63,6 @@ typedef struct {
 	IBOutlet StatInfo *statInfo;
 	NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *paramChangers;
 	TestEntry *testQueHead, *testQueTail;
-	Gathering *gatherings;
 	NSInteger *vcnQueue, vcnQueIdx[N_VCN_QUEQUE];
 	CGFloat vcnSubjRem[MAX_N_VAXEN];
 	NSInteger spanNPop[MAX_N_AGE_SPANS], ageSpanIdxs[MAX_N_AGE_SPANS], *ageSpanIDs;
@@ -71,12 +70,12 @@ typedef struct {
 	float *popDistMapData;
 	NSData *gatSpotsFixed;
 	NSMutableDictionary<NSString *, NSMutableArray *> *regGatInfo;
-	NSMutableArray<NSMutableArray<NSValue *> *> *gatMap;
 	CGFloat *agentsRnd;
 }
 @property LoopMode loopMode;
 @property NSInteger stopAtNDays;
 @property (readonly) Agent *agents, **Pop, *QList, *CList;
+@property (readonly) Gathering **gatMap;
 @property (readonly) NSMutableDictionary<NSNumber *, NSValue *> *WarpList;
 @property NSImage *popDistImage;
 @property MutableDictArray variantList, vaccineList;
@@ -94,7 +93,6 @@ typedef struct {
 - (WorldParams *)tmpWorldParamsP;
 - (VariantInfo *)variantInfoP;
 - (BOOL)running;
-- (Gathering *)gatherings;
 - (void)popLock;
 - (void)popUnlock;
 - (StatInfo *)statInfo;

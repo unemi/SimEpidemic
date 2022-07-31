@@ -123,6 +123,19 @@ void reset_agent(Agent *a, CGFloat age, RuntimeParams *rp, WorldParams *wp) {
 	a->gatFreq = random_with_corr(&dInfo, ae, rp->gatAct/100.);
 	a->firstDoseDate = -1.;
 }
+void make_lattice_postions(NSPoint *pts, NSInteger n) {
+	NSInteger mV = sqrt(n), mH, k = 0;
+	if (mV * mV == n) mH = mV;
+	else if (mV * (mV + 1) >= n) mH = mV + 1;
+	else mV = mH = mV + 1;
+	for (NSInteger i = 0; i < mV; i ++) {
+		CGFloat y = (i + .5) / mV;
+		for (NSInteger j = 0; j < mH && k < n; j ++)
+			pts[k ++] = (NSPoint){(j + .5) / mH, y};
+	}
+	if (random() & 1) for (NSInteger i = 0; i < n; i ++)
+		pts[i] = (NSPoint){pts[i].y, pts[i].x};
+}
 #define PDSmallest 4
 static CGFloat pop_dist_sum(NSInteger x, NSInteger y, NSInteger w, float *pd) {
 	CGFloat s = 0;
@@ -131,30 +144,40 @@ static CGFloat pop_dist_sum(NSInteger x, NSInteger y, NSInteger w, float *pd) {
 	return s;
 }
 void pop_dist_alloc(NSInteger x, NSInteger y, NSInteger w,
-	NSPoint *pts, NSInteger n, float *pd) {
+	NSPoint *pts, NSInteger n, float *pd, BOOL isRandom) {
 	if (n < 1) { return;
 	} else if (w <= PDSmallest) {
-		for (NSInteger i = 0; i < n; i ++)
+		if (isRandom) for (NSInteger i = 0; i < n; i ++)
 			pts[i] = (NSPoint){x + d_random() * w, y + d_random() * w};
+		else {
+			make_lattice_postions(pts, n);
+			for (NSInteger i = 0; i < n; i ++)
+				pts[i] = (NSPoint){x + pts[i].x * w, y + pts[i].y * w};
+		}
 	} else if (n == 1) {
 		CGFloat sx = 0., sy = 0., sd = 0.;
 		for (NSInteger i = y; i < y + w; i ++) for (NSInteger j = x; j < x + w; j ++) {
 			CGFloat d = pd[i * PopDistMapRes + j];
 			sx += d * j; sy += d * i; sd += d;
 		}
-		pts[0] = (NSPoint){sx / sd + PDSmallest * (d_random() - .5),
-			sy / sd + PDSmallest * (d_random() - .5)};
+		pts[0] = isRandom? (NSPoint){
+				sx / sd + PDSmallest * (d_random() - .5),
+				sy / sd + PDSmallest * (d_random() - .5)} :
+			(NSPoint){sx / sd + PDSmallest / 2., sy / sd + PDSmallest / 2.};
 	} else {
 		w /= 2;
 		NSInteger xx[] = {x, x, x + w, x + w}, yy[] = {y, y + w, y, y + w};
 		CGFloat s = 0., a[4];
 		for (NSInteger i = 0; i < 4; i ++)
 			s += a[i] = pop_dist_sum(xx[i], yy[i], w, pd);
+		NSInteger idx[4] = { 0, 1, 2, 3 };
 		NSPoint *pt = pts;
 		for (NSInteger i = 0; i < 4; i ++) {
-			NSInteger m = round(n * a[i] / s);
-			pop_dist_alloc(xx[i], yy[i], w, pt, m, pd);
-			n -= m; s -= a[i]; pt += m;
+			NSInteger j = random() % (4 - i) + i, k = idx[j];
+			idx[j] = idx[i];
+			NSInteger m = round(n * a[k] / s);
+			pop_dist_alloc(xx[k], yy[k], w, pt, m, pd, isRandom);
+			n -= m; s -= a[k]; pt += m;
 		}
 	}
 }
@@ -287,16 +310,24 @@ static void attracted(Agent *a, Agent *b) {
 		j ++;
 	}
 	if (j <= 0) return;
-	CGFloat dd[j], ax[j], ay[j];
-	for (NSInteger i = 0; i < j; i ++) dd[i] = ((d[i] < viewRange * 0.8)? 1.0 :
-		(1 - d[i] / viewRange) / 0.2) / d[i] / d2[i] * AVOIDANCE * runtimeParams.avoidance / 50.;
+	CGFloat dd[j], ax[j], ay[j], dstB[j];
+	for (NSInteger i = 0; i < j; i ++) dd[i] = (a->familyID == bb[i]->familyID)? 0. :
+		((d[i] < viewRange * 0.8)? 1.0 : (1 - d[i] / viewRange) / 0.2)
+			/ d[i] / d2[i] * AVOIDANCE * runtimeParams.avoidance / 50.;
 	for (NSInteger i = 0; i < j; i ++)
 		{ ax[i] = dx[i] * dd[i]; ay[i] = dy[i] * dd[i]; }
+	CGFloat dstF = 1. + runtimeParams.dstST / 5., dstA = a->distancing? dstF : 1.;
+	for (NSInteger i = 0; i < j; i ++)
+		{ a->fx -= ax[i] * dstA; a->fy -= ay[i] * dstA; }
+	for (NSInteger i = 0; i < j; i ++) dstB[i] = bb[i]->distancing? dstF : 1.;
+	for (NSInteger i = 0; i < j; i ++)
+		{ bb[i]->fx += ax[i] * dstB[i]; bb[i]->fy += ay[i] * dstB[i]; }
+	for (NSInteger i = 0; i < j; i ++)
+		if (a->familyID != bb[i]->familyID) {
+			attracted(a, bb[i]);
+			attracted(bb[i], a);
+		}
 	for (NSInteger i = 0; i < j; i ++) {
-		a->fx -= ax[i]; a->fy -= ay[i];
-		bb[i]->fx += ax[i]; bb[i]->fy += ay[i];
-		attracted(a, bb[i]);
-		attracted(bb[i], a);
 		[self checkInfectionA:a B:bb[i] dist:d[i]];
 		[self checkInfectionA:bb[i] B:a dist:d[i]];
 	}
@@ -304,10 +335,8 @@ static void attracted(Agent *a, Agent *b) {
 - (void)avoidGatherings:(NSInteger)gIdx agents:(Agent **)a n:(NSInteger)n {
 	CGFloat dx[n], dy[n], d2[n], d[n];
 	Agent *aa[n];
-	NSArray<NSValue *> *gArr = gatMap[gIdx];
 	CGFloat viewRange = (CGFloat)worldParams.worldSize / worldParams.mesh;
-	for (NSValue *v in gArr) {
-		Gathering *gat = v.pointerValue;
+	for (Gathering *gat = self.gatMap[gIdx]; gat != NULL; gat = gat->next) {
 		NSPoint p = gat->p;
 		for (NSInteger i = 0; i < n; i ++) {
 			dx[i] = a[i]->x - p.x; dy[i] = a[i]->y - p.y;
@@ -387,7 +416,7 @@ static BOOL patient_step(Agent *a, ParamsForStep prms, BOOL inQuarantine, StepIn
 }
 static CGFloat wall(CGFloat d) {
 	if (d < .02) d = .02;
-	return AVOIDANCE * 20. / d / d;
+	return AVOIDANCE * 10. / d / d;
 }
 static void expire_immunity(Agent *a, RuntimeParams *rp, WorldParams *wp) {
 	a->newHealth = Susceptible;
@@ -499,11 +528,6 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		}
 	}
 	info->moveFrom = index_in_pop(a->x, a->y, wp);
-	if (a->distancing) {
-		CGFloat dst = 1.0 + rp->dstST / 5.0;
-		a->fx *= dst;
-		a->fy *= dst;
-	}
 	a->fx += wall(a->x) - wall(wp->worldSize - a->x);
 	a->fy += wall(a->y) - wall(wp->worldSize - a->y);
 	CGFloat mass = rp->mass * a->massR / 100.;
@@ -523,7 +547,14 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 	a->vy = a->vy * fric + a->fy / mass / wp->stepsPerDay;
 	CGFloat v = hypot(a->vx, a->vy);
 	CGFloat maxV = rp->maxSpeed * 20. / wp->stepsPerDay;
-	if (a->gathering != NULL && rp->gatActiveBias > 0. && info->warpType == WarpNone) {
+	if (info->warpType == WalkBack) {
+		NSInteger nightSteps = wp->stepsPerDay / 3,
+			stepsLeft = (nightSteps < 1)? 1 :
+				nightSteps - (rp->step - wp->stepsPerDay * 2 / 3) % wp->stepsPerDay;
+		CGFloat r = 1. / ((stepsLeft > 0)? stepsLeft : stepsLeft + wp->stepsPerDay);
+		a->vx = (a->orgPt.x - a->x) * wp->stepsPerDay * r + a->vx * (1. - r);
+		a->vy = (a->orgPt.y - a->y) * wp->stepsPerDay * r + a->vy * (1. - r);
+	} else if (a->gathering != NULL && rp->gatActiveBias > 0. && info->warpType == WarpNone) {
 		CGFloat ab = a->activeness * rp->gatActiveBias / 100.;
 		CGFloat th = atan2(a->vy, a->vx) + (d_random() - .5) * ab * M_PI;
 		v *= 1. + ab;
@@ -534,15 +565,12 @@ void step_agent(Agent *a, ParamsForStep prms, BOOL goHomeBack, StepInfo *info) {
 		a->vx *= maxV / v; 
 		a->vy *= maxV / v;
 	}
-	if (info->warpType == WalkBack) {
-		NSInteger nightSteps = wp->stepsPerDay / 3;
-		CGFloat r = (nightSteps < 1)? 1 : (CGFloat)wp->stepsPerDay / nightSteps;
-		a->vx += ((a->orgPt.x - a->x) * r - a->vx) / 2.;
-		a->vy += ((a->orgPt.y - a->y) * r - a->vy) / 2.;
-		info->warpType = WarpNone;
-	}
 	a->x += a->vx / wp->stepsPerDay;
 	a->y += a->vy / wp->stepsPerDay;
+	if (info->warpType == WalkBack) {
+		a->vx = a->vy = 0.;
+		info->warpType = WarpNone;
+	}
 	if (a->x < AGENT_RADIUS)
 		{ a->x = AGENT_RADIUS * 2 - a->x; a->vx = - a->vx; }
 	else if (a->x > wp->worldSize - AGENT_RADIUS)

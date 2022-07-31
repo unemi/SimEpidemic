@@ -1019,7 +1019,7 @@
 				GCC_OPTIMIZATION_LEVEL = 3;
 				OTHER_CFLAGS = "-DNOGUI";
 				"OTHER_CFLAGS[arch=x86_64]" = (
-					"-march=cascadelake",
+					"-mavx2",
 					"-DNOGUI",
 				);
 				PRODUCT_NAME = simepidemic;

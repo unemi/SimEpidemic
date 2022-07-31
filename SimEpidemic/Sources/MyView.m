@@ -133,7 +133,9 @@ static BOOL should_draw_rect(NSRect rect, NSRect dRect) {
 		if (_showGatherings) {
 			CGFloat rgb[3];
 			[stateColors[ColGathering] getRed:rgb green:rgb+1 blue:rgb+2 alpha:NULL];
-			for (Gathering *gat = _world.gatherings; gat != NULL; gat = gat->next)
+			
+			for (NSInteger i = 0; i < m * m; i ++)
+			for (Gathering *gat = _world.gatMap[i]; gat != NULL; gat = gat->next)
 				draw_gathering(gat, rgb, dRect);
 	}}
 	attr[NSForegroundColorAttributeName] = stateColors[ColText];
