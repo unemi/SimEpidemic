@@ -1,5 +1,5 @@
 # SimEpidemic
-Individual-based Epidemic Simulator (2020-22)
+Individual-based Epidemic Simulator (2020-23)
 
 - As a part of [project](http://www.intlab.soka.ac.jp/~unemi/SimEpidemic1/info/) by Tatsuo Unemi, under cooperation with Saki Nawata and Masaaki Miyashita.
 - Supported by Cabinet Secretariat of Japanese Government and JSPS KAKENHI Grant Number JP21K12064.
@@ -23,6 +23,6 @@ A shell script SimEpidemicSV/install.sh might be helpful to learn how to install
 - Sample ... sample parameter files.
 - simepiWorld, simepiBackend ... another version of HTTP server under construction.
 
-&copy; Tatsuo Unemi, 2020-22, All rights reserved.
+&copy; Tatsuo Unemi, 2020-23, All rights reserved.
 
 ---
