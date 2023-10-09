@@ -204,7 +204,7 @@ void for_all_bacth_job_documents(void (^block)(World *)) {
 	char buf[128];
 	int k = 0;
 	for (NSNumber *num in runningTrials) {
-		k += snprintf(buf + k, 128 - k, "%ld:%ld, ", num.integerValue,
+		k += snprintf(buf + k, 128 - k, "%ld:%d, ", num.integerValue,
 			runningTrials[num].runtimeParamsP->step);
 		if (k >= 127) break;
 	}

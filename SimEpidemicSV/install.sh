@@ -11,5 +11,5 @@ echo "Archive succeeded."
 scp /tmp/SimEpidemic.dst/usr/local/bin/simepidemic $rID:$rDir/simepidemic.new
 if [ $? -ne 0 ]; then echo "scp failed."; exit; fi
 echo "Binary module was copied to $rID:$rDir/."
-ssh -t $rID "cd $rDir; ./allRestart.sh"
-# ssh -t $rID "cd $rDir; ./restart.sh"
+# ssh -t $rID "cd $rDir; ./allRestart.sh"
+ssh -t $rID "cd $rDir; ./restart.sh"

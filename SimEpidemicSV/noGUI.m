@@ -151,9 +151,10 @@ static NSDictionary *code_meaning_map(void) {
 static NSDictionary *ext_mime_map(void) {
 	NSDictionary *defaultMap = @{
 		@"html":@"text/html", @"css":@"text/css", @"js":@"text/javascript",
-		@"txt":@"text/plain",
+		@"txt":@"text/plain", @"csv":@"text/csv", @"tsv":@"text/tsv",
 		@"jpg":@"image/jpeg", @"jpeg":@"image/jpeg", @"png":@"image/png",
 		@"svg":@"image/svg+xml", @"ico":@"image/x-icon", @"gif":@"image/gif",
+		@"otf":@"application/x-font-opentype"
 	};
 @autoreleasepool {
 	NSData *data = [NSData dataWithContentsOfFile:@"/etc/apache2/mime.types"];

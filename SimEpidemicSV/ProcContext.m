@@ -143,7 +143,7 @@ void send_bytes(int desc, const char *bytes, NSInteger size) {
 	FD_ZERO(&fdSet);
 	FD_SET(desc, &fdSet);
 	do {
-		int n = select(desc + 1, NULL, &fdSet, NULL, &(struct timeval){0,100000});
+		int n = select(desc + 1, NULL, &fdSet, NULL, &(struct timeval){2,0});
 		if (n == 0) @throw @"'select' got time out to send answer";
 		else if (n < 0) @throw unix_err_msg();
 	} while (!FD_ISSET(desc, &fdSet));
@@ -151,11 +151,12 @@ void send_bytes(int desc, const char *bytes, NSInteger size) {
 	NSInteger retry = 5;
 	do {
 		ssize_t result = send(desc, bytes, size, 0);
-		if (result < 0) @throw unix_err_msg();
-		else if (result >= size) break;
-		if (result == 0) retry --;
+		if (result < 0) {
+			if (errno != EAGAIN) @throw unix_err_msg();
+		} else if (result >= size) break;
+		if (result <= 0) retry --;
 		else { bytes += result; size -= result; }
-		usleep(100000);
+		usleep((result < 0)? 500000 : 100000);
 	} while (retry > 0);
 	if (retry <= 0) @throw @"send answer";
 #ifdef DEBUG
@@ -196,15 +197,27 @@ static void send_large_data(int desc, const char *bytes, NSInteger size) {
 	else if ([content isKindOfClass:NSInputStream.class]) {
 		NSInteger length = [self sendHeader];
 		NSInputStream *stream = (NSInputStream *)content;
+		NSString *errMsg = nil;
 		[stream open];
 		@try {
 			NSMutableData *data = [NSMutableData dataWithLength:BUFFER_SIZE];
 			char *bytes = data.mutableBytes;
-			NSInteger size;
-			while ((size = [stream read:(uint8_t *)bytes maxLength:BUFFER_SIZE]) > 0)
-				{ send_bytes(desc, bytes, size); length += size; }
-		} @catch (NSObject *obj) { NSLog(@"%@", obj);  }
+			for (NSInteger remain = fileSize, size = 0; remain > 0; remain -= size) {
+				size = 0;
+				for (NSInteger i = 0; i < 5 && stream.hasBytesAvailable; i ++) {
+					size = [stream read:(uint8_t *)bytes maxLength:BUFFER_SIZE];
+					if (size > 0) break;
+					usleep((lrand48() % 400000) + 100000);
+				}
+				if (size > 0) {
+					if (size > remain) size = remain;
+					send_bytes(desc, bytes, size);
+					length += size;
+				} else @throw @"Could not read whole content of file.";
+			}
+		} @catch (NSObject *obj) { errMsg = obj.description;  }
 		[stream close];
+		if (errMsg != nil) @throw errMsg;
 		return length;
 	} else {
 		const char *bytes = NULL;
@@ -528,7 +541,7 @@ static NSDictionary<NSString *, NSString *> *header_dictionary(NSString *headerS
 	WorldParams *wp = world.tmpWorldParamsP;
 	set_params_from_dict(world.runtimeParamsP, wp, dict);
 	NSInteger popSize = wp->initPop;
-	if (popSize > maxPopSize) wp->initPop = maxPopSize;
+	if (popSize > maxPopSize) wp->initPop = (MyInt)maxPopSize;
 	[world popUnlock];
 	if (popSize > maxPopSize) @throw [NSString stringWithFormat:
 		@"200 The specified population size %ld is too large.\
@@ -700,7 +713,7 @@ static int store_agent_xyh(Agent *a, uint8 *buf, NSInteger worldSize) {
 //	xy[1] |= (a->health & 0x03) << 14;
 //	memcpy(buf, xy, 4);
 	return sprintf((char *)buf, "[%d,%d,%d],",
-		int_coord(a->x, worldSize), int_coord(a->y, worldSize), a->health);
+		int_coord(a->p.x, worldSize), int_coord(a->p.y, worldSize), a->health);
 }
 NSData *JSON_pop(World *world) {
 	WorldParams *wp = world.worldParamsP;
@@ -719,7 +732,7 @@ NSData *JSON_pop(World *world) {
 		WarpInfo info = value.warpInfoValue;
 		Agent *a = info.agent;
 		p += sprintf((char *)p, "[%d,%d,%d,%d,%d,%d],",
-			int_coord(a->x, wp->worldSize), int_coord(a->y, wp->worldSize), a->health,
+			int_coord(a->p.x, wp->worldSize), int_coord(a->p.y, wp->worldSize), a->health,
 			int_coord(info.goal.x, wp->worldSize), int_coord(info.goal.y, wp->worldSize),
 			info.mode);
 		nAgents ++;
@@ -749,7 +762,7 @@ NSData *JSON_pop(World *world) {
 - (void)getPopulation { [self getPop:JSON_pop]; }
 
 static NSArray *agent_cood(Agent *a, WorldParams *wp) {
-	return @[@(int_coord(a->x, wp->worldSize)), @(int_coord(a->y, wp->worldSize))];
+	return @[@(int_coord(a->p.x, wp->worldSize)), @(int_coord(a->p.y, wp->worldSize))];
 }
 NSData *JSON_pop2(World *world) {
 	WorldParams *wp = world.worldParamsP;
@@ -767,7 +780,7 @@ NSData *JSON_pop2(World *world) {
 		WarpInfo info = value.warpInfoValue;
 		Agent *a = info.agent;
 		[posts[a->health] addObject:@[
-			@(int_coord(a->x, wp->worldSize)), @(int_coord(a->y, wp->worldSize)),
+			@(int_coord(a->p.x, wp->worldSize)), @(int_coord(a->p.y, wp->worldSize)),
 			@(int_coord(info.goal.x, wp->worldSize)),
 			@(int_coord(info.goal.y, wp->worldSize)), @(info.mode)]];
 	}
